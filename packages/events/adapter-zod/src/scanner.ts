@@ -238,7 +238,8 @@ export async function discoverZodEvents(opts: {
     const text = await fs.readFile(file, 'utf8');
 
     if (!importsZod(text) && !text.includes('defineEvent(')) continue;
-    const relFile = path.relative(root, file);
+    // Forward slashes on every platform: the path is recorded in the event's source.
+    const relFile = path.relative(root, file).split(path.sep).join('/');
 
     let exports: StaticExport[];
 

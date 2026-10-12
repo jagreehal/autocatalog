@@ -1,0 +1,2 @@
+# LF everywhere: fixtures are compared byte for byte, and tests parse markdown by line.
+* text=auto eol=lf
