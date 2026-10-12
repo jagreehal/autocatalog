@@ -9,7 +9,7 @@ Teams can declare the events they consume from their own repository, so a produc
 
 - `autocatalog.consumes.json` lists a service, another team's event as `domain/id`, and the fields it reads.
 - `ac site` publishes every repository's declarations in `/catalog.json` and lists them on each event's page.
-- `ac drift --consumers <url|file>` reads that index and names the consumers each change reaches, by the fields they read. It prints when the index was published.
+- `ac drift --consumers <url|file>` reads that index and names the consumers each change reaches, by the fields they read. It prints when the index was published, and counts the consumers of every copy of an event two repositories publish unless `--repository` names its own.
 - `ac validate --catalog <url|file>` checks each declared field against the schema the producer publishes.
 - `ac drift --snapshot` names the consumers a runtime snapshot recorded.
 

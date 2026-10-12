@@ -775,6 +775,25 @@ describe('runtime drift against a snapshot', () => {
     expect(removed?.usage?.unaffected ?? []).not.toContain('LedgerService');
   });
 
+  it('keeps the baseline consumer list when the change drops a consumer from it', async () => {
+    // The same pull request removes LedgerService from the list and the field.
+    await writeEvent(
+      currDir,
+      'payments',
+      'PaymentCompleted',
+      { ...paymentManifest, consumers: ['NotificationService'] },
+      withoutAmount(),
+    );
+
+    const report = await driftCatalogs(baseDir, currDir, {
+      consumerFieldsOf: () => ({ LedgerService: ['note'] }),
+    });
+
+    const removed = report.findings.find((finding) => finding.kind === 'field_removed');
+
+    expect(removed?.usage?.unaffected ?? []).not.toContain('LedgerService');
+  });
+
   it('says a consumer only reported in message metadata is not proof of delivery', async () => {
     await writeEvent(currDir, 'payments', 'PaymentRefunded', refunded, withoutAmount());
 

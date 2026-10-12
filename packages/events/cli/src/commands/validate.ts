@@ -7,6 +7,7 @@ import {
   checkConsumerDeclarations,
   jsonObjectSchema,
   readConsumerDeclarations,
+  shownName,
   validateCatalog,
   type ConsumerDeclaration,
   type JsonObject,
@@ -84,7 +85,7 @@ export async function runValidate(opts: RunValidateOptions): Promise<number> {
   } catch (error) {
     console.error(
       kleur.red(
-        `✗ could not read ${opts.catalog}: ${error instanceof Error ? error.message : String(error)}`,
+        `✗ could not read ${opts.catalog}: ${shownName(error instanceof Error ? error.message : String(error))}`,
       ),
     );
 

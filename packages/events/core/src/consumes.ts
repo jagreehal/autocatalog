@@ -28,6 +28,9 @@ export const CONSUMES_FILE = 'autocatalog.consumes.json';
  */
 const SAFE_NAME = /^[A-Za-z0-9][\w .:/-]{0,199}$/;
 
+/** An event as `domain/id`, each part under the same rule as a name. */
+const EVENT_NAME = /^[A-Za-z0-9][\w.:-]{0,199}\/[A-Za-z0-9][\w.:-]{0,199}$/;
+
 /** A payload path such as `amount` or `items[].sku`, under the same rule. */
 const FIELD_PATH = /^[\w$][\w$.[\]-]{0,199}$/;
 
@@ -45,7 +48,7 @@ export const shownName = (name: string): string => JSON.stringify(name).slice(1,
 const consumerDeclaration = z.strictObject({
   service: z.string().regex(SAFE_NAME, 'use letters, digits, spaces and . _ : / -'),
   // `domain/id`, as the site and AI agents name an event.
-  event: z.string().regex(/^[^/\s]+\/[^/\s]+$/, 'name the event as domain/id'),
+  event: z.string().regex(EVENT_NAME, 'name the event as domain/id'),
   /** Payload paths the service reads, such as `amount` or `items[].sku`. */
   fields: z.array(z.string().regex(FIELD_PATH, 'a payload path such as items[].sku')).optional(),
 });
@@ -162,7 +165,7 @@ export function createConsumerResourceGraph(
 export interface GraphConsumers {
   /** By `domain/id`. */
   consumers: Map<string, EventConsumers>;
-  /** Events two repositories publish, when it could not tell which is ours, escaped. */
+  /** Events two repositories publish, when it could not tell which is ours, escaped; every copy's consumers count. */
   ambiguous: string[];
   /** Names not safe to print, escaped; each consumer is counted as {@link UNSAFE_CONSUMER}. */
   rejected: string[];
@@ -256,6 +259,10 @@ function publishedEvents(graph: ResourceGraph): Map<string, GraphEventEntry> {
     if (resource.ref.kind !== 'event') continue;
 
     const { domain } = eventDomain.parse(resource.attributes);
+
+    // `domain/id` is the key, so a part holding a slash could stand for another event.
+    if (!/^[^/\s]+$/.test(domain) || !/^[^/\s]+$/.test(resource.ref.id)) continue;
+
     const namespace = resource.ref.namespace ?? '';
 
     const repository = namespace.endsWith(`/${domain}`)
@@ -277,7 +284,8 @@ function publishedEvents(graph: ResourceGraph): Map<string, GraphEventEntry> {
  * Who consumes each event, by `domain/id`, from a company graph such as the
  * site's `/catalog.json`. The graph names its events per repository; when two
  * repositories publish the same `domain/id`, `repository` says which one is
- * ours, and without it the event is listed as ambiguous rather than guessed.
+ * ours. Without it the event is listed as ambiguous, and the consumers of
+ * every copy count.
  */
 export function consumersFromGraph(
   graph: ResourceGraph,
@@ -289,14 +297,6 @@ export function consumersFromGraph(
 
   for (const { key, repository } of events.values())
     publishers.set(key, (publishers.get(key) ?? new Set()).add(repository));
-
-  const ours = (key: string, repository: string) => {
-    const all = publishers.get(key) ?? new Set();
-
-    return options.repository && all.has(options.repository)
-      ? repository === options.repository
-      : all.size === 1;
-  };
 
   const consumers = new Map<string, EventConsumers>();
   // What each consumer of each event reads, by `domain/id`, as edges arrive.
@@ -311,11 +311,15 @@ export function consumersFromGraph(
 
     if (!event) continue;
 
-    if (!ours(event.key, event.repository)) {
-      if (!options.repository || !publishers.get(event.key)?.has(options.repository))
-        ambiguous.add(event.key);
-      continue;
-    }
+    // With this repository named among the publishers, another copy's
+    // consumers are that copy's. Without it, every copy's consumers count:
+    // another repository publishing the same event must not hide them.
+    const all = publishers.get(event.key) ?? new Set();
+    const pinned = Boolean(options.repository && all.has(options.repository));
+
+    if (pinned && event.repository !== options.repository) continue;
+
+    if (!pinned && all.size > 1) ambiguous.add(event.key);
 
     const safeName = isSafeName(edge.to.id);
     const name = safeName ? edge.to.id : UNSAFE_CONSUMER;
@@ -409,7 +413,7 @@ export async function checkConsumerDeclarations(
       published = fieldPaths(await pending);
     } catch (error) {
       problems.push(
-        `${service} consumes ${event}: its schema could not be read (${error instanceof Error ? error.message : String(error)})`,
+        `${service} consumes ${event}: its schema could not be read (${shownName(error instanceof Error ? error.message : String(error))})`,
       );
       continue;
     }

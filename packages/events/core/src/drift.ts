@@ -768,6 +768,8 @@ export async function driftCatalogs(
       continue;
     }
 
+    const listed = new Set([...base.frontmatter.consumers, ...curr.frontmatter.consumers]);
+
     const assessed = [
       ...assessEventChange({
         domain: curr.frontmatter.domain,
@@ -776,13 +778,14 @@ export async function driftCatalogs(
         // Only the current declaration counts: a consumer that stops reading a
         // field in the same change that removes it is exactly the safe removal,
         // and one whose declaration was dropped is back to unspecified.
-        // Fields from elsewhere describe only consumers this event does not list:
-        // another repository must not narrow what a listed consumer reads.
+        // Fields from elsewhere describe only consumers this event does not list,
+        // before or after the change: another repository must not narrow what a
+        // listed consumer reads, even in the change that drops it from the list.
         consumerFields: {
           ...Object.fromEntries(
             Object.entries(
               options.consumerFieldsOf?.(curr.frontmatter.domain, curr.frontmatter.id) ?? {},
-            ).filter(([consumer]) => !curr.frontmatter.consumers.includes(consumer)),
+            ).filter(([consumer]) => !listed.has(consumer)),
           ),
           ...curr.frontmatter.consumerFields,
         },
