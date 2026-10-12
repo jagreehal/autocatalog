@@ -3,7 +3,7 @@
 Know who depends on your event contracts before you break them.
 
 Your contracts already live in code, as Zod, Pydantic, JSON Schema, OpenAPI,
-AsyncAPI, Avro or protobuf. autocatalog finds them, records which services
+AsyncAPI, Avro or protobuf. autocatalog finds them, captures which services
 produce and consume each one, and fails a pull request before a breaking change
 reaches another team.
 
@@ -65,9 +65,9 @@ backward` gates on Schema Registry rules instead. The
 
 ## Keep teams out of each other's databases
 
-The same check guards team boundaries. autocatalog sees which tables and
-collections each service reads and writes, from Mongoose, Prisma and Drizzle
-models in code or from traces. It takes owners from CODEOWNERS and
+`autocatalog drift` guards team boundaries in the same run. It sees which
+tables and collections each service reads and writes, from Mongoose, Prisma and
+Drizzle models in code or from traces, and takes owners from CODEOWNERS and
 `catalog-info.yaml`. A pull request that has one team's service read another
 team's data fails:
 
@@ -126,9 +126,11 @@ export const PaymentCompleted = defineEvent(
 `npx autocatalog scan . --allow-code-execution` writes
 `events/payments/PaymentCompleted/` with `schema.json`, examples and metadata.
 The Zod adapter reads your TypeScript source and does not import your modules.
-The flag is there because the adapter package runs from your repository's
-`node_modules`, so `scan` asks before running it. Commit `events/`, and the site and MCP server read it
-from there. Re-run the scan when a contract changes.
+`scan` asks for `--allow-code-execution` because it runs the adapter package
+installed in your repository's `node_modules`. Your own modules do not run.
+
+Commit `events/`, and the site and MCP server read it from there. Re-run the
+scan when a contract changes.
 
 You don't write service definitions. autocatalog builds `PaymentService` from
 the events that name it.
@@ -139,9 +141,11 @@ and change nothing in their code.
 
 ## Ask the catalog from your editor
 
-`autocatalog-mcp` gives AI coding agents 12 tools over the catalog. An agent can
-look up an event's schema and examples, find which events carry a field, and
-check whether a change breaks a consumer before it writes the code.
+The site, the pull request check and your coding agent all read one model of
+your architecture, built from the code. `autocatalog-mcp` gives AI coding agents
+12 tools over that model. An agent can look up an event's schema and examples,
+find which events carry a field, and check whether a change breaks a consumer
+before it writes the code.
 
 ```json
 {
