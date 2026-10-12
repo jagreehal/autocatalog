@@ -1,6 +1,7 @@
 import json
 import sys
 from pathlib import Path
+from typing import ClassVar
 
 FIXTURES = Path(__file__).parent / "fixtures"
 sys.path.insert(0, str(FIXTURES))
@@ -90,7 +91,7 @@ def test_reads_delivery_from_an_autocatalog_inner_class():
             version = "1.0.0"
             name = "Order Placed"
             summary = "s"
-            delivery = {"orderingKey": "orderId"}
+            delivery: ClassVar[dict[str, str]] = {"orderingKey": "orderId"}
 
     assert _build_event(OrderPlaced, _meta_from_class(OrderPlaced)).delivery == {
         "orderingKey": "orderId"
