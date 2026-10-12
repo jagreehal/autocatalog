@@ -76,6 +76,7 @@ describe('readConsumerDeclarations', () => {
       { service: 'Ledger', event: 'p/e', fields: ['a\n::error::x'] },
     ],
     ['an event that is not domain/id', { service: 'Ledger', event: 'payment.completed' }],
+    ['an event name that could inject into a log', { service: 'Ledger', event: 'p/::error::x' }],
     ['a key it does not know', { service: 'Ledger', event: 'p/e', field: ['a'] }],
     ['no service', { event: 'p/e' }],
   ])('refuses %s, naming the file', async (_, entry) => {
@@ -367,11 +368,34 @@ describe('consumersFromGraph', () => {
     expect(rejected).toEqual(['x\\n::error::pwned']);
   });
 
-  it('names an event two repositories publish when it cannot tell which is its own', () => {
+  it('counts the consumers of every copy when it cannot tell which is its own', () => {
+    // Another repository publishing the same event must not switch the check off.
     const { consumers, ambiguous } = consumersFromGraph(published('a', 'b'));
 
-    expect(consumers.has('payments/paid')).toBe(false);
+    expect(consumers.get('payments/paid')?.consumers).toEqual(['a-reader', 'b-reader']);
     expect(ambiguous).toEqual(['payments/paid']);
+  });
+
+  it('ignores an event whose domain or id has a slash, so keys cannot collide', () => {
+    const graph = published('payments');
+    const [edge] = graph.relationships;
+
+    if (!edge) throw new Error('no edge');
+    const slashed = { ...event('payments', 'payments', 'paid').ref, id: 'paid/extra' };
+
+    const resource: EventCatalogResource = {
+      ref: slashed,
+      title: 'Paid',
+      tags: [],
+      provenance: { default: 'declared', fields: {} },
+      needsReview: false,
+      attributes: { domain: 'payments', status: 'active', schema: 'schema.json', examples: 0 },
+    };
+
+    graph.resources = [...graph.resources, resource];
+    graph.relationships = [...graph.relationships, { ...edge, from: slashed }];
+
+    expect([...consumersFromGraph(graph).consumers.keys()]).toEqual(['payments/paid']);
   });
 });
 
@@ -464,5 +488,18 @@ describe('checkConsumerDeclarations', () => {
         },
       ),
     ).toEqual(['Ledger consumes payments/paid: its schema could not be read (404)']);
+  });
+
+  it("escapes what the producer's site says when its schema cannot be read", async () => {
+    const [problem] = await checkConsumerDeclarations(
+      [{ service: 'Ledger', event: 'payments/paid', fields: ['amount'] }],
+      graph(),
+      async () => {
+        throw new Error('Not Found\n::error::injected');
+      },
+    );
+
+    expect(problem).not.toContain('\n');
+    expect(problem).toContain('Not Found\\n::error::injected');
   });
 });

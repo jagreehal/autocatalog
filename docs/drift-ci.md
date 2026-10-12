@@ -169,9 +169,10 @@ A renamed `amount` then fails with `breaks LedgerService`. A consumer that
 declared it reads only `currency` is listed as not affected. For a private site,
 `--consumers-token-env CATALOG_TOKEN` sends the token from that variable.
 `--consumers` also takes a file, such as a `catalog.json` your pipeline
-downloaded. When two repositories publish the same event, drift counts only the
-consumers of this repository's copy: it reads its name from the `origin`
-remote, or from `--repository`.
+downloaded. When two repositories publish the same event, drift counts the consumers of
+this repository's copy, naming it from the `origin` remote or `--repository`.
+When it cannot tell which copy is its own, it counts the consumers of every
+copy and says so.
 
 The site is built from each repository's main branch, so a consumer declared in
 an open pull request counts once it merges and the site rebuilds. Drift prints

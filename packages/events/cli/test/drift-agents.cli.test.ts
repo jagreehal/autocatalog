@@ -49,6 +49,73 @@ describe('ac drift names agents that consume the event it breaks', () => {
     return { exit, report: JSON.parse(String(log.mock.calls[0]![0])) };
   };
 
+  it('does not let a company index narrow an agent declared here', async () => {
+    // The index names a consumer exactly as the local agent is named, reading
+    // only a field this change leaves alone.
+    const ticket = {
+      kind: 'event' as const,
+      namespace: 'support-service/support',
+      id: 'ticket.opened',
+    };
+
+    const index = path.join(work, 'catalog.json');
+
+    await fs.writeFile(
+      index,
+      JSON.stringify({
+        spec: 'autocatalog/graph-v1',
+        resources: [
+          {
+            ref: ticket,
+            title: 'Ticket opened',
+            tags: [],
+            provenance: { default: 'declared', fields: {} },
+            needsReview: false,
+            attributes: { domain: 'support', status: 'active', schema: 'schema.json', examples: 0 },
+          },
+          {
+            ref: { kind: 'service', id: 'agent/triage-agent' },
+            title: 'agent/triage-agent',
+            tags: [],
+            provenance: { default: 'inferred', fields: {} },
+            needsReview: true,
+            attributes: { domains: [] },
+          },
+        ],
+        relationships: [
+          {
+            type: 'consumes',
+            from: ticket,
+            to: { kind: 'service', id: 'agent/triage-agent' },
+            provenance: 'declared',
+            needsReview: false,
+            attributes: { fields: ['customerId'] },
+          },
+        ],
+      }),
+    );
+
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const log = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    await runDrift({
+      base: baseline,
+      current: path.join(repo, 'events'),
+      format: 'json',
+      consumers: index,
+    });
+
+    const report = JSON.parse(String(log.mock.calls.at(-1)?.[0]));
+
+    const removed = report.findings.find(
+      (f: { eventId: string; kind: string }) =>
+        f.eventId === 'ticket.opened' && f.kind === 'field_removed',
+    );
+
+    expect(removed.consumers).toContain('agent/triage-agent');
+    expect(removed.usage?.unaffected ?? []).not.toContain('agent/triage-agent');
+  });
+
   it('fails the gate and lists the agent as a broken consumer', async () => {
     const { exit, report } = await drift();
 

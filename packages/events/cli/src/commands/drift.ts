@@ -25,6 +25,7 @@ import {
   type DriftFinding,
   type ResourceGraph,
   consumersFromGraph,
+  shownName,
   UNSAFE_CONSUMER,
   type EventConsumers,
 } from 'autocatalog-core';
@@ -238,14 +239,14 @@ async function companyConsumers(
 
     if (ambiguous.length && !options.quiet)
       console.warn(
-        `! ${ambiguous.join(', ')}: more than one repository publishes it, so consumers declared elsewhere were not counted. Pass --repository with this repository's name on the company site.`,
+        `! ${ambiguous.join(', ')}: more than one repository publishes it, so the consumers of every copy count. Pass --repository with this repository's name on the company site to count only its own.`,
       );
 
     return consumers;
   } catch (error) {
     if (!options.quiet)
       console.warn(
-        `! could not read consumers from ${source} (${error instanceof Error ? error.message : String(error)}); checking without them`,
+        `! could not read consumers from ${source} (${shownName(error instanceof Error ? error.message : String(error))}); checking without them`,
       );
 
     return undefined;
@@ -289,10 +290,21 @@ export async function runDrift(opts: RunDriftOptions): Promise<number> {
         ...(agents?.participants.get(`${domain}/${id}`)?.consumers ?? []),
         ...(elsewhere?.get(`${domain}/${id}`)?.consumers ?? []),
       ],
-      consumerFieldsOf: (domain, id) => ({
-        ...elsewhere?.get(`${domain}/${id}`)?.fields,
-        ...agents?.participants.get(`${domain}/${id}`)?.consumerFields,
-      }),
+      consumerFieldsOf: (domain, id) => {
+        const local = agents?.participants.get(`${domain}/${id}`);
+        const declaredHere = new Set(local?.consumers ?? []);
+
+        // The index describes only consumers this repository does not: an agent
+        // declared here says for itself what it reads.
+        return {
+          ...Object.fromEntries(
+            Object.entries(elsewhere?.get(`${domain}/${id}`)?.fields ?? {}).filter(
+              ([consumer]) => !declaredHere.has(consumer),
+            ),
+          ),
+          ...local?.consumerFields,
+        };
+      },
       sourceRoot: generated?.sources[1],
       snapshot,
     });
