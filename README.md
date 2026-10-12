@@ -1,70 +1,118 @@
 # autocatalog
 
-autocatalog finds the event contracts, documentation and agents your
-repositories already own, checks them in CI, and publishes one company site for
-people and agents. Point it at Zod, Pydantic, JSON Schema, OpenAPI, AsyncAPI, Avro
-or protobuf. Each derived field records where it came from, and a CI gate fails
-the pull request that breaks a consumer.
+Know who depends on your event contracts before you break them.
 
-[Brownfield discovery](docs/brownfield-resources.md) adds Mongoose, Prisma and Drizzle datastore contracts, commands, trace-inferred architecture, existing ownership catalogs, schema registries and CloudEvents envelopes.
+Your contracts already live in code, as Zod, Pydantic, JSON Schema, OpenAPI,
+AsyncAPI, Avro or protobuf. autocatalog finds them, captures their producers
+and consumers, and fails a pull request before a breaking change reaches
+another team.
 
-The site is [Starlight](https://starlight.astro.build). For interactive
-architecture diagrams, autocatalog writes the same catalog into
-[EventCatalog](https://www.eventcatalog.dev).
+Each team keeps its contracts with its code. autocatalog joins those
+repositories into one view of events, services, owners and dependencies, and
+checks each team's pull requests against the consumers it declares.
 
-**[Documentation →](https://jagreehal.github.io/autocatalog)** — the site is built
-from the `docs/` folder in this repository, using the plugin this repository ships.
+```mermaid
+flowchart LR
+  subgraph repos["Each team's repository"]
+    pay[Payments]
+    ledger[Ledger]
+    notif[Notifications]
+  end
+  repos -- autocatalog site --> site["Company site: events, services, owners, docs"]
+  repos -- autocatalog drift --> pr["Pull request check: names the services a change breaks"]
+```
 
-## Start on your own repository
-
-With event contracts in `contracts/` (JSON Schema, OpenAPI, Avro or protobuf)
-and markdown in `docs/`:
+Preview the site:
 
 ```bash
 npx autocatalog site . --dev
 ```
 
-Nothing authored, nothing configured, nothing written into the repository.
-Contracts somewhere else, or in Zod? `npx autocatalog .` scans the whole
-repository into `events/`, which you commit. In CI,
-`npx autocatalog drift --base-ref origin/main --root .` fails the pull request
-that breaks a consumer. The [quick start](docs/quick-start.md) says when you
-need each.
+Check a pull request:
 
-Then build one site across every repository your company enrols:
+```bash
+npx autocatalog drift --base-ref origin/main --root .
+```
+
+With schemas in `contracts/` and Markdown in `docs/`, neither needs a
+config file, and neither writes to your repository.
+
+**[Documentation](https://jagreehal.github.io/autocatalog)**
+
+## Catch the break before it ships
+
+A producer renames `amount` to `amountMinor`. The pull request still compiles
+and its tests still pass. Two services downstream start reading `undefined`.
+
+`autocatalog drift` discovers the contracts on `main` and on your branch,
+compares them, and names the consumers each incompatible change affects:
+
+```text
+breaking   payments/payment.completed: field `amount` (number) looks renamed to `amountMinor`
+           → breaks LedgerService, NotificationService.
+           Next: keep `amount` alongside `amountMinor` until consumers move off it,
+           or bump to 2.0.0 to mark it intentional and notify LedgerService, NotificationService
+suspicious payments/payment.completed: schema changed but version stayed at 1.0.0
+
+1 breaking · 1 suspicious · 0 additive
+```
+
+Add it to CI and the pull request fails with that message:
+
+```yaml
+- run: git fetch origin main
+- run: npx autocatalog drift --base-ref origin/main --root . --format github
+```
+
+The gate covers removed and renamed fields, type changes, fields that become
+required, narrowed enums and changed delivery guarantees. `--compatibility
+backward` gates on Schema Registry rules instead. The
+[drift guide](docs/drift-ci.md) lists each rule and its severity.
+
+## Keep teams out of each other's databases
+
+`autocatalog drift` guards team boundaries in the same run. It sees which
+tables and collections each service reads and writes, from Mongoose, Prisma and
+Drizzle models in code or from traces, and takes owners from CODEOWNERS and
+`catalog-info.yaml`. A pull request that has one team's service read another
+team's data fails:
+
+```text
+checkout (payments) reads collection acme/finance/statements, which ledger owns
+```
+
+Only new cross-team access fails. Access that already exists stays quiet, so
+you can turn the rule on in an existing codebase without first untangling old
+dependencies. To allow a deliberate exception, such as a migration, declare it
+with `autocatalog resources promote`; it then shows as a warning.
+
+## One site for the whole company
+
+Teams own their contracts in their own repositories, and the organisation still
+gets one view. One command builds a site across all of them:
 
 ```bash
 npx autocatalog site --topic catalog --owner acme
 ```
 
-A team enrols its repository by adding the `catalog` topic on GitHub.
+A team joins by adding the `catalog` topic to its GitHub repository. The site
+gives you:
 
-## Free, and works with EventCatalog
+- a page per event with its schema, examples, version history and the file that
+  defines it
+- a page per service listing what it produces and consumes, and who owns it
+- a field index, so you can see which events carry `customerId` before you
+  change it
+- owner pages, with the team's contact and everything it owns
+- your teams' Markdown docs, with owner and last-changed date on each page
 
-EventCatalog draws the best event diagrams around. autocatalog does the work
-around them, and several of those jobs sit behind EventCatalog's paid plans:
+Search, navigation and dark mode come from
+[Starlight](https://starlight.astro.build).
 
-| Job                                         | EventCatalog | autocatalog                             |
-| ------------------------------------------- | ------------ | --------------------------------------- |
-| Generate the catalog from OpenAPI, AsyncAPI | Scale plan   | `ac scan`, free                         |
-| Fail CI when a change breaks a consumer     | Scale plan   | `ac drift --base-ref origin/main`, free |
-| Field explorer across every schema          | Scale plan   | `/fields` and `ac fields`, free         |
-| MCP server for AI agents                    | Scale plan   | `autocatalog-mcp`, free                 |
-| Documentation pages beside the catalog      | Starter plan | The docs convention and `ac site`, free |
+## Define an event once
 
-`ac to-eventcatalog` writes the catalog into an EventCatalog project through
-EventCatalog's MIT-licensed SDK, and `ac from-eventcatalog` reads one back. Use
-EventCatalog for the pictures; autocatalog keeps them true.
-
-## The schema is the catalog
-
-There is no catalog model to maintain beside your code. autocatalog reads the contract from your schemas and stores what it extracted as generated state, tagged with where each field came from — `declared`, `extracted`, or `inferred`. Narrative content layers on top and survives regeneration; it is never the foundation.
-
-**Author in Zod or Pydantic** (or drop JSON Schema / OpenAPI / AsyncAPI). **The catalog speaks JSON Schema** — every language adapter emits the same on-disk interchange (`schema.json`). That is the wire contract, not a full runtime validator: Zod refinements and transforms that do not survive JSON Schema are out of scope for the catalog.
-
-Define an event once. The catalog, the graph, the services all derive from it.
-
-Zod:
+With Zod, `defineEvent` adds catalog metadata and returns the schema unchanged,
+so `z.infer` and `.parse()` keep working:
 
 ```ts
 import { defineEvent } from 'autocatalog-adapter-zod';
@@ -76,171 +124,113 @@ export const PaymentCompleted = defineEvent(
     team: 'Billing',
     producers: ['PaymentService'],
     consumers: ['LedgerService', 'NotificationService'],
-    tags: ['pci'],
   },
-  z.object({
-    id: z.string(),
-    amount: z.number(),
-  }),
+  z.object({ id: z.string(), amount: z.number() }),
 );
 ```
 
-Run `ac from-zod ./src/events.ts`. From that one file you get:
+`npx autocatalog scan . --allow-code-execution` writes
+`events/payments/PaymentCompleted/` with `schema.json`, examples and metadata.
+The Zod adapter reads your TypeScript source and does not import your modules.
+`scan` asks for `--allow-code-execution` because it runs the adapter package
+installed in your repository's `node_modules`. Your own modules do not run.
 
-- **Event page** — schema viewer, examples, version history, code snippets
-- **Service pages** — `PaymentService` and `LedgerService` pages auto-generated showing what each produces and consumes
-- **Architecture graph** — interactive producer→event→consumer graph with domain filtering
-- **Search** — command palette, full-text, find by attribute
-- **MCP tools** — AI coding agents can query events, schemas, and examples
+Commit `events/`, and the site and MCP server read it from there. Re-run the
+scan when a contract changes.
 
-`defineEvent` returns the Zod schema unchanged. `z.infer`, `.parse()`, `.safeParse()` all work. The metadata lives on a symbol. The adapter finds it during extraction.
+You don't write service definitions. autocatalog builds `PaymentService` from
+the events that name it.
 
-Pydantic:
+Producers and consumers come from what you declare beside the schema: in
+`defineEvent`, in a Pydantic model's config, or under `x-autocatalog` in a
+schema file. An AsyncAPI or EventCatalog import brings its own. Traces then
+flag any event a service emits that the catalog doesn't list.
 
-```python
-from pydantic import BaseModel, ConfigDict
+Python teams get the same result from Pydantic with `autocatalog-py extract`.
+Teams with JSON Schema, OpenAPI, Avro or protobuf files run `autocatalog scan`
+and change nothing in their code.
 
-class PaymentCompleted(BaseModel):
-    model_config = ConfigDict(
-        json_schema_extra={
-            "autocatalog": {
-                "id": "payment.completed",
-                "version": "1.0.0",
-                "name": "Payment Completed",
-                "summary": "Fires when a payment completes",
-                "domain": "payments",
-                "team": "Billing",
-                "producers": ["PaymentService"],
-            }
-        }
-    )
-    id: str
-    amount: float
-```
+## Give coding agents the architecture
 
-`autocatalog-py extract --module myapp.events` — same result. Same graph. Same services.
-
-## What you get from one schema definition
-
-- An event page with the schema as a tree, examples, and where the contract was
-  found
-- Service pages, derived from each event's producers and consumers
-- A field index across every event, with the services each field reaches
-- Search, navigation and dark mode from Starlight
-- An MCP server and a JSON Schema URL per event, for agents
-- Validation and drift checks for CI
-
-You never create a service definition. When two events declare the same
-producer, autocatalog builds the service page from the union of both.
-
-## AI coding agents
+The site, the pull request check and your coding agent all read one model of
+your architecture, built from the code. `autocatalog-mcp` gives AI coding agents
+12 tools over that model. An agent can look up an event's schema and examples,
+find which events carry a field, and check whether a change breaks a consumer
+before it writes the code.
 
 ```json
 {
   "mcpServers": {
     "autocatalog": {
-      "command": "node",
-      "args": ["node_modules/autocatalog-mcp/dist/index.js", "--root", "."]
+      "command": "npx",
+      "args": ["autocatalog-mcp", "--root", "."]
     }
   }
 }
 ```
 
-Eleven tools: list events, describe event, get schema, get examples, search, find by attribute, search fields, LLM text, assess impact, check change, and catalog status.
+The site also publishes `llms.txt` and a Markdown copy of each page.
 
-## Ways to add events
+## Works with EventCatalog
 
-| Approach                  | What you write                         | Result                                                      |
-| ------------------------- | -------------------------------------- | ----------------------------------------------------------- |
-| Zod + `defineEvent()`     | Schema in code                         | Auto-extracted → JSON Schema catalog                        |
-| Pydantic + `model_config` | Model in code                          | Same interchange, from Python                               |
-| Raw JSON Schema files     | `*.json` / `*.schema.json` in the repo | `ac scan` discovers them (sidecar or `x-autocatalog` meta)  |
-| OpenAPI 3.x               | `openapi.yaml` in the repo             | `ac scan` reads webhooks, callbacks and opted-in operations |
-| Avro / protobuf           | `*.avsc` / `*.proto` in the repo       | `ac scan` reads them with wire-format semantics intact      |
-| Existing JSON Schema      | `ac import --github-repo`              | Import schema/examples into catalog state                   |
-| AsyncAPI / EventCatalog   | Spec or markdown catalog               | `ac from-asyncapi` / `ac from-eventcatalog`                 |
-| Manual override           | Optional `index.mdx` body              | Narrative without changing generated data                   |
+[EventCatalog](https://www.eventcatalog.dev) draws interactive architecture
+diagrams. autocatalog works with it three ways:
 
-`ac scan` runs passive discovery adapters, resolves duplicate claims by provenance and confidence, and transactionally publishes one complete catalog artifact. A failed adapter or invalid event leaves the previous catalog untouched. Runtime adapters such as Zod execute repository code, so they require explicit consent: `ac scan . --allow-code-execution`.
+- **Diagrams in your site.** `autocatalog site --eventcatalog` builds
+  EventCatalog 4 alongside the site and shows its diagrams on event pages,
+  service pages and an Architecture page.
+- **Keep your portal.** `autocatalog to-eventcatalog ./catalog` writes your
+  events, commands, services, datastores, owners and systems into an
+  EventCatalog project, so your team keeps reading EventCatalog while
+  autocatalog checks the pull requests.
+- **Move in.** `autocatalog from-eventcatalog ./catalog` imports an existing
+  EventCatalog project. Export it and import it again, and you get the same
+  files back.
 
-## Daily commands
+## Already have AsyncAPI
 
-One binary covers events, documentation and agents:
+`autocatalog from-asyncapi spec.yaml` imports an AsyncAPI 2.x or 3.x document.
+`autocatalog to-asyncapi` writes a service's view as AsyncAPI 3.0 for mock
+servers and code generators.
 
-```
-npx autocatalog site . --dev   Serve this repository's site — the first thing to run
-npx autocatalog .   Scan this repository into events/, to commit
-ac scan          Safely discover JSON Schema, OpenAPI, Avro and protobuf events
-ac scan --allow-code-execution   Include trusted runtime adapters such as Zod
-ac site          Build one site from every enrolled repository
-ac validate      Check all events
-ac fields        Which events carry a field, and who it reaches
-ac drift --base-ref origin/main   Scan both Git states and gate contract drift
-ac docs check    Validate repository-owned documentation
-ac agents audit  Audit an agent catalog (optional autocatalog-agents-cli)
-ac import        Import from GitHub
-ac to-eventcatalog  Write the catalog into an EventCatalog project
-```
+## Commands
 
-Adapters auto-discover from `node_modules`. JSON Schema, OpenAPI, Avro and Protobuf are built in — `ac scan` runs them with no install. An adapter can add a dedicated command, participate directly in `ac scan`, or both.
+| Command                                    | Use it to                                              |
+| ------------------------------------------ | ------------------------------------------------------ |
+| `autocatalog site . --dev`                 | preview this repository's site                         |
+| `autocatalog scan .`                       | build `events/` from the schemas in the repository     |
+| `autocatalog drift --base-ref origin/main` | fail a pull request that breaks a consumer             |
+| `autocatalog validate`                     | check the committed catalog                            |
+| `autocatalog fields customerId`            | find the events that carry a field, and who reads them |
+| `autocatalog health`                       | score events on ownership, examples and versioning     |
+| `autocatalog docs check`                   | check docs frontmatter and links across repositories   |
+| `autocatalog site --topic catalog`         | build the site across enrolled repositories            |
 
-To add a new source format, implement the discovery interface and advertise it from the adapter package. See [writing your own adapter](docs/events/json-schema.md#writing-your-own-adapter).
-
-Each candidate keeps its event and source evidence together. Core owns conflict resolution, enrichment, validation, stale cleanup, and publication; adapters only translate their source format into the shared JSON Schema IR.
-
-See [production operation](docs/production.md) for the trust model, integrity checks, crash recovery, Git-ref constraints, and release gate.
-
-## The site
-
-- **`/`** lists every document by repository, with owner and last change
-- **`/events/payments-service/payments/payment.completed/`** shows one event, and
-  `schema.json` beside it
-  holds the contract
-- **`/services/PaymentService/`** lists what one service produces and consumes
-- **`/fields`** indexes every field across every event, with conflicts and reach
-- **`/catalog`** and **`/catalog.json`** hold the whole knowledge graph
-
-See [the company site](docs/site.md) for flags and a GitHub Pages workflow.
+`ac` is a short alias once `autocatalog-cli` is installed.
 
 ## Packages
 
-```
-packages/events/autocatalog   The one package users install: npx autocatalog
-packages/events/core          Schemas, loader, writer, scanners, drift, snippets, llm
-packages/events/cli           ac CLI: scan, site, drift, EventCatalog export and import
-packages/events/adapter-zod   defineEvent(), Zod → JSON Schema → catalog
-packages/events/mcp           MCP server, 12 tools, stdio transport
-packages/docs/core            docs/ aggregation, frontmatter contract, git dates, backlinks
-packages/docs/astro           The Starlight site: docs, events, services, fields, .md twins
-skills                        Agent skills (npx skills add jagreehal/autocatalog)
-python/autocatalog-py         Pydantic extractor
-```
+| Package                   | What it does                                      |
+| ------------------------- | ------------------------------------------------- |
+| `autocatalog`             | the one to install: `npx autocatalog`             |
+| `autocatalog-cli`         | the `ac` command                                  |
+| `autocatalog-core`        | catalog model, scanners, drift rules              |
+| `autocatalog-adapter-zod` | `defineEvent` for Zod                             |
+| `autocatalog-mcp`         | MCP server for AI coding agents                   |
+| `autocatalog-docs-astro`  | the Starlight site                                |
+| `autocatalog-docs-core`   | docs aggregation and the frontmatter contract     |
+| `autocatalog-agents-*`    | a catalog for AI agents, their tools and policies |
+| `autocatalog-py`          | the Pydantic extractor                            |
 
-## Documentation, same convention
-
-The same idea applied to prose: every team commits Markdown to `docs/` in its own
-repository, and one site aggregates them. Ownership and freshness are facts —
-`owner` is required frontmatter, `updated` comes from git — and links across
-repositories are declared as ids, so they resolve in a standalone clone.
-
-The site is [Starlight](https://starlight.astro.build) with a plugin, so search,
-navigation and accessibility are not ours to get wrong; only where the documents
-come from, and what can be said about them, is.
-
-The frontmatter contract is a committed JSON Schema the organisation owns, found
-at `contracts/docs-frontmatter.json` without a flag. Add a field to it and the
-same declaration validates in CI, reaches the page, and can be enforced from
-Python.
+## Contributing
 
 ```bash
-ac docs init-schema # write the default contract, then edit it in place
-ac docs check       # frontmatter, cross-repo links, deleted-but-linked docs
-ac docs sync-schema # has this repo's copy of the contract drifted from upstream?
-ac docs manifest    # publish contracts/docs-manifest.json
-pnpm site:docs:dev  # the aggregated, many-repository shape: examples/docs-demo
-pnpm docs:dev       # the single-repository shape: this project's own site
+pnpm install
+pnpm release:check   # lint, build, type-check, tests and smoke checks
 ```
 
-This project's documentation site is the convention running on itself. The pages
-under `docs/` are validated by `ac docs check` in CI, published to GitHub Pages
-from `apps/docs`, and every page has a `.md` twin and an entry in `llms.txt`.
+A change to a published package needs a changeset: `pnpm changeset`.
+
+## License
+
+MIT
