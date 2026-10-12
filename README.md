@@ -1,16 +1,39 @@
 # autocatalog
 
-Your event contracts already live in code, as Zod, Pydantic, JSON Schema,
-OpenAPI, AsyncAPI, Avro or protobuf. autocatalog reads them, commits a catalog
-beside the code, and fails the pull request that would break another team.
+Know who depends on your event contracts before you break them.
+
+Your contracts already live in code, as Zod, Pydantic, JSON Schema, OpenAPI,
+AsyncAPI, Avro or protobuf. autocatalog finds them, works out which services
+produce and consume each one, and fails a pull request before a breaking change
+reaches another team.
+
+```mermaid
+flowchart LR
+  code[Schemas in code] --> scan[autocatalog scan]
+  scan --> catalog[Catalog of events, producers, consumers and owners]
+  catalog --> site[Company site]
+  catalog --> pr[Pull request check]
+  pr --> impact[The services you would break]
+```
+
+Preview the site for one repository with schemas in `contracts/` and Markdown
+in `docs/`:
 
 ```bash
 npx autocatalog site . --dev
 ```
 
-Run that in a repository with schemas in `contracts/` and Markdown in `docs/`.
-You get a searchable site of your events, services, owners and docs. You write
-no config, and nothing lands in your repository.
+You get a searchable site of your events, services, owners and docs, with no
+configuration. Previewing writes nothing to your repository.
+
+Check a pull request in CI:
+
+```bash
+npx autocatalog drift --base-ref origin/main --root .
+```
+
+autocatalog builds the catalog from `main` and from your branch, compares them,
+and names the consumers each incompatible change affects.
 
 **[Documentation](https://jagreehal.github.io/autocatalog)**
 
@@ -19,8 +42,8 @@ no config, and nothing lands in your repository.
 A producer renames `amount` to `amountMinor`. The pull request still compiles
 and its tests still pass. Two services downstream start reading `undefined`.
 
-`autocatalog drift` scans your main branch and the pull request the same way,
-compares them, and names who you break:
+`autocatalog drift` compares the catalog built from `main` with the one built
+from the pull request, and names who you break:
 
 ```text
 breaking   payments/payment.completed: field `amount` (number) looks renamed to `amountMinor`
@@ -40,10 +63,25 @@ Add it to CI and the pull request fails with that message:
 ```
 
 The gate covers removed and renamed fields, type changes, fields that become
-required, narrowed enums and changed delivery guarantees. It also flags a
-service that starts reading a table another team owns. `--compatibility
-backward` gates on Schema Registry rules instead. The [drift guide](docs/drift-ci.md) lists each
-rule and its severity.
+required, narrowed enums and changed delivery guarantees. `--compatibility
+backward` gates on Schema Registry rules instead. The
+[drift guide](docs/drift-ci.md) lists each rule and its severity.
+
+## Keep teams out of each other's databases
+
+The same check guards team boundaries. autocatalog sees which tables and
+collections each service reads and writes, from Mongoose, Prisma and Drizzle
+models in code or from traces. It takes owners from CODEOWNERS and
+`catalog-info.yaml`. A pull request that has one team's service read another
+team's data fails:
+
+```text
+checkout (payments) reads collection acme/finance/statements, which ledger owns
+```
+
+Access that already exists stays quiet, so you can turn this on in a large
+codebase today. `autocatalog resources promote` records a deliberate exception,
+such as a migration.
 
 ## One site for the whole company
 
@@ -88,9 +126,10 @@ export const PaymentCompleted = defineEvent(
 );
 ```
 
-`npx autocatalog scan . --allow-code-execution` turns that into
-`events/payments/PaymentCompleted/` with `schema.json`, examples and metadata.
-You commit the folder, and the drift gate compares against it.
+`npx autocatalog . --allow-code-execution` runs your code to read the Zod
+schemas, and writes `events/payments/PaymentCompleted/` with `schema.json`,
+examples and metadata. Commit `events/`, and the site and MCP server read it
+from there. Re-run the scan when a contract changes.
 
 You don't write service definitions. autocatalog builds `PaymentService` from
 the events that name it.
