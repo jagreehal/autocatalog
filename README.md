@@ -3,7 +3,7 @@
 Know who depends on your event contracts before you break them.
 
 Your contracts already live in code, as Zod, Pydantic, JSON Schema, OpenAPI,
-AsyncAPI, Avro or protobuf. autocatalog finds them, works out which services
+AsyncAPI, Avro or protobuf. autocatalog finds them, records which services
 produce and consume each one, and fails a pull request before a breaking change
 reaches another team.
 
@@ -16,24 +16,20 @@ flowchart LR
   pr --> impact[The services you would break]
 ```
 
-Preview the site for one repository with schemas in `contracts/` and Markdown
-in `docs/`:
+Preview the site:
 
 ```bash
 npx autocatalog site . --dev
 ```
 
-You get a searchable site of your events, services, owners and docs, with no
-configuration. Previewing writes nothing to your repository.
-
-Check a pull request in CI:
+Check a pull request:
 
 ```bash
 npx autocatalog drift --base-ref origin/main --root .
 ```
 
-autocatalog builds the catalog from `main` and from your branch, compares them,
-and names the consumers each incompatible change affects.
+With schemas in `contracts/` and Markdown in `docs/`, neither needs
+configuration, and neither writes to your repository.
 
 **[Documentation](https://jagreehal.github.io/autocatalog)**
 
@@ -42,8 +38,8 @@ and names the consumers each incompatible change affects.
 A producer renames `amount` to `amountMinor`. The pull request still compiles
 and its tests still pass. Two services downstream start reading `undefined`.
 
-`autocatalog drift` compares the catalog built from `main` with the one built
-from the pull request, and names who you break:
+`autocatalog drift` discovers the contracts on `main` and on your branch,
+compares them, and names the consumers each incompatible change affects:
 
 ```text
 breaking   payments/payment.completed: field `amount` (number) looks renamed to `amountMinor`
@@ -79,9 +75,10 @@ team's data fails:
 checkout (payments) reads collection acme/finance/statements, which ledger owns
 ```
 
-Access that already exists stays quiet, so you can turn this on in a large
-codebase today. `autocatalog resources promote` records a deliberate exception,
-such as a migration.
+Only new cross-team access fails. Access that already exists stays quiet, so
+you can turn the rule on in an existing codebase without first untangling old
+dependencies. To allow a deliberate exception, such as a migration, declare it
+with `autocatalog resources promote`; it then shows as a warning.
 
 ## One site for the whole company
 
@@ -126,9 +123,11 @@ export const PaymentCompleted = defineEvent(
 );
 ```
 
-`npx autocatalog . --allow-code-execution` runs your code to read the Zod
-schemas, and writes `events/payments/PaymentCompleted/` with `schema.json`,
-examples and metadata. Commit `events/`, and the site and MCP server read it
+`npx autocatalog scan . --allow-code-execution` writes
+`events/payments/PaymentCompleted/` with `schema.json`, examples and metadata.
+The Zod adapter reads your TypeScript source and does not import your modules.
+The flag is there because the adapter package runs from your repository's
+`node_modules`, so `scan` asks before running it. Commit `events/`, and the site and MCP server read it
 from there. Re-run the scan when a contract changes.
 
 You don't write service definitions. autocatalog builds `PaymentService` from
