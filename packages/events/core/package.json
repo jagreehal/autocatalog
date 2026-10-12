@@ -1,6 +1,6 @@
 {
   "name": "autocatalog-core",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Catalog schemas, loader, validator, projection, and the autocatalog/graph-v1 resource graph.",
   "license": "MIT",
   "repository": {
