@@ -157,15 +157,27 @@ check whether a change breaks a consumer before it writes the code.
 
 The site also publishes `llms.txt` and a Markdown copy of each page.
 
-## Already have a catalog
+## Works with EventCatalog
 
-- `autocatalog from-asyncapi spec.yaml` imports an AsyncAPI 2.x or 3.x document.
-- `autocatalog from-eventcatalog ./catalog` imports an EventCatalog project:
-  events, commands, services, datastores, owners and systems.
-  `autocatalog to-eventcatalog` writes them back, so a team can keep its
-  EventCatalog portal while autocatalog gates the pull requests.
-- `autocatalog to-asyncapi` writes a service's view as AsyncAPI 3.0 for mock
-  servers and code generators.
+[EventCatalog](https://www.eventcatalog.dev) draws interactive architecture
+diagrams. autocatalog works with it three ways:
+
+- **Diagrams in your site.** `autocatalog site --eventcatalog` builds
+  EventCatalog 4 alongside the site and shows its diagrams on event pages,
+  service pages and an Architecture page.
+- **Keep your portal.** `autocatalog to-eventcatalog ./catalog` writes your
+  events, commands, services, datastores, owners and systems into an
+  EventCatalog project, so your team keeps reading EventCatalog while
+  autocatalog checks the pull requests.
+- **Move in.** `autocatalog from-eventcatalog ./catalog` imports an existing
+  EventCatalog project. Export it and import it again, and you get the same
+  files back.
+
+## Already have AsyncAPI
+
+`autocatalog from-asyncapi spec.yaml` imports an AsyncAPI 2.x or 3.x document.
+`autocatalog to-asyncapi` writes a service's view as AsyncAPI 3.0 for mock
+servers and code generators.
 
 ## Commands
 
