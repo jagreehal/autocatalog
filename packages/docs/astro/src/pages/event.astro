@@ -1,0 +1,63 @@
+---
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import type { InferGetStaticPropsType } from 'astro';
+import { docsCatalog, eventAgents } from '../catalog';
+import { eventPageProps } from '../page-models';
+import { setResourceContext, versionLabel } from '../shell';
+import { EventPage } from '../ui/pages/EventPage';
+
+export async function getStaticPaths() {
+  const catalog = await docsCatalog();
+
+  return catalog.events.map(({ repository, event }) => ({
+    params: { repository, domain: event.frontmatter.domain, id: event.frontmatter.id },
+    props: { repository, event },
+  }));
+}
+
+type Props = InferGetStaticPropsType<typeof getStaticPaths>;
+
+const { repository, event } = Astro.props;
+
+const catalog = await docsCatalog();
+
+const fm = event.frontmatter;
+
+const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+
+// Agents and Tools name the events they touch in their own catalog, so they are
+// read from the composed graph rather than from this event's frontmatter.
+const agents = eventAgents(catalog, repository, event);
+
+const page = await eventPageProps(catalog, Astro.props, agents, base);
+
+setResourceContext(Astro.locals, {
+  kind: 'event',
+  name: fm.name,
+  key: `event:${fm.domain}/${fm.id}`,
+  actions: [
+    { label: 'Copy schema', href: page.schemaHref, icon: 'copy', copy: true },
+    { label: 'View schema.json', href: page.schemaHref, icon: 'braces' },
+  ],
+  pills: [
+    { text: versionLabel(fm.version) },
+    ...(fm.status === 'active' ? [] : [{ text: fm.status, tone: 'warn' as const }]),
+    ...(fm.classification ? [{ text: fm.classification }] : []),
+  ],
+});
+
+// The page's sections, for Starlight's "On this page".
+const headings = [
+  { depth: 2, slug: 'schema', text: 'Schema' },
+  { depth: 2, slug: 'runtime', text: 'Runtime evidence' },
+  ...(page.examples.length ? [{ depth: 2, slug: 'examples', text: 'Examples' }] : []),
+  ...(page.versions.length > 1 ? [{ depth: 2, slug: 'versions', text: 'Versions' }] : []),
+  ...(page.documents.length ? [{ depth: 2, slug: 'documents', text: 'Documents' }] : []),
+  { depth: 2, slug: 'details', text: 'Details' },
+  ...(page.diagram ? [{ depth: 2, slug: 'diagram', text: 'Diagram' }] : []),
+];
+---
+
+<StarlightPage frontmatter={{ title: fm.name, description: fm.summary }} headings={headings}>
+  <EventPage client:load {...page} />
+</StarlightPage>

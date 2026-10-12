@@ -1,0 +1,35 @@
+{
+  "spec": "autotel-architecture/v0",
+  "generatedAt": "2026-09-01T09:00:00.000Z",
+  "service": "demo",
+  "events": {
+    "payment.completed": {
+      "name": "payment.completed",
+      "observedCount": 4210,
+      "firstSeen": "2026-08-25T00:04:11.000Z",
+      "lastSeen": "2026-09-01T08:58:02.000Z",
+      "producer": "PaymentService",
+      "consumers": ["LedgerService", "FraudService"],
+      "channel": "payments.settled",
+      "fieldPaths": ["paymentId", "amountMinor", "currency", "settledAt"]
+    },
+    "order.placed": {
+      "name": "order.placed",
+      "observedCount": 18337,
+      "firstSeen": "2026-08-25T00:00:07.000Z",
+      "lastSeen": "2026-09-01T08:59:51.000Z",
+      "producer": "OrderService",
+      "consumers": ["PaymentService"],
+      "fieldPaths": ["orderId", "total"]
+    },
+    "cart.abandoned": {
+      "name": "cart.abandoned",
+      "observedCount": 91,
+      "firstSeen": "2026-08-27T13:02:00.000Z",
+      "lastSeen": "2026-09-01T07:41:19.000Z",
+      "producer": "CheckoutService",
+      "consumers": ["MarketingService"],
+      "fieldPaths": ["cartId"]
+    }
+  }
+}

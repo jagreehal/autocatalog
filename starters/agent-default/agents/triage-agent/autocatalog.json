@@ -1,0 +1,33 @@
+{
+  "name": "Triage Agent",
+  "owner": "support-platform",
+  "status": "active",
+  "version": "1.4.0",
+  "repository": {
+    "language": "Python",
+    "url": "https://github.com/example/triage-agent"
+  },
+  "model": "claude-haiku-4-5",
+  "tools": [
+    "lookup-order"
+  ],
+  "policies": [
+    "vip-escalation"
+  ],
+  "domain": "support",
+  "risk": "low",
+  "prompts": {
+    "system": "./prompts/system.md"
+  },
+  "expected_traffic": {
+    "invocations_per_day": 6000,
+    "avg_input_tokens": 1200,
+    "avg_output_tokens": 180
+  },
+  "description": "First-touch agent. Classifies incoming tickets and hands off to specialists.",
+  "consumes": [
+    {
+      "event": "support/ticket.opened"
+    }
+  ]
+}

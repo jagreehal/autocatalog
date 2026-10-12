@@ -1,0 +1,9 @@
+{
+  "id": "shipment.dispatched",
+  "version": "1.2.0",
+  "domain": "shipping",
+  "name": "Shipment Dispatched",
+  "summary": "Carrier accepted the parcel for delivery",
+  "producers": ["ShippingService"],
+  "consumers": ["NotificationService"]
+}

@@ -1,0 +1,60 @@
+name: E2E Smoke
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.11'
+
+      - uses: ./.github/actions/setup-pnpm
+
+      - name: Test Python adapter
+        run: |
+          python -m pip install -e "python/autocatalog-py[dev]"
+          python -m pytest python/autocatalog-py/tests -q
+
+      - name: Run E2E smoke script
+        run: bash scripts/e2e-smoke.sh
+
+      # The workspace links packages together; a user's npm install does not.
+      - name: Install the packed packages and run the front door
+        run: bash scripts/pack-smoke.sh
+
+      # The Playwright stories are named `test:e2e`, so `turbo run test` never
+      # reaches them. They build the site and drive the built output, which is
+      # what actually gets published.
+      #
+      # Every step here is time-boxed. `playwright install` has shipped releases
+      # that hang forever after the browser download rather than failing
+      # (microsoft/playwright#40998, broken in 1.55.1–1.59.x). Without a bound,
+      # that burns the job to the six-hour default and reports nothing useful.
+      # The lockfile pins 1.60.0 and the range is `^1.60.0`, so this repo cannot
+      # resolve into that window — the timeout is for the next one.
+      - name: Install Playwright browsers
+        timeout-minutes: 10
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run docs site stories
+        timeout-minutes: 15
+        run: pnpm --filter @autocatalog-example/docs test:e2e
+
+      - name: Upload story reports
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: e2e-stories
+          path: |
+            examples/docs-demo/reports
+            examples/docs-demo/test-results
+          if-no-files-found: ignore

@@ -1,0 +1,8 @@
+{
+  "name": "Claude Haiku",
+  "owner": "Platform AI",
+  "status": "active",
+  "provider": "anthropic",
+  "model_id": "claude-haiku-4-5",
+  "context_window": 200000
+}

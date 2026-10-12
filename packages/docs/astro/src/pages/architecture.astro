@@ -1,0 +1,21 @@
+---
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import { eventCatalogEmbeds } from '../eventcatalog';
+import { ArchitecturePage } from '../ui/pages/ArchitecturePage';
+
+// Only routed when `ac site --eventcatalog` built EventCatalog into the site.
+const embeds = eventCatalogEmbeds()!;
+
+const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+---
+
+<StarlightPage
+  frontmatter={{
+    title: 'Architecture',
+    description: 'Every domain, service and event, drawn by EventCatalog from this catalog.',
+    tableOfContents: false,
+    pagefind: false,
+  }}
+>
+  <ArchitecturePage client:load base={base} defaultPath={embeds.graph} />
+</StarlightPage>

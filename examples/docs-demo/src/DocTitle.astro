@@ -1,0 +1,39 @@
+---
+// A Starlight component override belonging to this site, not to the plugin.
+//
+// `tier` is Acme's own field: it exists because the company added it to
+// contracts/docs-frontmatter.json, which is what both validates it and makes it
+// survive into entry.data. Showing it is then an ordinary Starlight override.
+// It wraps the plugin's title rather than Starlight's, so the badge, crumbs and
+// pills the plugin puts there stay.
+import Default from 'autocatalog-docs-astro/overrides/PageTitle.astro';
+
+const tier = Astro.locals.starlightRoute?.entry?.data?.tier;
+---
+
+<Default><slot /></Default>
+
+{
+  tier === 'critical' && (
+    <p class="ac-tier">
+      <strong>Critical tier.</strong> Someone may be paged while reading this.
+    </p>
+  )
+}
+
+<style>
+  /* A warning callout, so it reads as deliberate rather than stray coloured text. */
+  .ac-tier {
+    margin: 1rem 0 0;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid color-mix(in srgb, var(--ac-warn) 35%, transparent);
+    border-inline-start: 3px solid var(--ac-warn);
+    border-radius: 0.5rem;
+    background: color-mix(in srgb, var(--ac-warn) 8%, transparent);
+    color: var(--ac-text);
+    font-size: var(--sl-text-sm);
+  }
+  .ac-tier strong {
+    color: var(--ac-warn);
+  }
+</style>

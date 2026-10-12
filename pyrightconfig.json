@@ -1,0 +1,17 @@
+{
+  "include": ["python/autocatalog-py/src", "python/autocatalog-py/tests"],
+  "extraPaths": ["python/autocatalog-py/src", "python/autocatalog-py/tests/fixtures"],
+  "venvPath": "python/autocatalog-py",
+  "venv": ".venv",
+  "pythonVersion": "3.11",
+  "executionEnvironments": [
+    {
+      "root": "python/autocatalog-py/src",
+      "extraPaths": ["python/autocatalog-py/src"]
+    },
+    {
+      "root": "python/autocatalog-py/tests",
+      "extraPaths": ["python/autocatalog-py/src", "python/autocatalog-py/tests/fixtures"]
+    }
+  ]
+}

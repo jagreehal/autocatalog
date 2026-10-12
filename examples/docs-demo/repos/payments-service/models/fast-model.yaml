@@ -1,0 +1,6 @@
+id: fast-model
+name: Fast model
+owner: Platform AI
+provider: openai
+model_id: gpt-5-mini
+context_window: 400000

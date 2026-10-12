@@ -1,0 +1,37 @@
+cases:
+  - id: standard-in-policy
+    input:
+      orderId: ord_001
+      requestedAmount: 45.00
+      reason: damaged on arrival
+    expected:
+      action: issue-refund
+      amount: 45.00
+
+  - id: out-of-window
+    input:
+      orderId: ord_old_2024
+      requestedAmount: 30.00
+      reason: changed mind
+    expected:
+      action: refuse
+      cite_policy: refund-policy
+
+  - id: over-cap-escalate
+    input:
+      orderId: ord_big
+      requestedAmount: 850.00
+      reason: order wrong, customer wants full refund
+    expected:
+      action: escalate
+      cite_policy: refund-policy
+
+  - id: vip-always-escalate
+    input:
+      orderId: ord_vip_42
+      customerTags: [vip]
+      requestedAmount: 25.00
+      reason: late delivery
+    expected:
+      action: escalate
+      cite_policy: vip-escalation

@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["refundId", "orderId", "amount", "currency"],
+  "properties": {
+    "refundId": { "type": "string" },
+    "orderId": { "type": "string" },
+    "amount": { "type": "number", "description": "Amount in minor units" },
+    "currency": { "type": "string", "description": "ISO 4217 currency code" }
+  }
+}

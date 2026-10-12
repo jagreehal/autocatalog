@@ -1,0 +1,6 @@
+{
+  "id": "payment.completed",
+  "version": "0.9.0",
+  "name": "Payment Completed",
+  "summary": "Fires when a payment completes successfully (pre-release)"
+}

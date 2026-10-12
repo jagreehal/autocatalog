@@ -1,0 +1,14 @@
+{
+  "spec": "autocatalog/v2",
+  "id": "order.placed",
+  "version": "1.2.0",
+  "name": "Order Placed",
+  "summary": "An order has been placed.",
+  "status": "active",
+  "producers": ["CheckoutService"],
+  "consumers": ["FulfillmentService"],
+  "tags": ["commerce"],
+  "badges": [],
+  "schema": "./schema.json",
+  "examples": []
+}

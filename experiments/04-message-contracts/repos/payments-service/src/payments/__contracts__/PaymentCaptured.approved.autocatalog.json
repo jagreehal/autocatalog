@@ -1,0 +1,11 @@
+{
+  "id": "payment.captured",
+  "version": "2.0.0",
+  "summary": "A card payment was captured.",
+  "producers": ["PaymentService"],
+  "consumers": ["LedgerService", "EmailService"],
+  "consumerFields": {
+    "LedgerService": ["paymentId", "amount", "currency"],
+    "EmailService": ["orderId"]
+  }
+}

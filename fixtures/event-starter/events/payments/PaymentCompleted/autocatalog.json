@@ -1,0 +1,15 @@
+{
+  "id": "payment.completed",
+  "version": "1.0.0",
+  "name": "Payment Completed",
+  "summary": "Fires when a payment completes successfully",
+  "badges": [
+    {
+      "content": "Public",
+      "backgroundColor": "#dcfce7",
+      "textColor": "#166534"
+    }
+  ],
+  "producers": ["PaymentService"],
+  "consumers": ["LedgerService", "NotificationService"]
+}

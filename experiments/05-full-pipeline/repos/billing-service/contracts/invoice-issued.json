@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Invoice issued",
+  "description": "Billing invoiced a placed order.",
+  "type": "object",
+  "required": ["invoiceId", "orderId"],
+  "properties": {
+    "invoiceId": { "type": "string" },
+    "orderId": { "type": "string" }
+  },
+  "x-autocatalog": {
+    "id": "invoice.issued",
+    "version": "1.0.0",
+    "domain": "billing",
+    "producers": ["BillingService"]
+  }
+}

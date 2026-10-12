@@ -1,0 +1,23 @@
+---
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import { docsCatalog } from '../catalog';
+import { fieldsPageProps } from '../page-models';
+import { FieldsPage } from '../ui/pages/FieldsPage';
+
+// Every field across every event, the events that carry it, and every service
+// that would feel a change to it.
+const catalog = await docsCatalog();
+
+const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+
+---
+
+<StarlightPage
+  frontmatter={{
+    title: 'Fields',
+    description: 'Every field across every event, where it appears, and who a change to it would reach.',
+    tableOfContents: false,
+  }}
+>
+  <FieldsPage client:load {...fieldsPageProps(catalog, base)} />
+</StarlightPage>

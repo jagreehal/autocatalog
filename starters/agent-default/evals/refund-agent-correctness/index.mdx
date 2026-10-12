@@ -1,0 +1,11 @@
+# Refund Agent Correctness Eval
+
+Twelve golden cases covering the refund-agent's expected behavior across:
+
+- Standard in-policy refunds (should issue)
+- Out-of-window requests (should refuse)
+- Over-cap amounts (should escalate)
+- Non-refundable line items (should refuse with reason)
+- VIP customers (should escalate regardless of amount)
+
+A pass means the agent took the expected action AND cited the relevant Policy clause in any escalation/refusal.

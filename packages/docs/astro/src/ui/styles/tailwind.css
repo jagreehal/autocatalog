@@ -1,0 +1,213 @@
+/*
+ * shadcn/ui on Tailwind, inside Starlight. Tailwind's preflight is left out:
+ * it would reset Starlight's own content styles, and Starlight brings a reset
+ * of its own. Utilities sit in a layer after Starlight's, so they win over it.
+ *
+ * Starlight's layer order is restated first: this file loads before Starlight's
+ * own CSS, and Vite can bundle a component's layered styles ahead of Starlight's
+ * declaration; whichever layer is named first sorts lowest, and the reset would
+ * end up beating the content styles.
+ */
+@layer starlight.base, starlight.reset, starlight.core, starlight.content, starlight.components, starlight.utils,
+  theme, base, components, utilities;
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/utilities.css' layer(utilities);
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
+@import '@fontsource-variable/ibm-plex-sans';
+/* `prose`, for Markdown rendered inside components (a version's changes). */
+@plugin '@tailwindcss/typography';
+
+/* Installed as a package, these files sit in node_modules, which Tailwind skips. */
+@source '../';
+
+/* Starlight marks the theme on <html data-theme>, not with a .dark class. */
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
+@theme inline {
+  --font-heading: var(--font-sans);
+  --font-sans: 'IBM Plex Sans Variable', sans-serif;
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+:root {
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.148 0.004 228.8);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.148 0.004 228.8);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.148 0.004 228.8);
+  --primary: oklch(0.511 0.096 186.391);
+  --primary-foreground: oklch(0.984 0.014 180.72);
+  --secondary: oklch(0.967 0.001 286.375);
+  --secondary-foreground: oklch(0.21 0.006 285.885);
+  --muted: oklch(0.963 0.002 197.1);
+  --muted-foreground: oklch(0.56 0.021 213.5);
+  --accent: oklch(0.963 0.002 197.1);
+  --accent-foreground: oklch(0.218 0.008 223.9);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.925 0.005 214.3);
+  --input: oklch(0.925 0.005 214.3);
+  --ring: oklch(0.723 0.014 214.4);
+  --chart-1: oklch(0.855 0.138 181.071);
+  --chart-2: oklch(0.704 0.14 182.503);
+  --chart-3: oklch(0.6 0.118 184.704);
+  --chart-4: oklch(0.511 0.096 186.391);
+  --chart-5: oklch(0.437 0.078 188.216);
+  --radius: 0.625rem;
+  --sidebar: oklch(0.987 0.002 197.1);
+  --sidebar-foreground: oklch(0.148 0.004 228.8);
+  --sidebar-primary: oklch(0.6 0.118 184.704);
+  --sidebar-primary-foreground: oklch(0.984 0.014 180.72);
+  --sidebar-accent: oklch(0.963 0.002 197.1);
+  --sidebar-accent-foreground: oklch(0.218 0.008 223.9);
+  --sidebar-border: oklch(0.925 0.005 214.3);
+  --sidebar-ring: oklch(0.723 0.014 214.4);
+}
+
+[data-theme='dark'] {
+  --background: oklch(0.148 0.004 228.8);
+  --foreground: oklch(0.987 0.002 197.1);
+  --card: oklch(0.218 0.008 223.9);
+  --card-foreground: oklch(0.987 0.002 197.1);
+  --popover: oklch(0.218 0.008 223.9);
+  --popover-foreground: oklch(0.987 0.002 197.1);
+  --primary: oklch(0.437 0.078 188.216);
+  --primary-foreground: oklch(0.984 0.014 180.72);
+  --secondary: oklch(0.274 0.006 286.033);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.275 0.011 216.9);
+  --muted-foreground: oklch(0.723 0.014 214.4);
+  --accent: oklch(0.275 0.011 216.9);
+  --accent-foreground: oklch(0.987 0.002 197.1);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.56 0.021 213.5);
+  --chart-1: oklch(0.855 0.138 181.071);
+  --chart-2: oklch(0.704 0.14 182.503);
+  --chart-3: oklch(0.6 0.118 184.704);
+  --chart-4: oklch(0.511 0.096 186.391);
+  --chart-5: oklch(0.437 0.078 188.216);
+  --sidebar: oklch(0.218 0.008 223.9);
+  --sidebar-foreground: oklch(0.987 0.002 197.1);
+  --sidebar-primary: oklch(0.704 0.14 182.503);
+  --sidebar-primary-foreground: oklch(0.277 0.046 192.524);
+  --sidebar-accent: oklch(0.275 0.011 216.9);
+  --sidebar-accent-foreground: oklch(0.987 0.002 197.1);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.56 0.021 213.5);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+}
+
+/* autocatalog's own tokens, as Tailwind colours: provenance (DESIGN.md). */
+@theme inline {
+  --font-mono: var(--__sl-font-mono);
+  --color-warn: var(--ac-warn);
+  --color-declared: var(--ac-declared);
+  --color-extracted: var(--ac-extracted);
+  --color-inferred: var(--ac-inferred);
+  --color-overridden: var(--sl-color-blue-high);
+}
+
+/*
+ * The part of Tailwind's preflight that shadcn's components assume, limited to
+ * the components themselves (every one carries data-slot) so that Markdown
+ * keeps Starlight's styles. In the base layer, so the components' utilities win.
+ */
+@layer base {
+  :where(a[data-slot]) {
+    color: inherit;
+    text-decoration: inherit;
+  }
+  :where([data-slot]) {
+    border-width: 0;
+    border-style: solid;
+  }
+  :where(button[data-slot]) {
+    background: transparent;
+    color: inherit;
+    font: inherit;
+  }
+  :where(table[data-slot]) {
+    border-collapse: collapse;
+  }
+  :where(ol[data-slot], ul[data-slot]) {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+}
+
+/* Starlight's breakpoint, so md: agrees with when its sidebar appears. */
+@theme {
+  --breakpoint-md: 50rem;
+}
+
+/*
+ * Accessibility adjustments to the preset, measured against WCAG 2.1 AA (4.5:1
+ * for text) in both themes. Kept apart from the preset's own values so that a
+ * preset applied with the shadcn CLI does not silently undo them; re-check
+ * these after applying one (DESIGN.md).
+ */
+:root:not([data-theme='dark']) {
+  /* 5.35:1 on muted surfaces; the preset's was 4.15:1. */
+  --muted-foreground: oklch(0.5 0.021 213.5);
+  /* 5.63:1 on its own 10% tint, as a destructive badge or alert draws it. */
+  --destructive: oklch(0.52 0.21 27);
+}
+[data-theme='dark'] {
+  /* The preset's dark primary is a fill (2.62:1 as text); this one reads as
+     text and links at 8.14:1, with its foreground at 5.97:1 on it. */
+  --primary: oklch(0.704 0.14 182.503);
+  --primary-foreground: oklch(0.277 0.046 192.524);
+  --destructive: oklch(0.75 0.17 22);
+}

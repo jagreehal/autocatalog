@@ -1,0 +1,7 @@
+{
+  "amount": 4250,
+  "capturedAt": "2026-01-05T09:00:00.000Z",
+  "currency": "GBP",
+  "orderId": "ord-1",
+  "paymentId": "pay-1"
+}

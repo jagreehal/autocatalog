@@ -1,0 +1,11 @@
+{
+  "name": "Claude Opus 4.7",
+  "owner": "anthropic",
+  "status": "active",
+  "provider": "anthropic",
+  "model_id": "claude-opus-4-7",
+  "context_window": 1000000,
+  "cost_per_million_input_tokens": 15,
+  "cost_per_million_output_tokens": 75,
+  "description": "Anthropic's flagship reasoning model. Used for high-risk agents where correctness matters more than cost."
+}

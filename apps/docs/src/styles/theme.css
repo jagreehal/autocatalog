@@ -1,0 +1,42 @@
+/*
+ * autocatalog's site, on top of the plugin's theme (shadcn preset b5dN5X4ts and
+ * DESIGN.md). Only what is particular to this site lives here.
+ */
+:root {
+  --sl-font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+
+  /* Hairline rules do the structural work that cards and shadows usually do. */
+  --ac-rule: var(--sl-color-gray-5);
+}
+
+/* Headings sit tighter than Starlight's default; the type does the work. */
+.sl-markdown-content h1,
+.sl-markdown-content h2,
+.sl-markdown-content h3 {
+  letter-spacing: -0.018em;
+}
+
+.sl-markdown-content h2:not(:where(.not-content *)) {
+  padding-top: 0.6em;
+  border-top: 1px solid var(--ac-rule);
+}
+
+/* Tables carry most of the reference material here, so they get real attention. */
+.sl-markdown-content table {
+  font-size: var(--sl-text-sm);
+}
+.sl-markdown-content th {
+  font-weight: 600;
+  color: var(--sl-color-gray-2);
+}
+
+/* The site header reads as part of the page rather than a bar stuck on top. */
+.header {
+  border-bottom: 1px solid var(--ac-rule);
+}
+
+:where(a):focus-visible,
+:where(button):focus-visible {
+  outline: 2px solid var(--sl-color-accent);
+  outline-offset: 2px;
+}

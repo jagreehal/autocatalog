@@ -1,0 +1,12 @@
+{
+  "spec": "autocatalog/v2",
+  "id": "legacy.thing",
+  "version": "1.0.0",
+  "name": "Legacy thing",
+  "summary": "Its schema.json was deleted in a refactor and nobody noticed.",
+  "domain": "legacy",
+  "owner": { "team": "Legacy" },
+  "producers": ["LegacyService"],
+  "schema": "schema.json",
+  "examples": []
+}

@@ -1,0 +1,30 @@
+name: EventCatalog compatibility
+
+# autocatalog writes EventCatalog projects and reads them back. This builds a
+# real EventCatalog from our export on every pull request, at the version the
+# SDK dependency matches, so our changes cannot break EventCatalog users. The
+# daily run does the same against EventCatalog's latest release, so their
+# changes cannot break us without anyone noticing.
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '23 5 * * *'
+  workflow_dispatch:
+
+jobs:
+  compat:
+    # The pinned version is the @eventcatalog/core release that ships the SDK
+    # version packages/events/cli depends on. Move it with a Dependabot bump.
+    strategy:
+      fail-fast: false
+      matrix:
+        eventcatalog: ${{ github.event_name == 'schedule' && fromJSON('["4.12.1", "latest"]') || fromJSON('["4.12.1"]') }}
+    runs-on: ubuntu-latest
+    name: EventCatalog ${{ matrix.eventcatalog }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup-pnpm
+      - run: pnpm build
+      - run: bash scripts/eventcatalog-compat.sh ${{ matrix.eventcatalog }}

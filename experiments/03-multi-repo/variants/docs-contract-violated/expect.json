@@ -1,0 +1,4 @@
+{
+  "extends": "contracts-only",
+  "buildFails": ["careless-service/docs/notes\\.md.*tier"]
+}

@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "shipmentId": { "type": "string" },
+    "carrier": { "type": "string" }
+  },
+  "required": ["shipmentId"]
+}

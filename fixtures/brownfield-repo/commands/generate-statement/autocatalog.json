@@ -1,0 +1,12 @@
+{
+  "kind": "command",
+  "id": "generate-statement",
+  "version": "1.0.0",
+  "name": "Generate statement",
+  "summary": "Generate a customer's monthly statement",
+  "senders": ["billing"],
+  "handler": "statement-worker",
+  "schema": "./schema.json",
+  "outcome": { "type": "completion" },
+  "transport": [{ "address": "statement-jobs", "protocols": ["sqs"] }]
+}

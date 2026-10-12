@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Order placed",
+  "description": "A customer placed an order.",
+  "type": "object",
+  "required": ["orderId", "customerId", "total"],
+  "properties": {
+    "orderId": { "type": "string" },
+    "customerId": { "type": "string" },
+    "total": { "type": "number" },
+    "currency": { "type": "string" }
+  },
+  "x-autocatalog": {
+    "id": "order.placed",
+    "version": "1.0.0",
+    "domain": "orders",
+    "producers": ["OrderService"],
+    "consumers": ["BillingService", "ShippingService", "AnalyticsService"],
+    "consumerFields": {
+      "BillingService": ["orderId", "total", "currency"],
+      "ShippingService": ["orderId"]
+    }
+  }
+}

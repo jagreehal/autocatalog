@@ -1,0 +1,32 @@
+asyncapi: 3.0.0
+info:
+  title: OrdersService
+  version: 2.1.0
+servers:
+  broker:
+    host: kafka.internal:9092
+    protocol: kafka
+  webhooks:
+    host: hooks.example.com
+    protocol: https
+channels:
+  orderEvents:
+    address: orders/events
+    servers:
+      - $ref: '#/servers/broker'
+    messages:
+      orderShipped:
+        name: orderShipped
+        title: Order Shipped
+        summary: An order left the warehouse.
+        payload:
+          type: object
+          required: [orderId]
+          properties:
+            orderId: { type: string }
+            shippedAt: { type: string }
+operations:
+  publishOrderShipped:
+    action: send
+    channel:
+      $ref: '#/channels/orderEvents'

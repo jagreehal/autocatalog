@@ -1,0 +1,13 @@
+{
+  "exit": 0,
+  "github": {
+    "the new field is a notice": "^::notice file=src/payments/__contracts__/PaymentCaptured\\.approved\\.txt,line=1,title=payments/payment\\.captured::new field `method` \\(string\\)"
+  },
+  "githubNot": {
+    "no error annotation": "^::error",
+    "a field one sample shows is not read as newly required": "now required"
+  },
+  "markdown": {
+    "headline": "\\*\\*0 breaking\\*\\*"
+  }
+}

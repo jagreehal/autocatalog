@@ -1,0 +1,29 @@
+---
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import type { InferGetStaticPropsType } from 'astro';
+import { docsCatalog } from '../catalog';
+import { ownerPageProps } from '../page-models';
+import { graphOwners } from '../owners';
+import { OwnerPage } from '../ui/pages/OwnerPage';
+
+export async function getStaticPaths() {
+  const owners = graphOwners((await docsCatalog()).graph);
+
+  return owners.map((owner) => ({ params: { owner: owner.slug }, props: { owner } }));
+}
+
+type Props = InferGetStaticPropsType<typeof getStaticPaths>;
+
+const { owner } = Astro.props;
+
+---
+
+<StarlightPage
+  frontmatter={{
+    title: owner.name,
+    description: `Everything the catalog says ${owner.name} owns.`,
+    tableOfContents: false,
+  }}
+>
+  <OwnerPage {...ownerPageProps(owner)} />
+</StarlightPage>

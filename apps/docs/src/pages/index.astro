@@ -1,0 +1,50 @@
+---
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import { Home } from '../components/Home';
+
+// The home page the plugin would otherwise generate is an index of documents.
+// A project's front door has a different job: say what the tool does, and show
+// the one thing that makes it different, which is provenance. Hydrated only
+// for the code blocks' highlighting.
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+---
+
+<StarlightPage
+  frontmatter={{
+    title: 'autocatalog',
+    template: 'splash',
+    tableOfContents: false,
+    editUrl: false,
+    head: [],
+  }}
+>
+  <Home client:idle base={base} />
+</StarlightPage>
+
+<style is:global>
+  /*
+   * Starlight prints the page title above the content. On the home page that is
+   * the wordmark already sitting in the header, one line up. Hidden rather than
+   * removed: #_top is where the skip link lands.
+   */
+  body:has([data-home]) h1#_top {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  /* Without the title, the panel that held it is an empty ruled band. */
+  body:has([data-home]) .content-panel:first-of-type {
+    padding-block: 0;
+    border-bottom: 0;
+  }
+  body:has([data-home]) .content-panel {
+    border-top: 0;
+  }
+  /* The title block's rule divides the title from the page; there is no title. */
+  body:has([data-home]) [data-page-title] > [data-slot='separator'] {
+    display: none;
+  }
+</style>

@@ -1,0 +1,42 @@
+{
+  "eventcatalog": true,
+  "pages": {
+    "owners": ["Finance Platform", "Payments", "Platform AI", "Reliability"],
+    "owners/payments": ["Payments runbook", "Payment captured", "Refund agent"],
+    "owners/finance-platform": ["How captures reach the ledger", "Ledger entry posted"],
+    "events/payments-service/payments/payment.captured": [
+      "v2.0.0",
+      "agent/refund-agent",
+      "1.0.0 → 2.0.0 ✖ BREAKING: field amount changed type: number → object"
+    ],
+    "events/payments-service/payments/payment.captured/v/1.0.0": [
+      "1.0.0",
+      "amount number required"
+    ],
+    "payments-service/runbook": ["Linked from"]
+  },
+  "links": {
+    "events/payments-service/payments/payment.captured": [
+      "/events/payments-service/payments/payment.captured/v/1.0.0/",
+      "/services/PaymentService/",
+      "/services/LedgerService/",
+      "/owners/payments/",
+      "/payments-service/runbook",
+      "/ledger-service/posting"
+    ],
+    "services/LedgerService": [
+      "/events/ledger-service/ledger/ledger.entry.posted/",
+      "/events/payments-service/payments/payment.captured/",
+      "/ledger-service/posting"
+    ],
+    "payments-service/runbook": [
+      "/handbook/incident-policy",
+      "/ledger-service/posting",
+      "/events/payments-service/payments/payment.captured/"
+    ]
+  },
+  "lastChanged": {
+    "payments-service/runbook": "payments-service/docs/runbook.md",
+    "ledger-service/posting": "ledger-service/docs/posting.md"
+  }
+}

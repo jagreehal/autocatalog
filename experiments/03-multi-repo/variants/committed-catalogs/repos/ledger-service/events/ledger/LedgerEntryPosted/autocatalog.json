@@ -1,0 +1,13 @@
+{
+  "spec": "autocatalog/v2",
+  "id": "ledger.entry.posted",
+  "version": "1.0.0",
+  "name": "Ledger entry posted",
+  "summary": "A captured payment was posted to the ledger.",
+  "domain": "ledger",
+  "owner": { "team": "Finance Platform" },
+  "producers": ["LedgerService"],
+  "consumers": ["ReportingService"],
+  "schema": "schema.json",
+  "examples": []
+}

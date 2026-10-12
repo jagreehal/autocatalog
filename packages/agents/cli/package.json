@@ -1,0 +1,49 @@
+{
+  "name": "autocatalog-agents-cli",
+  "version": "0.1.0",
+  "description": "The ac-agents CLI: validate, impact, cost, audit, runtime drift, discovery, MCP, and llms.txt.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jagreehal/autocatalog.git",
+    "directory": "packages/agents/cli"
+  },
+  "homepage": "https://jagreehal.github.io/autocatalog",
+  "bugs": {
+    "url": "https://github.com/jagreehal/autocatalog/issues"
+  },
+  "type": "module",
+  "bin": {
+    "ac-agents": "./dist/bin.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "start": "node dist/bin.js",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "autocatalog-agents-adapter-autotel": "workspace:*",
+    "autocatalog-agents-core": "workspace:*",
+    "autocatalog-agents-mcp": "workspace:*",
+    "js-yaml": "^5.4.3",
+    "kleur": "^4.1.5"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.4",
+    "tsx": "^4.23.15",
+    "typescript": "^6.0.3",
+    "vitest": "^5.0.3"
+  },
+  "main": "./dist/index.js",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "types": "./dist/index.d.ts"
+}

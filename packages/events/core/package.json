@@ -1,0 +1,53 @@
+{
+  "name": "autocatalog-core",
+  "version": "0.0.1",
+  "description": "Catalog schemas, loader, validator, projection, and the autocatalog/graph-v1 resource graph.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jagreehal/autocatalog.git",
+    "directory": "packages/events/core"
+  },
+  "homepage": "https://jagreehal.github.io/autocatalog",
+  "bugs": {
+    "url": "https://github.com/jagreehal/autocatalog/issues"
+  },
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./contracts/graph-v1.schema.json": "./contracts/graph-v1.schema.json"
+  },
+  "files": [
+    "dist",
+    "contracts"
+  ],
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "ajv": "^8.20.0",
+    "ajv-formats": "^3.0.1",
+    "protobufjs": "8.8.0",
+    "typescript": "^6.0.3",
+    "yaml": "^2.9.1",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.4",
+    "ajv": "^8.20.0",
+    "tsup": "^8.5.1",
+    "vitest": "^5.0.3"
+  }
+}

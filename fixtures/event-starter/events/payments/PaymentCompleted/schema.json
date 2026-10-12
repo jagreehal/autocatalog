@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["id", "amount", "currency", "completedAt"],
+  "properties": {
+    "id": { "type": "string", "description": "Payment id" },
+    "amount": { "type": "number", "description": "Amount in minor units" },
+    "currency": { "type": "string", "description": "ISO 4217 currency code" },
+    "completedAt": { "type": "string", "format": "date-time" }
+  }
+}

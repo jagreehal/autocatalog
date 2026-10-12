@@ -1,0 +1,29 @@
+{
+  "name": "autocatalog",
+  "version": "0.0.1",
+  "description": "One install for autocatalog: run `npx autocatalog .` to scan a repository into a catalog.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jagreehal/autocatalog.git",
+    "directory": "packages/events/autocatalog"
+  },
+  "homepage": "https://jagreehal.github.io/autocatalog",
+  "bugs": {
+    "url": "https://github.com/jagreehal/autocatalog/issues"
+  },
+  "type": "module",
+  "bin": {
+    "autocatalog": "./bin.mjs"
+  },
+  "files": [
+    "bin.mjs",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=24"
+  },
+  "dependencies": {
+    "autocatalog-cli": "workspace:*"
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "$schema": "https://skills.sh/schemas/skills.sh.schema.json",
+  "notGrouped": "bottom",
+  "groupings": [
+    {
+      "title": "Events",
+      "description": "Skills for scanning a codebase into an event catalog and checking who a schema change breaks.",
+      "skills": [
+        "autocatalog-bootstrap",
+        "autocatalog-scan",
+        "autocatalog-drift",
+        "autocatalog-impact",
+        "autocatalog-investigate"
+      ]
+    },
+    {
+      "title": "Docs",
+      "description": "Skills for writing documentation from source against the company's frontmatter contract.",
+      "skills": ["autocatalog-docs", "autocatalog-docs-enroll"]
+    },
+    {
+      "title": "Agents",
+      "description": "Skills for maintaining a catalog of AI agents, tools and policies.",
+      "skills": ["autocatalog-agents-add", "autocatalog-agents-audit"]
+    }
+  ]
+}

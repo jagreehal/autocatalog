@@ -1,0 +1,60 @@
+/*
+ * EventCatalog's visualiser reads its colours from --ec-* properties as
+ * comma-separated RGB, which shadcn's oklch tokens can't be turned into in CSS.
+ * These are preset b0's neutral values, so the map sits on the page; re-derive
+ * them if the preset changes.
+ */
+[data-graph] .eventcatalog-visualizer {
+  /* Nodes sit on the page's own card colour, not a tint per kind. */
+  --ec-event-node-bg: var(--card) !important;
+  --ec-service-node-bg: var(--card) !important;
+  --ec-channel-node-bg: var(--card) !important;
+  --ec-agent-node-bg: var(--card) !important;
+  --ec-data-node-bg: var(--card) !important;
+  --ec-page-bg: 255, 255, 255;
+  --ec-card-bg: 255, 255, 255;
+  --ec-page-border: 229, 229, 229;
+  --ec-page-text: 10, 10, 10;
+  --ec-page-text-muted: 115, 115, 115;
+  --ec-accent: 23, 23, 23;
+  --ec-bg-dots: #d4d4d4;
+}
+[data-theme='dark'] [data-graph] .eventcatalog-visualizer {
+  --ec-page-bg: 10, 10, 10;
+  --ec-card-bg: 23, 23, 23;
+  --ec-page-border: 38, 38, 38;
+  --ec-page-text: 250, 250, 250;
+  --ec-page-text-muted: 161, 161, 161;
+  --ec-accent: 229, 229, 229;
+  --ec-bg-dots: #404040;
+}
+/* React Flow's attribution; EventCatalog hides it with the same global rule. */
+[data-graph] .react-flow__attribution {
+  display: none !important;
+}
+[data-graph] .react-flow__node > div[class*='border-2'] {
+  border-color: var(--ac-line-strong) !important;
+  box-shadow: none !important;
+}
+[data-graph] .react-flow__node.selected > div[class*='border-2'],
+[data-graph] .react-flow__node:focus-visible > div[class*='border-2'] {
+  border-color: var(--ring) !important;
+}
+[data-graph] .react-flow__node span[class*='text-[7px]'] {
+  background: var(--foreground) !important;
+  color: var(--background) !important;
+  font-size: 0.625rem !important;
+  letter-spacing: 0.04em !important;
+}
+[data-graph] .react-flow__node > div > div[style*='border-radius: 50%'] {
+  background: var(--muted-foreground) !important;
+  animation: none !important;
+}
+/* ArchitecturePage: EventCatalog brings its own layout, so it gets the whole content column. */
+:root:has([data-eventcatalog]) {
+  --sl-content-width: 100%;
+}
+/* The rest of the viewport below the header and title; no utility says that. */
+[data-eventcatalog] iframe {
+  height: calc(100vh - var(--sl-nav-height) - 9rem);
+}

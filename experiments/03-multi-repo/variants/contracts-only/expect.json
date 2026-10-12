@@ -1,0 +1,44 @@
+{
+  "pages": {
+    "owners": ["acme/orders", "Logistics", "Reliability", "Support", "Platform AI"],
+    "owners/acme-orders": ["Orders runbook", "Order placed"],
+    "owners/logistics": ["Shipping runbook", "Shipment dispatched"],
+    "events/orders-service/orders/order.placed": [
+      "v2.0.0",
+      "acme/orders",
+      "agent/triage-agent",
+      "currency string required",
+      "1.0.0 → 2.0.0"
+    ],
+    "events/orders-service/orders/order.placed/v/1.0.0": ["1.0.0", "total number required"],
+    "orders-service/runbook": ["Owned by @acme/orders", "Linked from"],
+    "support-agents/triage": ["agent/triage-agent"]
+  },
+  "links": {
+    "events/orders-service/orders/order.placed": [
+      "/events/orders-service/orders/order.placed/v/1.0.0/",
+      "/services/OrderService/",
+      "/services/ShippingService/",
+      "/services/BillingService/",
+      "/owners/acme-orders/",
+      "/orders-service/runbook",
+      "/shipping-service/runbook",
+      "/catalog#resource-agent%3Atriage-agent"
+    ],
+    "orders-service/runbook": [
+      "/handbook/incident-policy",
+      "/shipping-service/runbook",
+      "/events/orders-service/orders/order.placed/",
+      "/services/OrderService/"
+    ],
+    "services/ShippingService": [
+      "/events/shipping-service/shipping/shipment.dispatched/",
+      "/events/orders-service/orders/order.placed/"
+    ]
+  },
+  "absent": ["events/handbook"],
+  "lastChanged": {
+    "orders-service/runbook": "orders-service/docs/runbook.md",
+    "handbook/incident-policy": "handbook/docs/incident-policy.md"
+  }
+}

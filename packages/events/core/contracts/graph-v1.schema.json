@@ -1,0 +1,136 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://jagreehal.github.io/autocatalog/contracts/graph-v1.schema.json",
+  "title": "autocatalog/graph-v1",
+  "description": "The composed resource graph published at /catalog.json. Committed as JSON Schema, not only as a TypeScript type, so an adapter written in any language can be checked against the same contract this repository enforces.",
+  "type": "object",
+  "required": ["spec", "resources", "relationships"],
+  "additionalProperties": false,
+  "properties": {
+    "spec": { "const": "autocatalog/graph-v1" },
+    "resources": { "type": "array", "items": { "$ref": "#/$defs/resource" } },
+    "relationships": { "type": "array", "items": { "$ref": "#/$defs/relationship" } }
+  },
+  "$defs": {
+    "provenance": {
+      "description": "Where a fact came from. `inferred` is a guess and says so.",
+      "enum": ["declared", "extracted", "inferred", "overridden", "observed"]
+    },
+    "ref": {
+      "description": "Collision-safe identity. Two kinds may share a human-readable id.",
+      "type": "object",
+      "required": ["kind", "id"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "type": "string", "minLength": 1 },
+        "namespace": { "type": "string", "minLength": 1 },
+        "id": { "type": "string", "minLength": 1 },
+        "version": { "type": "string", "minLength": 1 }
+      }
+    },
+    "source": {
+      "description": "Where the fact can be read back. Absent when nothing can point at a file.",
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "type": { "type": "string" },
+        "file": { "type": "string" },
+        "line": { "type": "integer", "minimum": 0 },
+        "symbol": { "type": "string" },
+        "repo": { "type": "string" },
+        "ref": {
+          "description": "The git revision the fact was read at. On a Repository, the commit the site was built from.",
+          "type": "string"
+        }
+      }
+    },
+    "resource": {
+      "type": "object",
+      "required": ["ref", "title", "tags", "provenance", "needsReview", "attributes"],
+      "additionalProperties": false,
+      "properties": {
+        "ref": { "$ref": "#/$defs/ref" },
+        "title": { "type": "string", "minLength": 1 },
+        "summary": { "type": "string" },
+        "url": { "type": "string" },
+        "owner": {
+          "type": "object",
+          "required": ["team"],
+          "additionalProperties": false,
+          "properties": {
+            "team": { "type": "string", "minLength": 1 },
+            "name": { "type": "string", "minLength": 1 },
+            "contact": { "type": "string" }
+          }
+        },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "provenance": {
+          "type": "object",
+          "required": ["default", "fields"],
+          "additionalProperties": false,
+          "properties": {
+            "default": { "$ref": "#/$defs/provenance" },
+            "fields": {
+              "type": "object",
+              "additionalProperties": { "$ref": "#/$defs/provenance" }
+            }
+          }
+        },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+        "needsReview": { "type": "boolean" },
+        "source": { "$ref": "#/$defs/source" },
+        "attributes": { "type": "object" },
+        "evidence": { "$ref": "#/$defs/evidence" }
+      }
+    },
+    "relationship": {
+      "description": "A typed, directed edge that carries its own evidence.",
+      "type": "object",
+      "required": ["type", "from", "to", "provenance", "needsReview"],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "description": "Open, so an adapter may add a type. Current types: produces, consumes, publishes, defines, reads, writes, sends, handles, calls, relatesTo (Document → Document), describes (Document → any other resource), usesModel, usesTool, governedBy, belongsTo, orchestrates, evaluates.",
+          "type": "string",
+          "minLength": 1
+        },
+        "from": { "$ref": "#/$defs/ref" },
+        "to": { "$ref": "#/$defs/ref" },
+        "provenance": { "$ref": "#/$defs/provenance" },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+        "needsReview": { "type": "boolean" },
+        "source": { "$ref": "#/$defs/source" },
+        "evidence": { "$ref": "#/$defs/evidence" },
+        "attributes": { "type": "object" }
+      }
+    },
+    "evidence": {
+      "description": "Runtime observations behind a fact. Counts describe supplied spans, not total traffic.",
+      "type": "object",
+      "required": ["count", "sampleTraceIds", "coverage"],
+      "additionalProperties": false,
+      "properties": {
+        "count": { "type": "integer", "minimum": 0 },
+        "firstSeen": { "type": "string" },
+        "lastSeen": { "type": "string" },
+        "sampleTraceIds": { "type": "array", "maxItems": 10, "items": { "type": "string" } },
+        "environment": { "type": "string" },
+        "operations": { "type": "array", "items": { "type": "string" } },
+        "coverage": { "const": "unknown" },
+        "exports": {
+          "description": "Span counts per imported trace export, keyed by a digest of the export. `count` is their sum; importing an export again does not count it twice.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "count"],
+            "additionalProperties": false,
+            "properties": {
+              "id": { "type": "string", "minLength": 1 },
+              "count": { "type": "integer", "minimum": 0 }
+            }
+          }
+        }
+      }
+    }
+  }
+}

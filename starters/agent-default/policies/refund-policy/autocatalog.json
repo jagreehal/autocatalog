@@ -1,0 +1,8 @@
+{
+  "name": "Refund Policy v3",
+  "owner": "finance-ops",
+  "status": "active",
+  "version": "3.0.0",
+  "scope": "any Agent that can issue refunds",
+  "description": "Constraints on automated refunds — max amount, eligibility window, escalation rules."
+}

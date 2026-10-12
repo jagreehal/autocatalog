@@ -1,0 +1,13 @@
+{
+  "spec": "autocatalog/v2",
+  "id": "payment.captured",
+  "version": "1.0.0",
+  "name": "Payment captured",
+  "summary": "A payment was captured by the acquirer.",
+  "domain": "payments",
+  "owner": { "team": "Payments" },
+  "producers": ["PaymentService"],
+  "consumers": ["LedgerService"],
+  "schema": "schema.json",
+  "examples": []
+}

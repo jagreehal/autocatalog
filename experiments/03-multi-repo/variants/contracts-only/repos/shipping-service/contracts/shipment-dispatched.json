@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Shipment dispatched",
+  "description": "An order left the warehouse.",
+  "type": "object",
+  "required": ["shipmentId", "orderId"],
+  "properties": {
+    "shipmentId": { "type": "string" },
+    "orderId": { "type": "string" },
+    "carrier": { "type": "string" }
+  },
+  "x-autocatalog": {
+    "id": "shipment.dispatched",
+    "version": "1.0.0",
+    "domain": "shipping",
+    "owner": { "team": "Logistics" },
+    "producers": ["ShippingService"],
+    "consumers": ["NotificationService"]
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "name": "Refund Agent",
+  "owner": "support-platform",
+  "owners": [
+    "payments-team"
+  ],
+  "status": "active",
+  "version": "2.1.0",
+  "repository": {
+    "language": "TypeScript",
+    "url": "https://github.com/example/refund-agent"
+  },
+  "model": "claude-opus-4-7",
+  "tools": [
+    "lookup-order",
+    "issue-refund",
+    "send-email"
+  ],
+  "policies": [
+    "refund-policy",
+    "vip-escalation"
+  ],
+  "domain": "support",
+  "risk": "high",
+  "prompts": {
+    "system": "./prompts/system.md"
+  },
+  "expected_traffic": {
+    "invocations_per_day": 400,
+    "avg_input_tokens": 3500,
+    "avg_output_tokens": 600
+  },
+  "description": "Specialist agent for refund requests. Issues refunds within Policy and notifies the customer."
+}

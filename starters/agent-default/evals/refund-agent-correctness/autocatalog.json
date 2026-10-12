@@ -1,0 +1,8 @@
+{
+  "name": "Refund Agent Correctness Eval",
+  "owner": "support-platform",
+  "status": "active",
+  "target": "refund-agent",
+  "cases": "./cases.yaml",
+  "description": "Golden-set behavioral tests for the refund agent. Run on every prompt or model change."
+}

@@ -1,0 +1,15 @@
+---
+import Default from '@astrojs/starlight/components/MarkdownContent.astro';
+import { dropRepeatedTitle } from '../markdown';
+
+// A document committed to a repository usually opens with `# Its title`, so it
+// reads on GitHub too. Starlight already renders the title above the body, so
+// that first heading is dropped here when it says the same thing. Done on the
+// rendered body rather than in the Markdown pipeline, because the pipeline is
+// the site's to configure and may not be the one this plugin expects.
+const title = Astro.locals.starlightRoute?.entry?.data?.title;
+
+const body = await Astro.slots.render('default');
+---
+
+<Default><Fragment set:html={title ? dropRepeatedTitle(body, title) : body} /></Default>

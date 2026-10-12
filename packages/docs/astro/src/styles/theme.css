@@ -1,0 +1,420 @@
+/*
+ * The theme (DESIGN.md): shadcn/ui's tokens, and one colour system, for
+ * provenance. Resource kinds have no colour; the key and the icon say the kind.
+ *
+ * Starlight's own colour variables are mapped onto these tokens rather than
+ * restyling its components one by one: search, asides, code, the mobile menu
+ * and anything a site adds all follow. Loaded by index.css into Tailwind's
+ * components layer, which sorts after Starlight's layers, so this beats
+ * Starlight's defaults; a site's own unlayered customCss beats this.
+ *
+ */
+
+:root {
+  /*
+   * The surfaces, text and accent are shadcn/ui's tokens (tailwind.css), so a
+   * preset applied with the shadcn CLI restyles the whole site, Starlight too.
+   */
+  --ac-bg: var(--background);
+  --ac-side: var(--sidebar);
+  --ac-panel: var(--card);
+  --ac-panel-2: var(--muted);
+  --ac-line: var(--border);
+  --ac-line-strong: var(--input);
+  --ac-heading: var(--foreground);
+  --ac-text: var(--foreground);
+  --ac-muted: var(--muted-foreground);
+  --ac-accent: var(--primary);
+  --ac-accent-solid: var(--primary);
+  --ac-accent-tint: var(--accent);
+  --ac-required: var(--destructive);
+
+  /* Provenance, the only colour that carries meaning (DESIGN.md). */
+  --ac-extracted: #4cc9bd;
+  --ac-declared: #8aa8ff;
+  --ac-inferred: #e0a95c;
+  --ac-warn: #fbbf24;
+
+  --ac-radius: var(--radius);
+
+  --sl-color-white: var(--ac-heading);
+  --sl-color-gray-1: var(--foreground);
+  --sl-color-gray-2: var(--ac-text);
+  --sl-color-gray-3: var(--ac-muted);
+  --sl-color-gray-4: var(--ring);
+  --sl-color-gray-5: var(--ac-line);
+  --sl-color-gray-6: var(--ac-panel);
+  --sl-color-black: var(--ac-bg);
+
+  --sl-color-accent-low: var(--accent);
+  --sl-color-accent: var(--primary);
+  --sl-color-accent-high: var(--accent-foreground);
+
+  --sl-color-text-accent: var(--ac-accent);
+  /* Text on an accent background, such as the current page in the sidebar. */
+  --sl-color-text-invert: var(--primary-foreground);
+  --sl-color-bg-nav: var(--ac-bg);
+  --sl-color-bg-sidebar: var(--ac-side);
+  --sl-color-bg-inline-code: var(--ac-panel-2);
+  --sl-color-hairline-light: var(--ac-line);
+  --sl-color-hairline: var(--ac-line);
+  --sl-color-hairline-shade: var(--ac-line);
+
+  --sl-nav-height: 3.75rem;
+  --sl-line-height: 1.6;
+  --sl-font: var(--font-sans);
+  --sl-text-h1: 2rem;
+  --sl-text-h2: 1.375rem;
+  --sl-text-h3: 1.125rem;
+  --sl-text-h4: 1rem;
+  --sl-text-h5: 0.9375rem;
+
+  color-scheme: dark;
+}
+
+:root[data-theme='light'] {
+  --ac-extracted: #0b7a71;
+  --ac-declared: #2f5bd3;
+  --ac-inferred: #a8620b;
+  --ac-warn: #b45309;
+
+  --sl-color-gray-6: var(--ac-panel-2);
+  --sl-color-gray-7: var(--ac-panel-2);
+
+  color-scheme: light;
+}
+
+@media (min-width: 50em) {
+  :root {
+    --sl-text-h1: 2.375rem;
+    --sl-text-h2: 1.5rem;
+    --sl-text-h3: 1.1875rem;
+    --sl-text-h4: 1.0625rem;
+  }
+}
+
+/* Resource and index pages lay out cards side by side, so they take the width. */
+:root:has([data-wide]) {
+  --sl-content-width: 76rem;
+}
+
+/* Type: compact UI text, prose at a readable measure, tight bold headings. */
+body {
+  background: var(--ac-bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+.sl-markdown-content {
+  color: var(--ac-text);
+}
+.sl-markdown-content :is(h1, h2, h3, h4, h5):not(:where(.not-content *)) {
+  color: var(--ac-heading);
+  font-weight: 650;
+  letter-spacing: -0.015em;
+}
+.sl-markdown-content h2:not(:where(.not-content *)) {
+  margin-top: 2.25rem;
+}
+.sl-markdown-content :not(pre) > code:not(:where(.not-content *)) {
+  padding: 0.1em 0.35em;
+  border: 1px solid var(--ac-line);
+  border-radius: var(--radius);
+  font-size: 0.85em;
+}
+.sl-markdown-content a:not(:where(.not-content *)) {
+  color: var(--ac-accent);
+  text-underline-offset: 0.2em;
+  text-decoration-thickness: 1px;
+}
+.sl-markdown-content img {
+  border: 1px solid var(--ac-line);
+  border-radius: var(--ac-radius);
+}
+/* Prose keeps a reading measure even on a page wide enough for cards. */
+.sl-markdown-content > :is(p, ul, ol, blockquote) {
+  max-width: 72ch;
+}
+
+.site-title {
+  color: var(--ac-heading);
+  font-size: var(--sl-text-base);
+  font-weight: 650;
+}
+
+/* The search box. Starlight's, so ⌘K, Pagefind and the dialog are unchanged. */
+site-search button[data-open-modal] {
+  color: var(--ac-muted);
+}
+@media (min-width: 50rem) {
+  site-search button[data-open-modal] {
+    max-width: none;
+    height: 2.25rem;
+    padding-inline: 0.75rem 0.375rem;
+    border: 1px solid var(--ac-line);
+    border-radius: var(--radius);
+    background: var(--ac-side);
+    color: var(--ac-muted);
+    font-size: var(--sl-text-sm);
+  }
+  site-search button[data-open-modal]:hover {
+    border-color: var(--ac-line-strong);
+    color: var(--ac-text);
+  }
+  /* Two key chips, ⌘ and K, rather than one label. */
+  site-search button[data-open-modal] > kbd {
+    gap: 0.25rem;
+    padding: 0;
+    border: 0;
+    background: none;
+  }
+  site-search button[data-open-modal] > kbd kbd {
+    display: grid;
+    place-items: center;
+    min-width: 1.375rem;
+    height: 1.375rem;
+    padding-inline: 0.3rem;
+    border: 1px solid var(--ac-line-strong);
+    border-radius: var(--radius);
+    background: var(--ac-panel);
+    color: var(--ac-muted);
+    font-family: var(--__sl-font);
+    font-size: 0.6875rem;
+    font-weight: 600;
+  }
+}
+
+/* The search dialog, centred over a dimmed page with its key hints below. */
+site-search dialog::backdrop {
+  background: rgb(0 0 0 / 0.55);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+}
+@media (min-width: 50rem) {
+  site-search dialog {
+    min-height: 0;
+    margin: 4.5rem auto auto;
+    border: 1px solid var(--ac-line);
+    border-radius: var(--radius);
+    background: var(--ac-panel);
+    box-shadow: 0 24px 64px rgb(0 0 0 / 0.35);
+  }
+  site-search .dialog-frame {
+    gap: 0;
+    padding: 0;
+  }
+  site-search .dialog-frame::after {
+    content: 'tab to move    ↵ to open    esc to close';
+    padding: 0.625rem 1rem;
+    border-top: 1px solid var(--ac-line);
+    color: var(--ac-muted);
+    font-size: var(--sl-text-2xs);
+    white-space: pre;
+  }
+  site-search .search-container {
+    padding: 1rem;
+  }
+}
+/* Before a query: what can be found, rather than an empty box. */
+site-search .search-container:has(.pagefind-ui__search-input:placeholder-shown)::after {
+  content: 'Search documents, events, services, agents and owners.';
+  display: block;
+  padding: 1.75rem 0 1rem;
+  color: var(--ac-muted);
+  font-size: var(--sl-text-sm);
+  text-align: center;
+}
+#starlight__search {
+  --pagefind-ui-background: var(--ac-panel);
+  --pagefind-ui-border: var(--ac-line);
+  --pagefind-ui-tag: var(--ac-panel-2);
+}
+#starlight__search .pagefind-ui__search-input {
+  border-radius: var(--radius);
+}
+#starlight__search .pagefind-ui__result-link {
+  color: var(--ac-heading);
+}
+#starlight__search mark {
+  background: var(--ac-accent-tint);
+  color: var(--ac-accent);
+}
+/* The Kind filter as a row of tabs above the results, not a sidebar of boxes. */
+#starlight__search .pagefind-ui__drawer {
+  flex-direction: column;
+  gap: 0.75rem;
+}
+#starlight__search .pagefind-ui__filter-panel {
+  flex: none;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+}
+#starlight__search .pagefind-ui__filter-panel-label {
+  display: none;
+}
+/* Always open, so the tabs show without a click on a "Kind" disclosure. */
+@supports selector(::details-content) {
+  #starlight__search .pagefind-ui__filter-name {
+    display: none;
+  }
+  #starlight__search .pagefind-ui__filter-block::details-content {
+    content-visibility: visible;
+    block-size: auto;
+  }
+}
+#starlight__search .pagefind-ui__filter-block {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+#starlight__search .pagefind-ui__filter-group-label {
+  display: none;
+}
+#starlight__search .pagefind-ui__filter-group {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  padding: 0;
+}
+#starlight__search .pagefind-ui__filter-value {
+  position: relative;
+  padding: 0;
+}
+#starlight__search .pagefind-ui__filter-checkbox {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+#starlight__search .pagefind-ui__filter-value::before {
+  display: none;
+}
+#starlight__search .pagefind-ui__filter-label {
+  display: block;
+  padding: 0.25rem 0.625rem;
+  border-radius: 999px;
+  color: var(--ac-muted);
+  font-size: var(--sl-text-xs);
+  text-transform: capitalize;
+}
+#starlight__search .pagefind-ui__filter-checkbox:checked + .pagefind-ui__filter-label {
+  background: var(--ac-accent-tint);
+  color: var(--ac-accent);
+}
+#starlight__search .pagefind-ui__filter-checkbox:focus-visible + .pagefind-ui__filter-label {
+  outline: 2px solid var(--ac-accent);
+}
+
+/* The "On this page" list: small, on a guide line, the current entry accented. */
+.right-sidebar {
+  border-inline-start: 0;
+}
+.right-sidebar-panel {
+  padding-top: 2.5rem;
+}
+.right-sidebar-panel h2 {
+  font-size: var(--sl-text-xs);
+  font-weight: 650;
+}
+starlight-toc ul ul,
+starlight-toc nav > ul {
+  border-inline-start: 1px solid var(--ac-line);
+}
+starlight-toc ul ul {
+  border: 0;
+}
+starlight-toc a {
+  margin-inline-start: -1px;
+  padding-block: 0.3rem;
+  border-inline-start: 2px solid transparent;
+  border-radius: 0;
+  font-size: var(--sl-text-2xs);
+  font-weight: 500;
+}
+starlight-toc a[aria-current='true'] {
+  border-inline-start-color: var(--ac-accent);
+  color: var(--ac-accent);
+}
+
+/* One focus ring everywhere, in the accent, never removed. */
+:where(a, button, select, summary, input, [tabindex]):focus-visible {
+  outline: 2px solid var(--ac-accent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+/* Asides as cards with a coloured edge, tinted rather than filled. */
+.starlight-aside {
+  border: 1px solid var(--ac-line);
+  border-inline-start: 3px solid var(--sl-color-asides-border);
+  border-radius: var(--ac-radius);
+  background: color-mix(in srgb, var(--sl-color-asides-border) 7%, var(--ac-panel));
+  font-size: var(--sl-text-sm);
+}
+.starlight-aside__title {
+  font-size: var(--sl-text-sm);
+}
+
+/* Previous and next, as two more cards rather than two banners. */
+.pagination-links a {
+  padding: 0.75rem 1rem;
+  border-color: var(--ac-line);
+  border-radius: var(--ac-radius);
+  background: var(--ac-panel);
+  box-shadow: none;
+  color: var(--ac-muted);
+  font-size: var(--sl-text-2xs);
+}
+.pagination-links a:hover {
+  border-color: var(--ac-line-strong);
+}
+.pagination-links .link-title {
+  color: var(--ac-heading);
+  font-size: var(--sl-text-sm);
+  font-weight: 600;
+}
+
+/* The title and the body read as one page, without Starlight's rule between. */
+.content-panel + .content-panel {
+  border-top: 0;
+  padding-top: 0;
+}
+@media (min-width: 50rem) {
+  .content-panel {
+    padding-inline: 2.5rem;
+  }
+}
+
+/* A phone keeps a 16px gutter and never scrolls sideways. */
+@media (max-width: 49.99rem) {
+  :root {
+    --sl-content-pad-x: 1rem;
+  }
+  html,
+  body {
+    overflow-x: clip;
+  }
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

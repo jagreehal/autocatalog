@@ -1,0 +1,41 @@
+asyncapi: '2.6.0'
+info:
+  title: StreetlightsService
+  version: 1.0.0
+servers:
+  mosquitto:
+    url: mqtt://test.mosquitto.org
+    protocol: mqtt
+channels:
+  lighting/measured:
+    subscribe:
+      message:
+        $ref: '#/components/messages/LightMeasured'
+  lighting/commands:
+    publish:
+      message:
+        name: dimLight
+        title: Dim Light
+        summary: Command to dim a light.
+        payload:
+          type: object
+          properties:
+            percentage: { type: integer, minimum: 0, maximum: 100 }
+components:
+  messages:
+    LightMeasured:
+      name: lightMeasured
+      title: Light Measured
+      summary: Ambient light level reading.
+      payload:
+        $ref: '#/components/schemas/LightMeasuredPayload'
+      examples:
+        - name: bright
+          payload: { lumens: 1200, sensorId: 's-1' }
+  schemas:
+    LightMeasuredPayload:
+      type: object
+      required: [lumens, sensorId]
+      properties:
+        lumens: { type: integer }
+        sensorId: { type: string }

@@ -1,0 +1,13 @@
+{
+  "name": "orders-service",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test test/checkout.test.ts"
+  },
+  "devDependencies": {
+    "autotel": "8.0.0",
+    "autotel-eventcatalog": "30.0.1",
+    "autotel-subscribers": "59.0.3"
+  }
+}

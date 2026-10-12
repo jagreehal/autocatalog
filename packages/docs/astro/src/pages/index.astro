@@ -1,0 +1,31 @@
+---
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import { getCollection } from 'astro:content';
+import { docsCatalog } from '../catalog';
+import { docsSiteConfig } from '../config';
+import { homePageProps } from '../page-models';
+import { setPageHeader } from '../shell';
+import { HomePage } from '../ui/pages/HomePage';
+import { listItems } from '../view';
+
+// Starlight has no page at / until some repository publishes docs/index.md, and
+// no single team should have to own the company's front door.
+const site = docsSiteConfig();
+
+const catalog = await docsCatalog();
+
+const items = listItems(await getCollection('docs'), catalog.manifest);
+
+const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+
+setPageHeader(Astro.locals, {
+  eyebrow: 'Catalog',
+  primary: { label: 'Explore catalog', href: `${base}catalog/` },
+});
+---
+
+<StarlightPage
+  frontmatter={{ title: site.title, description: site.description, tableOfContents: false }}
+>
+  <HomePage {...homePageProps(catalog, items, base)} />
+</StarlightPage>

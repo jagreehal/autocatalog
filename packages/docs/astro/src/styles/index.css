@@ -1,0 +1,28 @@
+/*
+ * The plugin's stylesheet. Tailwind (and with it the layer order) comes first.
+ * The hand-written theme and component styles sit in Tailwind's components
+ * layer, so a utility on an element always beats them, as it would in any
+ * Tailwind project.
+ */
+@import '../ui/styles/tailwind.css';
+@import './theme.css' layer(components);
+@import '../ui/styles/components.css' layer(components);
+
+/*
+ * Code is highlighted by microlighter (the Code component). Its GitHub theme
+ * picks colours with light-dark(), which follows color-scheme; Starlight's
+ * toggle sets the theme on <html>, so the scheme is pinned to it here rather
+ * than left to the operating system. The surface is the theme's own.
+ */
+@import 'microlighter/themes/github.css';
+
+[data-theme='light'] [data-syntax-theme] {
+  color-scheme: light;
+}
+[data-theme='dark'] [data-syntax-theme] {
+  color-scheme: dark;
+}
+[data-syntax-theme='github'] {
+  --syntax-background: var(--muted);
+  --syntax-foreground: var(--foreground);
+}

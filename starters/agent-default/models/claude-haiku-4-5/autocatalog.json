@@ -1,0 +1,11 @@
+{
+  "name": "Claude Haiku 4.5",
+  "owner": "anthropic",
+  "status": "active",
+  "provider": "anthropic",
+  "model_id": "claude-haiku-4-5-20251001",
+  "context_window": 200000,
+  "cost_per_million_input_tokens": 1,
+  "cost_per_million_output_tokens": 5,
+  "description": "Fast, cheap model. Used for low-risk classification and routing agents."
+}

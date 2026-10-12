@@ -1,0 +1,9 @@
+dist/
+reports/
+test-results/
+playwright-report/
+.astro/
+
+# Published by `pnpm manifest`; generated artifacts are not committed here.
+# The contract beside it is authored, and is committed.
+repos/contracts/docs-manifest.json

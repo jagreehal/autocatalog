@@ -1,0 +1,9 @@
+{
+  "name": "Refund agent",
+  "owner": "Payments",
+  "description": "Checks capture state and prepares a policy-compliant refund.",
+  "model": "fast-model",
+  "tools": [],
+  "policies": [],
+  "risk": "high"
+}

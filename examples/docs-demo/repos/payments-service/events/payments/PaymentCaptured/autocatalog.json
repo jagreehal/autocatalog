@@ -1,0 +1,27 @@
+{
+  "spec": "autocatalog/v2",
+  "id": "payment.captured",
+  "version": "1.0.0",
+  "name": "Payment captured",
+  "summary": "A payment was captured successfully.",
+  "domain": "payments",
+  "owner": {
+    "team": "Payments"
+  },
+  "producers": ["PaymentService"],
+  "consumers": ["LedgerService"],
+  "tags": ["payments"],
+  "status": "active",
+  "schema": "schema.json",
+  "examples": [],
+  "provenance": {
+    "default": "extracted",
+    "fields": {}
+  },
+  "confidence": 1,
+  "needsReview": false,
+  "source": {
+    "file": "src/payments.ts",
+    "symbol": "PaymentCaptured"
+  }
+}

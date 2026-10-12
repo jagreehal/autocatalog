@@ -1,0 +1,16 @@
+---
+id: PaymentService
+name: PaymentService
+version: 1.0.0
+summary: Processes payments.
+sends:
+  - id: PaymentProcessed
+receives:
+  - id: UserRegistered
+    fields: [userId, email]
+    from:
+      - id: user-events
+        delivery_mode: pull
+---
+
+The payment service.

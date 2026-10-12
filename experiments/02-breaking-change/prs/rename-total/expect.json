@@ -1,0 +1,24 @@
+{
+  "exit": 1,
+  "github": {
+    "the rename is one error annotation on the line of the new field, titled with the event": "^::error file=contracts/order-placed\\.json,line=10,title=orders/order\\.placed::field `total` \\(number\\) looks renamed to `amountDue`",
+    "it breaks the consumer that reads it": "renamed to `amountDue` — breaks BillingService.*reads it: BillingService",
+    "a consumer that never said what it reads is kept": "renamed to `amountDue`.*fields undeclared or invalid: AnalyticsService",
+    "a consumer that declared it does not read the field is not affected": "renamed to `amountDue`.*not affected: ShippingService\\)",
+    "next step: keep the old field or take a major bump, and who to tell": "renamed to `amountDue`.*\\. Next: keep `total` alongside `amountDue` until consumers move off it, or bump to 2\\.0\\.0 to mark it intentional and notify BillingService, AnalyticsService$",
+    "the API operation is named on the line of the OpenAPI file": "^::error file=openapi\\.yaml,line=24,title=openapi\\.yaml/GET /orders/\\{orderId\\} \\(getOrder\\)::response: field `200\\.total` \\(number\\) looks renamed to `200\\.amountDue`\\. Next: .*bump info\\.version to 2\\.0\\.0",
+    "the unbumped version is a warning on its line, asking for a major bump": "^::warning file=contracts/order-placed\\.json,line=15,.*version stayed at 1\\.0\\.0 — a breaking change needs a major bump to 2\\.0\\.0"
+  },
+  "githubNot": {
+    "the consumer that does not read `total` is never told the rename breaks it": "breaks [^(\\n]*ShippingService",
+    "the rename is not also reported as a removal": "was removed",
+    "the new field is not a second breaking error": "`amountDue` is now required"
+  },
+  "markdown": {
+    "headline counts one breaking change per rename": "\\*\\*2 breaking\\*\\*",
+    "grouped under the event": "^## orders/order\\.placed$",
+    "grouped under the operation": "^## openapi\\.yaml/GET /orders/\\{orderId\\} \\(getOrder\\)$",
+    "names who to tell": "BREAKING: field `total` \\(number\\) looks renamed to `amountDue` — breaks consumers: BillingService, AnalyticsService"
+  },
+  "summary": true
+}

@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Acme documentation frontmatter",
+  "description": "Written by `ac docs init-schema` and then edited: Acme closed the contract, turned owner into its own list of teams, and added a tier of its own. Every enrolled repository is checked against this file, and a Python repository can enforce it with `jsonschema` without installing anything else.",
+  "type": "object",
+  "required": ["title", "owner", "tier"],
+  "properties": {
+    "title": { "type": "string", "minLength": 1 },
+    "owner": {
+      "description": "A team, not a person. People change teams; documents outlive them.",
+      "enum": ["Reliability", "Payments", "Data Platform"]
+    },
+    "summary": { "type": "string" },
+    "tier": {
+      "description": "critical means somebody may be paged while reading this.",
+      "enum": ["critical", "standard"]
+    },
+    "related": {
+      "type": "array",
+      "items": { "type": "string", "pattern": "^[^./][^/]*/.+$" }
+    },
+    "about": {
+      "description": "Resources this document is about, as kind/id: event/<domain>/<id>, service/<name>, agent/<id>.",
+      "type": "array",
+      "items": { "type": "string", "pattern": "^[a-z]+/.+$" }
+    },
+    "tags": { "type": "array", "items": { "type": "string" } }
+  },
+  "additionalProperties": false
+}

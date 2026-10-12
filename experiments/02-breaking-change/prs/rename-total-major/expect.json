@@ -1,0 +1,17 @@
+{
+  "exit": 0,
+  "github": {
+    "the acknowledged rename is still on the diff, as a warning on its line": "^::warning file=contracts/order-placed\\.json,line=10,title=orders/order\\.placed::field `total` \\(number\\) looks renamed to `amountDue` — breaks BillingService, AnalyticsService",
+    "it says who to tell": "renamed to `amountDue`.*\\. Acknowledged by the major bump 1\\.0\\.0 → 2\\.0\\.0: notify BillingService, AnalyticsService before it ships$",
+    "the API rename is acknowledged by info.version": "^::warning file=openapi\\.yaml,line=24,.*looks renamed to `200\\.amountDue`\\. Acknowledged by the major bump 1\\.0\\.0 → 2\\.0\\.0"
+  },
+  "githubNot": {
+    "no error annotation": "^::error",
+    "no version warning once it was bumped": "version stayed"
+  },
+  "markdown": {
+    "headline says the breaking changes are acknowledged": "\\*\\*2 breaking\\*\\* \\(2 acknowledged\\)",
+    "marked acknowledged": "BREAKING \\(acknowledged\\): field `total` \\(number\\) looks renamed to `amountDue`"
+  },
+  "summary": true
+}

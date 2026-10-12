@@ -1,0 +1,14 @@
+{
+  "extends": "committed-catalogs",
+  "quarantined": ["legacy-service"],
+  "pages": {
+    "legacy-service/notes": ["Legacy service notes", "Owned by Legacy"],
+    "owners/payments": ["Payments runbook", "Payment captured", "Refund agent"]
+  },
+  "links": {
+    "events/payments-service/payments/payment.captured": [
+      "/events/payments-service/payments/payment.captured/v/1.0.0/"
+    ]
+  },
+  "absent": ["events/legacy-service"]
+}

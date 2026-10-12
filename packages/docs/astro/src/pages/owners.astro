@@ -1,0 +1,20 @@
+---
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import { docsCatalog } from '../catalog';
+import { ownersPageProps } from '../page-models';
+import { OwnersPage } from '../ui/pages/OwnersPage';
+
+const catalog = await docsCatalog();
+
+---
+
+<StarlightPage
+  frontmatter={{
+    title: 'Owners',
+    description:
+      'Teams responsible for documents, contracts, datastores, services, and Agent-system resources. Ownership comes from declarations, connected service catalogs, or CODEOWNERS.',
+    tableOfContents: false,
+  }}
+>
+  <OwnersPage {...ownersPageProps(catalog)} />
+</StarlightPage>

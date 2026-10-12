@@ -1,0 +1,11 @@
+{
+  "name": "Refund agent",
+  "owner": "Payments",
+  "status": "active",
+  "model": "haiku",
+  "tools": [],
+  "policies": [],
+  "risk": "high",
+  "description": "Prepares a refund when a capture is disputed.",
+  "consumes": [{ "event": "payments/payment.captured", "fields": ["paymentId"] }]
+}

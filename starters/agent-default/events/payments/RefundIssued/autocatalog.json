@@ -1,0 +1,8 @@
+{
+  "id": "refund.issued",
+  "version": "1.0.0",
+  "name": "Refund Issued",
+  "summary": "Fires when a refund is sent to the customer's payment method",
+  "producers": ["PaymentService"],
+  "consumers": ["LedgerService"]
+}

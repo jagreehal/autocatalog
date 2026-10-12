@@ -1,0 +1,8 @@
+{
+  "name": "VIP Escalation Policy",
+  "owner": "customer-success",
+  "status": "active",
+  "version": "1.2.0",
+  "scope": "any first-touch Agent (e.g. triage-agent)",
+  "description": "Routing rules for VIP customers — never let an automated agent close a VIP ticket without human review."
+}

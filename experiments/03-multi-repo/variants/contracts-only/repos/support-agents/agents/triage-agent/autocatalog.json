@@ -1,0 +1,11 @@
+{
+  "name": "Triage agent",
+  "owner": "Support",
+  "status": "active",
+  "model": "haiku",
+  "tools": [],
+  "policies": [],
+  "risk": "low",
+  "description": "Opens a support ticket when an order looks stuck.",
+  "consumes": [{ "event": "orders/order.placed", "fields": ["orderId"] }]
+}

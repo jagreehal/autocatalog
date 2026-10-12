@@ -1,0 +1,6 @@
+{
+  "id": "kyc.submitted",
+  "version": "1.0.0",
+  "name": "KYC Submitted",
+  "summary": "Fires when a KYC application is submitted"
+}

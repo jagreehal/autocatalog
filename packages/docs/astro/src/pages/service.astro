@@ -1,0 +1,63 @@
+---
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import type { InferGetStaticPropsType } from 'astro';
+import { buildServices } from 'autocatalog-core';
+import { docsCatalog } from '../catalog';
+import { serviceFacts, servicePageProps } from '../page-models';
+import { setResourceContext } from '../shell';
+import { ServicePage } from '../ui/pages/ServicePage';
+
+// A service has no page of its own to author: it is whatever the events say
+// produces and consumes them.
+export async function getStaticPaths() {
+  const catalog = await docsCatalog();
+  const services = buildServices(catalog.events.map(({ event }) => event));
+
+  return [...services.values()].map((service) => ({
+    params: { name: service.name },
+    props: { service },
+  }));
+}
+
+type Props = InferGetStaticPropsType<typeof getStaticPaths>;
+
+const { service } = Astro.props;
+
+const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+
+const catalog = await docsCatalog();
+
+const page = servicePageProps(catalog, service, base);
+
+const facts = serviceFacts(catalog.graph, service.name);
+
+setResourceContext(Astro.locals, {
+  kind: 'service',
+  name: service.name,
+  key: `service:${service.name}`,
+  ...(facts.repository && {
+    actions: [{ label: 'Repository', href: facts.repository, icon: 'repository' as const }],
+  }),
+  pills: [],
+});
+
+// The page's sections, for Starlight's "On this page".
+const headings = [
+  ...page.sections.map(({ heading, slug }) => ({ depth: 2, slug, text: heading })),
+  ...(page.documents.length ? [{ depth: 2, slug: 'documents', text: 'Documents' }] : []),
+  ...(page.diagram ? [{ depth: 2, slug: 'diagram', text: 'Diagram' }] : []),
+];
+---
+
+<StarlightPage
+  frontmatter={{
+    title: service.name,
+    // Its own summary when it has one; else what the page is, since nobody wrote it.
+    description:
+      facts.summary ??
+      "Inferred from the producers and consumers that each event declares. Nobody writes this page; change an event's contract and it changes.",
+  }}
+  headings={headings}
+>
+  <ServicePage client:load {...page} />
+</StarlightPage>

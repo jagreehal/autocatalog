@@ -1,0 +1,13 @@
+# Astro's image pipeline needs sharp's install script to fetch its binaries, or
+# a document that includes a screenshot fails the build.
+onlyBuiltDependencies:
+  - sharp
+
+packages:
+  - 'apps/*'
+  - 'packages/events/*'
+  - 'packages/agents/*'
+  - 'packages/docs/*'
+  - 'starters/*'
+  - 'fixtures/*'
+  - 'examples/*'

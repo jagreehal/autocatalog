@@ -1,0 +1,9 @@
+---
+import { ThemeSelect } from '../ui/overrides/ThemeSelect';
+
+// One button in place of Starlight's three-way select, in React so it hydrates
+// like the rest of the UI. It is an island here, rather than markup, because it
+// reads and writes localStorage and `data-theme`.
+---
+
+<ThemeSelect client:load />

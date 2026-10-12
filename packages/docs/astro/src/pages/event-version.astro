@@ -1,0 +1,60 @@
+---
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import type { InferGetStaticPropsType } from 'astro';
+import { docsCatalog } from '../catalog';
+import { eventVersions } from '../event-versions';
+import { eventVersionPageProps } from '../page-models';
+import { setResourceContext, versionLabel } from '../shell';
+import { EventVersionPage } from '../ui/pages/EventVersionPage';
+
+// One earlier version of an event, from its versioned/ folder: the contract as
+// it was, for a consumer still pinned to it.
+export async function getStaticPaths() {
+  const catalog = await docsCatalog();
+
+  return catalog.history.map((entry) => ({
+    params: {
+      repository: entry.repository,
+      domain: entry.event.frontmatter.domain,
+      id: entry.event.frontmatter.id,
+      version: entry.event.frontmatter.version,
+    },
+    props: { entry, versions: eventVersions(catalog, entry) },
+  }));
+}
+
+type Props = InferGetStaticPropsType<typeof getStaticPaths>;
+
+const { entry, versions } = Astro.props;
+
+const fm = entry.event.frontmatter;
+
+const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+
+const page = await eventVersionPageProps(entry, versions, base);
+
+setResourceContext(Astro.locals, {
+  kind: 'event',
+  name: fm.name,
+  key: `event:${fm.domain}/${fm.id}@${fm.version}`,
+  actions: [
+    { label: 'Copy schema', href: page.schemaHref, icon: 'copy', copy: true },
+    { label: 'View schema.json', href: page.schemaHref, icon: 'braces' },
+  ],
+  pills: [{ text: 'earlier version', tone: 'warn' }],
+});
+
+// The page's sections, for Starlight's "On this page".
+const headings = [
+  { depth: 2, slug: 'schema', text: 'Schema' },
+  ...(page.examples.length ? [{ depth: 2, slug: 'examples', text: 'Examples' }] : []),
+  { depth: 2, slug: 'versions', text: 'Versions' },
+];
+---
+
+<StarlightPage
+  frontmatter={{ title: `${fm.name} ${fm.version}`, description: fm.summary }}
+  headings={headings}
+>
+  <EventVersionPage client:load {...page} />
+</StarlightPage>

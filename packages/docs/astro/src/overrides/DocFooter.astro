@@ -1,0 +1,68 @@
+---
+import Default from '@astrojs/starlight/components/Footer.astro';
+import { z } from 'astro/zod';
+import { aboutDocument } from '../about';
+import { docsCatalog, resourcesDefinedByRepository } from '../catalog';
+import { graphOwners, ownerFor, ownerHref } from '../owners';
+import { DocFooterChrome } from '../ui/overrides/DocFooterChrome';
+import { catalogHref, day, toLinks } from '../view';
+
+// Starlight's route data. The index page this plugin injects renders without an
+// entry from the docs collection, so every read here has to tolerate its
+// absence.
+const entry = Astro.locals.starlightRoute?.entry;
+
+const id = entry?.id ?? '';
+
+// Starlight types the entry by its own schema, which knows nothing of the
+// convention's fields. The collection already enforced these two, so this
+// restates its types rather than trusting a cast.
+const data = z
+  .looseObject({ owner: z.string().optional(), related: z.array(z.string()).optional() })
+  .parse(entry?.data ?? {});
+
+const catalog = await docsCatalog();
+
+const manifest = catalog.manifest;
+
+const record = manifest[id];
+
+const owner = data.owner;
+
+const ownerPage = owner ? ownerFor(graphOwners(catalog.graph), owner) : undefined;
+
+// Freshness is git's answer, not Starlight's: each enrolled repository may be
+// its own checkout, which the site's own git history knows nothing about.
+const changed = day(record?.updated);
+
+const repository = id.split('/')[0] ?? '';
+
+const defined = repository ? resourcesDefinedByRepository(catalog, repository) : [];
+
+const { siteTitle } = Astro.locals.starlightRoute;
+
+const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+---
+
+<DocFooterChrome
+  base={base}
+  siteTitle={siteTitle}
+  owner={owner}
+  ownerHref={ownerPage && ownerHref(ownerPage)}
+  known={record !== undefined}
+  changed={changed}
+  source={record?.source}
+  edit={record?.edit}
+  related={toLinks(data.related ?? [], manifest)}
+  linkedFrom={toLinks(record?.linkedFrom ?? [], manifest)}
+  about={aboutDocument(catalog.graph, id)}
+  repository={repository}
+  defined={defined.map((resource) => ({
+    kind: resource.ref.kind,
+    id: resource.ref.id,
+    title: resource.title,
+    href: catalogHref(resource.ref),
+  }))}
+>
+  <Default><slot /></Default>
+</DocFooterChrome>

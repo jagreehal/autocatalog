@@ -1,0 +1,98 @@
+name: CI
+
+on:
+  # Main-branch validation is called by Release, so publish depends on these
+  # exact-commit checks instead of racing an independent CI workflow.
+  workflow_call:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: ./.github/actions/setup-pnpm
+
+      - name: Lint (Prettier, then oxlint with the anti-slop rules)
+        run: pnpm lint
+
+      - name: Type-check with TypeScript 7
+        run: pnpm typecheck
+
+      - name: Run tests
+        run: pnpm test
+
+      - name: Type-check all packages
+        run: pnpm build
+
+      - name: Verify product journeys through the built CLI
+        run: pnpm smoke:product
+
+      - name: Validate event starter
+        run: pnpm validate:events
+
+      - name: Validate agent starter
+        run: pnpm validate:agents
+
+      # The site itself is built by `pnpm build`, which covers every workspace
+      # package. This is the check a publishing repository runs in its own CI.
+      - name: Check the docs demo against the convention
+        run: pnpm validate:docs
+
+      # This repository publishes its own docs/ through the same convention, so
+      # the site's content is checked exactly like any enrolled repository's.
+      - name: Check this repository's own docs
+        run: pnpm docs:check
+
+      - name: Audit agent starter (fail on P0)
+        run: pnpm tsx packages/agents/cli/src/bin.ts audit starters/agent-default --fail-on P0
+
+      - name: Publish dry-run (event packages)
+        run: |
+          for pkg in autocatalog autocatalog-core autocatalog-cli autocatalog-adapter-zod autocatalog-mcp autocatalog-docs-core autocatalog-docs-astro; do
+            echo "=== dry-run: $pkg ==="
+            pnpm --filter "$pkg" publish --dry-run --no-git-checks
+          done
+
+      - name: Publish dry-run (agent packages)
+        run: |
+          for pkg in autocatalog-agents-core autocatalog-agents-adapter-autotel autocatalog-agents-mcp autocatalog-agents-cli; do
+            echo "=== dry-run: $pkg ==="
+            pnpm --filter "$pkg" publish --dry-run --no-git-checks
+          done
+
+  catalog-hardening:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup-pnpm
+      # Through turbo, not `pnpm --filter`: these tests resolve workspace deps to
+      # dist/, so the dependencies must be built first. turbo's test task already
+      # declares dependsOn ^build; calling pnpm directly skips it.
+      - run: pnpm turbo run test --filter=autocatalog-core --filter=autocatalog-cli
+
+  # autocatalog-py is not a pnpm workspace, so `pnpm test` never reaches it.
+  # Kept as its own job so JS contributors do not need a Python toolchain.
+  python:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: python/autocatalog-py
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.11'
+      - run: pip install -e ".[dev]"
+      - name: Lint
+        run: ruff check .
+      - name: Run tests
+        run: pytest -q

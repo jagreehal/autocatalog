@@ -1,0 +1,46 @@
+[build-system]
+requires = ["hatchling>=1.18"]
+build-backend = "hatchling.build"
+
+[project]
+name = "autocatalog-py"
+version = "0.0.1"
+description = "Extract Autocatalog events from Pydantic models"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+dependencies = [
+  "pydantic>=2.7",
+  "click>=8.1",
+  "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0",
+  # Pinned, not floating: an unpinned linter fails CI whenever ruff ships new
+  # rules, with no change to this repo. Bump deliberately, with the findings
+  # cleared in the same commit.
+  "ruff==0.16.1",
+]
+
+[project.scripts]
+autocatalog-py = "autocatalog_py.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/autocatalog_py"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.pyright]
+include = ["src", "tests"]
+extraPaths = ["src", "tests/fixtures"]
+venvPath = "."
+venv = ".venv"
+pythonVersion = "3.11"

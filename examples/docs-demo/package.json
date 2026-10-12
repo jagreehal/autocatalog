@@ -1,0 +1,30 @@
+{
+  "name": "@autocatalog-example/docs",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "The docs demo: three repositories that each own their docs/, aggregated into one index with nothing authored in this project.",
+  "scripts": {
+    "_comment": "Runs the CLI through tsx rather than the `ac` bin: the bin points at dist/bin.js, so pnpm cannot create the shim on a clean checkout where nothing is built yet. Published consumers install from npm and do use `ac`.",
+    "check": "tsx ../../packages/events/cli/src/bin.ts docs check ./repos",
+    "manifest": "tsx ../../packages/events/cli/src/bin.ts docs manifest ./repos",
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "@astrojs/starlight": "^0.42.6",
+    "astro": "^7.3.8",
+    "autocatalog-cli": "workspace:*",
+    "autocatalog-docs-astro": "workspace:*",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "sharp": "^0.35.5"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.64.0",
+    "executable-stories-playwright": "8.11.0",
+    "tsx": "^4.23.15"
+  }
+}

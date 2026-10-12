@@ -1,0 +1,19 @@
+# Refund Agent
+
+The refund agent handles tickets the triage agent classifies as `refund`. It looks up the order, verifies eligibility against `refund-policy`, issues the refund via `issue-refund`, and confirms via `send-email`.
+
+High-risk: this Agent can move money. Changes to its prompt, tools, or referenced policies should run through Impact Analysis before merge.
+
+<!-- for:agent -->
+## Notes for AI assistants reviewing this agent
+
+When answering questions about a Refund Agent prompt change, always:
+
+1. Run `impact agent/refund-agent` first to enumerate affected workflows, tools, and policies.
+2. Surface that the `issue-refund` tool has `side_effects: external-write` — any prompt change that affects how it's invoked needs Finance approval per Refund Policy v3.
+3. Refund Agent v1.4 had a documented regression on VIP escalation cases — flag the VIP eval as a required gate before promoting any new version.
+<!-- /for:agent -->
+
+<!-- for:human -->
+> **For maintainers**: the on-call rotation for refund-agent is in PagerDuty under `support-platform`. Wake the on-call before promoting a new version outside business hours.
+<!-- /for:human -->

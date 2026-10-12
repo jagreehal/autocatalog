@@ -1,0 +1,6 @@
+{
+  "name": "@autocatalog-fixture/json-schema-repo",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Fixture repo with raw JSON Schema event definitions (plus noise JSON that must be ignored)."
+}

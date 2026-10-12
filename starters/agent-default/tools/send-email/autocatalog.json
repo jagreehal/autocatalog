@@ -1,0 +1,11 @@
+{
+  "name": "Send Email",
+  "owner": "comms-platform",
+  "status": "active",
+  "side_effects": "external-write",
+  "risk": "medium",
+  "protocol": "mcp",
+  "schema": "./schema.zod.ts",
+  "domain": "support",
+  "description": "Sends a transactional email to a customer via the comms provider."
+}

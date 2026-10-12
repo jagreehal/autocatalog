@@ -1,0 +1,17 @@
+---
+id: PaymentProcessed
+name: Payment Processed
+version: 1.2.0
+summary: A payment was processed by the gateway.
+owners:
+  - billing-team
+badges:
+  - content: PCI
+    backgroundColor: '#ffe0e0'
+    textColor: '#900'
+---
+
+## When it fires
+
+The gateway emits this after capture succeeds. Retries are idempotent on
+`paymentId`.

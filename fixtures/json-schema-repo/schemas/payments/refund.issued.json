@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schemas/refund.issued.json",
+  "title": "Refund Issued",
+  "description": "Emitted when a refund is issued to a customer",
+  "type": "object",
+  "properties": {
+    "refundId": { "type": "string" },
+    "amount": { "type": "number" },
+    "currency": { "type": "string" }
+  },
+  "required": ["refundId", "amount", "currency"],
+  "x-autocatalog": {
+    "id": "refund.issued",
+    "version": "1.0.0",
+    "domain": "payments",
+    "team": "Billing",
+    "producers": ["RefundService"],
+    "consumers": ["LedgerService"],
+    "summary": "Emitted when a refund is issued to a customer"
+  }
+}

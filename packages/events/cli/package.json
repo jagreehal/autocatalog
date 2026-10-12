@@ -1,0 +1,71 @@
+{
+  "name": "autocatalog-cli",
+  "version": "0.0.1",
+  "description": "The ac CLI: scan a repository into a catalog, validate it, gate drift in CI, and run the docs convention.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jagreehal/autocatalog.git",
+    "directory": "packages/events/cli"
+  },
+  "homepage": "https://jagreehal.github.io/autocatalog",
+  "bugs": {
+    "url": "https://github.com/jagreehal/autocatalog/issues"
+  },
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "ac": "./dist/bin.js",
+    "autocatalog": "./dist/bin.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@astrojs/starlight": "^0.42.6",
+    "@aws-sdk/client-glue": "3.1149.0",
+    "@eventcatalog/sdk": "^2.29.2",
+    "astro": "^7.3.8",
+    "autocatalog-adapter-zod": "workspace:*",
+    "autocatalog-agents-core": "workspace:*",
+    "autocatalog-core": "workspace:*",
+    "autocatalog-docs-astro": "workspace:*",
+    "autocatalog-docs-core": "workspace:*",
+    "commander": "^15.0.0",
+    "kleur": "^4.1.5",
+    "yaml": "^2.9.1",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@asyncapi/specs": "6.11.1",
+    "@types/node": "^26.6.4",
+    "ajv": "8.20.0",
+    "gray-matter": "^4.0.3",
+    "tsup": "^8.5.1",
+    "typescript": "^6.0.3",
+    "vitest": "^5.0.3"
+  },
+  "optionalDependencies": {
+    "autocatalog-agents-cli": "workspace:*"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./bin": "./dist/bin.js",
+    "./eventcatalog": {
+      "types": "./dist/eventcatalog.d.ts",
+      "import": "./dist/eventcatalog.js"
+    }
+  }
+}

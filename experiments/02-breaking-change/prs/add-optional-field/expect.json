@@ -1,0 +1,14 @@
+{
+  "exit": 0,
+  "github": {
+    "the new field is a notice": "^::notice file=contracts/order-placed\\.json,line=12,title=orders/order\\.placed::new field `couponCode` \\(string\\)",
+    "the unbumped version is a warning": "^::warning .*version stayed at 1\\.0\\.0 — bump it"
+  },
+  "githubNot": {
+    "no error annotation": "^::error",
+    "no consumer is said to break": "breaks"
+  },
+  "markdown": {
+    "headline": "\\*\\*0 breaking\\*\\*"
+  }
+}

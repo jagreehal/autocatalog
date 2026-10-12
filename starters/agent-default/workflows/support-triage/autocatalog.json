@@ -1,0 +1,18 @@
+{
+  "name": "Support Triage Workflow",
+  "owner": "support-platform",
+  "status": "active",
+  "agents": [
+    "triage-agent",
+    "refund-agent"
+  ],
+  "flow": [
+    {
+      "from": "triage-agent",
+      "to": "refund-agent",
+      "on": "classification = refund"
+    }
+  ],
+  "domain": "support",
+  "description": "Front-door support flow. Triage classifies, refund agent handles refunds, VIPs go to a human."
+}

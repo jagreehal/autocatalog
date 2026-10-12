@@ -1,0 +1,11 @@
+{
+  "name": "Lookup Order",
+  "owner": "orders-team",
+  "status": "active",
+  "side_effects": "read-only",
+  "risk": "low",
+  "protocol": "mcp",
+  "schema": "./schema.zod.ts",
+  "domain": "support",
+  "description": "Reads an order by ID from the orders service."
+}

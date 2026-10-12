@@ -1,0 +1,8 @@
+{
+  "id": "ticket.opened",
+  "version": "1.0.0",
+  "name": "Ticket Opened",
+  "summary": "Fires when a customer opens a support ticket",
+  "producers": ["SupportDesk"],
+  "consumers": []
+}

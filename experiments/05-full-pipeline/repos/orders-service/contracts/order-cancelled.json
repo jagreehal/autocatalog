@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Order cancelled",
+  "description": "A customer cancelled an order before it shipped.",
+  "type": "object",
+  "required": ["orderId", "reason"],
+  "properties": {
+    "orderId": { "type": "string" },
+    "reason": { "type": "string", "enum": ["customer", "fraud"] }
+  },
+  "x-autocatalog": {
+    "id": "order.cancelled",
+    "version": "1.0.0",
+    "domain": "orders",
+    "producers": ["OrderService"],
+    "consumers": ["BillingService"]
+  }
+}

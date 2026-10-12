@@ -1,0 +1,4 @@
+# Ownership inference input (P4). Orders deliberately has no owner.
+src/payments/ @acme/billing
+src/billing/ @acme/billing
+src/shipping/ @acme/logistics

@@ -1,0 +1,14 @@
+version: 2
+updates:
+  # EventCatalog ships its SDK in lockstep with core. A new release opens a
+  # pull request, and the compatibility workflow builds a real EventCatalog
+  # from our export before it can merge.
+  - package-ecosystem: npm
+    directory: /packages/events/cli
+    schedule:
+      interval: weekly
+    allow:
+      - dependency-name: '@eventcatalog/*'
+    groups:
+      eventcatalog:
+        patterns: ['@eventcatalog/*']

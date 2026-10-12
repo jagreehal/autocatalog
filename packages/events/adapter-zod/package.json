@@ -1,0 +1,59 @@
+{
+  "name": "autocatalog-adapter-zod",
+  "version": "0.0.1",
+  "description": "defineEvent() and Zod to JSON Schema extraction, so a Zod schema is the catalog entry.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jagreehal/autocatalog.git",
+    "directory": "packages/events/adapter-zod"
+  },
+  "homepage": "https://jagreehal.github.io/autocatalog",
+  "bugs": {
+    "url": "https://github.com/jagreehal/autocatalog/issues"
+  },
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "autocatalog-from-zod": "./dist/bin.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "autocatalog": {
+    "adapter": {
+      "command": "from-zod",
+      "description": "Generate events from a Zod TS module",
+      "entry": "./dist/bin.js",
+      "discovery": {
+        "entry": "./dist/index.js",
+        "export": "zodDiscoveryAdapter"
+      }
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "autocatalog-core": "workspace:*",
+    "commander": "^15.0.0",
+    "jiti": "^2.7.0",
+    "kleur": "^4.1.5",
+    "typescript": "^6.0.3",
+    "zod": "^4.6.5",
+    "zod-to-json-schema": "^3.25.2"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.4",
+    "tsup": "^8.5.1",
+    "vitest": "^5.0.3"
+  }
+}

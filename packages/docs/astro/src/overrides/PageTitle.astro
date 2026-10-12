@@ -1,0 +1,55 @@
+---
+import Default from '@astrojs/starlight/components/PageTitle.astro';
+import { z } from 'astro/zod';
+import { docsCatalog } from '../catalog';
+import { type PageAction, pageHeader, resourceContext } from '../shell';
+import { PageTitleChrome } from '../ui/overrides/PageTitleChrome';
+import { docHref } from '../view';
+
+// The head of every page: its title, its key in the catalog, the sentence that
+// says what it is for, then what a reader can do with the page itself.
+// A resource page says so through its context; a document is recognised by
+// its id being in the manifest. The markup is React; Starlight's own <h1> is
+// Astro, so it is handed in as the chrome's children.
+const { id, entry } = Astro.locals.starlightRoute;
+
+const resource = resourceContext(Astro.locals);
+
+const header = pageHeader(Astro.locals);
+
+const isDoc = !resource && id in (await docsCatalog()).manifest;
+
+const kind = resource?.kind ?? (isDoc ? 'doc' : undefined);
+
+const kindLabel = kind === 'doc' ? 'Document' : kind && kind.charAt(0).toUpperCase() + kind.slice(1);
+
+// A document's convention field is `summary`; Starlight's own is `description`.
+// Starlight types the entry by its own schema, so the convention's field is
+// restated here; the collection already enforced it.
+const data = z
+  .looseObject({ description: z.string().optional(), summary: z.string().optional() })
+  .parse(entry.data);
+
+// Every document has a Markdown twin; a resource page lists its own.
+const actions: PageAction[] =
+  header?.actions ??
+  (isDoc
+    ? [
+        { label: 'Copy page as Markdown', href: docHref(`${id}.md`), icon: 'copy', copy: true },
+        { label: 'View as Markdown', href: docHref(`${id}.md`), icon: 'doc' },
+      ]
+    : []);
+---
+
+<PageTitleChrome
+  client:load
+  kind={kind}
+  kindLabel={kindLabel}
+  catalogKey={resource?.key ?? (isDoc ? `document:${id}` : undefined)}
+  primary={header?.primary}
+  summary={data.description ?? data.summary}
+  pills={resource?.pills ?? []}
+  actions={actions}
+>
+  <Default />
+</PageTitleChrome>
