@@ -1,6 +1,6 @@
 {
   "name": "autocatalog",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "One install for autocatalog: run `npx autocatalog .` to scan a repository into a catalog.",
   "license": "MIT",
   "repository": {
