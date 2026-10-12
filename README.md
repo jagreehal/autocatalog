@@ -7,13 +7,19 @@ AsyncAPI, Avro or protobuf. autocatalog finds them, captures their producers
 and consumers, and fails a pull request before a breaking change reaches
 another team.
 
+Each team keeps its contracts with its code. autocatalog joins those
+repositories into one view of events, services, owners and dependencies, and
+checks each team's pull requests against the consumers it declares.
+
 ```mermaid
 flowchart LR
-  code[Schemas in code] --> scan[autocatalog scan]
-  scan --> catalog[Catalog of events, producers, consumers and owners]
-  catalog --> site[Company site]
-  catalog --> pr[Pull request check]
-  pr --> impact[The services you would break]
+  subgraph repos["Each team's repository"]
+    pay[Payments]
+    ledger[Ledger]
+    notif[Notifications]
+  end
+  repos -- autocatalog site --> site["Company site: events, services, owners, docs"]
+  repos -- autocatalog drift --> pr["Pull request check: names the services a change breaks"]
 ```
 
 Preview the site:
@@ -82,8 +88,8 @@ with `autocatalog resources promote`; it then shows as a warning.
 
 ## One site for the whole company
 
-Each team keeps its contracts and docs in its own repository. One command builds
-a site across all of them:
+Teams own their contracts in their own repositories, and the organisation still
+gets one view. One command builds a site across all of them:
 
 ```bash
 npx autocatalog site --topic catalog --owner acme
