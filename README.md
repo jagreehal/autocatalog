@@ -3,9 +3,9 @@
 Know who depends on your event contracts before you break them.
 
 Your contracts already live in code, as Zod, Pydantic, JSON Schema, OpenAPI,
-AsyncAPI, Avro or protobuf. autocatalog finds them, captures which services
-produce and consume each one, and fails a pull request before a breaking change
-reaches another team.
+AsyncAPI, Avro or protobuf. autocatalog finds them, captures their producers
+and consumers, and fails a pull request before a breaking change reaches
+another team.
 
 ```mermaid
 flowchart LR
@@ -28,8 +28,8 @@ Check a pull request:
 npx autocatalog drift --base-ref origin/main --root .
 ```
 
-With schemas in `contracts/` and Markdown in `docs/`, neither needs
-configuration, and neither writes to your repository.
+With schemas in `contracts/` and Markdown in `docs/`, neither needs a
+config file, and neither writes to your repository.
 
 **[Documentation](https://jagreehal.github.io/autocatalog)**
 
@@ -135,11 +135,16 @@ scan when a contract changes.
 You don't write service definitions. autocatalog builds `PaymentService` from
 the events that name it.
 
+Producers and consumers come from what you declare beside the schema: in
+`defineEvent`, in a Pydantic model's config, or under `x-autocatalog` in a
+schema file. An AsyncAPI or EventCatalog import brings its own. Traces then
+flag any event a service emits that the catalog doesn't list.
+
 Python teams get the same result from Pydantic with `autocatalog-py extract`.
 Teams with JSON Schema, OpenAPI, Avro or protobuf files run `autocatalog scan`
 and change nothing in their code.
 
-## Ask the catalog from your editor
+## Give coding agents the architecture
 
 The site, the pull request check and your coding agent all read one model of
 your architecture, built from the code. `autocatalog-mcp` gives AI coding agents
