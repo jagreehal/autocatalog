@@ -19,7 +19,7 @@ const ZodSchemaLike = z.looseObject({ safeParse: z.instanceof(Function) });
 /** Any non-array object: a Zod schema instance or a JSON Schema object. */
 const SchemaValue = z.looseObject({});
 
-const CurveItemLike = z.looseObject({
+const CompactItemLike = z.looseObject({
   name: z.string(),
   description: z.string(),
   schema: SchemaValue,
@@ -42,14 +42,14 @@ export function toJsonSchema(schema: SchemaInput): JsonObject {
   return jsonObjectSchema.parse(isZodSchema(schema) ? z.toJSONSchema(schema) : schema);
 }
 
-export interface ParsedCurveName {
+export interface ParsedCompactName {
   version: string;
   id: string;
   domain: string;
   pascalName: string;
 }
 
-export interface CurveItem {
+export interface CompactItem {
   name: string;
   description: string;
   schema: SchemaInput;
@@ -62,11 +62,13 @@ function titleCase(pascal: string): string {
   return pascal.replace(/([a-z])([A-Z])/g, '$1 $2');
 }
 
-export function parseCurveName(curveName: string): ParsedCurveName {
-  const match = VERSION_RE.exec(curveName);
+export function parseCompactName(compactName: string): ParsedCompactName {
+  const match = VERSION_RE.exec(compactName);
 
   if (!match) {
-    throw new Error(`Curve name "${curveName}" is missing a version prefix (e.g. "v1.foo.bar")`);
+    throw new Error(
+      `Compact name "${compactName}" is missing a version prefix (e.g. "v1.foo.bar")`,
+    );
   }
 
   const version = match[1]!;
@@ -76,8 +78,8 @@ export function parseCurveName(curveName: string): ParsedCurveName {
   return { version, id, domain: firstSegment, pascalName: pascalCase(id) };
 }
 
-export function curveItemToAutocatalogEvent(item: CurveItem): AdapterEvent {
-  const parsed = parseCurveName(item.name);
+export function compactItemToAutocatalogEvent(item: CompactItem): AdapterEvent {
+  const parsed = parseCompactName(item.name);
   const examples = item.example !== undefined ? [{ name: 'default', data: item.example }] : [];
   // getEventMetadata must be called before zod-to-json-schema conversion
   // (the Zod schema object carries the symbol; the plain JSON output does not)
@@ -114,8 +116,8 @@ export interface ExplicitEvent extends Omit<
   tags?: string[];
 }
 
-export function isCurveItem<T>(item: T): item is T & CurveItem {
-  return CurveItemLike.safeParse(item).success;
+export function isCompactItem<T>(item: T): item is T & CompactItem {
+  return CompactItemLike.safeParse(item).success;
 }
 
 export function isExplicitEvent<T>(item: T): item is T & ExplicitEvent {
@@ -151,6 +153,6 @@ export function explicitToAdapterEvent(e: ExplicitEvent): AdapterEvent {
   };
 }
 
-export function toAdapterEvent(item: ExplicitEvent | CurveItem): AdapterEvent {
-  return isExplicitEvent(item) ? explicitToAdapterEvent(item) : curveItemToAutocatalogEvent(item);
+export function toAdapterEvent(item: ExplicitEvent | CompactItem): AdapterEvent {
+  return isExplicitEvent(item) ? explicitToAdapterEvent(item) : compactItemToAutocatalogEvent(item);
 }

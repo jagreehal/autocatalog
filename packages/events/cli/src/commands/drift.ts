@@ -24,9 +24,13 @@ import {
   readOptionalResourceJson,
   type DriftFinding,
   type ResourceGraph,
+  consumersFromGraph,
+  UNSAFE_CONSUMER,
+  type EventConsumers,
 } from 'autocatalog-core';
 import { linkAgentsToEvents } from 'autocatalog-agents-core';
 import { discoverDiscoveryAdapters } from '../adapters';
+import { publishedLine, readCompanyIndex, repositoryName } from '../company-index';
 import { ARTIFACT_RESOURCES_FILE } from './resources';
 
 const execFileAsync = promisify(execFile);
@@ -45,6 +49,15 @@ export interface RunDriftOptions {
   allowCodeExecution?: boolean;
   /** A runtime architecture snapshot to check the current catalog against. */
   snapshot?: string;
+  /**
+   * The company site's `/catalog.json`, as a URL or a file: consumers other
+   * repositories declare, so the gate names them too.
+   */
+  consumers?: string;
+  /** An environment variable holding a token for a private company site. */
+  consumersTokenEnv?: string;
+  /** This repository's name on the company site, when two repositories publish one event. */
+  repository?: string;
 }
 
 async function gitOutput(cwd: string, args: string[]): Promise<string> {
@@ -200,6 +213,45 @@ async function artifactResources(events: string): Promise<ResourceGraph | undefi
   }
 }
 
+/**
+ * Consumers other repositories declare, from the company index. An index that
+ * cannot be read is said and skipped: a site outage must not block every
+ * pull request in the company.
+ */
+async function companyConsumers(
+  source: string,
+  options: { tokenEnv?: string; repository?: string; quiet?: boolean },
+): Promise<Map<string, EventConsumers> | undefined> {
+  try {
+    const { graph, publishedAt } = await readCompanyIndex(source, { tokenEnv: options.tokenEnv });
+
+    if (!options.quiet) console.warn(`  ${publishedLine('consumers', source, publishedAt)}`);
+
+    const { consumers, ambiguous, rejected } = consumersFromGraph(graph, {
+      repository: options.repository,
+    });
+
+    if (rejected.length && !options.quiet)
+      console.warn(
+        `! consumers whose names are not safe to print, counted as "${UNSAFE_CONSUMER}": ${rejected.join(', ')}`,
+      );
+
+    if (ambiguous.length && !options.quiet)
+      console.warn(
+        `! ${ambiguous.join(', ')}: more than one repository publishes it, so consumers declared elsewhere were not counted. Pass --repository with this repository's name on the company site.`,
+      );
+
+    return consumers;
+  } catch (error) {
+    if (!options.quiet)
+      console.warn(
+        `! could not read consumers from ${source} (${error instanceof Error ? error.message : String(error)}); checking without them`,
+      );
+
+    return undefined;
+  }
+}
+
 export async function runDrift(opts: RunDriftOptions): Promise<number> {
   if (Boolean(opts.base) === Boolean(opts.baseRef)) {
     throw new Error('Specify exactly one of --base or --base-ref');
@@ -224,10 +276,23 @@ export async function runDrift(opts: RunDriftOptions): Promise<number> {
 
     const agents = await linkAgentsToEvents({ agentsRoot, eventsRoot: base });
 
+    const elsewhere = opts.consumers
+      ? await companyConsumers(opts.consumers, {
+          tokenEnv: opts.consumersTokenEnv,
+          repository: opts.repository ?? (await repositoryName(agentsRoot)),
+          quiet: opts.quiet,
+        })
+      : undefined;
+
     const events = await driftCatalogs(base, current, {
-      consumersOf: (domain, id) => agents?.participants.get(`${domain}/${id}`)?.consumers ?? [],
-      consumerFieldsOf: (domain, id) =>
-        agents?.participants.get(`${domain}/${id}`)?.consumerFields ?? {},
+      consumersOf: (domain, id) => [
+        ...(agents?.participants.get(`${domain}/${id}`)?.consumers ?? []),
+        ...(elsewhere?.get(`${domain}/${id}`)?.consumers ?? []),
+      ],
+      consumerFieldsOf: (domain, id) => ({
+        ...elsewhere?.get(`${domain}/${id}`)?.fields,
+        ...agents?.participants.get(`${domain}/${id}`)?.consumerFields,
+      }),
       sourceRoot: generated?.sources[1],
       snapshot,
     });

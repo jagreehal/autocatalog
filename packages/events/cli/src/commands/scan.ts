@@ -300,9 +300,6 @@ export async function runScan(opts: RunScanOptions): Promise<number> {
       // A silent zero is the worst answer a scanner can give: it looks like a
       // clean repository and reads like a pass in CI. Say that nothing was
       // claimed and which adapters were asked.
-      // ponytail: the artifact still records `status: valid` for an empty scan.
-      // Carrying this as an artifact diagnostic is the real fix, and it belongs
-      // with the other diagnostics rather than in the printer.
       if (summary.resources === 0) {
         console.warn(
           kleur.yellow(`\n  no adapter claimed a file under ${root} — nothing was documented`),

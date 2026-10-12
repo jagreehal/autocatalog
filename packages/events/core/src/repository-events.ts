@@ -10,13 +10,15 @@ import { loadCatalogSnapshot, type LoadedEvent } from './load';
 import { isRealFileInside } from './utils';
 import { applySnapshot, readSnapshot } from './snapshot';
 import { RESOURCE_GRAPH_FILE } from './resource-store';
+import { CONSUMES_FILE } from './consumes';
 
 const execFileAsync = promisify(execFile);
 
 /** The conventional roots a repository publishes under; any one enrols it. */
 const CONTRACTS = 'contracts';
 
-const PUBLISHED_ROOTS = ['docs', 'events', 'agents', CONTRACTS];
+// A repository that only consumes other teams' events still publishes that fact.
+const PUBLISHED_ROOTS = ['docs', 'events', 'agents', CONTRACTS, CONSUMES_FILE];
 
 /** Where scanning looks for CODEOWNERS, read at each commit with the contracts. */
 const CODEOWNERS = ['CODEOWNERS', '.github/CODEOWNERS', 'docs/CODEOWNERS'];

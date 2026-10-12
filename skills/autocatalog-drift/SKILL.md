@@ -23,6 +23,16 @@ Changes are classified and each is attributed to the services that consume the e
 
 Read the named consumers. That list is the whole point of running this, and it is what a schema differ alone cannot tell you.
 
+### Consumers in other repositories
+
+The event's manifest lists the consumers its own repository knows. Teams in other repositories declare theirs in `autocatalog.consumes.json`, and the company site publishes them at `/catalog.json`. Read them too:
+
+```bash
+ac drift --base-ref origin/main --root . --consumers https://catalog.example.com/catalog.json
+```
+
+The output names when that index was published. Declarations made since then are not in it, so mention the date when you report who is affected.
+
 ## 2. Decide, using the classification
 
 - **Additive** — proceed.
@@ -40,6 +50,26 @@ ac changelog
 ```
 
 This turns the diff into a summary a consumer's team can read without opening the schema.
+
+## When you are the consumer
+
+Declare what your service reads from another team's event in `autocatalog.consumes.json` at the repository root, with the fields it reads:
+
+```json
+{
+  "consumes": [
+    { "service": "LedgerService", "event": "payments/payment.completed", "fields": ["amount"] }
+  ]
+}
+```
+
+Then check each field against the schema the producer publishes:
+
+```bash
+ac validate --catalog https://catalog.example.com/catalog.json
+```
+
+Leave `fields` out when the service may read any field: every change to the event then reaches it.
 
 ## 4. Make it a gate, not a habit
 

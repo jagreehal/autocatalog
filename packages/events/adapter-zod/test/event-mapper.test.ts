@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import { pascalCase } from 'autocatalog-core';
-import { parseCurveName, curveItemToAutocatalogEvent } from '../src/curve-mapper';
+import { parseCompactName, compactItemToAutocatalogEvent } from '../src/event-mapper';
 import { defineEvent } from '../src/define-event';
 
 describe('pascalCase', () => {
@@ -19,9 +19,9 @@ describe('pascalCase', () => {
   });
 });
 
-describe('parseCurveName', () => {
-  it('splits a curve-style name into version + id + domain + pascalName', () => {
-    expect(parseCurveName('v1.payment.completed')).toEqual({
+describe('parseCompactName', () => {
+  it('splits a compact-style name into version + id + domain + pascalName', () => {
+    expect(parseCompactName('v1.payment.completed')).toEqual({
       version: 'v1',
       id: 'payment.completed',
       domain: 'payment',
@@ -30,7 +30,7 @@ describe('parseCurveName', () => {
   });
 
   it('handles single-segment ids', () => {
-    expect(parseCurveName('v2.heartbeat')).toEqual({
+    expect(parseCompactName('v2.heartbeat')).toEqual({
       version: 'v2',
       id: 'heartbeat',
       domain: 'heartbeat',
@@ -39,7 +39,7 @@ describe('parseCurveName', () => {
   });
 
   it('handles dash-separated id segments', () => {
-    expect(parseCurveName('v1.payment-batch.completed')).toEqual({
+    expect(parseCompactName('v1.payment-batch.completed')).toEqual({
       version: 'v1',
       id: 'payment-batch.completed',
       domain: 'payment-batch',
@@ -48,13 +48,13 @@ describe('parseCurveName', () => {
   });
 
   it('rejects names without a version prefix', () => {
-    expect(() => parseCurveName('payment.completed')).toThrow(/version/i);
+    expect(() => parseCompactName('payment.completed')).toThrow(/version/i);
   });
 });
 
-describe('curveItemToAutocatalogEvent', () => {
-  it('maps a full curve item to an IR-shaped record', () => {
-    const result = curveItemToAutocatalogEvent({
+describe('compactItemToAutocatalogEvent', () => {
+  it('maps a full compact item to an IR-shaped record', () => {
+    const result = compactItemToAutocatalogEvent({
       name: 'v1.payment.completed',
       description: 'Fires when a payment completes',
       schema: { type: 'object' },
@@ -73,7 +73,7 @@ describe('curveItemToAutocatalogEvent', () => {
   });
 
   it('handles items with no example', () => {
-    const result = curveItemToAutocatalogEvent({
+    const result = compactItemToAutocatalogEvent({
       name: 'v1.heartbeat',
       description: 'tick',
       schema: { type: 'object' },
@@ -88,7 +88,7 @@ describe('curveItemToAutocatalogEvent', () => {
       z.object({ orderId: z.string() }),
     );
 
-    const result = curveItemToAutocatalogEvent({
+    const result = compactItemToAutocatalogEvent({
       name: 'v1.checkout.orderPlaced',
       description: 'Order placed',
       schema,
@@ -102,10 +102,10 @@ describe('curveItemToAutocatalogEvent', () => {
     });
   });
 
-  it('falls back to Curve domain when defineEvent has no domain', () => {
+  it('falls back to Compact domain when defineEvent has no domain', () => {
     const schema = defineEvent({ producers: ['ReportSvc'] }, z.object({}));
 
-    const result = curveItemToAutocatalogEvent({
+    const result = compactItemToAutocatalogEvent({
       name: 'v1.reports.generated',
       description: 'report ready',
       schema,

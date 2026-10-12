@@ -45,7 +45,7 @@ spec:
       {
         ...architectureResource({
           kind: 'collection',
-          namespace: 'curve/finance',
+          namespace: 'acme/finance',
           id: 'statements',
         }),
         source: { file: 'models/statement.ts' },
@@ -54,7 +54,7 @@ spec:
 
     const result = resolveResourceOwnership(graph, {
       claims: imported.claims,
-      codeowners: parseCodeowners('/models/** @curve/ledger'),
+      codeowners: parseCodeowners('/models/** @acme/ledger'),
       teamAliases: { 'group:default/finance': 'finance-team' },
     });
 
@@ -66,7 +66,7 @@ spec:
     ).toBe('finance-team');
     expect(
       result.graph.resources.find((resource) => resource.ref.id === 'statements')?.owner?.team,
-    ).toBe('curve/ledger');
+    ).toBe('acme/ledger');
     expect(result.conflicts).toContainEqual(
       expect.objectContaining({
         resource: { kind: 'service', id: 'billing' },

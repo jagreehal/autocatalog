@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import { defineEvent, getEventMetadata, mergeMetadata } from '../src/define-event';
-import { explicitToAdapterEvent } from '../src/curve-mapper';
+import { explicitToAdapterEvent } from '../src/event-mapper';
 
 describe('defineEvent', () => {
   it('returns the schema unchanged', () => {

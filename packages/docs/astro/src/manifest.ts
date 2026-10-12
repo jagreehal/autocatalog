@@ -15,8 +15,8 @@ let cached: DocsManifest | undefined;
  * A document that breaks the contract throws, which fails the build. Rendering
  * a partial index would quietly answer "who links to this" with a lie.
  *
- * ponytail: one `git log` per document, once per build. Batch to a single
- * `git log --name-only` walk if a large monorepo makes builds drag.
+ * One `git log` per document, once per build. A single `git log --name-only`
+ * walk would serve a very large monorepo.
  */
 export function docsManifest(): DocsManifest {
   if (!cached) {

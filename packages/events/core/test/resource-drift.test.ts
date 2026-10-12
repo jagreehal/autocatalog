@@ -8,7 +8,7 @@ import type { JsonObject } from '../src/json';
 describe('resource contract drift', () => {
   it('names readers affected by a collection field removal while retaining unknown reader usage', () => {
     const baseline = emptyResourceGraph();
-    const ref = { kind: 'collection', namespace: 'curve/finance', id: 'statements' } as const;
+    const ref = { kind: 'collection', namespace: 'acme/finance', id: 'statements' } as const;
     baseline.resources.push(
       architectureResource(ref, {
         schema: {
@@ -57,7 +57,7 @@ describe('resource contract drift', () => {
   });
   it('flags invalid complete documents without reporting sensitive values or treating projections as documents', () => {
     const graph = emptyResourceGraph();
-    const ref = { kind: 'collection', namespace: 'curve/finance', id: 'statements' } as const;
+    const ref = { kind: 'collection', namespace: 'acme/finance', id: 'statements' } as const;
     graph.resources.push(
       architectureResource(ref, {
         schema: {

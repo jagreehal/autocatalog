@@ -620,7 +620,7 @@ export async function exportToEventCatalog(
   // service or domain disappears. Every other file, including one someone
   // added beside a generated page, stays.
   const previous = await previousExport(catalogDir);
-  // ponytail: kept by path, so an event that moves domain loses its stamp until the next `stamp`.
+  // Kept by path: an event that moves domain gets its stamp at the next `stamp`.
   const stamps = await readStamps(previous.files);
   await removeFiles(previous.files, catalogDir);
   // Ownership is recorded before each file is written, so an export that

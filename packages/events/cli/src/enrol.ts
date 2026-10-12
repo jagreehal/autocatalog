@@ -104,8 +104,8 @@ export interface CloneOptions {
  * Blobless clones: full history, so git can say when each document last
  * changed, without downloading every old version of every file.
  *
- * ponytail: re-clones on every run; fine for tens of repositories, switch to
- * fetch-and-reset when enrolment reaches hundreds.
+ * Clones afresh on every run, which suits tens of repositories; fetch and
+ * reset would suit hundreds.
  */
 export async function cloneRepositories(
   repositories: EnrolledRepository[],

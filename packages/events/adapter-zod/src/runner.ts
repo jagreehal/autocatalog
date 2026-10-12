@@ -1,7 +1,7 @@
 import path from 'node:path';
 import { createJiti } from 'jiti';
 import { z } from 'zod';
-import { isCurveItem, isExplicitEvent, toAdapterEvent } from './curve-mapper';
+import { isCompactItem, isExplicitEvent, toAdapterEvent } from './event-mapper';
 import { writeEventFolder } from './writer';
 
 export interface RunAdapterOptions {
@@ -36,7 +36,7 @@ export async function runAdapter(opts: RunAdapterOptions): Promise<RunAdapterRes
 
   for (const item of items) {
     try {
-      if (!isExplicitEvent(item) && !isCurveItem(item)) {
+      if (!isExplicitEvent(item) && !isCompactItem(item)) {
         throw new Error(`Unrecognised item shape: ${JSON.stringify(item).slice(0, 80)}`);
       }
 

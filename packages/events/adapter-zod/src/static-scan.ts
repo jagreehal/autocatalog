@@ -1,13 +1,7 @@
 /**
- * Static Zod extraction — reads source, never executes it.
- *
- * The runtime path (jiti.import) required the *target* repo's node_modules to be
- * installed, coupled us to its Zod major, and died on the first `.transform()`.
- * Measured against a bare clone of ag-ui-protocol/ag-ui it extracted zero of 34
- * events. See wayfinder #15.
- *
- * Reading source instead also means we never execute a stranger's module side
- * effects, which matters for a tool whose pitch is "point it at any repo".
+ * Static Zod extraction: it reads source and never executes it. It needs no
+ * installed `node_modules`, works across Zod majors, reads past `.transform()`,
+ * and never runs another repository's module side effects.
  */
 import {
   isJsonObject,

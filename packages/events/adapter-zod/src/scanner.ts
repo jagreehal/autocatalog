@@ -13,7 +13,7 @@ import {
   type ProvenanceValue,
 } from 'autocatalog-core';
 import { z } from 'zod';
-import { isCurveItem, isExplicitEvent, toAdapterEvent } from './curve-mapper';
+import { isCompactItem, isExplicitEvent, toAdapterEvent } from './event-mapper';
 import { importsZod, staticExports, type StaticExport } from './static-scan';
 
 export interface ScanOptions {
@@ -264,7 +264,7 @@ export async function discoverZodEvents(opts: {
     for (const ex of exports) {
       for (const { item, limits } of ex.registryItems ?? []) {
         // An array of anything else is not an event registry.
-        if (!isExplicitEvent(item) && !isCurveItem(item)) continue;
+        if (!isExplicitEvent(item) && !isCompactItem(item)) continue;
 
         let event: AdapterEvent;
 

@@ -28,16 +28,16 @@ describe('schema registries', () => {
         }),
         getCompatibility: async () => 'BACKWARD',
       },
-      { id: 'curve-kafka', url: 'https://registry.example', subjects: ['statements-value'] },
+      { id: 'acme-kafka', url: 'https://registry.example', subjects: ['statements-value'] },
     );
 
     expect(imported.resources).toHaveLength(2);
     expect(imported.resources[1]).toMatchObject({
-      ref: { kind: 'event', namespace: 'curve-kafka', id: 'statements-value', version: '2' },
+      ref: { kind: 'event', namespace: 'acme-kafka', id: 'statements-value', version: '2' },
       attributes: {
         registry: {
           provider: 'confluent',
-          id: 'curve-kafka',
+          id: 'acme-kafka',
           schemaId: 102,
           nativeVersion: '2',
           compatibility: 'BACKWARD',
@@ -64,7 +64,7 @@ describe('schema registries', () => {
             : {
                 Schemas: [
                   {
-                    SchemaArn: 'arn:aws:glue:eu-west-1:123:schema/curve/statement',
+                    SchemaArn: 'arn:aws:glue:eu-west-1:123:schema/acme/statement',
                     SchemaName: 'statement',
                   },
                 ],
@@ -89,13 +89,13 @@ describe('schema registries', () => {
           }),
         }),
       },
-      { id: 'curve-glue', registry: 'curve' },
+      { id: 'acme-glue', registry: 'acme' },
     );
 
     expect(tokens).toEqual([undefined, 'next']);
     expect(graph.resources).toHaveLength(1);
     expect(graph.resources[0]).toMatchObject({
-      ref: { kind: 'event', namespace: 'curve-glue', id: 'statement', version: '1' },
+      ref: { kind: 'event', namespace: 'acme-glue', id: 'statement', version: '1' },
       attributes: {
         registry: {
           provider: 'glue',
@@ -131,7 +131,7 @@ describe('schema registries', () => {
                 references: [{ name: 'money.json', subject: 'money', version: 1 }],
               },
       },
-      { id: 'curve-kafka' },
+      { id: 'acme-kafka' },
     );
 
     const schema = resourceSchema(graph.resources[0]!);
@@ -159,7 +159,7 @@ describe('schema registries', () => {
           references: subject === 'money' ? [] : [{ name: 'Money', subject: 'money', version: 1 }],
         }),
       },
-      { id: 'curve-kafka' },
+      { id: 'acme-kafka' },
     );
 
     expect(resourceSchema(graph.resources[0]!)).toMatchObject({
@@ -185,7 +185,7 @@ describe('schema registries', () => {
             subject === 'money' ? [] : [{ name: 'money.proto', subject: 'money', version: 1 }],
         }),
       },
-      { id: 'curve-kafka' },
+      { id: 'acme-kafka' },
     );
 
     expect(resourceSchema(graph.resources[0]!)).toMatchObject({
@@ -227,7 +227,7 @@ describe('schema registries', () => {
           .replace('import "google/protobuf/struct.proto";', 'import "money.proto";')
           .replace('google.protobuf.Struct meta = 3;', 'money.Money meta = 3;'),
       }),
-      { id: 'curve-kafka', subjects: ['with-reference'] },
+      { id: 'acme-kafka', subjects: ['with-reference'] },
     );
 
     expect(resourceSchema(graph.resources[0]!)).toMatchObject({
@@ -247,13 +247,13 @@ describe('schema registries', () => {
     const errors: string[] = [];
 
     const graph = await importConfluentRegistry(registry, {
-      id: 'curve-kafka',
+      id: 'acme-kafka',
       onSubjectError: (message) => errors.push(message),
     });
 
     expect(graph.resources.map((resource) => resource.ref.id)).toEqual(['paid']);
     expect(errors).toEqual(["broken@1: no such Type or Enum 'Missing' in Type .billing.Broken"]);
-    await expect(importConfluentRegistry(registry, { id: 'curve-kafka' })).rejects.toThrow(
+    await expect(importConfluentRegistry(registry, { id: 'acme-kafka' })).rejects.toThrow(
       "broken@1: no such Type or Enum 'Missing' in Type .billing.Broken",
     );
   });

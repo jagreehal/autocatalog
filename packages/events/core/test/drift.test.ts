@@ -13,6 +13,7 @@ import {
   type DriftReport,
 } from '../src/drift';
 import type { JsonObject } from '../src/json';
+import { UNSAFE_CONSUMER } from '../src/consumes';
 
 let baseDir: string;
 
@@ -704,6 +705,96 @@ describe('runtime drift against a snapshot', () => {
     expect(report.hasBreaking).toBe(false);
     // Runtime evidence is not a schema change: no registry strategy fails on it.
     expect(compatibilityBreaks(report, 'full')).toEqual([]);
+  });
+
+  it('names the consumers the snapshot saw, beside the ones declared', async () => {
+    await writeEvent(currDir, 'payments', 'PaymentCompleted', paymentManifest, withoutAmount());
+
+    const report = await driftCatalogs(baseDir, currDir, {
+      snapshot: {
+        ...snapshot,
+        events: {
+          'payment.completed': {
+            ...observation('payment.completed', ['paymentId']),
+            consumers: ['FraudService', 'LedgerService'],
+            consumerEvidence: 'observed' as const,
+          },
+          'payment.refunded': {
+            ...observation('payment.refunded', ['paymentId']),
+            consumers: ['AuditService'],
+            consumerEvidence: 'reported' as const,
+          },
+        },
+      },
+    });
+
+    const removed = report.findings.find((finding) => finding.kind === 'field_removed');
+
+    // LedgerService is declared already, so it is named once, as declared.
+    expect(removed?.consumers).toEqual([
+      'LedgerService',
+      'NotificationService',
+      'FraudService (seen at runtime)',
+    ]);
+  });
+
+  it('counts a runtime consumer whose name could inject into a report under a safe label', async () => {
+    await writeEvent(currDir, 'payments', 'PaymentCompleted', paymentManifest, withoutAmount());
+
+    const report = await driftCatalogs(baseDir, currDir, {
+      snapshot: {
+        ...snapshot,
+        events: {
+          'payment.completed': {
+            ...observation('payment.completed', ['paymentId']),
+            consumers: ['FraudService', '![x](https://evil/pixel)'],
+          },
+        },
+      },
+    });
+
+    const removed = report.findings.find((finding) => finding.kind === 'field_removed');
+
+    expect(removed?.consumers).toContain('FraudService (reported at runtime)');
+    expect(removed?.consumers).toContain(`${UNSAFE_CONSUMER} (reported at runtime)`);
+    expect(removed?.consumers.join(' ')).not.toContain('evil');
+  });
+
+  it('never lets another source narrow what a consumer the event lists reads', async () => {
+    await writeEvent(currDir, 'payments', 'PaymentCompleted', paymentManifest, withoutAmount());
+
+    const report = await driftCatalogs(baseDir, currDir, {
+      consumersOf: () => ['LedgerService'],
+      // Another repository claims LedgerService reads only `note`.
+      consumerFieldsOf: () => ({ LedgerService: ['note'] }),
+    });
+
+    const removed = report.findings.find((finding) => finding.kind === 'field_removed');
+
+    expect(removed?.consumers).toContain('LedgerService');
+    expect(removed?.usage?.unaffected ?? []).not.toContain('LedgerService');
+  });
+
+  it('says a consumer only reported in message metadata is not proof of delivery', async () => {
+    await writeEvent(currDir, 'payments', 'PaymentRefunded', refunded, withoutAmount());
+
+    const report = await driftCatalogs(baseDir, currDir, {
+      snapshot: {
+        ...snapshot,
+        events: {
+          'payment.refunded': {
+            ...observation('payment.refunded', ['paymentId']),
+            consumers: ['AuditService'],
+          },
+        },
+      },
+    });
+
+    const removed = report.findings.find(
+      (finding) => finding.kind === 'field_removed' && finding.eventId === 'payment.refunded',
+    );
+
+    expect(removed?.consumers).toContain('AuditService (reported at runtime)');
   });
 
   it('renders an undocumented event without an empty domain', async () => {

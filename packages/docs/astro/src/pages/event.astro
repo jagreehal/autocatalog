@@ -1,7 +1,7 @@
 ---
 import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
 import type { InferGetStaticPropsType } from 'astro';
-import { docsCatalog, eventAgents } from '../catalog';
+import { docsCatalog, eventParticipants } from '../catalog';
 import { eventPageProps } from '../page-models';
 import { setResourceContext, versionLabel } from '../shell';
 import { EventPage } from '../ui/pages/EventPage';
@@ -25,9 +25,10 @@ const fm = event.frontmatter;
 
 const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
 
-// Agents and Tools name the events they touch in their own catalog, so they are
-// read from the composed graph rather than from this event's frontmatter.
-const agents = eventAgents(catalog, repository, event);
+// Agents, Tools and services in other repositories name the events they touch
+// in their own repositories, so they are read from the composed graph rather
+// than from this event's frontmatter.
+const agents = eventParticipants(catalog, repository, event);
 
 const page = await eventPageProps(catalog, Astro.props, agents, base);
 

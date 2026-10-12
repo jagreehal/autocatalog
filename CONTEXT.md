@@ -66,7 +66,7 @@ Defines the terms this project uses. Consistent language across docs, code, and 
 
 **autocatalog-cli** — The `ac` binary. Discovers adapter plugins from `node_modules` (any package with `autocatalog-adapter-` prefix and an `autocatalog.adapter` field in `package.json`). Commands: validate, scan (built-in and installed Discovery Adapters), drift (catalog directory or Git-ref baseline), changelog, health, from-eventcatalog, from-asyncapi, init, import, dev, build, eject, plus dynamically registered adapter commands.
 
-**autocatalog-adapter-zod** — Converts Zod schemas to JSON Schema `AdapterEvent`s. Provides `defineEvent()` for metadata in schema. Handles two input shapes: Curve (`{name, description, schema, example}`) and Explicit (`{id, version, name, summary, schema, ...}`). Writes via core `writeEventFolder`.
+**autocatalog-adapter-zod** — Converts Zod schemas to JSON Schema `AdapterEvent`s. Provides `defineEvent()` for metadata in schema. Handles two input shapes: Compact (`{name, description, schema, example}`) and Explicit (`{id, version, name, summary, schema, ...}`). Writes via core `writeEventFolder`.
 
 **autocatalog-mcp** — MCP server over stdio. Uses the strict catalog snapshot and projection from core. Twelve tools, including impact, compatibility and a runtime investigation handoff to autotel-mcp. Ships compiled stdio and server entry points.
 
@@ -98,7 +98,7 @@ Defines the terms this project uses. Consistent language across docs, code, and 
 
 **mergeDiscoveries(results)** — Resolves cohesive Discovery Candidates by event id. Higher provenance/confidence wins (declared > extracted > inferred); ties use stable source ordering and every collision is reported.
 
-**toAdapterEvent(item): AdapterEvent** — Dispatch function for mapping Zod registry items to the internal AdapterEvent shape. Handles Curve shape and Explicit shape with a single call.
+**toAdapterEvent(item): AdapterEvent** — Dispatch function for mapping Zod registry items to the internal AdapterEvent shape. Handles the Compact shape and the Explicit shape with a single call.
 
 **createCatalogProjection(snapshot | events): CatalogProjection** — Derives graph, services, domains, search records, current events, and event lookup once. Exported from core and consumed by Astro and MCP.
 

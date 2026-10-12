@@ -60,7 +60,7 @@ metadata, `schema.json` converted from Zod, examples, and a generated
 
 ## Two export shapes
 
-**Curve shape** — compact, with identity encoded in the name:
+**Compact shape**, with identity encoded in the name:
 
 ```ts
 export default [

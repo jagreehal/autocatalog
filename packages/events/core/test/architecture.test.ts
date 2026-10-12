@@ -126,12 +126,12 @@ describe('architecture discovery', () => {
           ],
         })),
       },
-      { datastore: 'curve-main', environment: 'production' },
+      { datastore: 'acme-main', environment: 'production' },
     );
 
     expect(datastoreOwnership(graph)).toEqual([
       expect.objectContaining({
-        ref: { kind: 'collection', namespace: 'curve-main/finance', id: 'statements' },
+        ref: { kind: 'collection', namespace: 'acme-main/finance', id: 'statements' },
         writers: ['billing'],
         readers: ['reporting'],
         owner: null,

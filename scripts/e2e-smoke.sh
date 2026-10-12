@@ -37,7 +37,7 @@ ln -s "$ROOT/packages/events/adapter-zod" "$ZOD_PROJECT/node_modules/autocatalog
 (
   cd "$ZOD_PROJECT"
   node "$ROOT/packages/events/cli/dist/bin.js" from-zod \
-    "$ROOT/packages/events/adapter-zod/test/fixtures/curve-export.ts" \
+    "$ROOT/packages/events/adapter-zod/test/fixtures/compact-export.ts" \
     --out "$ZOD_PROJECT/events"
 )
 node "$ROOT/packages/events/cli/dist/bin.js" validate --cwd "$ZOD_PROJECT"

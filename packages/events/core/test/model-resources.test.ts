@@ -53,7 +53,7 @@ describe('model resources', () => {
 
       const result = await scanModelResources({
         root,
-        datastore: 'curve',
+        datastore: 'acme',
         database: 'finance',
         service: 'billing',
       });
@@ -61,7 +61,7 @@ describe('model resources', () => {
       expect(result.errors).toEqual([]);
       expect(result.graph.resources).toContainEqual(
         expect.objectContaining({
-          ref: { kind: 'collection', namespace: 'curve/finance', id: 'statements' },
+          ref: { kind: 'collection', namespace: 'acme/finance', id: 'statements' },
           attributes: expect.objectContaining({
             adapter: 'mongoose',
             schema: {
@@ -126,7 +126,7 @@ describe('model resources', () => {
 
       const result = await scanModelResources({
         root,
-        datastore: 'curve',
+        datastore: 'acme',
         database: 'finance',
         service: 'billing',
       });
@@ -134,7 +134,7 @@ describe('model resources', () => {
       expect(result.errors).toEqual([]);
       expect(result.graph.resources).toContainEqual(
         expect.objectContaining({
-          ref: { kind: 'table', namespace: 'curve/finance', id: 'ledger.statements' },
+          ref: { kind: 'table', namespace: 'acme/finance', id: 'ledger.statements' },
           attributes: expect.objectContaining({
             adapter: 'prisma',
             schema: {
@@ -174,7 +174,7 @@ describe('model resources', () => {
 
       const result = await scanModelResources({
         root,
-        datastore: 'curve',
+        datastore: 'acme',
         database: 'finance',
         service: 'billing',
       });
@@ -182,7 +182,7 @@ describe('model resources', () => {
       expect(result.errors).toEqual([]);
       expect(result.graph.resources).toContainEqual(
         expect.objectContaining({
-          ref: { kind: 'table', namespace: 'curve/finance', id: 'statements' },
+          ref: { kind: 'table', namespace: 'acme/finance', id: 'statements' },
           attributes: expect.objectContaining({
             adapter: 'drizzle',
             schema: {
@@ -221,7 +221,7 @@ describe('model resources', () => {
 
       const result = await scanModelResources({
         root,
-        datastore: 'curve',
+        datastore: 'acme',
         database: 'finance',
         service: 'reporting',
       });
@@ -253,7 +253,7 @@ describe('model resources', () => {
             },
           },
         ],
-        { datastore: 'curve', database: 'finance' },
+        { datastore: 'acme', database: 'finance' },
       );
 
       await fs.mkdir(path.join(root, '.autocatalog'));
@@ -265,7 +265,7 @@ describe('model resources', () => {
       expect(result.errors).toEqual([]);
       expect(result.graph.resources).toContainEqual(
         expect.objectContaining({
-          ref: { kind: 'collection', namespace: 'curve/finance', id: 'statements' },
+          ref: { kind: 'collection', namespace: 'acme/finance', id: 'statements' },
           attributes: expect.objectContaining({
             schema: {
               type: 'object',
@@ -298,7 +298,7 @@ describe('model resources', () => {
 
       const result = await scanModelResources({
         root,
-        datastore: 'curve',
+        datastore: 'acme',
         database: 'finance',
         service: 'reporting',
       });

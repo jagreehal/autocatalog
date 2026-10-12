@@ -315,3 +315,5 @@ export * from './schema-registries';
 export * from './cloudevents';
 
 export * from './scan-architecture';
+
+export * from './consumes';

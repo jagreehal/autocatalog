@@ -64,6 +64,11 @@ Add it to CI and the pull request fails with that message:
 - run: npx autocatalog drift --base-ref origin/main --root . --format github
 ```
 
+A team in another repository declares what it reads in its own
+`autocatalog.consumes.json`. Pass the company site's index with
+`--consumers https://catalog.acme.dev/catalog.json` and drift names that team
+too, even though the producer never listed it.
+
 The gate covers removed and renamed fields, type changes, fields that become
 required, narrowed enums and changed delivery guarantees. `--compatibility
 backward` gates on Schema Registry rules instead. The

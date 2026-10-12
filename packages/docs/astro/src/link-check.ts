@@ -24,9 +24,8 @@ const EVENTCATALOG = 'eventcatalog/';
  * clicks: links Starlight generates, links pages build, and links authors write
  * all end up here, after the base path has been applied.
  *
- * ponytail: attributes are read with a regex, which holds for the quoted
- * markup Astro emits; parse with hast-util-from-html if a page ever hand-writes
- * unquoted attributes.
+ * Attributes are read with a regex, which holds for the quoted markup Astro
+ * emits. hast-util-from-html would also read hand-written unquoted attributes.
  */
 export async function brokenLinks(outDir: string, base = '/'): Promise<BrokenLink[]> {
   const prefix = `/${base.replace(/^\/+|\/+$/g, '')}`.replace(/^\/$/, '');

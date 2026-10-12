@@ -110,7 +110,7 @@ A service that starts reading or writing a table or collection that another
 team owns fails the change that introduced it:
 
 ```text
-checkout (payments) reads collection curve/finance/statements, which ledger owns
+checkout (payments) reads collection acme/finance/statements, which ledger owns
 ```
 
 Owners come from the same places as everywhere else: `catalog-info.yaml`,
@@ -120,6 +120,74 @@ Only new access is reported, so adopting this does not fail on what is already
 there, and nothing is said when either owner is unknown. A deliberate exception, such as a
 migration, is reviewed with `ac resources promote`; it is then reported as a
 warning that does not fail `--fail-on breaking`.
+
+## Consumers in other repositories
+
+An event's manifest lists the consumers its producer knows about. A team in
+another repository can start reading the event without telling anyone, and the
+producer's pull request would never name it. That team declares what it
+consumes in its own repository, in `autocatalog.consumes.json` at the root:
+
+```json
+{
+  "consumes": [
+    {
+      "service": "LedgerService",
+      "event": "payments/payment.completed",
+      "fields": ["amount", "currency"]
+    }
+  ]
+}
+```
+
+`ac site` joins every repository's declarations into the company graph it
+publishes at `/catalog.json`. A declaration naming an event no repository
+publishes, or one two repositories publish, keeps that repository out of the
+graph and the build says why. The event's page lists the declared consumers
+beside the ones its manifest names.
+
+Any repository can name any service, so a declaration only adds consumers. It
+never narrows one the producer's manifest lists: for those, the producer's
+`consumerFields` decide what they read. Two declarations of one consumer
+combine their fields, and one that names no fields, or a field path that is not
+one, means the consumer may read anything. A consumer that may read anything is
+reached by every change.
+
+Names from these files, and from runtime snapshots, reach terminal output,
+Markdown and pull request annotations, so they keep to letters, digits, spaces
+and `. _ : / -`. A declaration with any other name fails `ac validate`. Drift
+still counts such a consumer, as "a consumer whose name is not safe to print",
+so a hostile name cannot make the gate pass, and it prints the name escaped.
+
+The producer's pull request reads them back:
+
+```bash
+ac drift --base-ref origin/main --root . --consumers https://catalog.acme.dev/catalog.json
+```
+
+A renamed `amount` then fails with `breaks LedgerService`. A consumer that
+declared it reads only `currency` is listed as not affected. For a private site,
+`--consumers-token-env CATALOG_TOKEN` sends the token from that variable.
+`--consumers` also takes a file, such as a `catalog.json` your pipeline
+downloaded. When two repositories publish the same event, drift counts only the
+consumers of this repository's copy: it reads its name from the `origin`
+remote, or from `--repository`.
+
+The site is built from each repository's main branch, so a consumer declared in
+an open pull request counts once it merges and the site rebuilds. Drift prints
+when the index it read was published, from the site's `Last-Modified` header or
+the file's time, and how long ago:
+
+````text
+  consumers from https://catalog.acme.dev/catalog.json, published 2026-10-12T21:30:00Z (2 hour(s) ago)
+``` If the index
+cannot be read, drift says so and runs without it: an outage on the site does
+not block pull requests across the company.
+
+The consumer checks its side too. In the consumer's own pull request,
+`ac validate --catalog <url>` checks each declared event exists and each field
+it reads is in the schema the producer publishes, so a typo such as `amout`
+fails before anyone relies on it.
 
 ## Landing a breaking change
 
@@ -155,12 +223,17 @@ command, report, formats and gates:
 ```yaml
 - run: npm test # autotel's ArchitectureSnapshotSubscriber writes .autotel/snapshot.json
 - run: pnpm exec ac drift --base-ref origin/main --root . --format github --snapshot .autotel/snapshot.json
-```
+````
 
 It reads the `autotel-architecture/*` snapshot autotel's
 `ArchitectureSnapshotSubscriber` writes, and works with `--base-ref` and with
 `--base`/`--current` alike. A file that is not a snapshot fails the command
 before anything is scanned: read as empty, it would report every event unseen.
+
+The consumers a snapshot records join each finding's list, after the declared
+ones and labelled with how the snapshot knows: `FraudService (seen at runtime)`
+when it saw the delivery, `(reported at runtime)` when message metadata named
+it. A consumer already declared is named once, as declared.
 
 | Runtime finding                   | Severity   | Rationale                                                                             |
 | --------------------------------- | ---------- | ------------------------------------------------------------------------------------- |

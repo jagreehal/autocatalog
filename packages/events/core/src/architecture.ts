@@ -316,7 +316,7 @@ export function combineEvidence(
   if (!b) return a;
   const exports = new Map<string, number>();
 
-  // ponytail: one entry per distinct export per fact; prune by age if long-lived graphs grow.
+  // One entry per distinct export per fact.
   for (const entry of [...(a.exports ?? []), ...(b.exports ?? [])])
     exports.set(entry.id, Math.max(exports.get(entry.id) ?? 0, entry.count));
 

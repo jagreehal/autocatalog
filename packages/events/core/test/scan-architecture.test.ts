@@ -50,7 +50,7 @@ describe('architecture scan publication', () => {
 
       const options = {
         root,
-        datastore: 'curve',
+        datastore: 'acme',
         database: 'finance',
         service: 'billing',
         traces: exportOf(span('trace-1', 'billing', 'insert')),
@@ -78,7 +78,7 @@ describe('architecture scan publication', () => {
 
   it('accumulates distinct exports, ignores a repeated export and keeps promoted evidence', async () => {
     const root = await fs.mkdtemp(path.join(os.tmpdir(), 'ac-accumulate-'));
-    const base = { root, datastore: 'curve' };
+    const base = { root, datastore: 'acme' };
     const a = exportOf(span('trace-a', 'billing', 'insert'));
 
     const b = exportOf(
@@ -140,7 +140,7 @@ describe('architecture scan publication', () => {
 
   it('demotes deleted code edges to observations when evidence exists, else drops them', async () => {
     const root = await fs.mkdtemp(path.join(os.tmpdir(), 'ac-deleted-code-'));
-    const options = { root, datastore: 'curve', database: 'finance', service: 'billing' };
+    const options = { root, datastore: 'acme', database: 'finance', service: 'billing' };
 
     try {
       await fs.writeFile(
@@ -194,7 +194,7 @@ describe('scanning an ordinary repository', () => {
         'apiVersion: backstage.io/v1alpha1\nkind: Component\nmetadata:\n  name: checkout\nspec:\n  type: service\n  owner: payments\n',
       );
 
-      const options = { root, datastore: 'curve', database: 'finance', publish: false };
+      const options = { root, datastore: 'acme', database: 'finance', publish: false };
       const baseline = await scanArchitecture(options);
 
       const current = await scanArchitecture({
@@ -210,7 +210,7 @@ describe('scanning an ordinary repository', () => {
       ).toEqual([
         [
           'breaking',
-          'checkout (payments) reads collection curve/finance/statements, which ledger owns',
+          'checkout (payments) reads collection acme/finance/statements, which ledger owns',
         ],
       ]);
     } finally {

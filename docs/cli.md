@@ -53,7 +53,10 @@ without them gets no `.autocatalog/`. `--traces`, `--service`, `--datastore`,
 identities are saved to `.autocatalog/config.json`.
 
 **`ac validate`** — validates every event. `--strict-warnings` turns warnings
-into failures. See [validation](/docs/events/validation).
+into failures. It also checks `autocatalog.consumes.json`, and passes a
+repository that only consumes other teams' events. `--catalog <url|file>`
+checks each declared field against the schema the producer publishes on the
+company site. See [validation](/docs/events/validation).
 
 **`ac health`** — scores events on completeness, ownership, examples and
 versioning. `--min <score>` exits non-zero below a threshold.
@@ -68,8 +71,11 @@ versioning. `--min <score>` exits non-zero below a threshold.
 request diff; `--compatibility backward | forward | full | none` gates on a
 Schema Registry strategy instead of severity. `--snapshot <file>` adds runtime
 drift from an autotel snapshot to the same report: undocumented events and
-undeclared fields (suspicious), documented events never seen (info). See
-[drift gating](/docs/drift-ci).
+undeclared fields (suspicious), documented events never seen (info), and the
+consumers it recorded. `--consumers <url|file>` reads the company site's
+`/catalog.json` and names the consumers other repositories declare, with
+`--consumers-token-env` for a private site and `--repository` when two
+repositories publish the same event. See [drift gating](/docs/drift-ci).
 
 **`ac fields [query]`** — shows which events carry a field and which consumers
 it reaches. With no query it lists every field by usage; with one it details a
