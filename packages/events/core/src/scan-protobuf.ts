@@ -318,7 +318,8 @@ export async function discoverProtobuf(opts: ScanProtobufOptions): Promise<Disco
 
   for (const file of files) {
     opts.signal?.throwIfAborted();
-    const relFile = path.relative(root, file);
+    // Forward slashes on every platform: the path is recorded and matched against CODEOWNERS.
+    const relFile = path.relative(root, file).split(path.sep).join('/');
     let source: string;
 
     try {

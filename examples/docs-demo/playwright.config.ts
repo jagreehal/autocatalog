@@ -24,7 +24,9 @@ export default defineConfig({
   webServer: {
     // Built and previewed, not `dev`: the search index is a build artifact, so
     // the dev server cannot answer the question these stories exist to ask.
-    command: `pnpm build && pnpm preview --host 127.0.0.1 --port ${port}`,
+    // `--ignore-lock` keeps the server in the foreground, where Playwright can
+    // stop it: Astro otherwise backgrounds a preview an AI agent starts.
+    command: `pnpm build && pnpm preview --host 127.0.0.1 --port ${port} --ignore-lock`,
     url: baseURL,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,

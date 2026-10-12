@@ -20,14 +20,15 @@ jobs:
       - name: Lint (Prettier, then oxlint with the anti-slop rules)
         run: pnpm lint
 
+      # Packages resolve each other through dist/, so build before type-checking.
+      - name: Build
+        run: pnpm build
+
       - name: Type-check with TypeScript 7
         run: pnpm typecheck
 
       - name: Run tests
         run: pnpm test
-
-      - name: Type-check all packages
-        run: pnpm build
 
       - name: Verify product journeys through the built CLI
         run: pnpm smoke:product

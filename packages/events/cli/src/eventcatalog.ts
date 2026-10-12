@@ -1083,7 +1083,7 @@ export async function exportToEventCatalog(
 
   for (const file of previous.unproven.filter((file) => !rewritten.has(file))) {
     skipped.push(
-      `${path.relative(catalogDir, file)} may be from an earlier export, but nothing shows autocatalog wrote it; left in place`,
+      `${path.relative(catalogDir, file).split(path.sep).join('/')} may be from an earlier export, but nothing shows autocatalog wrote it; left in place`,
     );
   }
 
