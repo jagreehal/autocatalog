@@ -3,7 +3,7 @@ import path from 'node:path';
 import os from 'node:os';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { writeEventFolder } from '../src/writer';
-import type { AdapterEvent } from '../src/curve-mapper';
+import type { AdapterEvent } from '../src/event-mapper';
 
 const evt: AdapterEvent = {
   id: 'payment.completed',

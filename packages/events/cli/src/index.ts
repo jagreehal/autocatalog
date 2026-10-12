@@ -16,15 +16,33 @@ export function buildProgram(): Command {
     .option('--cwd <dir>', 'project directory', process.cwd())
     .option('-q, --quiet', 'suppress non-error output', false)
     .option('--strict-warnings', 'treat warnings as errors', false)
-    .action(async (opts: { cwd: string; quiet: boolean; strictWarnings: boolean }) => {
-      const code = await runValidate({
-        cwd: opts.cwd,
-        quiet: opts.quiet,
-        strictWarnings: opts.strictWarnings,
-      });
+    .option(
+      '--catalog <url|file>',
+      "the company site's /catalog.json: check the fields autocatalog.consumes.json reads",
+    )
+    .option(
+      '--catalog-token-env <name>',
+      'environment variable holding a token for a private company site',
+    )
+    .action(
+      async (opts: {
+        cwd: string;
+        quiet: boolean;
+        strictWarnings: boolean;
+        catalog?: string;
+        catalogTokenEnv?: string;
+      }) => {
+        const code = await runValidate({
+          cwd: opts.cwd,
+          quiet: opts.quiet,
+          strictWarnings: opts.strictWarnings,
+          catalog: opts.catalog,
+          catalogTokenEnv: opts.catalogTokenEnv,
+        });
 
-      process.exit(code);
-    });
+        process.exit(code);
+      },
+    );
 
   withScanIdentities(
     program
@@ -177,9 +195,24 @@ export function buildProgram(): Command {
       '--snapshot <file>',
       'runtime architecture snapshot (autotel) to check the current catalog against',
     )
+    .option(
+      '--consumers <url|file>',
+      "the company site's /catalog.json: consumers other repositories declare",
+    )
+    .option(
+      '--consumers-token-env <name>',
+      'environment variable holding a token for a private company site',
+    )
+    .option(
+      '--repository <name>',
+      "this repository's name on the company site (default: from the origin remote)",
+    )
     .option('-q, --quiet', 'suppress output', false)
     .action(
       async (opts: {
+        consumers?: string;
+        consumersTokenEnv?: string;
+        repository?: string;
         base?: string;
         baseRef?: string;
         root: string;
@@ -203,6 +236,9 @@ export function buildProgram(): Command {
             failOn: opts.failOn,
             compatibility: opts.compatibility,
             snapshot: opts.snapshot,
+            consumers: opts.consumers,
+            consumersTokenEnv: opts.consumersTokenEnv,
+            repository: opts.repository,
             quiet: opts.quiet,
           }),
         );

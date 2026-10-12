@@ -27,6 +27,10 @@ import {
   architectureConflicts,
   relationshipKey,
   isJsonObject,
+  CONSUMES_FILE,
+  createConsumerResourceGraph,
+  mergeConsumerGraph,
+  readConsumerDeclarations,
   RESOURCE_GRAPH_FILE,
   type CatalogRelationship,
   type JsonValue,
@@ -51,7 +55,7 @@ import { catalogHref } from './view';
 export interface RepositoryFailure {
   repository: string;
   /** Which convention failed to compile: the repository's events or its agents. */
-  source: 'events' | 'agents' | 'resources';
+  source: 'events' | 'agents' | 'resources' | 'consumers';
   message: string;
 }
 
@@ -247,6 +251,31 @@ export async function buildDocsCatalog(
     }
   }
 
+  // What a repository says it consumes of the events every repository publishes,
+  // so a producer elsewhere learns who it would break. Merged rather than
+  // composed: a service or edge the producer's events already name is the same
+  // one, and the declaration adds only what is missing.
+  const consumerFragments: ResourceGraph[] = [];
+
+  for (const { name, repositoryRoot } of repositories) {
+    if (!fs.existsSync(path.join(repositoryRoot, CONSUMES_FILE))) continue;
+
+    try {
+      consumerFragments.push(
+        createConsumerResourceGraph(await readConsumerDeclarations(repositoryRoot), {
+          repository: name,
+          events: graphEvents,
+        }),
+      );
+    } catch (error) {
+      failures.push({
+        repository: name,
+        source: 'consumers',
+        message: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
   // Drawn once every Adapter has composed, because a document may be about
   // anything they define. One naming nothing here — a typo, or a repository
   // quarantined above — is left out and said out loud; `ac docs check` is what
@@ -271,6 +300,11 @@ export async function buildDocsCatalog(
       });
     }
   }
+
+  // Last, so a declaration only fills gaps: every repository's own resources
+  // and events are in place first, and none of them can be pre-empted by
+  // another repository naming the same service as a consumer.
+  composed = consumerFragments.reduce(mergeConsumerGraph, composed);
 
   const about = createDescribesRelationships(docs, composed.resources, {
     repository: options.repository,
@@ -330,7 +364,11 @@ export async function buildDocsCatalog(
 
 /** What a quarantined repository failed to compile, as the file or folder its owners would open. */
 export const failureSource = (failure: RepositoryFailure) =>
-  failure.source === 'resources' ? RESOURCE_GRAPH_FILE : `${failure.source}/ catalog`;
+  failure.source === 'resources'
+    ? RESOURCE_GRAPH_FILE
+    : failure.source === 'consumers'
+      ? CONSUMES_FILE
+      : `${failure.source}/ catalog`;
 
 /** An observation only adds evidence; a declaration or an owner says what the resource is. */
 const declares = (entry: CatalogResource | CatalogRelationship) => {
@@ -382,8 +420,8 @@ function claim(
  * or owner. A contradicting declaration quarantines the fragment, as a
  * contradicting event does. The first declaration in sorted order stands.
  */
-// ponytail: first declarer wins, as for events; an ownership registry naming
-// which repository may declare which datastore is the upgrade.
+// The first repository to declare a datastore keeps it, as for events. An
+// ownership registry could name which repository may declare which datastore.
 function guardFragment(
   composed: ResourceGraph,
   fragment: { repository: string; graph: ResourceGraph },
@@ -488,23 +526,25 @@ export function resourcesDefinedByRepository(
   return index.get(repository) ?? [];
 }
 
-export interface EventAgents {
+export interface EventParticipants {
   producers: ShellLink[];
   consumers: ShellLink[];
 }
 
 /**
- * Agents and Tools that declare they produce or consume one event, named
- * `kind/id`. Neither has a page of its own, so each links to its entry in the
- * Catalog, as a document about it does.
+ * Who touches one event beyond what its own manifest names: Agents and Tools
+ * that declare they produce or consume it, named `kind/id`, and services that
+ * another repository declares consume it. None has a page of its own, so each
+ * links to its entry in the Catalog, as a document about it does.
  */
-export function eventAgents(
+export function eventParticipants(
   catalog: DocsCatalog,
   repository: string,
   event: LoadedEvent,
-): EventAgents {
+): EventParticipants {
   const namespace = `${repository}/${event.frontmatter.domain}`;
-  const out: EventAgents = { producers: [], consumers: [] };
+  const out: EventParticipants = { producers: [], consumers: [] };
+  const listed = new Set(event.frontmatter.consumers);
 
   const link = (ref: ResourceRef): ShellLink => ({
     label: `${ref.kind}/${ref.id}`,
@@ -524,6 +564,13 @@ export function eventAgents(
       out.producers.push(link(from));
     } else if (type === 'consumes' && isThisEvent(from) && isAgentSystem(to)) {
       out.consumers.push(link(to));
+    } else if (
+      type === 'consumes' &&
+      isThisEvent(from) &&
+      to.kind === 'service' &&
+      !listed.has(to.id)
+    ) {
+      out.consumers.push({ label: to.id, kind: 'service', href: catalogHref(to) });
     }
   }
 

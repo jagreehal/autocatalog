@@ -6,6 +6,7 @@ import { jsonObjectSchema } from './json';
 import { loadCatalog, type LoadedEvent } from './load';
 import { durationSeconds } from './schema';
 import { matchSnapshot, type ArchitectureSnapshot } from './snapshot';
+import { isSafeName, UNSAFE_CONSUMER } from './consumes';
 import { schemaPointer, sourceLines } from './source-lines';
 import type { ResourceRef } from './resource-graph';
 
@@ -679,6 +680,43 @@ export interface DriftCatalogsOptions {
   snapshot?: ArchitectureSnapshot;
 }
 
+/** A consumer only a runtime snapshot names, and how it is shown. */
+interface RuntimeConsumer {
+  name: string;
+  label: string;
+}
+
+/**
+ * The consumers a runtime snapshot recorded for each event, by `domain/id`. A
+ * consumer seen receiving the event is evidence; one named in message metadata
+ * is a report, and the label says which, since neither is a declaration.
+ */
+function runtimeConsumers(
+  events: LoadedEvent[],
+  snapshot: ArchitectureSnapshot,
+): Map<string, RuntimeConsumer[]> {
+  const { matches } = matchSnapshot(events, (event) => event.frontmatter, snapshot);
+  const consumers = new Map<string, RuntimeConsumer[]>();
+
+  for (const [name, event] of matches) {
+    const observation = snapshot.events[name];
+    const how = observation?.consumerEvidence === 'observed' ? 'seen' : 'reported';
+
+    consumers.set(
+      `${event.frontmatter.domain}/${event.frontmatter.id}`,
+      // Runtime evidence is data from outside the repository: a name that is not
+      // safe to print is counted under a safe label rather than dropped.
+      (observation?.consumers ?? []).map((consumer) => {
+        const name = isSafeName(consumer) ? consumer : UNSAFE_CONSUMER;
+
+        return { name, label: `${name} (${how} at runtime)` };
+      }),
+    );
+  }
+
+  return consumers;
+}
+
 export async function driftCatalogs(
   baselineRoot: string,
   currentRoot: string,
@@ -689,6 +727,10 @@ export async function driftCatalogs(
     loadCatalog(currentRoot, { skipVersioned: true }),
   ]);
 
+  const seen = options.snapshot
+    ? runtimeConsumers(baseline, options.snapshot)
+    : new Map<string, RuntimeConsumer[]>();
+
   const baseByKey = new Map(baseline.map((e) => [key(e), e]));
   const currByKey = new Map(current.map((e) => [key(e), e]));
   const findings: DriftFinding[] = [];
@@ -696,11 +738,19 @@ export async function driftCatalogs(
   for (const [k, base] of baseByKey) {
     const curr = currByKey.get(k);
 
-    const consumers = [
+    const declared = [
       ...new Set([
         ...base.frontmatter.consumers,
         ...(options.consumersOf?.(base.frontmatter.domain, base.frontmatter.id) ?? []),
       ]),
+    ];
+
+    // Consumers only the runtime knows about, labelled with how it knows.
+    const consumers = [
+      ...declared,
+      ...(seen.get(`${base.frontmatter.domain}/${base.frontmatter.id}`) ?? []).flatMap(
+        ({ name, label }) => (declared.includes(name) ? [] : [label]),
+      ),
     ];
 
     if (!curr) {
@@ -726,9 +776,15 @@ export async function driftCatalogs(
         // Only the current declaration counts: a consumer that stops reading a
         // field in the same change that removes it is exactly the safe removal,
         // and one whose declaration was dropped is back to unspecified.
+        // Fields from elsewhere describe only consumers this event does not list:
+        // another repository must not narrow what a listed consumer reads.
         consumerFields: {
+          ...Object.fromEntries(
+            Object.entries(
+              options.consumerFieldsOf?.(curr.frontmatter.domain, curr.frontmatter.id) ?? {},
+            ).filter(([consumer]) => !curr.frontmatter.consumers.includes(consumer)),
+          ),
           ...curr.frontmatter.consumerFields,
-          ...options.consumerFieldsOf?.(curr.frontmatter.domain, curr.frontmatter.id),
         },
         source: sourceOf(curr),
         previous: base.schema,
@@ -1151,7 +1207,7 @@ export function compareSemverish(a: string, b: string): number {
 
   if (preA.length === 0 || preB.length === 0) return preB.length - preA.length;
 
-  // ponytail: numeric locale order approximates semver's identifier rules.
+  // Numeric locale order follows semver's identifier rules.
   return preA.join('-').localeCompare(preB.join('-'), 'en', { numeric: true });
 }
 

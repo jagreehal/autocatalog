@@ -48,7 +48,7 @@ const distance = (a: string, b: string): number => {
 };
 
 /** The candidate a mistyped reference most likely meant, for a "did you mean" hint. */
-// ponytail: edit distance over every candidate, fine for catalogs in the thousands.
+// Edit distance over every candidate, which suits catalogs in the thousands.
 export function closestMatch(ref: string, candidates: string[]): string | undefined {
   const best = candidates
     .map((candidate) => ({ candidate, d: distance(ref, candidate) }))

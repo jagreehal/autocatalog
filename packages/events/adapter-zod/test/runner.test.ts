@@ -7,7 +7,7 @@ import { runAdapter } from '../src/runner';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
-const curveFixture = path.join(here, 'fixtures/curve-export.ts');
+const compactFixture = path.join(here, 'fixtures/compact-export.ts');
 
 const explicitFixture = path.join(here, 'fixtures/explicit-export.ts');
 
@@ -22,9 +22,9 @@ afterEach(async () => {
 });
 
 describe('runAdapter', () => {
-  it('processes a curve-style module with auto-detected shape', async () => {
+  it('processes a compact-style module with auto-detected shape', async () => {
     const result = await runAdapter({
-      module: curveFixture,
+      module: compactFixture,
       exportName: 'jsonSchemas',
       out: tmp,
     });
@@ -65,7 +65,7 @@ describe('runAdapter', () => {
 
   it('returns an error if the named export is missing', async () => {
     await expect(
-      runAdapter({ module: curveFixture, exportName: 'nopeNope', out: tmp }),
+      runAdapter({ module: compactFixture, exportName: 'nopeNope', out: tmp }),
     ).rejects.toThrow(/export/i);
   });
 });

@@ -144,10 +144,10 @@ describe('ac resources', () => {
   it('scans a schema-free OTLP export and promotes an observed edge', async () => {
     const root = await workspace();
     const traces = await writeJson(path.join(root, 'otlp.json'), otlp('billing', 'insert', 't1'));
-    expect(await runResourceScan({ root, traces, datastore: 'curve', quiet: true })).toBe(0);
+    expect(await runResourceScan({ root, traces, datastore: 'acme', quiet: true })).toBe(0);
     const graph = (await readResourceGraph(root))!;
     expect(graph.relationships.map(relationshipKey)).toEqual([
-      'service:billing--writes-->collection:curve%2Ffinance/statements',
+      'service:billing--writes-->collection:acme%2Ffinance/statements',
     ]);
     expect(
       await runResourcePromote({
@@ -222,7 +222,7 @@ describe('ac resources', () => {
         provider: 'backstage',
         source,
         root,
-        id: 'curve-backstage',
+        id: 'acme-backstage',
         quiet: true,
       }),
     ).toBe(0);

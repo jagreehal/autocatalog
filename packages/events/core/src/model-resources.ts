@@ -951,8 +951,8 @@ function drizzleAccess(call: ts.CallExpression, method: string): 'reads' | 'writ
   if (method !== 'insert' && method !== 'update' && method !== 'delete') return undefined;
   const parent = call.parent;
 
-  // ponytail: syntax, not types. `cache.delete(users)` as a statement is not a
-  // query; `await cache.delete(users)` would be. Resolve the receiver's type if that matters.
+  // Read from syntax: `cache.delete(users)` as a statement is not a query, and
+  // `await cache.delete(users)` is.
   return (ts.isPropertyAccessExpression(parent) && parent.expression === call) ||
     ts.isAwaitExpression(parent) ||
     ts.isReturnStatement(parent)

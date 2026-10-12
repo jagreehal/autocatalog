@@ -1,19 +1,19 @@
 export {
-  parseCurveName,
-  curveItemToAutocatalogEvent,
+  parseCompactName,
+  compactItemToAutocatalogEvent,
   explicitToAdapterEvent,
   toAdapterEvent,
-  isCurveItem,
+  isCompactItem,
   isExplicitEvent,
-  type ParsedCurveName,
-  type CurveItem,
+  type ParsedCompactName,
+  type CompactItem,
   type ExplicitEvent,
   type AdapterEvent,
   isZodSchema,
   toJsonSchema,
   type SourceLocation,
   type ProvenanceValue,
-} from './curve-mapper';
+} from './event-mapper';
 
 export {
   scanRepo,

@@ -6,7 +6,7 @@ import Ajv2020 from 'ajv/dist/2020.js';
 import graphContract from 'autocatalog-core/contracts/graph-v1.schema.json' with { type: 'json' };
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { aboutDocument, documentsAbout } from '../src/about';
-import { buildDocsCatalog, eventAgents, resourcesDefinedByRepository } from '../src/catalog';
+import { buildDocsCatalog, eventParticipants, resourcesDefinedByRepository } from '../src/catalog';
 import {
   writeResourceGraph,
   architectureResource,
@@ -89,7 +89,7 @@ describe('documentation catalog projection', () => {
     const repository = path.join(root, 'billing');
     await fs.mkdir(repository);
     const graph = emptyResourceGraph();
-    const ref = { kind: 'collection', namespace: 'curve/finance', id: 'statements' } as const;
+    const ref = { kind: 'collection', namespace: 'acme/finance', id: 'statements' } as const;
     graph.resources.push(architectureResource(ref), architectureService('billing'));
     graph.relationships.push({
       type: 'writes',
@@ -486,7 +486,7 @@ describe('agents linked to events across repositories', () => {
 
     // The event's own producer is a service, already on the page; only the agent
     // is added, linked to its Catalog entry as a document page links it.
-    expect(eventAgents(catalog, repository, event)).toEqual({
+    expect(eventParticipants(catalog, repository, event)).toEqual({
       producers: [],
       consumers: [
         {
@@ -514,6 +514,94 @@ describe('agents linked to events across repositories', () => {
       },
     ]);
     // The event itself still publishes; only the broken agent catalog is missing.
+    expect(catalog.events).toHaveLength(1);
+  });
+});
+
+describe('services consuming events across repositories', () => {
+  const declare = (consumes: Array<{ service: string; event: string; fields?: string[] }>) =>
+    write('ledger/autocatalog.consumes.json', JSON.stringify({ consumes }));
+
+  it('draws the edge from the event another repository publishes, with the fields it reads', async () => {
+    await writeEvent();
+    // The consumer repository publishes nothing else.
+    await declare([
+      { service: 'LedgerService', event: 'payments/payment.captured', fields: ['amount'] },
+    ]);
+
+    const catalog = await buildDocsCatalog(root, { includeDates: false });
+
+    expect(catalog.failures).toEqual([]);
+    expect(
+      catalog.graph.relationships
+        .filter((r) => r.type === 'consumes' && r.to.id === 'LedgerService')
+        .map((r) => [r.from.namespace, r.from.id, r.attributes]),
+    ).toEqual([['payments-service/payments', 'payment.captured', { fields: ['amount'] }]]);
+
+    // The event's page lists it, linked to its entry since it has no page of its own.
+    const [entry] = catalog.events;
+
+    if (!entry) throw new Error('the event did not publish');
+    const { repository, event } = entry;
+
+    expect(eventParticipants(catalog, repository, event).consumers).toEqual([
+      {
+        label: 'LedgerService',
+        kind: 'service',
+        href: '/catalog#resource-service%3ALedgerService',
+      },
+    ]);
+  });
+
+  it('joins a service the producer already lists, without failing either repository', async () => {
+    await writeEvent();
+    // The producer's manifest names LedgerService too, so the service and the
+    // edge already exist when the consumer's declaration arrives.
+    const manifest = `${root}/payments-service/events/payments/PaymentCaptured/autocatalog.json`;
+    const json = JSON.parse(await fs.readFile(manifest, 'utf8'));
+    await fs.writeFile(manifest, JSON.stringify({ ...json, consumers: ['LedgerService'] }));
+    await declare([
+      { service: 'LedgerService', event: 'payments/payment.captured', fields: ['amount'] },
+      { service: 'FraudService', event: 'payments/payment.captured' },
+    ]);
+
+    const catalog = await buildDocsCatalog(root, { includeDates: false });
+
+    expect(catalog.failures).toEqual([]);
+    expect(
+      catalog.graph.relationships
+        .filter((r) => r.type === 'consumes' && r.from.id === 'payment.captured')
+        .map((r) => [r.to.id, r.attributes ?? {}]),
+    ).toEqual([
+      ['FraudService', {}],
+      // The producer lists LedgerService; its word on what Ledger reads stands.
+      ['LedgerService', {}],
+    ]);
+
+    // LedgerService is on the page already, from the manifest; only FraudService is added.
+    const [entry] = catalog.events;
+
+    if (!entry) throw new Error('the event did not publish');
+    const { repository, event } = entry;
+
+    expect(eventParticipants(catalog, repository, event).consumers.map((c) => c.label)).toEqual([
+      'FraudService',
+    ]);
+  });
+
+  it('quarantines a declaration naming an event nobody publishes, and says which', async () => {
+    await writeEvent();
+    await declare([{ service: 'LedgerService', event: 'payments/payment.capture' }]);
+
+    const catalog = await buildDocsCatalog(root, { includeDates: false });
+
+    expect(catalog.failures).toEqual([
+      {
+        repository: 'ledger',
+        source: 'consumers',
+        message: expect.stringContaining('payments/payment.capture, which no repository publishes'),
+      },
+    ]);
     expect(catalog.events).toHaveLength(1);
   });
 });
@@ -606,6 +694,27 @@ describe('resource graphs from several repositories', () => {
 
     return graph;
   }
+
+  it('cannot stand in for a service another repository declares by naming it as a consumer', async () => {
+    await writeEvent();
+    await enrol('billing', declaredBy('billing'));
+    // A repository that sorts first claims billing as a consumer of an event.
+    await write(
+      'aaa-hostile/autocatalog.consumes.json',
+      JSON.stringify({ consumes: [{ service: 'billing', event: 'payments/payment.captured' }] }),
+    );
+
+    const catalog = await buildDocsCatalog(root, { includeDates: false });
+
+    expect(catalog.failures).toEqual([]);
+    // billing's own declaration stands, and the consumer edge joins it.
+    expect(
+      catalog.graph.relationships
+        .filter((r) => r.from.id === 'billing' || r.to.id === 'billing')
+        .map((r) => r.type)
+        .sort(),
+    ).toEqual(['consumes', 'writes']);
+  });
 
   it('quarantines a repository claiming a datastore another repository declares', async () => {
     await enrol('billing', declaredBy('billing'));
