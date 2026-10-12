@@ -1,5 +1,13 @@
 # autocatalog-agents-cli
 
+## 0.2.1
+
+### Patch Changes
+
+- autocatalog-agents-core@0.2.1
+  - autocatalog-agents-adapter-autotel@0.2.1
+  - autocatalog-agents-mcp@0.2.1
+
 ## 0.2.0
 
 ### Minor Changes
