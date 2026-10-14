@@ -1,5 +1,13 @@
 # autocatalog-cli
 
+## 0.2.1
+
+### Patch Changes
+
+- 1b03b64: `autocatalog site` builds inside any project layout. It renders with its own React when the project installs another React at the top of a flat `node_modules`, such as an EventCatalog project, and it brings the js-yaml its bundled Starlight code imports.
+- Updated dependencies [1b03b64]
+  - autocatalog-docs-astro@0.2.1
+
 ## 0.2.0
 
 ### Minor Changes

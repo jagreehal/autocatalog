@@ -1,6 +1,6 @@
 {
   "name": "autocatalog-cli",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "The ac CLI: scan a repository into a catalog, validate it, gate drift in CI, and run the docs convention.",
   "license": "MIT",
   "repository": {
