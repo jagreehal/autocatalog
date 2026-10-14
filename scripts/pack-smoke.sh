@@ -30,6 +30,9 @@ echo "==> install into an empty project with npm"
 mkdir -p "$TMP/user"
 cd "$TMP/user"
 npm init -y >/dev/null
+# A project that already has an older React, hoisted to the top of a flat
+# node_modules: the site must still render with its own.
+npm install --no-audit --no-fund --loglevel=error react@18.3.1 react-dom@18.3.1
 npm install --no-audit --no-fund --loglevel=error "$TMP"/packs/*.tgz
 
 echo "==> autocatalog validate"

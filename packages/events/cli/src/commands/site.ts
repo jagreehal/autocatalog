@@ -126,13 +126,21 @@ export async function runSite(opts: RunSiteOptions): Promise<number> {
     // against the working directory, not --root.
     const child = spawn(
       process.execPath,
-      [astro, opts.dev ? 'dev' : 'build', '--root', siteProject],
+      [
+        '--import',
+        new URL('./site-react.js', import.meta.url).href,
+        astro,
+        opts.dev ? 'dev' : 'build',
+        '--root',
+        siteProject,
+      ],
       {
         cwd: siteProject,
         stdio: 'inherit',
         env: {
           ...process.env,
           AUTOCATALOG_DOCS_ROOT: root,
+          AUTOCATALOG_REACT_FROM: import.meta.resolve('autocatalog-docs-astro'),
           ...(opts.site && { AUTOCATALOG_SITE_URL: opts.site }),
           ...(opts.base && { AUTOCATALOG_SITE_BASE: opts.base }),
           ...(opts.title && { AUTOCATALOG_DOCS_TITLE: opts.title }),
