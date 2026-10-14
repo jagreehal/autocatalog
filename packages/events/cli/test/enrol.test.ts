@@ -32,16 +32,16 @@ describe('listRepositoriesByTopic', () => {
       if (url.includes('/orgs/')) return json({ message: 'Not Found' }, 404);
 
       return json([
-        repo('payments', ['cbd-publisher']),
-        repo('dashboard', ['cbd-publisher', 'frontend']),
-        repo('old-billing', ['cbd-publisher'], true),
+        repo('payments', ['catalog-publisher']),
+        repo('dashboard', ['catalog-publisher', 'frontend']),
+        repo('old-billing', ['catalog-publisher'], true),
         repo('scratch', []),
       ]);
     };
 
     const found = await listRepositoriesByTopic({
       owner: 'acme',
-      topic: 'cbd-publisher',
+      topic: 'catalog-publisher',
       token: 't0ken',
       fetch,
     });
@@ -104,6 +104,85 @@ describe('cloneRepositories', () => {
     });
 
     expect(log.trim()).toBe('runbook');
+  });
+
+  it('skips a repository that cannot be cloned, names it, and clones the rest', async () => {
+    const origin = path.join(work, 'payments');
+    await fs.mkdir(origin);
+    execFileSync('git', ['init', '-q'], { cwd: origin });
+
+    const into = path.join(work, 'repos');
+
+    const { cloned, failed } = await cloneRepositories(
+      [
+        { name: 'payments', cloneUrl: origin },
+        { name: 'gone', cloneUrl: path.join(work, 'gone') },
+      ],
+      { into },
+    );
+
+    expect(cloned).toEqual(['payments']);
+    expect(failed.map((failure) => failure.name)).toEqual(['gone']);
+    expect(failed[0]?.reason).toContain('gone');
+    expect((await fs.stat(path.join(into, 'payments', '.git'))).isDirectory()).toBe(true);
+  });
+
+  it('clones a repository enrolled twice once, and keeps the checkout', async () => {
+    const origin = path.join(work, 'payments');
+    await fs.mkdir(origin);
+    execFileSync('git', ['init', '-q'], { cwd: origin });
+
+    const into = path.join(work, 'repos');
+
+    // Enrolled by topic, and named again with --repo in another spelling.
+    const { failed } = await cloneRepositories(
+      [
+        { name: 'payments', cloneUrl: origin },
+        { name: 'payments', cloneUrl: `${origin}/` },
+      ],
+      { into },
+    );
+
+    expect(failed).toEqual([]);
+    expect((await fs.stat(path.join(into, 'payments', '.git'))).isDirectory()).toBe(true);
+  });
+
+  it('refuses a repository name that is not one folder, before deleting anything', async () => {
+    const into = path.join(work, 'cache', 'repos');
+    await fs.mkdir(into, { recursive: true });
+
+    for (const name of ['..', '.', 'a/b', '']) {
+      await expect(
+        cloneRepositories([{ name, cloneUrl: path.join(work, 'gone') }], { into }),
+      ).rejects.toThrow(/not a folder name/);
+    }
+
+    expect((await fs.stat(path.join(work, 'cache'))).isDirectory()).toBe(true);
+  });
+
+  it('refuses two different repositories that would clone to the same folder', async () => {
+    await expect(
+      cloneRepositories(
+        [
+          { name: 'payments', cloneUrl: 'https://github.com/acme/payments.git' },
+          { name: 'payments', cloneUrl: 'https://x:secret@github.com/other/payments.git' },
+        ],
+        { into: path.join(work, 'repos') },
+      ),
+    ).rejects.toThrow(/payments.*acme\/payments.*other\/payments/);
+  });
+
+  it('keeps credentials in a clone URL out of what it reports', async () => {
+    const refused = cloneRepositories(
+      [
+        { name: 'payments', cloneUrl: 'https://github.com/acme/payments.git' },
+        { name: 'payments', cloneUrl: 'https://x:secret@github.com/other/payments.git' },
+      ],
+      { into: path.join(work, 'repos') },
+    );
+
+    await expect(refused).rejects.toThrow(/github\.com\/other\/payments/);
+    await expect(refused).rejects.not.toThrow(/secret/);
   });
 });
 

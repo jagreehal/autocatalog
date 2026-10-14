@@ -132,7 +132,7 @@ that produced it, so any runtime in any language emitting the
 
 **`ac from-zod <file>`** — registered by `autocatalog-adapter-zod` when it is
 installed. Adapters can add their own commands this way; `ac` discovers them
-from `node_modules`.
+from `node_modules`. See [Writing an adapter](/docs/adapters).
 
 ## The site
 

@@ -109,6 +109,15 @@ describe('what a scan leaves in the repository', () => {
     await expect(fs.access(path.join(repo, 'AGENTS.md'))).rejects.toThrow();
   });
 
+  it('refuses a root that is not there, instead of writing an empty catalog', async () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const out = path.join(repo, 'events');
+
+    expect(await runScan({ root: path.join(repo, 'typo'), out, quiet: true })).toBe(1);
+    expect(error.mock.calls.join(' ')).toMatch(/typo: no such directory/);
+    await expect(fs.access(out)).rejects.toThrow();
+  });
+
   it('says what it wrote, where, and whether to commit it', async () => {
     await runScan({ root: repo, out: path.join(repo, 'events') });
     const text = said.join('\n');

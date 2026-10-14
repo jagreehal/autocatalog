@@ -25,7 +25,8 @@ repo has no events — the scan reads JSON Schema, OpenAPI (`webhooks`,
 `callbacks`, and operations marked `x-autocatalog`), Avro `.avsc`, and protobuf
 `.proto` with no configuration. Zod and other runtime adapters need
 `ac scan . --allow-code-execution`, which runs repository code, so only for
-source you have read and trust.
+source you have read and trust. A company format needs an adapter of its own:
+see `docs/adapters.md`.
 
 ## 2. Work the gaps, hardest first
 

@@ -74,7 +74,29 @@ export async function runSite(opts: RunSiteOptions): Promise<number> {
     }
 
     console.log(kleur.dim(`Cloning ${enrolled.map((repo) => repo.name).join(', ')}`));
-    root = await cloneRepositories(enrolled, { into: path.resolve(opts.cache), token });
+
+    const cloned = await cloneRepositories(enrolled, {
+      into: path.resolve(opts.cache),
+      token,
+    }).catch((error: Error) => error);
+
+    if (cloned instanceof Error) {
+      console.error(kleur.red(cloned.message));
+
+      return 1;
+    }
+
+    for (const failure of cloned.failed) {
+      console.warn(kleur.yellow(`Left out ${failure.name}: ${failure.reason}`));
+    }
+
+    if (cloned.cloned.length === 0) {
+      console.error(kleur.red('No repository could be cloned.'));
+
+      return 1;
+    }
+
+    root = cloned.root;
   }
 
   // Checked once anything enrolled is cloned: the contract may live in a clone.
@@ -156,17 +178,20 @@ export async function runSite(opts: RunSiteOptions): Promise<number> {
   if (code !== 0 || opts.dev) return code;
 
   // Astro builds inside the bundled project, where its prerender chunks can
-  // resolve the packages they import; the result is copied to --out.
+  // resolve the packages they import. The result is assembled beside --out
+  // and swapped in whole, so a failed build leaves the last good site.
   const out = path.resolve(opts.out);
-  await fs.rm(out, { recursive: true, force: true });
-  await fs.cp(path.join(siteProject, 'dist'), out, { recursive: true });
+  const next = `${out}.next`;
+  await fs.rm(next, { recursive: true, force: true });
+  await fs.cp(path.join(siteProject, 'dist'), next, { recursive: true });
 
   if (eventcatalog) {
-    await fs.cp(eventcatalog.dist, path.join(out, EVENTCATALOG_DIR), { recursive: true });
-    await fs.cp(eventcatalog.license, path.join(out, EVENTCATALOG_DIR, 'LICENSE'));
-    const missing = await missingEmbeds(out, eventcatalog.embeds);
+    await fs.cp(eventcatalog.dist, path.join(next, EVENTCATALOG_DIR), { recursive: true });
+    await fs.cp(eventcatalog.license, path.join(next, EVENTCATALOG_DIR, 'LICENSE'));
+    const missing = await missingEmbeds(next, eventcatalog.embeds);
 
     if (missing.length > 0) {
+      await fs.rm(next, { recursive: true, force: true });
       console.error(
         kleur.red(`EventCatalog did not build pages the site embeds:\n  ${missing.join('\n  ')}`),
       );
@@ -174,6 +199,9 @@ export async function runSite(opts: RunSiteOptions): Promise<number> {
       return 1;
     }
   }
+
+  await fs.rm(out, { recursive: true, force: true });
+  await fs.rename(next, out);
 
   console.log(kleur.green(`Site written to ${path.relative(process.cwd(), out) || '.'}`));
   // Build output, not source: deploy it, and keep it out of the repository.

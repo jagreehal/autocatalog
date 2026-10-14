@@ -8,7 +8,7 @@ const meta = {
   parameters: { layout: 'fullscreen' },
   // A real, public EventCatalog, so the frame shows what a reader would see.
   args: {
-    base: 'https://jagreehal.github.io/cbd-catalog/',
+    base: 'https://demo.eventcatalog.dev/',
     defaultPath: 'visualiser/domains/payments/1.0.0',
   },
 } satisfies Meta<typeof ArchitecturePage>;

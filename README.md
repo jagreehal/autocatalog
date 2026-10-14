@@ -187,7 +187,8 @@ diagrams. autocatalog works with it three ways:
 - **Keep your portal.** `autocatalog to-eventcatalog ./catalog` writes your
   events, commands, services, datastores, owners and systems into an
   EventCatalog project, so your team keeps reading EventCatalog while
-  autocatalog checks the pull requests.
+  autocatalog checks the pull requests. The same export runs as an
+  EventCatalog generator that scans your repositories.
 - **Move in.** `autocatalog from-eventcatalog ./catalog` imports an existing
   EventCatalog project. Export it and import it again, and you get the same
   files back.

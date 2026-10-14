@@ -17,6 +17,8 @@ The scanner finds `defineEvent()` calls, registry arrays, and convention-named e
 
 If discovery requires executing the project's own modules, `ac scan . --allow-code-execution` is needed. Only pass it for source you trust — it runs the repository's code.
 
+Events in a format of the company's own? An installed `autocatalog-adapter-<name>` or `@scope/autocatalog-adapter-<name>` package teaches the scan to read them. `docs/adapters.md` shows the package and its `discover` function.
+
 ## 2. Read the provenance before believing the catalog
 
 Every field records where it came from. This is the point of the tool: check it rather than skimming the count.
