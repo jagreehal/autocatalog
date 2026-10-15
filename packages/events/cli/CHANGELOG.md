@@ -1,5 +1,11 @@
 # autocatalog-cli
 
+## 0.3.0
+
+### Minor Changes
+
+- e58430a: The EventCatalog generator scans repositories. `['autocatalog-cli/eventcatalog', { repositories: ['../payments-service'] }]` reads each one like `ac scan`, runs its installed adapters once you set `allowCodeExecution: true`, and sets the exit code your CI checks. Scoped adapters such as `@acme/autocatalog-adapter-orders` load like any other, and a new guide shows how to write one. `ac site` clones each repository once, builds from every repository it reaches, names the rest, and swaps in the new site when the build completes.
+
 ## 0.2.1
 
 ### Patch Changes
