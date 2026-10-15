@@ -1,5 +1,12 @@
 # autocatalog
 
+## 0.1.3
+
+### Patch Changes
+
+- Updated dependencies [e58430a]
+  - autocatalog-cli@0.3.0
+
 ## 0.1.2
 
 ### Patch Changes
