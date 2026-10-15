@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import fs from 'node:fs/promises';
+import os from 'node:os';
 import path from 'node:path';
 import utils from '@eventcatalog/sdk';
 import { stringify as stringifyYaml } from 'yaml';
@@ -21,6 +22,7 @@ import {
   type ResourceRef,
 } from 'autocatalog-core';
 import { z } from 'zod';
+import { AdapterExecutionError } from './adapters';
 
 /**
  * Write an autocatalog catalog into an EventCatalog project.
@@ -1106,28 +1108,96 @@ interface EventCatalogConfig {
   organizationName?: string;
 }
 
+export interface AutocatalogGeneratorOptions {
+  /** Repositories to scan the way `ac scan` does, relative to the EventCatalog project. */
+  repositories?: string[];
+  /** Run the adapters installed in each repository, such as Zod, which evaluate its code. */
+  allowCodeExecution?: boolean;
+  /** Published `events/` roots, scanned and committed beforehand. */
+  roots?: string[];
+  narrative?: boolean;
+}
+
 /**
  * The same export as an EventCatalog generator, so an existing EventCatalog
  * project adds one line to eventcatalog.config.js:
  *
- *   generators: [['autocatalog-cli/eventcatalog', { roots: ['../payments-service/events'] }]]
+ *   generators: [['autocatalog-cli/eventcatalog', { repositories: ['../payments-service'] }]]
+ *
+ * EventCatalog logs a generator's error and builds anyway, so a failure also
+ * sets the exit code: CI fails instead of publishing a catalog missing events.
  */
 export default async function autocatalogGenerator(
   _config: EventCatalogConfig,
-  options: { roots: string[]; narrative?: boolean },
+  options: AutocatalogGeneratorOptions,
 ): Promise<void> {
+  try {
+    await generate(options);
+  } catch (error) {
+    process.exitCode = 1;
+
+    throw error;
+  }
+}
+
+async function generate(options: AutocatalogGeneratorOptions): Promise<void> {
   const catalogDir = process.env.PROJECT_DIR || process.cwd();
-  const roots = options.roots.map((root) => path.resolve(catalogDir, root));
+  const repositories = (options.repositories ?? []).map((repo) => path.resolve(catalogDir, repo));
+  const roots = (options.roots ?? []).map((root) => path.resolve(catalogDir, root));
 
-  const result = await exportToEventCatalog({
-    catalogs: await loadEventCatalogSources(roots),
-    catalogDir,
-    narrative: options.narrative,
-  });
+  if (repositories.length === 0 && roots.length === 0) {
+    throw new Error('autocatalog: name the repositories to scan, or the published events roots');
+  }
 
-  console.log(
-    `autocatalog: ${result.events} event(s) in ${result.versions} version(s), ${result.commands} command(s) and queries, ${result.services} service(s) and ${result.dataStores} data store(s) across ${result.domains} domain(s)`,
-  );
+  const work = await fs.mkdtemp(path.join(os.tmpdir(), 'autocatalog-generator-'));
 
-  for (const reason of result.skipped) console.warn(`autocatalog: ${reason}`);
+  try {
+    const { runScan } = await import('./commands/scan');
+    const scanned: EventCatalogSource[] = [];
+
+    for (const [i, repository] of repositories.entries()) {
+      const out = path.join(work, String(i), 'events');
+
+      const code = await runScan({
+        root: repository,
+        out,
+        quiet: true,
+        allowCodeExecution: options.allowCodeExecution,
+      }).catch((error: Error) => {
+        if (
+          error instanceof AdapterExecutionError &&
+          error.code === 'code_execution_consent_required'
+        ) {
+          throw new Error(
+            `autocatalog: ${repository} installs adapters that run its code (${error.packages.join(', ')}); set allowCodeExecution: true only for a repository you trust`,
+            { cause: error },
+          );
+        }
+
+        throw error;
+      });
+
+      if (code !== 0) throw new Error(`autocatalog: could not scan ${repository}`);
+
+      scanned.push({
+        name: repository,
+        events: (await loadCatalogSnapshot(out)).events,
+        graph: await readResourceGraph(repository),
+      });
+    }
+
+    const result = await exportToEventCatalog({
+      catalogs: [...scanned, ...(await loadEventCatalogSources(roots))],
+      catalogDir,
+      narrative: options.narrative,
+    });
+
+    console.log(
+      `autocatalog: ${result.events} event(s) in ${result.versions} version(s), ${result.commands} command(s) and queries, ${result.services} service(s) and ${result.dataStores} data store(s) across ${result.domains} domain(s)`,
+    );
+
+    for (const reason of result.skipped) console.warn(`autocatalog: ${reason}`);
+  } finally {
+    await fs.rm(work, { recursive: true, force: true });
+  }
 }

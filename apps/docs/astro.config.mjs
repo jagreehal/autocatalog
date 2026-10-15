@@ -66,6 +66,7 @@ export default defineConfig({
             { label: 'From Pydantic', slug: 'docs/events/pydantic' },
             { label: 'From JSON Schema', slug: 'docs/events/json-schema' },
             { label: 'Importing a catalog', slug: 'docs/events/importing' },
+            { label: 'Writing an adapter', slug: 'docs/adapters' },
             { label: 'Validation', slug: 'docs/events/validation' },
             { label: 'Versioning', slug: 'docs/events/versioning' },
           ],

@@ -57,6 +57,21 @@ describe('ac to-eventcatalog', () => {
     expect(event?.['x-autocatalog']).toMatchObject({ provenance: { default: 'extracted' } });
   });
 
+  it('indexes as an EventCatalog Federation source, through the same SDK call Federation makes', async () => {
+    const index = await sdk.buildIndex({ source: 'payments', commit: 'test', hashContent: true });
+
+    const keys = index.resources.map((resource) => `${resource.type}:${resource.id}`);
+
+    expect(index.source).toBe('payments');
+    expect(keys).toEqual(
+      expect.arrayContaining([
+        'event:payment.completed',
+        'service:PaymentService',
+        'domain:payments',
+      ]),
+    );
+  });
+
   it('places a service with the events it produces', async () => {
     const service = await sdk.getService('PaymentService');
     expect(service?.sends?.map((pointer) => pointer.id)).toContain('payment.completed');

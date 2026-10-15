@@ -81,7 +81,7 @@ not control.
 
 ## 7. Polish: the bar every component meets
 
-The reference for care is EventCatalog's own front page (cbd-catalog): not its
+The reference for care is EventCatalog's own front page: not its
 chrome, its craft. Every story in Storybook, in both themes, meets these.
 
 - **Hierarchy in three steps, no more.** A block has a title (CardTitle or a

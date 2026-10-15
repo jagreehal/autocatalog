@@ -38,7 +38,7 @@ const published = (
   },
 });
 
-const payments = published('cbd-payments-service', ['payments-api'], {
+const payments = published('payments-service', ['payments-api'], {
   amount: { type: 'number' },
 });
 
@@ -72,7 +72,7 @@ describe('each field occurrence links to the schema it came from', () => {
 
     expect(amount!.occurrences.map((o) => o.type)).toEqual(['number', 'string']);
     expect(carriers.map(eventPath)).toEqual([
-      'events/cbd-payments-service/payment/payment.completed/',
+      'events/payments-service/payment/payment.completed/',
       'events/legacy-billing/payment/payment.completed/',
     ]);
   });

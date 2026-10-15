@@ -113,6 +113,12 @@ export async function runScan(opts: RunScanOptions): Promise<number> {
   const root = path.resolve(opts.root);
   const out = path.resolve(opts.out);
 
+  if (!(await fs.stat(root).catch(() => null))?.isDirectory()) {
+    console.error(`${opts.root}: no such directory to scan`);
+
+    return 1;
+  }
+
   let architecture: Awaited<ReturnType<typeof scanResources>>;
 
   try {

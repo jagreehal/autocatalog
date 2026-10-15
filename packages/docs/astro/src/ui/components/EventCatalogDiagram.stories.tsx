@@ -10,8 +10,8 @@ const meta = {
     // A real, public EventCatalog, so the frame shows a real diagram. Its
     // embed=true mode needs an EventCatalog licence the public demo lacks, so the
     // story frames the full page rather than a licence notice.
-    iframeSrc: 'https://jagreehal.github.io/cbd-catalog/visualiser/domains/payments/1.0.0',
-    openHref: 'https://jagreehal.github.io/cbd-catalog/visualiser/domains/payments/1.0.0',
+    iframeSrc: 'https://demo.eventcatalog.dev/visualiser/domains/payments/1.0.0',
+    openHref: 'https://demo.eventcatalog.dev/visualiser/domains/payments/1.0.0',
     title: 'Payments domain diagram',
   },
 } satisfies Meta<typeof EventCatalogDiagram>;

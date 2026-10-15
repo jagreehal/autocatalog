@@ -100,9 +100,24 @@ export interface CloneOptions {
   token?: string;
 }
 
+/** A repository that could not be cloned, and what git said. */
+export interface CloneFailure {
+  name: string;
+  reason: string;
+}
+
+export interface ClonedRepositories {
+  root: string;
+  /** The repositories now checked out under `root`, by name. */
+  cloned: string[];
+  failed: CloneFailure[];
+}
+
 /**
  * Blobless clones: full history, so git can say when each document last
- * changed, without downloading every old version of every file.
+ * changed, without downloading every old version of every file. A repository
+ * that cannot be cloned is left out and named, so one deleted or private
+ * repository does not take the company index down with it.
  *
  * Clones afresh on every run, which suits tens of repositories; fetch and
  * reset would suit hundreds.
@@ -110,7 +125,9 @@ export interface CloneOptions {
 export async function cloneRepositories(
   repositories: EnrolledRepository[],
   opts: CloneOptions,
-): Promise<string> {
+): Promise<ClonedRepositories> {
+  const distinct = distinctRepositories(repositories);
+
   await fs.rm(opts.into, { recursive: true, force: true });
   await ignoredDirectory(opts.into);
 
@@ -123,8 +140,8 @@ export async function cloneRepositories(
       ]
     : [];
 
-  await Promise.all(
-    repositories.map((repo) =>
+  const results = await Promise.allSettled(
+    distinct.map((repo) =>
       run('git', [
         ...auth,
         'clone',
@@ -136,7 +153,80 @@ export async function cloneRepositories(
     ),
   );
 
-  return opts.into;
+  const cloned: string[] = [];
+  const failed: CloneFailure[] = [];
+
+  for (const [i, result] of results.entries()) {
+    const repo = distinct[i];
+
+    if (!repo) continue;
+
+    if (result.status === 'fulfilled') {
+      cloned.push(repo.name);
+      continue;
+    }
+
+    await fs.rm(path.join(opts.into, repo.name), { recursive: true, force: true });
+    // git's own words: the error message repeats the command line, token included.
+    failed.push({ name: repo.name, reason: gitStderr(result.reason) });
+  }
+
+  return { root: opts.into, cloned, failed };
+}
+
+/** What a failed `execFile` carries besides its message. */
+const failedCommand = z.object({ stderr: z.string() });
+
+/** git's `fatal:` line, the one that names what went wrong, wherever it falls. */
+function gitStderr(error: Error): string {
+  const parsed = failedCommand.safeParse(error);
+  const lines = (parsed.success ? parsed.data.stderr : '').split(/\r?\n/).filter(Boolean);
+
+  return shown(lines.find((line) => line.startsWith('fatal:')) ?? lines[0] ?? 'git clone failed');
+}
+
+/** A clone URL as it may be printed: any user and password in it left out. */
+const shown = (url: string) => url.replace(/\/\/[^/@]*@/, '//');
+
+/** One spelling of a clone URL: `…/payments`, `…/payments/` and `…/payments.git` are one repository. */
+const canonicalUrl = (url: string) =>
+  url
+    .replace(/\/+$/, '')
+    .replace(/\.git$/, '')
+    .toLowerCase();
+
+/**
+ * Each repository once, each in one folder of its own. Two clones into one
+ * folder race, and the loser's cleanup would delete the winner's checkout. A repository enrolled twice, by
+ * topic and by --repo, is cloned once; two different repositories that share a
+ * folder name, compared as a case-insensitive filesystem would, are refused.
+ */
+function distinctRepositories(repositories: EnrolledRepository[]): EnrolledRepository[] {
+  const byFolder = new Map<string, EnrolledRepository>();
+
+  for (const repo of repositories) {
+    if (!/^[^/\\]+$/.test(repo.name) || /^\.\.?$/.test(repo.name)) {
+      throw new Error(
+        `${JSON.stringify(repo.name)} from ${shown(repo.cloneUrl)}: not a folder name`,
+      );
+    }
+
+    const folder = repo.name.toLowerCase();
+    const seen = byFolder.get(folder);
+
+    if (!seen) {
+      byFolder.set(folder, repo);
+      continue;
+    }
+
+    if (canonicalUrl(seen.cloneUrl) !== canonicalUrl(repo.cloneUrl)) {
+      throw new Error(
+        `${repo.name}: ${shown(seen.cloneUrl)} and ${shown(repo.cloneUrl)} would both clone into ${repo.name}/; enrol one of them`,
+      );
+    }
+  }
+
+  return [...byFolder.values()];
 }
 
 /**

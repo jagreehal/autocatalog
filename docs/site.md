@@ -41,6 +41,11 @@ repository, and the site's owners approve nothing.
 Private repositories need `GITHUB_TOKEN`. The command sends the token as a
 request header, so it never lands in a clone's `.git/config`.
 
+The command clones each repository once, even when you enrol it by topic and
+by `--repo`. When a clone fails, it names the repository with git's message and
+builds the site from the rest. It writes `--out` once the build completes, so a
+failed build leaves your last site in place.
+
 Run `npx autocatalog site .` inside one repository to preview what it publishes
 before you enrol it.
 
@@ -188,8 +193,16 @@ The same export runs as an EventCatalog generator, so an existing EventCatalog
 project adds one line to `eventcatalog.config.js`:
 
 ```js
-generators: [['autocatalog-cli/eventcatalog', { roots: ['../payments-service/events'] }]];
+generators: [['autocatalog-cli/eventcatalog', { repositories: ['../payments-service'] }]];
 ```
+
+`eventcatalog generate` then scans each repository the way `ac scan` does and
+writes what it finds. The adapters a repository installs come with it: set
+`allowCodeExecution: true` for one that defines its events in Zod, and the
+generator runs `autocatalog-adapter-zod` and any
+[adapter of your own](/docs/adapters) in its isolated process. `roots` reads
+`events/` folders a repository already scanned and committed. When a scan
+fails, `eventcatalog generate` exits 1, and your CI stops before it publishes.
 
 Each event page in EventCatalog leads with where its contract was found. A
 domain retired in source disappears on the next export. The export lists every
@@ -202,6 +215,28 @@ with proof that autocatalog wrote them. Anything it can't be sure of, such as
 an example or a service linked to a generated domain, stays and is reported.
 A resource someone else already wrote under the same id is left alone and
 reported.
+
+### As an EventCatalog Federation source
+
+EventCatalog Federation (an EventCatalog Enterprise feature) combines many
+teams' EventCatalog projects into one. A repository joins as a source by
+committing its export:
+
+```bash
+ac to-eventcatalog ./eventcatalog --root ./events
+```
+
+and the central catalog names that folder:
+
+```js
+federation: {
+  sources: [{ id: 'payments', source: 'github:acme/payments-service', path: 'eventcatalog' }],
+}
+```
+
+Federation indexes the folder with the EventCatalog SDK's `buildIndex`, and
+autocatalog's tests build that index from every export. For autocatalog's own
+site, `ac site` reads the same repositories' contracts.
 
 ### With autotel
 

@@ -1,6 +1,6 @@
 # autocatalog-py
 
-Extract [Autocatalog](https://github.com/jreehal/autocatalog) events from Pydantic models.
+Extract [Autocatalog](https://github.com/jagreehal/autocatalog) events from Pydantic models.
 
 ## Install
 

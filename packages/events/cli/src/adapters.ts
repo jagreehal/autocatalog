@@ -52,6 +52,8 @@ export class AdapterExecutionError extends Error {
       | 'adapter_output_limit'
       | 'adapter_protocol_invalid',
     message: string,
+    /** The adapter packages involved, by name. */
+    public readonly packages: string[] = [],
   ) {
     super(`[${code}] ${message}`);
     this.name = 'AdapterExecutionError';
@@ -97,6 +99,9 @@ async function readAdapterPackage(p: string): Promise<z.infer<typeof adapterPack
   }
 }
 
+/** `autocatalog-adapter-<x>`, or the same under a scope: `@acme/autocatalog-adapter-<x>`. */
+const ADAPTER_NAME = /^(@[^/]+\/)?autocatalog-adapter-[^/]+$/;
+
 async function loadAdapterManifest(packageDir: string): Promise<AdapterManifest | null> {
   const pkg = await readAdapterPackage(path.join(packageDir, 'package.json'));
 
@@ -105,7 +110,7 @@ async function loadAdapterManifest(packageDir: string): Promise<AdapterManifest 
   const meta = pkg.autocatalog?.adapter;
   const packageName = pkg.name ?? null;
 
-  if (!packageName || !packageName.startsWith('autocatalog-adapter-')) return null;
+  if (!packageName || !ADAPTER_NAME.test(packageName)) return null;
 
   if (!meta) return null;
   const commandValid = Boolean(meta.command && meta.entry);
@@ -128,7 +133,16 @@ async function loadAdapterManifest(packageDir: string): Promise<AdapterManifest 
 export async function discoverAdapters(cwd: string): Promise<AdapterManifest[]> {
   const nm = path.join(cwd, 'node_modules');
   const entries = await fs.readdir(nm).catch(() => []);
-  const candidates = entries.filter((e) => e.startsWith('autocatalog-adapter-'));
+
+  const scoped = await Promise.all(
+    entries
+      .filter((entry) => entry.startsWith('@'))
+      .map(async (scope) =>
+        (await fs.readdir(path.join(nm, scope)).catch(() => [])).map((name) => `${scope}/${name}`),
+      ),
+  );
+
+  const candidates = [...entries, ...scoped.flat()].filter((name) => ADAPTER_NAME.test(name));
   const results: AdapterManifest[] = [];
 
   for (const name of candidates) {
@@ -332,7 +346,7 @@ export function createIsolatedDiscoveryAdapter(
   }
 
   return {
-    name: manifest.packageName.replace(/^autocatalog-adapter-/, ''),
+    name: manifest.packageName.replace('autocatalog-adapter-', ''),
     discover: (context) =>
       executeDiscoveryAdapter({
         name: manifest.packageName,
@@ -360,6 +374,7 @@ export async function discoverDiscoveryAdapters(
     throw new AdapterExecutionError(
       'code_execution_consent_required',
       `runtime discovery is installed (${discovery.map((item) => item.packageName).join(', ')}); rerun with --allow-code-execution only for a repository you trust`,
+      discovery.map((item) => item.packageName),
     );
   }
 

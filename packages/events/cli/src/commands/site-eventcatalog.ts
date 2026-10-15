@@ -203,7 +203,7 @@ export async function buildEventCatalog(opts: {
   if (!embeds.embed) {
     console.log(
       kleur.dim(
-        'EventCatalog embeds its diagrams without its own navigation only with its licence key (EVENTCATALOG_LICENSE_KEY_BACKSTAGE); pages show its full visualiser instead.',
+        'EventCatalog embeds its diagrams without its own navigation only with its licence key (EVENTCATALOG_LICENSE_KEY_BACKSTAGE); pages link to its diagrams instead.',
       ),
     );
   }
