@@ -1,6 +1,6 @@
 {
   "name": "autocatalog-docs-astro",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "Starlight plugin that reads every repository's docs/ instead of one src/content/docs, and publishes markdown twins and llms.txt alongside.",
   "license": "MIT",
   "repository": {
