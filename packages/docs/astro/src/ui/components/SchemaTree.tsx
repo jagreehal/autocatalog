@@ -219,7 +219,7 @@ function Prop({ node, open, visible, onToggle }: PropProps) {
         <ul className="m-0 flex list-none flex-wrap gap-1 p-0" aria-label="Constraints">
           {node.facts.map((fact) => (
             <li key={fact}>
-              <code className="bg-muted px-1.5 py-0.5 font-mono text-xs break-all">{fact}</code>
+              <code className="bg-muted px-1.5 py-0.5 font-mono text-xs wrap-anywhere">{fact}</code>
             </li>
           ))}
         </ul>

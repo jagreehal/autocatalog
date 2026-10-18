@@ -58,6 +58,7 @@ it('publishes a page for each event and earlier version, its schema, each servic
       '/owners/[owner]',
       '/[...slug].md',
       '/llms.txt',
+      '/contracts/docs-manifest.json',
     ]),
   );
 });

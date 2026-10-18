@@ -1,5 +1,6 @@
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
-  test: { include: ['test/**/*.test.ts'], environment: 'node' },
+  // These tests spawn git and build projects, which Windows runners do slowly.
+  test: { include: ['test/**/*.test.ts'], environment: 'node', testTimeout: 30_000 },
 });

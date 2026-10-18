@@ -15,7 +15,17 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from '#ui/components/ui/empty.tsx';
+import { Badge } from '#ui/components/ui/badge.tsx';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '#ui/components/ui/table.tsx';
 import type { IconName } from '../../icons';
+import { docHref } from '../lib/docs';
 import { DocList, type DocListItem } from '../components/DocList';
 import { SectionHeading } from '../components/SectionHeading';
 import { Icon } from '../components/Icon';
@@ -122,13 +132,38 @@ export function HomePage({ stats, explore, repos, tags }: HomePageProps) {
           <SectionHeading id="home-by-tag" count={plural(tags.length, 'tag', 'tags')}>
             By tag
           </SectionHeading>
-          <div className="grid items-start gap-4 md:grid-cols-2">
-            {tags.map(([tag, docs]) => (
-              <Shelf key={tag} title={tag} count={documents(docs.length)}>
-                <DocList items={docs} showRepo />
-              </Shelf>
-            ))}
-          </div>
+          <Card>
+            <CardContent>
+              <Table aria-label="Documents by tag">
+                <TableHeader>
+                  <TableHead isRowHeader>Tag</TableHead>
+                  <TableHead>Documents</TableHead>
+                </TableHeader>
+                <TableBody>
+                  {tags.map(([tag, docs]) => (
+                    <TableRow key={tag} id={tag}>
+                      <TableCell className="w-40 align-top">
+                        <Badge variant="secondary">{tag}</Badge>
+                      </TableCell>
+                      <TableCell className="whitespace-normal">
+                        {docs.map((doc, index) => (
+                          <Fragment key={doc.id}>
+                            {index > 0 && ', '}
+                            <a
+                              href={docHref(doc.id)}
+                              className="text-foreground underline-offset-4 hover:underline"
+                            >
+                              {doc.title}
+                            </a>
+                          </Fragment>
+                        ))}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
         </section>
       )}
     </div>
@@ -160,7 +195,7 @@ function Holds({ stats }: { stats: Stat[] }) {
   );
 }
 
-/** A repository or a tag, and the documents under it. */
+/** A repository and the documents under it. */
 function Shelf({ title, count, children }: { title: string; count: string; children: ReactNode }) {
   return (
     <Card>

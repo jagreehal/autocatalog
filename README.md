@@ -174,7 +174,8 @@ before it writes the code.
 }
 ```
 
-The site also publishes `llms.txt` and a Markdown copy of each page.
+The site also publishes `llms.txt`, a Markdown copy of each page, and
+`contracts/docs-manifest.json` for `ac docs check --manifest`.
 
 ## Works with EventCatalog
 

@@ -92,6 +92,9 @@ different ones fail the build, naming both, until `--docs-schema` picks one.
   events.
 - `/catalog` shows the whole knowledge graph, and `/catalog.json` holds the same
   graph as JSON.
+- `/contracts/docs-manifest.json` lists every document and who links to it.
+  Point `ac docs check --manifest` at it and each repository's CI catches a link
+  to a missing document, or a rename that would orphan a link from elsewhere.
 
 ## For agents
 

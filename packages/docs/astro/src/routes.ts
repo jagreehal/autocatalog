@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { AstroIntegration } from 'astro';
+import { DOCS_MANIFEST_PATH } from 'autocatalog-docs-core';
 import { eventCatalogEmbeds } from './eventcatalog';
 import { brokenLinks, formatBrokenLinks } from './link-check';
 
@@ -48,6 +49,7 @@ export function autocatalogDocsRoutes(root: string): AstroIntegration {
           ['/catalog', path.join(here, 'pages/catalog.astro')],
           ['/catalog.json', path.join(here, 'pages/catalog.json.ts')],
           ['/llms.txt', path.join(here, 'pages/llms.txt.ts')],
+          [`/${DOCS_MANIFEST_PATH}`, path.join(here, 'pages/docs-manifest.json.ts')],
           ['/events/[repository]/[domain]/[id]', path.join(here, 'pages/event.astro')],
           [
             '/events/[repository]/[domain]/[id]/schema.json',
