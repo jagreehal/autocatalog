@@ -35,7 +35,7 @@ export function lastChanged(root: string, file: string): string | null {
 }
 
 /** Per checkout: its web origin, and where the root sits below the checkout's top. */
-const remotes = new Map<string, { web: string; prefix: string } | null>();
+const remotes = new Map<string, { web: string; prefix: string; branch: string } | null>();
 
 /** `git@github.com:acme/payments.git` or `https://…/payments.git` → https://…/acme/payments */
 export function webUrl(remote: string): string | null {
@@ -65,7 +65,7 @@ export function sourceUrl(
   const target = isNestedCheckout ? rest.join('/') : file;
 
   if (!remotes.has(cwd)) {
-    let remote: { web: string; prefix: string } | null = null;
+    let remote: { web: string; prefix: string; branch: string } | null = null;
 
     try {
       const run = (args: string[]) =>
@@ -80,7 +80,22 @@ export function sourceUrl(
       // inside a monorepo does; the web path starts at the top.
       const prefix = run(['rev-parse', '--show-prefix']);
 
-      remote = web ? { web, prefix } : null;
+      // The default branch reads like the link a person would share, and it
+      // exists on the host even when the build checked out a local branch.
+      const attempt = (args: string[]) => {
+        try {
+          return run(args);
+        } catch {
+          return '';
+        }
+      };
+
+      const branch =
+        attempt(['symbolic-ref', '--short', 'refs/remotes/origin/HEAD']).replace(/^origin\//, '') ||
+        attempt(['symbolic-ref', '--short', 'HEAD']) ||
+        'HEAD';
+
+      remote = web ? { web, prefix, branch } : null;
     } catch {
       remote = null;
     }
@@ -90,7 +105,7 @@ export function sourceUrl(
 
   const origin = remotes.get(cwd);
 
-  return origin ? `${origin.web}/${view}/HEAD/${origin.prefix}${target}` : null;
+  return origin ? `${origin.web}/${view}/${origin.branch}/${origin.prefix}${target}` : null;
 }
 
 /**

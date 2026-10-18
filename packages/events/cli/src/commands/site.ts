@@ -96,6 +96,19 @@ export async function runSite(opts: RunSiteOptions): Promise<number> {
       return 1;
     }
 
+    console.log(
+      kleur.green(
+        `✓ Cloned ${cloned.cloned.length} ${cloned.cloned.length === 1 ? 'repository' : 'repositories'} into ${path.relative(process.cwd(), cloned.root) || '.'}`,
+      ),
+    );
+    console.log(
+      kleur.dim(
+        token
+          ? '  Authenticated with GITHUB_TOKEN or GH_TOKEN.'
+          : '  Unauthenticated: public repositories only. Set GITHUB_TOKEN or GH_TOKEN for private ones and a higher rate limit.',
+      ),
+    );
+
     root = cloned.root;
   }
 
