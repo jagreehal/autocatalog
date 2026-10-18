@@ -63,7 +63,7 @@
         "shadcn/no-unknown-classes": [
           "error",
           {
-            "allow": ["not-content", "sl-markdown-content"]
+            "allow": ["not-content", "sl-markdown-content", "mermaid"]
           }
         ],
         "shadcn/require-static-classes": "error"

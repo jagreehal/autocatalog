@@ -38,5 +38,27 @@ export const About: Story = {
   },
 };
 
+/** The decisions about a service, each with its state. */
+export const Decisions: Story = {
+  args: {
+    id: 'decisions',
+    heading: 'Decisions',
+    links: [
+      {
+        href: '/payments-service/adr/0002-kafka',
+        title: 'Use Kafka for payment events',
+        label: 'payments-service',
+        status: 'accepted',
+      },
+      {
+        href: '/payments-service/adr/0001-rabbitmq',
+        title: 'Use RabbitMQ for payment events',
+        label: 'payments-service',
+        status: 'superseded',
+      },
+    ],
+  },
+};
+
 /** With nothing to link, the card is not drawn. */
 export const Empty: Story = { args: { links: [] } };

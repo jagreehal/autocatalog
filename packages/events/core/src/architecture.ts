@@ -163,7 +163,12 @@ function mergeReporting(graphs: ResourceGraph[], report: (message: string) => vo
 
       const attributes = preferred === previous ? { ...right, ...left } : { ...left, ...right };
 
-      if (schemaContested) delete attributes.schema;
+      // A model's fields describe the schema, so they go with it.
+      if (schemaContested) {
+        delete attributes.schema;
+        delete attributes.fields;
+        delete attributes.indexes;
+      }
 
       if (previous.ref.kind === 'service' && resource.ref.kind === 'service') {
         const domains = [

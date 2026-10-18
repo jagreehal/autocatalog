@@ -91,7 +91,15 @@ export function createDocsResourceGraph(
       },
       needsReview: false,
       source: { file: doc.file, repo: repositoryName },
-      attributes: { repository: repositoryName, updated: indexed.updated },
+      // A decision, runbook or incident says so, with its state, so a reader
+      // of the graph can find every ADR about a service without the site.
+      attributes: {
+        repository: repositoryName,
+        updated: indexed.updated,
+        ...(indexed.kind && { kind: indexed.kind }),
+        ...(indexed.status && { status: indexed.status }),
+        ...(indexed.date && { date: indexed.date }),
+      },
     };
 
     resources.set(resourceKey(repository.ref), repository);

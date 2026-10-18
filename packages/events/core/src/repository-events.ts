@@ -36,17 +36,22 @@ const HISTORY_VERSIONS = 10;
 /** Where autotel-subscribers' ArchitectureSnapshotSubscriber is documented to write. */
 export const RUNTIME_SNAPSHOT = '.autotel/snapshot.json';
 
+/** Where Prisma looks for a schema, so a repository with one has data models to publish. */
+const PRISMA_SCHEMAS = ['prisma/schema.prisma', 'prisma/schema', 'schema.prisma'];
+
 /**
  * Whether a directory under an aggregation root is an enrolled repository: it
- * has a conventional root, or approved message contracts beside its tests. Not
- * for deciding whether the root itself is one repository: a company keeps its
- * shared contracts at the root of the aggregation too.
+ * has a conventional root, approved message contracts beside its tests, or a
+ * Prisma schema the site reads its data models from. Whether the root itself is
+ * one repository is {@link isSingleRepository}'s question, since a company keeps
+ * its shared contracts at the root of the aggregation too.
  */
 export function publishesCatalogContent(dir: string): boolean {
   return (
     PUBLISHED_ROOTS.some((name) => fs.existsSync(path.join(dir, name))) ||
     hasMessageContracts(dir) ||
-    hasResourceGraph(dir)
+    hasResourceGraph(dir) ||
+    PRISMA_SCHEMAS.some((name) => fs.existsSync(path.join(dir, name)))
   );
 }
 

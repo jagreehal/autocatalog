@@ -38,6 +38,8 @@ export interface ServicePageProps {
   /** The OpenAPI specs it serves, each with its reference page. */
   apis?: Array<{ title: string; file: string; href: string }> | undefined;
   documents: ResourceLinksProps['links'];
+  /** Decisions, runbooks and incidents about it: one card per kind that has any. */
+  records?: ResourceLinksProps[] | undefined;
   /** When EventCatalog drew this service. Inline when it can embed, else a link. */
   diagram?: EventCatalogDiagramProps | undefined;
   /** Who owns it, when its own record says: imported from EventCatalog or Backstage. */
@@ -52,6 +54,7 @@ export function ServicePage({
   sections,
   apis = [],
   documents,
+  records = [],
   diagram,
   owner,
   system,
@@ -98,7 +101,11 @@ export function ServicePage({
         fallback={<FlowStrip label="Message flow" {...flow} />}
       />
 
-      {(sections.length > 0 || apis.length > 0 || documents.length > 0 || diagram) && (
+      {(sections.length > 0 ||
+        apis.length > 0 ||
+        documents.length > 0 ||
+        records.length > 0 ||
+        diagram) && (
         <div className="grid items-start gap-6 md:grid-cols-2">
           {sections.map((section) => (
             <Card id={section.slug} key={section.slug}>
@@ -174,6 +181,9 @@ export function ServicePage({
               </CardContent>
             </Card>
           )}
+          {records.map((record) => (
+            <ResourceLinks key={record.id} {...record} />
+          ))}
           <ResourceLinks id="documents" heading="Documents" links={documents} />
           {diagram && (
             <Card id="diagram" className={diagram.embed ? 'md:col-span-2' : undefined}>

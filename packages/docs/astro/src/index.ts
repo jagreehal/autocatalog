@@ -47,6 +47,11 @@ export interface AutocatalogDocsOptions {
   repository?: string;
   /** Committed JSON Schema the frontmatter must satisfy. */
   schema?: string;
+  /**
+   * The organisation's document kinds. Omit and the site finds
+   * `contracts/autocatalog.conventions.json` the way it finds the contract.
+   */
+  conventions?: string;
   /** One sentence describing what is aggregated here, used on / and llms.txt. */
   description?: string;
 }
@@ -92,6 +97,10 @@ export default function autocatalogDocs(opts: AutocatalogDocsOptions = {}): Star
           process.env.AUTOCATALOG_DOCS_SCHEMA ??= path.resolve(projectRoot, opts.schema);
         }
 
+        if (opts.conventions) {
+          process.env.AUTOCATALOG_DOCS_CONVENTIONS ??= path.resolve(projectRoot, opts.conventions);
+        }
+
         // Read back rather than reusing the locals above: an environment
         // override wins, and a sidebar built from a different checkout to the
         // pages is worse than no sidebar.
@@ -113,6 +122,7 @@ export default function autocatalogDocs(opts: AutocatalogDocsOptions = {}): Star
           repo: effective.repo,
           repository: effective.repository,
           schemaPath: effective.schemaPath,
+          conventionsPath: effective.conventionsPath,
           includeDates: false,
         });
 
@@ -138,6 +148,9 @@ export default function autocatalogDocs(opts: AutocatalogDocsOptions = {}): Star
                     ]
                   : []),
                 ...(catalog.apis.length > 0 ? [{ label: 'APIs', link: '/apis' }] : []),
+                // Decisions, runbooks, incidents: each kind with documents.
+                ...catalog.kinds.map((kind) => ({ label: kind.label, link: `/${kind.path}` })),
+                ...(catalog.models.length > 0 ? [{ label: 'Data models', link: '/data' }] : []),
                 ...(graphOwners(catalog.graph).length > 0
                   ? [{ label: 'Owners', link: '/owners' }]
                   : []),

@@ -4,7 +4,12 @@ import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { jsonObjectSchema, type JsonObject } from 'autocatalog-core';
 import { z } from 'zod';
-import { runDocsCheck, runDocsInitSchema, runDocsSyncSchema } from '../src/commands/docs';
+import {
+  runDocsCheck,
+  runDocsInitConventions,
+  runDocsInitSchema,
+  runDocsSyncSchema,
+} from '../src/commands/docs';
 
 let root: string;
 
@@ -110,6 +115,53 @@ describe('ac docs check', () => {
 
     expect(said.join('\n')).toContain('contract: ');
     expect(said.join('\n')).toContain('docs-frontmatter.json');
+  });
+});
+
+describe('ac docs init-conventions', () => {
+  const conventionsFile = () => path.join(root, 'contracts/autocatalog.conventions.json');
+
+  it('hands the organisation the built-in kinds to edit, and will not overwrite them', async () => {
+    expect(await runDocsInitConventions({ root, quiet: true })).toBe(0);
+
+    const written = z
+      .object({ kinds: z.record(z.string(), z.object({ folder: z.string() })) })
+      .parse(JSON.parse(await fs.readFile(conventionsFile(), 'utf8')));
+
+    expect(Object.keys(written.kinds)).toEqual(['adr', 'runbook', 'incident']);
+    expect(written.kinds.adr?.folder).toBe('adr');
+    expect(await runDocsInitConventions({ root, quiet: true })).toBe(1);
+  });
+
+  it('is what ac docs check enforces from then on, with no flag', async () => {
+    await runDocsInitConventions({ root, quiet: true });
+    await write(
+      'contracts/autocatalog.conventions.json',
+      JSON.stringify({
+        kinds: {
+          postmortem: {
+            label: 'Postmortems',
+            folder: 'postmortems',
+            schema: { required: ['severity'] },
+          },
+        },
+      }),
+    );
+    await write('a/docs/postmortems/outage.md', '---\ntitle: Outage\nowner: Ops\n---\n\nBody.\n');
+
+    const said: string[] = [];
+
+    const spy = vi.spyOn(console, 'error').mockImplementation((...args: unknown[]) => {
+      said.push(args.map(String).join(' '));
+    });
+
+    expect(await runDocsCheck({ root, quiet: true })).toBe(1);
+    spy.mockRestore();
+
+    expect(said.join('\n')).toContain(
+      "outage.md (postmortem): (root): must have required property 'severity'",
+    );
+    expect(said.join('\n')).toMatch(/kinds: \S*contracts\/autocatalog\.conventions\.json/);
   });
 });
 

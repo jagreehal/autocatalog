@@ -809,4 +809,24 @@ describe('resource graphs from several repositories', () => {
     );
     expect(datastoreOwnership(catalog.graph)).toHaveLength(1);
   });
+
+  it("quarantines a repository named like one of the site's own pages", async () => {
+    await enrol('billing', declaredBy('billing'));
+    await write('data/prisma/schema.prisma', 'model Row {\n  id Int @id\n}');
+
+    const catalog = await buildDocsCatalog(root, { includeDates: false });
+
+    expect(catalog.failures).toEqual([
+      {
+        repository: 'data',
+        source: 'name',
+        message:
+          "/data/ is one of the site's own pages; rename the repository's folder to publish it",
+      },
+    ]);
+    expect(catalog.warnings).toContain(
+      "data is missing from the graph — /data/ is one of the site's own pages; rename the repository's folder to publish it",
+    );
+    expect(catalog.models.map(({ repository }) => repository)).not.toContain('data');
+  });
 });

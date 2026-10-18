@@ -39,6 +39,7 @@ import {
 } from './owners';
 import { type ShellLink, versionLabel } from './shell';
 import { remarkMermaid } from './mermaid';
+import { docKindIcon, documentsByKind, kindCounts, kindHref, kindNoun } from './kinds';
 import { explorerModel } from './ui/components/catalog-explorer-model';
 import type { EventCatalogDiagramProps } from './ui/components/EventCatalogDiagram';
 import type { DeliveryView } from './ui/components/DeliveryFacts';
@@ -85,6 +86,13 @@ export function homePageProps(
       value: count,
       kind,
       href: `${base}catalog/?kind=${encodeURIComponent(kind)}`,
+    })),
+    // Decisions, runbooks and incidents are documents too, counted again here
+    // because "how many incidents" is a question the index is asked.
+    ...[...kindCounts(catalog)].map(([kind, count]) => ({
+      label: kindNoun(kind, count),
+      value: count,
+      href: kindHref(base, kind),
     })),
     {
       label: label('domain', domains),
@@ -168,6 +176,23 @@ export function homePageProps(
             href: `${base}apis/`,
             icon: 'api' as const,
             kind: 'service',
+          },
+        ]
+      : []),
+    ...catalog.kinds.map((kind) => ({
+      title: kind.label,
+      text: kind.description ?? `Every document under docs/${kind.folder}/, newest first.`,
+      href: kindHref(base, kind),
+      icon: docKindIcon(kind),
+      kind: 'doc',
+    })),
+    ...(catalog.models.length > 0
+      ? [
+          {
+            title: 'Data models',
+            text: 'Every table and collection, its fields and relations, and who reads and writes it.',
+            href: `${base}data/`,
+            icon: 'data' as const,
           },
         ]
       : []),
@@ -397,7 +422,10 @@ export function servicePageProps(
 
   const consumes = eventsForService(events, service.name, 'consumers');
 
-  const documents = documentsAbout(catalog.graph, { kind: 'service', id: service.name });
+  const { documents, records } = documentsByKind(
+    catalog.kinds,
+    documentsAbout(catalog.graph, { kind: 'service', id: service.name }),
+  );
 
   const { owner, system } = serviceFacts(catalog.graph, service.name);
 
@@ -459,6 +487,7 @@ export function servicePageProps(
     sections,
     apis,
     documents,
+    records,
     ...(owner && { owner }),
     ...(system && { system }),
     diagram: diagramProps(
@@ -592,11 +621,14 @@ export async function eventPageProps(
   // Earlier versions from versioned/, each with its own page under this one.
   const versions = eventVersions(catalog, entry);
 
-  const documents = documentsAbout(catalog.graph, {
-    kind: 'event',
-    namespace: `${repository}/${fm.domain}`,
-    id: fm.id,
-  });
+  const { documents, records } = documentsByKind(
+    catalog.kinds,
+    documentsAbout(catalog.graph, {
+      kind: 'event',
+      namespace: `${repository}/${fm.domain}`,
+      id: fm.id,
+    }),
+  );
 
   // The folder is the generated contract, so it is linked to rather than edited;
   // the one file in it a person writes is the optional index.mdx narrative.
@@ -672,6 +704,7 @@ export async function eventPageProps(
     versions: versionLinks(versions, entry, base),
     changesHtml: await versionChangesHtml(versions, entry),
     documents,
+    records,
     facts,
     transport: fm.transport,
     delivery: deliveryView(fm.delivery, correlationPath(event)),

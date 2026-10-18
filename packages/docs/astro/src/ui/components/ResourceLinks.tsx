@@ -1,5 +1,6 @@
 /** @jsxImportSource react */
 import { ArrowUpRightIcon } from 'lucide-react';
+import { Badge } from '#ui/components/ui/badge.tsx';
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from '#ui/components/ui/card.tsx';
 import {
   Item,
@@ -8,11 +9,13 @@ import {
   ItemDescription,
   ItemTitle,
 } from '#ui/components/ui/item.tsx';
+import { statusVariant } from '../lib/status';
 
 export interface ResourceLinksProps {
   id: string;
   heading: string;
-  links: Array<{ href: string; title: string; label: string }>;
+  /** `status` is a decision's or incident's state, shown as a badge beside it. */
+  links: Array<{ href: string; title: string; label: string; status?: string }>;
 }
 
 /** A card of links; nothing at all when there are none. */
@@ -40,7 +43,13 @@ export function ResourceLinks({ id, heading, links }: ResourceLinksProps) {
                     <ItemTitle>{link.title}</ItemTitle>
                     {/* A repository or a resource's key: literally code either way. */}
                     <ItemDescription>
-                      <span className="font-mono">{link.label}</span>
+                      {/* Under the title, so a long title keeps the row's width. */}
+                      <span className="flex flex-wrap items-center gap-2">
+                        {link.status && (
+                          <Badge variant={statusVariant(link.status)}>{link.status}</Badge>
+                        )}
+                        <span className="font-mono">{link.label}</span>
+                      </span>
                     </ItemDescription>
                   </ItemContent>
                   <ItemActions className="self-start">

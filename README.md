@@ -18,7 +18,7 @@ flowchart LR
     ledger[Ledger]
     notif[Notifications]
   end
-  repos -- autocatalog site --> site["Company site: events, services, owners, docs"]
+  repos -- autocatalog site --> site["Company site: events, services, data models, owners, docs"]
   repos -- autocatalog drift --> pr["Pull request check: names the services a change breaks"]
 ```
 

@@ -63,6 +63,7 @@ const headings = [
   { depth: 2, slug: 'runtime', text: 'Runtime evidence' },
   ...(page.examples.length ? [{ depth: 2, slug: 'examples', text: 'Examples' }] : []),
   ...(page.versions.length > 1 ? [{ depth: 2, slug: 'versions', text: 'Versions' }] : []),
+  ...(page.records ?? []).map(({ id, heading }) => ({ depth: 2, slug: id, text: heading })),
   ...(page.documents.length ? [{ depth: 2, slug: 'documents', text: 'Documents' }] : []),
   { depth: 2, slug: 'details', text: 'Details' },
   ...(page.diagram ? [{ depth: 2, slug: 'diagram', text: 'Diagram' }] : []),

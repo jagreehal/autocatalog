@@ -8,6 +8,7 @@ import type { ValidateFunction } from 'ajv';
 import addFormats from 'ajv-formats';
 import {
   type JsonObject,
+  type JsonValue,
   isJsonObject,
   isRealFileInside,
   jsonObjectSchema,
@@ -72,6 +73,12 @@ export const DEFAULT_FRONTMATTER_SCHEMA = {
       items: { type: 'string', pattern: '^[a-z]+/.+$' },
     },
     tags: { type: 'array', items: { type: 'string' } },
+    /**
+     * What sort of document this is: `adr`, `runbook`, `incident`, or a kind
+     * the organisation's conventions add. Usually left out, because the folder
+     * under docs/ already says it.
+     */
+    kind: { type: 'string', pattern: '^[a-z][a-z0-9-]*$' },
   },
   // Open by default: a team may carry fields this contract has never heard of.
   // Set false to close the contract once the organisation knows its own shape.
@@ -103,39 +110,60 @@ export interface FrontmatterContract {
  * prevent.
  */
 export function resolveFrontmatterContract(root: string, schemaPath?: string): FrontmatterContract {
-  if (schemaPath) return readContract(path.resolve(schemaPath));
+  const found = resolvePublishedFile(root, DOCS_SCHEMA_PATH, {
+    explicit: schemaPath,
+    what: 'docs frontmatter contract',
+    remedy: 'ac site --docs-schema <file>, or ac docs check --schema <file>',
+  });
+
+  return found
+    ? { schema: jsonObjectSchema.parse(found.json), file: found.file }
+    : { schema: DEFAULT_FRONTMATTER_SCHEMA, file: null };
+}
+
+/**
+ * Find one organisation-wide file under `contracts/`: the explicit path, the
+ * root's own, or the one an enrolled repository publishes. Every file the
+ * convention publishes this way is found by these rules and refused for the
+ * same reasons, so the frontmatter contract and the kind conventions never
+ * disagree about which repository is the handbook. Null when nothing does.
+ */
+export function resolvePublishedFile(
+  root: string,
+  relative: string,
+  options: { explicit?: string | undefined; what: string; remedy: string },
+): PublishedFile | null {
+  if (options.explicit) return readJson(path.resolve(options.explicit));
 
   const absolute = path.resolve(root);
-  const conventional = path.join(absolute, DOCS_SCHEMA_PATH);
+  const conventional = path.join(absolute, relative);
 
-  if (fs.existsSync(conventional)) return readContract(conventional);
+  if (fs.existsSync(conventional)) return readJson(conventional);
 
   // One repository: its subdirectories are its own code, not enrolled repositories.
-  if (fs.existsSync(path.join(absolute, 'docs'))) {
-    return { schema: DEFAULT_FRONTMATTER_SCHEMA, file: null };
-  }
+  if (fs.existsSync(path.join(absolute, 'docs'))) return null;
 
   const files = fs
     .readdirSync(absolute, { withFileTypes: true })
     .flatMap((entry) => {
       const repository = path.join(absolute, entry.name);
-      const file = path.join(repository, DOCS_SCHEMA_PATH);
+      const file = path.join(repository, relative);
 
       return entry.isDirectory() && isRealFileInside(repository, file) ? [file] : [];
     })
     .sort();
 
-  const published = files.map(readContract);
+  const published = files.map(readJson);
   const [first] = published;
 
-  if (!first) return { schema: DEFAULT_FRONTMATTER_SCHEMA, file: null };
+  if (!first) return null;
 
-  if (published.some((contract) => !isDeepStrictEqual(contract.schema, first.schema))) {
+  if (published.some((candidate) => !isDeepStrictEqual(candidate.json, first.json))) {
     throw new Error(
       [
-        'More than one repository publishes a different docs frontmatter contract:',
+        `More than one repository publishes a different ${options.what}:`,
         ...files.map((file) => `  ${path.relative(absolute, file)}`),
-        'Name the one to enforce: ac site --docs-schema <file>, or ac docs check --schema <file>.',
+        `Name the one to enforce: ${options.remedy}.`,
       ].join('\n'),
     );
   }
@@ -143,8 +171,14 @@ export function resolveFrontmatterContract(root: string, schemaPath?: string): F
   return first;
 }
 
-function readContract(file: string): FrontmatterContract {
-  return { schema: jsonObjectSchema.parse(JSON.parse(fs.readFileSync(file, 'utf8'))), file };
+/** An organisation-wide file under `contracts/`, and where it was read from. */
+export interface PublishedFile {
+  file: string;
+  json: JsonValue;
+}
+
+function readJson(file: string): PublishedFile {
+  return { file, json: jsonValueSchema.parse(JSON.parse(fs.readFileSync(file, 'utf8'))) };
 }
 
 /**
@@ -172,6 +206,7 @@ export const frontmatterSchema = z
     related: z.array(z.string()).optional(),
     about: z.array(z.string()).optional(),
     tags: z.array(z.string()).optional(),
+    kind: z.string().optional(),
   })
   .catchall(jsonValueSchema);
 
@@ -207,7 +242,11 @@ export function frontmatterValidator(schema: JsonObject): FrontmatterValidator {
 
       return (compiled.errors ?? []).map((error) => ({
         path: error.instancePath.replace(/^\//, '').replace(/\//g, '.') || '(root)',
-        message: error.message ?? 'is invalid',
+        // ajv says only "one of the allowed values"; the author needs the list.
+        message:
+          error.keyword === 'enum' && Array.isArray(error.params.allowedValues)
+            ? `must be one of ${error.params.allowedValues.join(', ')}`
+            : (error.message ?? 'is invalid'),
       }));
     },
   };

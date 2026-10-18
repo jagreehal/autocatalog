@@ -106,6 +106,10 @@ export function buildProgram(): Command {
       'JSON Schema for frontmatter (defaults to contracts/docs-frontmatter.json, then the built-in contract)',
     )
     .option(
+      '--conventions <file>',
+      'document kinds to enforce (defaults to contracts/autocatalog.conventions.json, then the built-in kinds)',
+    )
+    .option(
       '--manifest <file>',
       'published index to resolve links against (contracts/docs-manifest.json)',
     )
@@ -114,7 +118,13 @@ export function buildProgram(): Command {
     .action(
       async (
         root: string | undefined,
-        opts: { schema?: string; manifest?: string; repo?: string; quiet: boolean },
+        opts: {
+          schema?: string;
+          conventions?: string;
+          manifest?: string;
+          repo?: string;
+          quiet: boolean;
+        },
       ) => {
         const { runDocsCheck } = await import('./commands/docs');
         process.exit(await runDocsCheck({ root: root ?? process.cwd(), ...opts }));
@@ -128,13 +138,23 @@ export function buildProgram(): Command {
       '--schema <file>',
       'JSON Schema for frontmatter (defaults to contracts/docs-frontmatter.json, then the built-in contract)',
     )
+    .option(
+      '--conventions <file>',
+      'document kinds to enforce (defaults to contracts/autocatalog.conventions.json, then the built-in kinds)',
+    )
     .option('--manifest <file>', 'output path (defaults to contracts/docs-manifest.json)')
     .option('--repo <name>', 'name for a single repository publishing its own docs/')
     .option('-q, --quiet', 'suppress non-error output', false)
     .action(
       async (
         root: string | undefined,
-        opts: { schema?: string; manifest?: string; repo?: string; quiet: boolean },
+        opts: {
+          schema?: string;
+          conventions?: string;
+          manifest?: string;
+          repo?: string;
+          quiet: boolean;
+        },
       ) => {
         const { runDocsManifest } = await import('./commands/docs');
         process.exit(await runDocsManifest({ root: root ?? process.cwd(), ...opts }));
@@ -162,6 +182,19 @@ export function buildProgram(): Command {
     .action(async (root: string | undefined, opts: { schema?: string; quiet: boolean }) => {
       const { runDocsInitSchema } = await import('./commands/docs');
       process.exit(await runDocsInitSchema({ root: root ?? process.cwd(), ...opts }));
+    });
+
+  docs
+    .command('init-conventions [root]')
+    .description('Write the default document kinds (ADRs, runbooks, incidents) to edit')
+    .option(
+      '--conventions <file>',
+      'output path (defaults to contracts/autocatalog.conventions.json)',
+    )
+    .option('-q, --quiet', 'suppress non-error output', false)
+    .action(async (root: string | undefined, opts: { conventions?: string; quiet: boolean }) => {
+      const { runDocsInitConventions } = await import('./commands/docs');
+      process.exit(await runDocsInitConventions({ root: root ?? process.cwd(), ...opts }));
     });
 
   program
@@ -517,6 +550,10 @@ export function buildProgram(): Command {
       '--docs-schema <file>',
       'docs frontmatter contract to enforce (defaults to <root>/contracts/docs-frontmatter.json, then the one an enrolled repository publishes)',
     )
+    .option(
+      '--docs-conventions <file>',
+      'document kinds to publish (defaults to <root>/contracts/autocatalog.conventions.json, then the one an enrolled repository publishes)',
+    )
     .action(
       async (
         root: string | undefined,
@@ -532,6 +569,7 @@ export function buildProgram(): Command {
           dev: boolean;
           eventcatalog: boolean;
           docsSchema?: string;
+          docsConventions?: string;
         },
       ) => {
         const { runSite } = await import('./commands/site');

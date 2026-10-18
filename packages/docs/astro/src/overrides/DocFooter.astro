@@ -27,6 +27,9 @@ const manifest = catalog.manifest;
 
 const record = manifest[id];
 
+// A decision, runbook or incident lists what it applies to in its title block.
+const about = record?.kind ? [] : aboutDocument(catalog.graph, id);
+
 const owner = data.owner;
 
 const ownerPage = owner ? ownerFor(graphOwners(catalog.graph), owner) : undefined;
@@ -55,7 +58,7 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
   edit={record?.edit}
   related={toLinks(data.related ?? [], manifest)}
   linkedFrom={toLinks(record?.linkedFrom ?? [], manifest)}
-  about={aboutDocument(catalog.graph, id)}
+  about={about}
   repository={repository}
   defined={defined.map((resource) => ({
     kind: resource.ref.kind,

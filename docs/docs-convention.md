@@ -61,6 +61,128 @@ it is about are listed under the document, and `/catalog.json` carries each as a
 by, with the near miss it probably meant; a kind the repository defines none of
 is left to the composed site, which warns and leaves the edge out.
 
+## Decisions, runbooks and incidents
+
+Architecture decision records, runbooks and incident write-ups live in the
+repository they are about, in a folder under its `docs/`:
+
+```text
+payments-service/docs/
+  adr/0003-kafka-for-payment-events.md
+  runbooks/replay-payment-events.md
+  incidents/2026-09-14-duplicate-payment-completed.md
+```
+
+The folder sets the document's kind, so nobody writes `kind:` by hand. A
+document elsewhere can still name one in frontmatter (`kind: incident`), and
+the deepest matching folder wins when two kinds nest. A folder's `index.md` or
+`README.md` introduces the kind and stays a plain document.
+
+Each kind adds fields to the base contract:
+
+| Kind       | Folder       | Fields                                                                                                                                            |
+| ---------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `adr`      | `adr/`       | `status` (proposed, accepted, rejected, deprecated, superseded) and `date`, both required; `supersedes` and `supersededBy`, lists of document ids |
+| `runbook`  | `runbooks/`  | `severity` (sev1 to sev4) and `lastTested`, a date; both optional                                                                                 |
+| `incident` | `incidents/` | `date`, `severity` and `status` (open, mitigated, resolved), required; `rootCause` and `solution`, one sentence each, written once it is resolved |
+
+The ADR states match EventCatalog's. What a document applies to is `about:`,
+the same field every document has, so a decision about a service is listed on
+that service's page:
+
+```yaml
+---
+title: Publish payment events on Kafka
+owner: payments-platform
+status: accepted
+date: 2026-03-14
+supersedes:
+  - payments-service/adr/0001-rabbitmq-for-payment-events
+about:
+  - service/payments-service
+  - event/payment/payment.completed
+---
+```
+
+An incident keeps its short answers in frontmatter, where the index shows them,
+and the full write-up in the body:
+
+```yaml
+---
+title: Duplicate payment.completed after a consumer rebalance
+owner: payments-platform
+date: 2026-09-14
+severity: sev2
+status: resolved
+rootCause: The settle step published before committing its offset.
+solution: Publishing now happens after the commit.
+about:
+  - service/payments-service
+---
+```
+
+`ac docs check` validates each document against the base contract and its
+kind's schema together, names the kind in each failure, and checks that every
+`supersedes` and `supersededBy` id resolves, as it does for `related`.
+
+### The conventions file
+
+An organisation changes the kinds with one file,
+`contracts/autocatalog.conventions.json`, published and found the way the
+frontmatter contract is: at the aggregation root, or the one an enrolled
+repository (usually the handbook) publishes. Two repositories publishing
+different copies is an error that names both files.
+
+```bash
+ac docs init-conventions   # write the built-in kinds, then edit them in place
+```
+
+```json
+{
+  "kinds": {
+    "runbook": false,
+    "adr": { "folder": "decisions" },
+    "rfc": {
+      "label": "Proposals",
+      "folder": "rfcs",
+      "path": "proposals",
+      "description": "Changes proposed across teams, and what came of them.",
+      "columns": ["status", "date", "reviewers", "owner"],
+      "statusField": "status",
+      "dateField": "date",
+      "schema": {
+        "type": "object",
+        "required": ["status", "date"],
+        "properties": {
+          "status": { "enum": ["draft", "review", "accepted", "withdrawn"] },
+          "date": { "type": "string", "format": "date" },
+          "reviewers": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    }
+  }
+}
+```
+
+Each kind takes:
+
+- `label`: the plural the index page, sidebar and home page use.
+- `folder`: where its documents sit under `docs/`.
+- `path`: its index page, `/<path>/`. Defaults to the label in lower case.
+- `description`: the sentence under the index page's title.
+- `schema`: JSON Schema for the kind's own frontmatter, checked together with
+  the base contract. A base contract closed with `additionalProperties: false`
+  still accepts the kind's fields.
+- `columns`: the frontmatter fields the index table shows after the title.
+- `statusField` and `dateField`: the field shown as a badge and filtered on, and
+  the field the index sorts newest first by.
+
+`false` turns a built-in kind off. An object for a built-in kind replaces only
+the fields it names, and a field it names replaces the built-in one whole,
+`schema` included. A kind's path must not be an enrolled repository's name or
+a page the site already publishes, such as `catalog`; the build says which kind
+to change.
+
 ## The contract is yours
 
 Frontmatter is validated against a JSON Schema the organisation owns, found at

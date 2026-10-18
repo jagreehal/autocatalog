@@ -142,6 +142,7 @@ names repositories directly, and a root builds from checkouts on disk. `--dev`
 serves instead of building. `--eventcatalog` builds EventCatalog into the site
 and embeds its diagrams. `--docs-schema` names the docs frontmatter contract to
 enforce; without it the site uses the root's, else an enrolled repository's.
+`--docs-conventions` names the conventions file, found the same way.
 See [the company site](/docs/site).
 
 **`ac to-eventcatalog <dir>`** writes the catalog into an EventCatalog project
@@ -159,7 +160,9 @@ of them take an optional root and default to the current directory.
 
 **`ac docs check`** — validates frontmatter against the contract, plus links
 between repositories and documents that were deleted while something still links
-to them.
+to them. An ADR, runbook or incident is also checked against its kind's schema,
+and its `supersedes` and `supersededBy` ids must resolve. `--conventions` names
+the conventions file when the default lookup should not choose it.
 
 **`ac docs manifest`** — publishes `contracts/docs-manifest.json`, the
 aggregated index other repositories resolve links against. `ac site` serves
@@ -167,6 +170,12 @@ the same file at `/contracts/docs-manifest.json`.
 
 **`ac docs init-schema`** — writes the default frontmatter contract into
 `contracts/` so the organisation owns its copy from the start.
+
+**`ac docs init-conventions`** — writes the built-in document kinds (ADRs,
+runbooks, incidents) into `contracts/autocatalog.conventions.json` for the
+organisation to edit: add a kind, change a folder, label or schema, or turn a
+kind off. It refuses to overwrite a file that exists; `--conventions` writes
+elsewhere.
 
 **`ac docs sync-schema`** — checks that copy against the organisation's
 canonical one, found from the `$id` the copy records. `--write` takes the

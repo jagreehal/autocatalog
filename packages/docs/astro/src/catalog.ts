@@ -32,6 +32,11 @@ import {
   mergeConsumerGraph,
   readConsumerDeclarations,
   RESOURCE_GRAPH_FILE,
+  architectureConfig,
+  loadCodeowners,
+  readOptionalResourceJson,
+  resolveResourceOwnership,
+  scanModelResources,
   type CatalogRelationship,
   type JsonValue,
 } from 'autocatalog-core';
@@ -42,12 +47,16 @@ import {
   DocsManifestError,
   headCommit,
   readDocs,
+  resolveDocKinds,
   resolveDocsLayout,
   type BuildDocsManifestOptions,
   type Doc,
+  type DocKind,
   type DocsManifest,
 } from 'autocatalog-docs-core';
 import { repositoryApis, type CatalogApi } from './apis';
+import { publishedKinds, RESERVED_SEGMENTS } from './kinds';
+import { catalogModels, modelPath, type CatalogModel } from './data-models';
 import { docsSiteConfig } from './config';
 import type { ShellLink } from './shell';
 import { catalogHref } from './view';
@@ -55,8 +64,8 @@ import { catalogHref } from './view';
 /** A repository whose own catalog would not compile, and why. */
 export interface RepositoryFailure {
   repository: string;
-  /** Which convention failed to compile: the repository's events, agents or API specs. */
-  source: 'events' | 'agents' | 'resources' | 'consumers' | 'apis';
+  /** Which convention failed to compile: the repository's events, agents or API specs, or its name. */
+  source: 'events' | 'agents' | 'resources' | 'consumers' | 'apis' | 'name';
   message: string;
 }
 
@@ -78,7 +87,11 @@ export interface DocsCatalog {
   history: CatalogEvent[];
   /** The OpenAPI documents each repository commits, each with a reference page. */
   apis: CatalogApi[];
+  /** The tables and collections each repository defines, each with a page. */
+  models: CatalogModel[];
   manifest: DocsManifest;
+  /** The document kinds with at least one document, each with an index page. */
+  kinds: DocKind[];
   graph: ResourceGraph;
   summary: ResourceGraphSummary;
   /** Repositories quarantined from the graph, shown rather than swallowed. */
@@ -141,7 +154,13 @@ export async function buildDocsCatalog(
   claim(declarations, 'docs/', docsGraph);
 
   const failures: RepositoryFailure[] = [];
-  const resourceFragments: Array<{ repository: string; graph: ResourceGraph }> = [];
+
+  const resourceFragments: Array<{
+    repository: string;
+    repositoryRoot: string;
+    graph: ResourceGraph;
+  }> = [];
+
   const events: CatalogEvent[] = [];
   const history: CatalogEvent[] = [];
   const apis: CatalogApi[] = [];
@@ -177,12 +196,30 @@ export async function buildDocsCatalog(
 
   // Sorted, so which of two contradicting repositories is quarantined does not
   // depend on the order the filesystem lists them in.
-  const repositories = [...repositoryRoots(root, docs, options.repo)]
+  const found = [...repositoryRoots(root, docs, options.repo)]
     .map(([repository, repositoryRoot]) => ({
       name: options.repository ?? repository,
       repositoryRoot,
     }))
     .sort((a, b) => a.name.localeCompare(b.name));
+
+  // A repository's name is the first segment of its pages' addresses, so one
+  // named like a page the site already has is left out until it is renamed.
+  const repositories = found.filter(({ name }) => !RESERVED_SEGMENTS.has(name));
+
+  for (const { name } of found)
+    if (RESERVED_SEGMENTS.has(name))
+      failures.push({
+        repository: name,
+        source: 'name',
+        message: `/${name}/ is one of the site's own pages; rename the repository's folder to publish it`,
+      });
+
+  const kinds = publishedKinds(
+    resolveDocKinds(root, options.conventionsPath).kinds,
+    manifest,
+    new Set([...docs.map((doc) => doc.repo), ...repositories.map(({ name }) => name)]),
+  );
 
   // Every repository's events first, so an agent in one repository can name an
   // event another publishes and the edge lands on that exact Event resource.
@@ -192,9 +229,12 @@ export async function buildDocsCatalog(
 
   for (const { name, repositoryRoot } of repositories) {
     try {
-      const resourceGraph = await readResourceGraph(repositoryRoot);
+      const resourceGraph =
+        (await readResourceGraph(repositoryRoot)) ??
+        (await scannedModels(repositoryRoot, name, notes));
 
-      if (resourceGraph) resourceFragments.push({ repository: name, graph: resourceGraph });
+      if (resourceGraph)
+        resourceFragments.push({ repository: name, repositoryRoot, graph: resourceGraph });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
 
@@ -304,6 +344,8 @@ export async function buildDocsCatalog(
   // quarantined above — is left out and said out loud; `ac docs check` is what
   // fails the merge for it.
   let composed = composer.graph();
+  // The repository each table and collection is read from, for its page.
+  const modelRepositories = new Map<string, { repository: string; repositoryRoot: string }>();
 
   for (const fragment of resourceFragments) {
     try {
@@ -315,6 +357,12 @@ export async function buildDocsCatalog(
       if (contested.length) throw new Error(`${RESOURCE_GRAPH_FILE}: ${contested.join('; ')}`);
       composed = mergeArchitectureGraphs(composed, guarded);
       claim(declarations, fragment.repository, fragment.graph, { declaredOnly: true });
+
+      for (const resource of fragment.graph.resources) {
+        const key = resourceKey(resource.ref);
+
+        if (!modelRepositories.has(key)) modelRepositories.set(key, fragment);
+      }
     } catch (error) {
       failures.push({
         repository: fragment.repository,
@@ -348,9 +396,10 @@ export async function buildDocsCatalog(
   // refuse.
   const warnings = [
     ...about.failures.map((failure) => `${failure}, so it is missing from the graph`),
-    ...failures.map(
-      (failure) =>
-        `${failure.repository}: its ${failureSource(failure)} did not compile and is missing from the graph — ${failure.message}`,
+    ...failures.map((failure) =>
+      failure.source === 'name'
+        ? `${failure.repository} is missing from the graph — ${failure.message}`
+        : `${failure.repository}: its ${failureSource(failure)} did not compile and is missing from the graph — ${failure.message}`,
     ),
     ...notes,
   ];
@@ -364,10 +413,18 @@ export async function buildDocsCatalog(
       : repositories.map(({ name, repositoryRoot }) => [name, headCommit(repositoryRoot)]),
   );
 
+  // A model's page is its url, so the map and the Catalog link to it as they
+  // do to a document.
+  const models = catalogModels(composed, modelRepositories);
+  const modelPages = new Map(models.map((model) => [resourceKey(model.resource.ref), model]));
+
   const graph: ResourceGraph = {
     ...composed,
     resources: composed.resources.map((resource) => {
       const commit = resource.ref.kind === 'repository' ? commits.get(resource.ref.id) : null;
+      const model = modelPages.get(resourceKey(resource.ref));
+
+      if (model) return { ...resource, url: modelPath(model) };
 
       return commit ? { ...resource, source: { repo: resource.ref.id, ref: commit } } : resource;
     }),
@@ -378,12 +435,80 @@ export async function buildDocsCatalog(
     events: events.sort((a, b) => a.event.frontmatter.id.localeCompare(b.event.frontmatter.id)),
     history,
     apis,
+    models: models.map((model) => ({
+      ...model,
+      resource: { ...model.resource, url: modelPath(model) },
+    })),
     manifest,
+    kinds,
     graph,
     summary: summarizeResourceGraph(graph),
     failures,
     warnings,
   };
+}
+
+/**
+ * A repository that commits no resources.json still gets its data models: the
+ * passive model scan `ac resources scan` runs, which parses source without
+ * running it, with owners from its CODEOWNERS. Only a scan that found a table
+ * or collection is kept, so a repository without models adds nothing to the graph.
+ */
+async function scannedModels(
+  repositoryRoot: string,
+  repository: string,
+  notes: string[],
+): Promise<ResourceGraph | undefined> {
+  const { graph, errors } = await modelScan(path.resolve(repositoryRoot));
+
+  for (const error of errors) notes.push(`${repository}: data models were not scanned: ${error}`);
+
+  return graph.resources.some(({ ref }) => ref.kind === 'table' || ref.kind === 'collection')
+    ? graph
+    : undefined;
+}
+
+type ModelScan = Promise<{ graph: ResourceGraph; errors: string[] }>;
+
+declare global {
+  // Configuring the site and rendering its pages each build the catalog, from
+  // separately loaded copies of this module, so the scans are kept on the process.
+  var autocatalogModelScans: Map<string, ModelScan> | undefined;
+}
+
+const modelScans = (globalThis.autocatalogModelScans ??= new Map());
+
+/** One scan per repository checkout per process. */
+function modelScan(root: string): ModelScan {
+  const known = modelScans.get(root);
+
+  if (known) return known;
+
+  const scan = (async () => {
+    const config = architectureConfig.parse(
+      (await readOptionalResourceJson(path.join(root, '.autocatalog', 'config.json'), { root })) ??
+        {},
+    );
+
+    const { graph, errors } = await scanModelResources({
+      root,
+      service: config.service,
+      datastore: config.datastore,
+      database: config.database,
+    });
+
+    const owned = resolveResourceOwnership(graph, {
+      ...config.ownership,
+      claims: [],
+      codeowners: await loadCodeowners(root),
+    });
+
+    return { graph: owned.graph, errors };
+  })();
+
+  modelScans.set(root, scan);
+
+  return scan;
 }
 
 /** What a quarantined repository failed to compile, as the file or folder its owners would open. */
@@ -394,7 +519,9 @@ export const failureSource = (failure: RepositoryFailure) =>
       ? CONSUMES_FILE
       : failure.source === 'apis'
         ? 'contracts/'
-        : `${failure.source}/ catalog`;
+        : failure.source === 'name'
+          ? 'repository name'
+          : `${failure.source}/ catalog`;
 
 /** An observation only adds evidence; a declaration or an owner says what the resource is. */
 const declares = (entry: CatalogResource | CatalogRelationship) => {
@@ -511,8 +638,8 @@ let cached: Promise<DocsCatalog> | undefined;
 
 export function docsCatalog(): Promise<DocsCatalog> {
   if (!cached) {
-    const { root, repo, repository, schemaPath } = docsSiteConfig();
-    cached = buildDocsCatalog(root, { repo, repository, schemaPath });
+    const { root, repo, repository, schemaPath, conventionsPath } = docsSiteConfig();
+    cached = buildDocsCatalog(root, { repo, repository, schemaPath, conventionsPath });
   }
 
   return cached;

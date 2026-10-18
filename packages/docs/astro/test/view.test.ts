@@ -20,6 +20,9 @@ const manifest: DocsManifest = {
     source: null,
     edit: null,
     linkedFrom: [],
+    kind: null,
+    status: null,
+    date: null,
   },
   'payments-service/runbook': {
     owner: 'Payments',
@@ -28,6 +31,9 @@ const manifest: DocsManifest = {
     source: null,
     edit: null,
     linkedFrom: ['acme-handbook/incident-policy'],
+    kind: null,
+    status: null,
+    date: null,
   },
 };
 
@@ -81,6 +87,17 @@ describe('grouping', () => {
 describe('day', () => {
   it('formats an ISO date once, for every surface', () => {
     expect(day('2026-03-04T09:00:00Z')).toBe('4 Mar 2026');
+  });
+
+  it('keeps a date-only value on its own day in a timezone behind UTC', () => {
+    vi.stubEnv('TZ', 'America/Los_Angeles');
+
+    try {
+      expect(day('2026-10-18')).toBe('18 Oct 2026');
+      expect(day('2026-03-04T09:00:00Z')).toBe('4 Mar 2026');
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 
   it('renders nothing rather than a guess when git could not say', () => {

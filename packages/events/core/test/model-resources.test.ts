@@ -804,3 +804,331 @@ describe('read projections', () => {
     expect(edges(result.graph)).toEqual([['reads', 'User', 'extracted', false, ['email_address']]]);
   });
 });
+
+describe('Prisma model detail', () => {
+  const library = `datasource db {
+  provider = "mongodb"
+}
+
+/// A person who borrows books.
+model Member {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  /// Where we send overdue notices.
+  email     String   @unique
+  tier      Tier     @default(STANDARD)
+  joinedAt  DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  address   Address?
+  mentorId  String?  @db.ObjectId
+  mentor    Member?  @relation("Mentoring", fields: [mentorId], references: [id])
+  mentees   Member[] @relation("Mentoring")
+  loans     Loan[]
+
+  @@map("members")
+}
+
+model Loan {
+  id       String @id @default(auto()) @map("_id") @db.ObjectId
+  memberId String @db.ObjectId
+  member   Member @relation(fields: [memberId], references: [id])
+  bookIsbn String
+  dueOn    DateTime /// Inclusive.
+
+  @@index([memberId, dueOn(sort: Desc)])
+  @@unique([memberId, bookIsbn], name: "one_copy_each")
+}
+
+type Address {
+  street String
+  city   String
+}
+
+enum Tier {
+  STANDARD
+  GOLD @map("gold")
+}`;
+
+  const resource = (graph: ResourceGraph, id: string) =>
+    graph.resources.filter(isArchitectureCatalogResource).find((item) => item.ref.id === id);
+
+  it('describes fields, keys, defaults, enums, embedded types and documentation', async () => {
+    const result = await scanFiles({ 'schema.prisma': library });
+    const members = { kind: 'collection', namespace: 'default/default', id: 'members' };
+
+    expect(result.skipped).toEqual([]);
+    expect(resource(result.graph, 'members')?.summary).toBe('A person who borrows books.');
+    expect(resource(result.graph, 'members')?.attributes.fields).toEqual([
+      { name: 'id', column: '_id', type: 'String', id: true, default: 'auto()' },
+      { name: 'email', type: 'String', unique: true, doc: 'Where we send overdue notices.' },
+      { name: 'tier', type: 'Tier', default: 'STANDARD', enum: ['STANDARD', 'gold'] },
+      { name: 'joinedAt', type: 'DateTime', default: 'now()' },
+      { name: 'updatedAt', type: 'DateTime', updatedAt: true },
+      {
+        name: 'address',
+        type: 'Address',
+        optional: true,
+        fields: [
+          { name: 'street', type: 'String' },
+          { name: 'city', type: 'String' },
+        ],
+      },
+      { name: 'mentorId', type: 'String', optional: true },
+      {
+        name: 'mentor',
+        type: 'Member',
+        optional: true,
+        relation: {
+          model: 'Member',
+          to: members,
+          many: false,
+          name: 'Mentoring',
+          fields: ['mentorId'],
+          references: ['id'],
+        },
+      },
+      {
+        name: 'mentees',
+        type: 'Member',
+        list: true,
+        relation: { model: 'Member', to: members, many: true, name: 'Mentoring' },
+      },
+      {
+        name: 'loans',
+        type: 'Loan',
+        list: true,
+        relation: {
+          model: 'Loan',
+          to: { kind: 'collection', namespace: 'default/default', id: 'Loan' },
+          many: true,
+        },
+      },
+    ]);
+    expect(schemaOf(result.graph, 'members')).toMatchObject({
+      properties: {
+        address: {
+          anyOf: [
+            {
+              type: 'object',
+              properties: { street: { type: 'string' }, city: { type: 'string' } },
+            },
+            { type: 'null' },
+          ],
+        },
+      },
+    });
+  });
+
+  it('reads indexes and trailing documentation', async () => {
+    const result = await scanFiles({ 'schema.prisma': library });
+
+    expect(resource(result.graph, 'Loan')?.attributes.indexes).toEqual([
+      { fields: ['memberId', 'dueOn'], unique: false },
+      { fields: ['memberId', 'bookIsbn'], unique: true, name: 'one_copy_each' },
+    ]);
+    expect(resource(result.graph, 'Loan')?.attributes.fields).toContainEqual({
+      name: 'dueOn',
+      type: 'DateTime',
+      doc: 'Inclusive.',
+    });
+  });
+
+  it('joins a model to each model it holds a key of, once, and not to itself', async () => {
+    const result = await scanFiles({
+      'schema.prisma': `${library}
+model Post {
+  id   Int   @id
+  tags Tag[]
+}
+model Tag {
+  id    Int    @id
+  posts Post[]
+}`,
+    });
+
+    expect(
+      result.graph.relationships
+        .filter((edge) => edge.type === 'references')
+        .map((edge) => [edge.from.id, edge.to.id, edge.attributes?.fields]),
+    ).toEqual([
+      ['Loan', 'members', ['member']],
+      ['Post', 'Tag', ['tags']],
+    ]);
+  });
+});
+
+describe('Drizzle and Mongoose model detail', () => {
+  const references = (graph: ResourceGraph) =>
+    graph.relationships
+      .filter((edge) => edge.type === 'references')
+      .map((edge) => [edge.from.id, edge.to.id]);
+
+  it('follows a Drizzle column reference to a table in another file', async () => {
+    const result = await scanFiles({
+      'authors.ts': `import { pgTable, serial, text } from 'drizzle-orm/pg-core';
+export const authors = pgTable('authors', { id: serial('id').primaryKey(), name: text('name').notNull().unique() });`,
+      'books.ts': `import { pgTable, serial, integer, timestamp } from 'drizzle-orm/pg-core';
+import { authors } from './authors';
+export const books = pgTable('books', {
+  id: serial('id').primaryKey(),
+  authorId: integer('author_id').references(() => authors.id),
+  createdAt: timestamp('created_at').defaultNow(),
+});`,
+    });
+
+    const books = result.graph.resources.find((resource) => resource.ref.id === 'books');
+
+    expect(books?.attributes).toMatchObject({
+      fields: [
+        { name: 'id', type: 'serial', id: true },
+        {
+          name: 'authorId',
+          column: 'author_id',
+          type: 'integer',
+          optional: true,
+          relation: {
+            model: 'authors',
+            to: { kind: 'table', namespace: 'default/default', id: 'authors' },
+            fields: ['authorId'],
+            references: ['id'],
+          },
+        },
+        { name: 'createdAt', column: 'created_at', default: 'now()' },
+      ],
+    });
+    expect(references(result.graph)).toEqual([['books', 'authors']]);
+  });
+
+  it('follows a Mongoose ref to the model it names', async () => {
+    const result = await scanFiles({
+      'models.ts': `import mongoose from 'mongoose';
+const author = new mongoose.Schema({ name: { type: String, required: true, unique: true } }, { collection: 'authors' });
+export const Author = mongoose.model('Author', author);
+const book = new mongoose.Schema({
+  title: { type: String, required: true },
+  author: { type: mongoose.Schema.Types.ObjectId, ref: 'Author', required: true },
+  status: { type: String, enum: ['draft', 'published'], default: 'draft' },
+}, { collection: 'books' });
+export const Book = mongoose.model('Book', book);`,
+    });
+
+    const books = result.graph.resources.find((resource) => resource.ref.id === 'books');
+
+    expect(books?.attributes).toMatchObject({
+      fields: [
+        { name: 'title', type: 'String' },
+        {
+          name: 'author',
+          type: 'ObjectId',
+          relation: { model: 'Author', to: { kind: 'collection', id: 'authors' } },
+        },
+        {
+          name: 'status',
+          optional: true,
+          default: "'draft'",
+          enum: ['draft', 'published'],
+        },
+      ],
+    });
+    expect(references(result.graph)).toEqual([['books', 'authors']]);
+  });
+});
+
+const modelOf = (graph: ResourceGraph, id: string) =>
+  graph.resources.filter(isArchitectureCatalogResource).find((item) => item.ref.id === id);
+
+describe('model relations across files and schemas', () => {
+  const references = (graph: ResourceGraph) =>
+    graph.relationships
+      .filter((edge) => edge.type === 'references')
+      .map((edge) => [`${edge.from.kind}:${edge.from.id}`, `${edge.to.kind}:${edge.to.id}`])
+      .sort();
+
+  const relationOf = (graph: ResourceGraph, table: string, field: string) =>
+    z
+      .array(z.object({ name: z.string(), relation: z.record(z.string(), z.unknown()).optional() }))
+      .parse(modelOf(graph, table)?.attributes.fields)
+      .find((item) => item.name === field)?.relation;
+
+  it('resolves a Drizzle reference in its own file first, then through an aliased import', async () => {
+    const result = await scanFiles({
+      'src/a/schema.ts': `import { pgTable, integer } from 'drizzle-orm/pg-core';
+export const users = pgTable('users', { id: integer('id').primaryKey() });
+export const posts = pgTable('posts', {
+  id: integer('id').primaryKey(),
+  authorId: integer('author_id').references(() => users.id),
+  editorId: integer('editor_id').references(() => missing.id),
+});`,
+      'src/b/schema.ts': `import { pgTable, integer } from 'drizzle-orm/pg-core';
+import { users as people } from '../a/schema';
+export const users = pgTable('legacy_users', { id: integer('id').primaryKey() });
+export const comments = pgTable('comments', {
+  id: integer('id').primaryKey(),
+  personId: integer('person_id').references(() => people.id),
+});`,
+    });
+
+    expect(references(result.graph)).toEqual([
+      ['table:comments', 'table:users'],
+      ['table:posts', 'table:users'],
+    ]);
+    expect(relationOf(result.graph, 'posts', 'editorId')).not.toHaveProperty('to');
+  });
+
+  it('reads each Prisma schema with its own datasource and relations', async () => {
+    const result = await scanFiles({
+      'prisma/schema/base.prisma': `datasource db {\n  provider = "mongodb"\n}`,
+      'prisma/schema/user.prisma': `model User {\n  id String @id @map("_id")\n  posts Post[]\n}`,
+      'prisma/schema/post.prisma': `model Post {\n  id String @id @map("_id")\n  authorId String\n  author User @relation(fields: [authorId], references: [id])\n}`,
+      'services/billing/prisma/schema.prisma': `datasource db {\n  provider = "postgresql"\n}\nmodel Invoice {\n  id Int @id\n  userId Int\n  user User @relation(fields: [userId], references: [id])\n}\nmodel User {\n  id Int @id\n  invoices Invoice[]\n}`,
+    });
+
+    expect(
+      result.graph.resources
+        .filter(isArchitectureCatalogResource)
+        .map((resource) => `${resource.ref.kind}:${resource.ref.id}`)
+        .sort(),
+    ).toEqual(['collection:Post', 'collection:User', 'table:Invoice', 'table:User']);
+    expect(references(result.graph)).toEqual([
+      ['collection:Post', 'collection:User'],
+      ['table:Invoice', 'table:User'],
+    ]);
+  });
+});
+
+describe('Prisma field and index syntax', () => {
+  it('keeps index fields whole when their arguments hold commas', async () => {
+    const result = await scanFiles({
+      'schema.prisma': `model User {\n  id Int @id\n  email String\n  @@index([email(sort: Desc, length: 10), id])\n}`,
+    });
+
+    expect(modelOf(result.graph, 'User')?.attributes.indexes).toEqual([
+      { fields: ['email', 'id'], unique: false },
+    ]);
+  });
+
+  it('keeps the optional modifier of an Unsupported type', async () => {
+    const result = await scanFiles({
+      'schema.prisma': `model Place {\n  id Int @id\n  geo Unsupported("geometry(Point, 4326)")?\n}`,
+    });
+
+    expect(modelOf(result.graph, 'Place')?.attributes.fields).toContainEqual({
+      name: 'geo',
+      type: 'Unsupported',
+      optional: true,
+    });
+  });
+});
+
+describe('scan scope', () => {
+  it.each(['.next', '.output', '.svelte-kit', '.vercel', 'out', 'vendor'])(
+    'does not read models from %s, which holds copies rather than source',
+    async (folder) => {
+      const result = await scanFiles({
+        'schema.prisma': 'model User {\n  id Int @id\n}',
+        [`${folder}/schema.prisma`]: 'model Copy {\n  id Int @id\n}',
+      });
+
+      expect(result.graph.resources.map((resource) => resource.ref.id)).toEqual(['User']);
+    },
+  );
+});

@@ -14,6 +14,8 @@ export interface DocsSiteConfig {
   repository: string | undefined;
   /** Path to a committed JSON Schema, or undefined for the built-in contract. */
   schemaPath: string | undefined;
+  /** Path to the organisation's conventions file, or undefined to find it by convention. */
+  conventionsPath: string | undefined;
   title: string;
   description: string;
 }
@@ -26,6 +28,7 @@ export function docsSiteConfig(): DocsSiteConfig {
     repo: process.env.AUTOCATALOG_DOCS_REPO || undefined,
     repository: process.env.AUTOCATALOG_DOCS_REPOSITORY || undefined,
     schemaPath: process.env.AUTOCATALOG_DOCS_SCHEMA || undefined,
+    conventionsPath: process.env.AUTOCATALOG_DOCS_CONVENTIONS || undefined,
     title: process.env.AUTOCATALOG_DOCS_TITLE ?? 'Documentation',
     description:
       process.env.AUTOCATALOG_DOCS_DESCRIPTION ??

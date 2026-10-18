@@ -1,0 +1,55 @@
+---
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import type { InferGetStaticPropsType } from 'astro';
+import { docsCatalog } from '../catalog';
+import { docsSiteConfig } from '../config';
+import { dataModelPageProps, modelDescription, modelPath, modelTitle } from '../data-models';
+import { setPageHeader } from '../shell';
+import { twinPath } from '../twins';
+import { DataModelPage } from '../ui/pages/DataModelPage';
+
+export async function getStaticPaths() {
+  const catalog = await docsCatalog();
+
+  return catalog.models.map((model) => ({
+    params: { repository: model.repository, name: model.name },
+    props: { model },
+  }));
+}
+
+type Props = InferGetStaticPropsType<typeof getStaticPaths>;
+
+const { model } = Astro.props;
+
+const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+
+const catalog = await docsCatalog();
+
+const page = dataModelPageProps(catalog.graph, model, catalog.models, catalog.events, {
+  base,
+  root: docsSiteConfig().root,
+});
+
+const markdownHref = `${base}${twinPath(modelPath(model))}`;
+
+setPageHeader(Astro.locals, {
+  actions: [
+    ...(page.sourceHref
+      ? [{ label: 'Source', href: page.sourceHref, icon: 'repository' as const }]
+      : []),
+    { label: 'View as Markdown', href: markdownHref, icon: 'doc' },
+  ],
+});
+---
+
+<StarlightPage
+  frontmatter={{
+    title: modelTitle(model.resource),
+    head: [{ tag: 'link', attrs: { rel: 'alternate', type: 'text/markdown', href: markdownHref } }],
+    description: model.resource.summary ?? modelDescription(page),
+    // The fields table and the diagram need the width more than a reader needs the outline.
+    tableOfContents: false,
+  }}
+>
+  <DataModelPage {...page} />
+</StarlightPage>
