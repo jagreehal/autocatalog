@@ -3,7 +3,9 @@ import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
 import type { InferGetStaticPropsType } from 'astro';
 import { docsCatalog, eventParticipants } from '../catalog';
 import { eventPageProps } from '../page-models';
+import { eventPath } from '../event-path';
 import { setResourceContext, versionLabel } from '../shell';
+import { twinPath } from '../twins';
 import { EventPage } from '../ui/pages/EventPage';
 
 export async function getStaticPaths() {
@@ -32,6 +34,8 @@ const agents = eventParticipants(catalog, repository, event);
 
 const page = await eventPageProps(catalog, Astro.props, agents, base);
 
+const markdownHref = `${base}${twinPath(eventPath(Astro.props))}`;
+
 setResourceContext(Astro.locals, {
   kind: 'event',
   name: fm.name,
@@ -39,11 +43,17 @@ setResourceContext(Astro.locals, {
   actions: [
     { label: 'Copy schema', href: page.schemaHref, icon: 'copy', copy: true },
     { label: 'View schema.json', href: page.schemaHref, icon: 'braces' },
+    { label: 'View as Markdown', href: markdownHref, icon: 'doc' },
   ],
   pills: [
     { text: versionLabel(fm.version) },
-    ...(fm.status === 'active' ? [] : [{ text: fm.status, tone: 'warn' as const }]),
+    ...(fm.status === 'active'
+      ? []
+      : [{ text: fm.status, tone: fm.status === 'draft' ? ('quiet' as const) : ('warn' as const) }]),
     ...(fm.classification ? [{ text: fm.classification }] : []),
+    // The labels a team gave the event. Shown in the theme's colours rather
+    // than the ones written beside them, so every badge reads the same way.
+    ...fm.badges.map((badge) => ({ text: badge.content })),
   ],
 });
 
@@ -59,6 +69,13 @@ const headings = [
 ];
 ---
 
-<StarlightPage frontmatter={{ title: fm.name, description: fm.summary }} headings={headings}>
+<StarlightPage
+  frontmatter={{
+    title: fm.name,
+    description: fm.summary,
+    head: [{ tag: 'link', attrs: { rel: 'alternate', type: 'text/markdown', href: markdownHref } }],
+  }}
+  headings={headings}
+>
   <EventPage client:load {...page} />
 </StarlightPage>

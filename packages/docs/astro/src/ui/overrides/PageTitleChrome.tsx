@@ -4,7 +4,7 @@ import { Badge } from '#ui/components/ui/badge.tsx';
 import { Button, LinkButton } from '#ui/components/ui/button.tsx';
 import { ButtonGroup } from '#ui/components/ui/button-group.tsx';
 import { Separator } from '#ui/components/ui/separator.tsx';
-import type { PageAction } from '../../shell';
+import type { PageAction, PillTone } from '../../shell';
 import { Icon } from '../components/Icon';
 
 export interface PageTitleChromeProps {
@@ -19,11 +19,13 @@ export interface PageTitleChromeProps {
   /** The sentence that says what the page is for. */
   summary?: string;
   /** States worth flagging beside the key: a version, deprecated. */
-  pills: Array<{ text: string; tone?: 'warn' }>;
+  pills: Array<{ text: string; tone?: PillTone }>;
   actions: PageAction[];
   /** Starlight's own `<h1>`, rendered by the Astro shell. */
   children?: ReactNode;
 }
+
+const PILL_VARIANT = { warn: 'destructive', quiet: 'secondary', plain: 'outline' } as const;
 
 /** How long "Copied" stays on the button before it says what it does again. */
 const RESET_MS = 1600;
@@ -98,10 +100,10 @@ export function PageTitleChrome({
                   {catalogKey}
                 </code>
               )}
-              {pills.map((pill) => (
+              {pills.map((pill, index) => (
                 <Badge
-                  key={pill.text}
-                  variant={pill.tone === 'warn' ? 'destructive' : 'outline'}
+                  key={`${index}:${pill.text}`}
+                  variant={PILL_VARIANT[pill.tone ?? 'plain']}
                   data-tone={pill.tone}
                 >
                   {pill.text}

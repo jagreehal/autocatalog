@@ -105,11 +105,15 @@ gives you:
 
 - a page per event with its schema, examples, version history and the file that
   defines it
-- a page per service listing what it produces and consumes, and who owns it
-- a field index, so you can see which events carry `customerId` before you
-  change it
+- a page per service and per domain, with a map of what it produces and
+  consumes and the services on the other side
+- a catalog map of every service, event, command and datastore
+- an API reference for each OpenAPI spec under `contracts/`
+- a schema index, and a field index so you can see which events carry
+  `customerId` before you change it
 - owner pages, with the team's contact and everything it owns
-- your teams' Markdown docs, with owner and last-changed date on each page
+- your teams' Markdown docs, with Mermaid diagrams, owner and last-changed date
+  on each page
 
 Search, navigation and dark mode come from
 [Starlight](https://starlight.astro.build).

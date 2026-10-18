@@ -6,7 +6,7 @@
 import type { IconName } from './icons';
 
 /** The kinds a page can be about. */
-export type ResourceKind = 'event' | 'service' | 'agent' | 'doc';
+export type ResourceKind = 'event' | 'service' | 'domain' | 'agent' | 'doc';
 
 export interface ShellLink {
   label: string;
@@ -34,6 +34,9 @@ export interface PageHeader {
   primary?: { label: string; href: string };
 }
 
+/** `warn` for a state a reader must act on; `quiet` for one worth knowing, such as a draft. */
+export type PillTone = 'warn' | 'quiet';
+
 /** What a resource page tells the title block about itself. */
 export interface ResourceContext extends PageHeader {
   kind: ResourceKind;
@@ -41,7 +44,7 @@ export interface ResourceContext extends PageHeader {
   /** Its key in the catalog graph, such as `event:payments/payment.captured`. */
   key: string;
   /** States worth flagging: a version, deprecated, an earlier version. Never the kind. */
-  pills: Array<{ text: string; tone?: 'warn' }>;
+  pills: Array<{ text: string; tone?: PillTone }>;
 }
 
 // Keyed by the request's locals: a page sets its context in its frontmatter,

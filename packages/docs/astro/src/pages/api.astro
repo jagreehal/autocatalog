@@ -1,0 +1,42 @@
+---
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import type { InferGetStaticPropsType } from 'astro';
+import { apiDescription, apiPageProps, apiTitle, servicesForApi } from '../apis';
+import { docsCatalog } from '../catalog';
+import { setPageHeader } from '../shell';
+import { ApiPage } from '../ui/pages/ApiPage';
+
+export async function getStaticPaths() {
+  const catalog = await docsCatalog();
+
+  return catalog.apis.map((api) => ({
+    params: { repository: api.repository, name: api.name },
+    props: { api },
+  }));
+}
+
+type Props = InferGetStaticPropsType<typeof getStaticPaths>;
+
+const { api } = Astro.props;
+
+const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+
+const catalog = await docsCatalog();
+
+const page = apiPageProps(api, servicesForApi(api, catalog.events), base);
+
+setPageHeader(Astro.locals, {
+  actions: [{ label: 'View openapi.json', href: page.specHref, icon: 'braces' }],
+});
+---
+
+<StarlightPage
+  frontmatter={{
+    title: apiTitle(api),
+    description:
+      apiDescription(api) ?? `The OpenAPI reference ${api.repository} commits at ${api.file}.`,
+    tableOfContents: false,
+  }}
+>
+  <ApiPage client:load {...page} />
+</StarlightPage>

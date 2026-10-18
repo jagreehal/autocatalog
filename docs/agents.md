@@ -123,8 +123,3 @@ anyone hand-writing one. `--dry-run` prints what it would create.
 `ac agents mcp` starts an MCP server over the agent catalog, and
 `ac agents llmstxt` emits the whole catalog as `llms.txt` for clients that only
 read URLs. Same posture as the [event MCP server](/docs/mcp): free, local, stdio.
-
-The generated Agents site also has `/assistant`: a BYOK browser chat that calls the
-same tools (impact, cost, audit, search) against the published snapshot. Prefer MCP
-when a coding agent is doing the asking; the page is for humans poking at a catalog
-without installing anything.

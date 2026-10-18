@@ -21,6 +21,7 @@ import {
 import { z } from 'zod';
 import { sourceUrl } from 'autocatalog-docs-core';
 import { documentsAbout } from './about';
+import { apiPath, apisForService, apiTitle } from './apis';
 import { failureSource, type CatalogEvent, type DocsCatalog } from './catalog';
 import { docsSiteConfig } from './config';
 import { eventCatalogEmbeds } from './eventcatalog';
@@ -37,6 +38,7 @@ import {
   type Owner,
 } from './owners';
 import { type ShellLink, versionLabel } from './shell';
+import { remarkMermaid } from './mermaid';
 import { explorerModel } from './ui/components/catalog-explorer-model';
 import type { EventCatalogDiagramProps } from './ui/components/EventCatalogDiagram';
 import type { DeliveryView } from './ui/components/DeliveryFacts';
@@ -44,6 +46,8 @@ import type { ExampleView } from './ui/components/Examples';
 import { runtimeEvidenceView } from './runtime-evidence-view';
 import type {
   CatalogPageProps,
+  DomainPageProps,
+  DomainsPageProps,
   EventPageProps,
   EventVersionPageProps,
   FieldsPageProps,
@@ -53,7 +57,8 @@ import type {
   ServicePageProps,
 } from './ui/pages';
 import { catalogAnchor, groupByRepo, groupByTag, type DocListItem } from './view';
-import { catalogGraph, flowGraph } from './visualiser';
+import { buildDomains, domainHref, type Domain } from './domains';
+import { catalogGraph, domainNeighbourhood, flowGraph, serviceNeighbourhood } from './visualiser';
 
 // The view models the pages render. Everything that reads the catalog, the disk
 // or the Markdown pipeline lives here, so what reaches a React page is plain,
@@ -72,6 +77,8 @@ export function homePageProps(
   items: DocListItem[],
   base: string,
 ): HomePageProps {
+  const domains = buildDomains(catalog.events).length;
+
   const stats = [
     ...Object.entries(catalog.summary.resourcesByKind).map(([kind, count]) => ({
       label: label(kind, count),
@@ -79,6 +86,11 @@ export function homePageProps(
       kind,
       href: `${base}catalog/?kind=${encodeURIComponent(kind)}`,
     })),
+    {
+      label: label('domain', domains),
+      value: domains,
+      href: `${base}domains/`,
+    },
     {
       label: label('relationship', catalog.summary.relationships),
       value: catalog.summary.relationships,
@@ -104,6 +116,17 @@ export function homePageProps(
           },
         ]
       : []),
+    ...(domains > 0
+      ? [
+          {
+            title: 'Domains',
+            text: 'Each domain’s events, the services around them, and a map of how they connect.',
+            href: `${base}domains/`,
+            icon: 'domain' as const,
+            kind: 'domain',
+          },
+        ]
+      : []),
     ...(buildServices(catalog.events.map(({ event }) => event)).size > 0
       ? [
           {
@@ -123,6 +146,28 @@ export function homePageProps(
             href: `${base}fields/`,
             icon: 'fields' as const,
             kind: 'event',
+          },
+        ]
+      : []),
+    ...(catalog.events.length > 0
+      ? [
+          {
+            title: 'Schemas',
+            text: 'Every event schema, what it was written in, and who owns it.',
+            href: `${base}schemas/`,
+            icon: 'braces' as const,
+            kind: 'event',
+          },
+        ]
+      : []),
+    ...(catalog.apis.length > 0
+      ? [
+          {
+            title: 'APIs',
+            text: 'The OpenAPI specs repositories commit, each with its reference.',
+            href: `${base}apis/`,
+            icon: 'api' as const,
+            kind: 'service',
           },
         ]
       : []),
@@ -167,7 +212,10 @@ export function catalogPageProps(catalog: DocsCatalog, base: string): CatalogPag
         ? { count: row.evidence.count, environment: row.evidence.environment }
         : null,
     })),
-    map: catalogGraph(catalog.graph, base),
+    map: catalogGraph(catalog.graph, base, {
+      servicePages: servicePages(catalog),
+      eventPages: eventPages(catalog),
+    }),
     explorer: explorerModel(catalog.graph),
   };
 }
@@ -257,6 +305,71 @@ export function ownerPageProps(owner: Owner): OwnerPageProps {
   };
 }
 
+export function domainsPageProps(catalog: DocsCatalog, base: string): DomainsPageProps {
+  return {
+    domains: buildDomains(catalog.events).map((domain) => ({
+      name: domain.name,
+      href: domainHref(base, domain.name),
+      events: domain.events.length,
+      services: domain.services.length,
+      owners: domain.owners.length,
+    })),
+  };
+}
+
+export function domainPageProps(
+  catalog: DocsCatalog,
+  domain: Domain,
+  base: string,
+): DomainPageProps {
+  const owners = graphOwners(catalog.graph);
+
+  const role = (name: string, side: 'producers' | 'consumers') =>
+    domain.events.filter(({ event }) => event.frontmatter[side].includes(name)).length;
+
+  return {
+    summary: catalog.graph.resources.find(
+      (resource) => resource.ref.kind === 'domain' && resource.ref.id === domain.name,
+    )?.summary,
+    events: domain.events.map((entry) => {
+      const { name, id, summary } = entry.event.frontmatter;
+
+      const shared = domain.events.filter((other) => other.event.frontmatter.id === id).length > 1;
+
+      return {
+        name,
+        id,
+        href: `${base}${eventPath(entry)}`,
+        summary,
+        repository: shared ? entry.repository : undefined,
+      };
+    }),
+    services: domain.services.map((name) => ({
+      name,
+      href: `${base}services/${name}/`,
+      produces: role(name, 'producers'),
+      consumes: role(name, 'consumers'),
+    })),
+    owners: domain.owners.map((team) => {
+      const owner = ownerFor(owners, team);
+
+      return { team: owner?.name ?? team, href: owner ? ownerHref(owner) : undefined };
+    }),
+    visualiser: catalogGraph(catalog.graph, base, {
+      only: domainNeighbourhood(catalog.graph, domain.name),
+      servicePages: servicePages(catalog),
+      eventPages: eventPages(catalog),
+    }),
+  };
+}
+
+/** The events with a page: every current event a repository publishes. */
+const eventPages = (catalog: DocsCatalog) => new Set(catalog.events.map(eventPath));
+
+/** The services with a page: every one an event names as producer or consumer. */
+const servicePages = (catalog: DocsCatalog) =>
+  new Set(buildServices(catalog.events.map(({ event }) => event)).keys());
+
 /** EventCatalog's drawing of one resource, or undefined when `ac site --eventcatalog` made none. */
 export function diagramProps(
   base: string,
@@ -330,10 +443,21 @@ export function servicePageProps(
     ];
   });
 
+  const apis = apisForService(catalog.apis, events, service.name).map((api) => ({
+    title: apiTitle(api),
+    file: api.file,
+    href: `${base}${apiPath(api)}`,
+  }));
+
   return {
     flow,
-    visualiser: flowGraph(flow),
+    visualiser: catalogGraph(catalog.graph, base, {
+      only: serviceNeighbourhood(catalog.graph, service.name),
+      servicePages: servicePages(catalog),
+      eventPages: eventPages(catalog),
+    }),
     sections,
+    apis,
     documents,
     ...(owner && { owner }),
     ...(system && { system }),
@@ -492,7 +616,8 @@ export async function eventPageProps(
   // contract: a caveat, a runbook step. It renders as Markdown; regenerating the
   // catalog never touches it.
   const narrativeHtml = event.body.trim()
-    ? (await (await createMarkdownProcessor()).render(event.body)).code
+    ? (await (await createMarkdownProcessor({ remarkPlugins: [remarkMermaid] })).render(event.body))
+        .code
     : null;
 
   const owner = fm.owner && ownerFor(graphOwners(catalog.graph), fm.owner.team);
@@ -509,9 +634,9 @@ export async function eventPageProps(
   };
 
   // The facts that identify the event, beyond the title and crumbs above.
-  const facts: Array<[string, string]> = [
+  const facts: EventPageProps['facts'] = [
     ['Id', fm.id],
-    ['Domain', fm.domain],
+    ['Domain', fm.domain, domainHref(base, fm.domain)],
     ['Repository', repository],
   ];
 
@@ -536,6 +661,7 @@ export async function eventPageProps(
       needsReview: fm.needsReview,
     },
     deprecation,
+    draft: fm.status === 'draft',
     narrativeHtml,
     flow,
     visualiser: flowGraph(flow),

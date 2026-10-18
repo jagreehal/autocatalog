@@ -39,7 +39,7 @@ const meta = {
     documents: [{ href: '/payments/runbook', title: 'Payments runbook', label: 'payments' }],
     facts: [
       ['Id', 'payment.completed'],
-      ['Domain', 'payments'],
+      ['Domain', 'payments', '/domains/payments/'],
       ['Repository', 'payments'],
       ['Tags', 'payments, billing'],
     ],
@@ -69,6 +69,11 @@ export const Default: Story = {};
 
 export const Deprecated: Story = {
   args: { deprecation: 'Since 2.0.0. Use payment.captured. Consumers should migrate by Q1.' },
+};
+
+/** Still being written: published to read, flagged before anyone depends on it. */
+export const Draft: Story = {
+  args: { draft: true },
 };
 
 export const InlineDiagram: Story = {

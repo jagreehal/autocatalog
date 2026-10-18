@@ -1,0 +1,20 @@
+---
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import { docsCatalog } from '../catalog';
+import { schemasPageProps } from '../schemas';
+import { SchemasPage } from '../ui/pages/SchemasPage';
+
+const catalog = await docsCatalog();
+
+const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+---
+
+<StarlightPage
+  frontmatter={{
+    title: 'Schemas',
+    description: 'Every event schema, what it was written in, who owns it, and where to fetch it.',
+    tableOfContents: false,
+  }}
+>
+  <SchemasPage client:load {...schemasPageProps(catalog, base)} />
+</StarlightPage>

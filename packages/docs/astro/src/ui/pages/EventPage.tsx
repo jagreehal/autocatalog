@@ -1,5 +1,5 @@
 /** @jsxImportSource react */
-import { TriangleAlertIcon } from 'lucide-react';
+import { PencilLineIcon, TriangleAlertIcon } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '#ui/components/ui/alert.tsx';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '#ui/components/ui/card.tsx';
 import { Item } from '#ui/components/ui/item.tsx';
@@ -28,6 +28,8 @@ export interface EventPageProps {
   provenance: EvidenceView;
   /** What the deprecation notice says; absent for an event that is not deprecated. */
   deprecation?: string | null | undefined;
+  /** A contract still being written: published to read and discuss with its owner. */
+  draft?: boolean | undefined;
   /** The team's own index.mdx, rendered to HTML. */
   narrativeHtml?: string | null | undefined;
   /** One hop of the message flow around the event. */
@@ -43,7 +45,7 @@ export interface EventPageProps {
   changesHtml?: string | null | undefined;
   documents: ResourceLinksProps['links'];
   /** The facts that identify the event, beyond the title and crumbs above. */
-  facts: Array<[string, string]>;
+  facts: Array<[label: string, value: string, href?: string]>;
   transport?: TransportEntry[] | undefined;
   /** What a consumer may rely on about arrival. */
   delivery?: DeliveryView | undefined;
@@ -58,6 +60,7 @@ export function EventPage({
   owner,
   provenance,
   deprecation,
+  draft,
   narrativeHtml,
   flow,
   visualiser,
@@ -100,10 +103,21 @@ export function EventPage({
       </CardHeader>
       <CardContent>
         <dl className="m-0 flex flex-col">
-          {facts.map(([label, value]) => (
+          {facts.map(([label, value, href]) => (
             <Item key={label} size="xs">
               <dt className="w-32 text-muted-foreground">{label}</dt>
-              <dd className="m-0 min-w-0 flex-1 break-words">{value}</dd>
+              <dd className="m-0 min-w-0 flex-1 break-words">
+                {href ? (
+                  <a
+                    className="text-foreground underline decoration-border underline-offset-4 hover:decoration-foreground"
+                    href={href}
+                  >
+                    {value}
+                  </a>
+                ) : (
+                  value
+                )}
+              </dd>
             </Item>
           ))}
           {/* Props that crossed into the browser arrive as null where they were undefined. */}
@@ -133,6 +147,18 @@ export function EventPage({
               <TriangleAlertIcon />
               <AlertTitle>Deprecated</AlertTitle>
               <AlertDescription>{deprecation}</AlertDescription>
+            </Alert>
+          </div>
+        )}
+
+        {draft && (
+          <div className="not-content">
+            <Alert>
+              <PencilLineIcon />
+              <AlertTitle>Draft</AlertTitle>
+              <AlertDescription>
+                This contract may still change. Agree it with the owner before depending on it.
+              </AlertDescription>
             </Alert>
           </div>
         )}

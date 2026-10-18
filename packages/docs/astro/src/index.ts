@@ -4,6 +4,7 @@ import react from '@astrojs/react';
 import tailwindcss from '@tailwindcss/vite';
 import type { StarlightPlugin } from '@astrojs/starlight/types';
 import { z } from 'astro/zod';
+import { isUnifiedProcessor } from '@astrojs/markdown-remark';
 import type { PluginOption } from 'vite';
 import { docsSiteConfig } from './config';
 import { autocatalogDocsRoutes } from './routes';
@@ -15,6 +16,7 @@ import { graphOwners } from './owners';
 import { catalogSidebar, docsSidebar } from './sidebar';
 import { eventCatalogEmbeds } from './eventcatalog';
 import { reactRendererIntegration, siteHasReact } from './react-integration';
+import { MERMAID_SCRIPT, remarkMermaid } from './mermaid';
 
 export interface AutocatalogDocsOptions {
   /**
@@ -128,7 +130,14 @@ export default function autocatalogDocs(opts: AutocatalogDocsOptions = {}): Star
               items: [
                 { label: 'Knowledge graph', link: '/catalog' },
                 ...(eventCatalogEmbeds() ? [{ label: 'Architecture', link: '/architecture' }] : []),
-                ...(eventsSidebar.length > 0 ? [{ label: 'Fields', link: '/fields' }] : []),
+                ...(eventsSidebar.length > 0
+                  ? [
+                      { label: 'Domains', link: '/domains' },
+                      { label: 'Schemas', link: '/schemas' },
+                      { label: 'Fields', link: '/fields' },
+                    ]
+                  : []),
+                ...(catalog.apis.length > 0 ? [{ label: 'APIs', link: '/apis' }] : []),
                 ...(graphOwners(catalog.graph).length > 0
                   ? [{ label: 'Owners', link: '/owners' }]
                   : []),
@@ -139,6 +148,11 @@ export default function autocatalogDocs(opts: AutocatalogDocsOptions = {}): Star
           ],
           // The theme (DESIGN.md). First, so a site's own customCss still wins.
           customCss: ['autocatalog-docs-astro/styles/index.css', ...(config.customCss ?? [])],
+          // Draws ```mermaid fences, on the pages that have one.
+          head: [
+            ...(config.head ?? []),
+            { tag: 'script', attrs: { type: 'module' }, content: MERMAID_SCRIPT },
+          ],
           components: {
             // Ownership and the two link directions are facts about a document
             // that Starlight has nowhere to put, so they go below the article.
@@ -157,6 +171,20 @@ export default function autocatalogDocs(opts: AutocatalogDocsOptions = {}): Star
         });
 
         addIntegration(autocatalogDocsRoutes(effective.root));
+
+        // Joins the site's own Markdown processor, the way Starlight adds its
+        // asides. Another processor leaves the fence as a highlighted code block.
+        addIntegration({
+          name: 'autocatalog-docs-mermaid',
+          hooks: {
+            'astro:config:setup': ({ config: astro }) => {
+              const processor = astro.markdown?.processor;
+
+              if (processor && isUnifiedProcessor(processor))
+                processor.options.remarkPlugins.push(remarkMermaid);
+            },
+          },
+        });
 
         // The pages are React components, hydrated as islands where they have
         // anything to do. A site already using React keeps its own configuration

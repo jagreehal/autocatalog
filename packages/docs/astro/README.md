@@ -45,8 +45,11 @@ about, because it assumes one repository:
 | `/`                             | An index page, because no single team should own the company's front door                           |
 | `/catalog`                      | One browsable inventory of Docs, Events, Agents, evidence, and relationships                        |
 | `/catalog.json`                 | The same composed inventory as deterministic `autocatalog/graph-v1` JSON                            |
-| `/<repo>/<path>.md`             | A raw markdown twin of every page                                                                   |
-| `/llms.txt`                     | The whole index in the llms.txt format                                                              |
+| `/domains`, `/domains/<domain>` | Each domain's events, services, owners and map                                                      |
+| `/apis/<repo>/<name>`           | An API reference for each OpenAPI spec under `contracts/`, with the spec beside it                  |
+| `/schemas`                      | Every event schema with its format, version, domain and owner                                       |
+| `/<repo>/<path>.md`             | A raw markdown twin of every document, event and service page                                       |
+| `/llms.txt`, `/llms-full.txt`   | The whole index in the llms.txt format, and the full text of every document and event               |
 | `/contracts/docs-manifest.json` | The aggregated docs index that each repository's `ac docs check` resolves links against             |
 | The title block                 | An override of Starlight's `PageTitle`: a resource's catalog key, and where its definition was read |
 

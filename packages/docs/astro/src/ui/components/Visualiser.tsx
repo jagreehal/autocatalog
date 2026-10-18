@@ -9,6 +9,8 @@ import { type KeyboardEvent, useMemo } from 'react';
 const COLLECTIONS = new Map([
   ['event', 'events'],
   ['service', 'services'],
+  ['command', 'commands'],
+  ['query', 'queries'],
 ]);
 
 /**

@@ -5,6 +5,7 @@ import { buildServices } from 'autocatalog-core';
 import { docsCatalog } from '../catalog';
 import { serviceFacts, servicePageProps } from '../page-models';
 import { setResourceContext } from '../shell';
+import { twinPath } from '../twins';
 import { ServicePage } from '../ui/pages/ServicePage';
 
 // A service has no page of its own to author: it is whatever the events say
@@ -31,19 +32,25 @@ const page = servicePageProps(catalog, service, base);
 
 const facts = serviceFacts(catalog.graph, service.name);
 
+const markdownHref = `${base}${twinPath(`services/${service.name}/`)}`;
+
 setResourceContext(Astro.locals, {
   kind: 'service',
   name: service.name,
   key: `service:${service.name}`,
-  ...(facts.repository && {
-    actions: [{ label: 'Repository', href: facts.repository, icon: 'repository' as const }],
-  }),
+  actions: [
+    ...(facts.repository
+      ? [{ label: 'Repository', href: facts.repository, icon: 'repository' as const }]
+      : []),
+    { label: 'View as Markdown', href: markdownHref, icon: 'doc' },
+  ],
   pills: [],
 });
 
 // The page's sections, for Starlight's "On this page".
 const headings = [
   ...page.sections.map(({ heading, slug }) => ({ depth: 2, slug, text: heading })),
+  ...(page.apis?.length ? [{ depth: 2, slug: 'apis', text: 'APIs' }] : []),
   ...(page.documents.length ? [{ depth: 2, slug: 'documents', text: 'Documents' }] : []),
   ...(page.diagram ? [{ depth: 2, slug: 'diagram', text: 'Diagram' }] : []),
 ];
@@ -52,6 +59,7 @@ const headings = [
 <StarlightPage
   frontmatter={{
     title: service.name,
+    head: [{ tag: 'link', attrs: { rel: 'alternate', type: 'text/markdown', href: markdownHref } }],
     // Its own summary when it has one; else what the page is, since nobody wrote it.
     description:
       facts.summary ??
