@@ -260,7 +260,7 @@ export async function runDocsManifest(opts: DocsCommandOptions): Promise<number>
       kleur.green(`✓ ${displayPath(out)}: ${ids.length} doc(s) across ${repos.size} repo(s)`),
     );
     console.log(
-      kleur.dim('  Commit it: other repositories’ ac docs check resolves links against it.'),
+      kleur.dim('  Publish it where other repositories’ ac docs check --manifest can fetch it.'),
     );
   }
 

@@ -38,8 +38,20 @@ repository, and the site's owners approve nothing.
 | `--eventcatalog`     | Draw diagrams with EventCatalog, inside this site               |
 | `--docs-schema`      | The docs frontmatter contract to enforce                        |
 
-Private repositories need `GITHUB_TOKEN`. The command sends the token as a
-request header, so it never lands in a clone's `.git/config`.
+Set the flags once in `package.json` and reuse them for the dev server:
+
+```json
+{
+  "scripts": {
+    "build": "autocatalog site --topic catalog --owner acme --site https://acme.github.io --base /catalog/",
+    "dev": "npm run build -- --dev"
+  }
+}
+```
+
+The command prints how many repositories it cloned and whether it had a token.
+Private repositories need `GITHUB_TOKEN` or `GH_TOKEN`. The command sends the
+token as a request header, so it never lands in a clone's `.git/config`.
 
 The command clones each repository once, even when you enrol it by topic and
 by `--repo`. When a clone fails, it names the repository with git's message and

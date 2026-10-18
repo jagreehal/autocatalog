@@ -1,13 +1,14 @@
 import path from 'node:path';
 import { Command, Option } from 'commander';
 import type { CompatibilityMode } from 'autocatalog-core';
+import pkg from '../package.json' with { type: 'json' };
 import { runValidate } from './commands/validate';
 import { discoverAdapters, registerAdapterCommand } from './adapters';
 import { registerResourceCommands, withScanIdentities } from './commands/resources';
 
 export function buildProgram(): Command {
   const program = new Command();
-  program.name('ac').description('Autocatalog CLI').version('0.0.1');
+  program.name('ac').description('Autocatalog CLI').version(pkg.version);
   registerResourceCommands(program);
 
   program
