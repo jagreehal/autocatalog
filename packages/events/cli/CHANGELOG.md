@@ -1,5 +1,15 @@
 # autocatalog-cli
 
+## 0.3.1
+
+### Patch Changes
+
+- acf1994: `ac --version` prints the installed version. `ac site` reports how many repositories it cloned and whether it had a token. Source and edit links point at the repository's default branch. `ac docs manifest` suggests publishing the file where `ac docs check --manifest` can fetch it.
+- Updated dependencies [acf1994]
+- Updated dependencies [6eab2f9]
+  - autocatalog-docs-core@0.1.2
+  - autocatalog-docs-astro@0.3.0
+
 ## 0.3.0
 
 ### Minor Changes

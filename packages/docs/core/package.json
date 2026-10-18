@@ -1,6 +1,6 @@
 {
   "name": "autocatalog-docs-core",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Aggregate repository-owned docs/ roots into one validated, linkable index.",
   "license": "MIT",
   "repository": {

@@ -1,5 +1,16 @@
 # autocatalog-docs-astro
 
+## 0.3.0
+
+### Minor Changes
+
+- 6eab2f9: `autocatalog site` serves `contracts/docs-manifest.json`, so `ac docs check --manifest` reads links from the same site that renders the docs. The home page lists tags in one table, evidence from contract files reads "Extracted from source", and schema enum values wrap between values.
+
+### Patch Changes
+
+- Updated dependencies [acf1994]
+  - autocatalog-docs-core@0.1.2
+
 ## 0.2.1
 
 ### Patch Changes
