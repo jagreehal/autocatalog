@@ -35,19 +35,20 @@ of contents, previous/next — all Starlight's, and better than a hand-rolled
 site would ever be. This plugin supplies only what Starlight has no opinion
 about, because it assumes one repository:
 
-| Added                     | How                                                                                                 |
-| ------------------------- | --------------------------------------------------------------------------------------------------- |
-| Documents from every repo | The `docs` collection is loaded from the aggregation root, ids derived from path                    |
-| Sidebar                   | One group per repository, generated from disk, titled from each document's frontmatter              |
-| Ownership                 | `owner` frontmatter, shown below every document                                                     |
-| Freshness                 | Last commit touching the file, asked of the repository that owns it                                 |
-| Both link directions      | Declared `related` edges, plus the backlinks derived from them                                      |
-| `/`                       | An index page, because no single team should own the company's front door                           |
-| `/catalog`                | One browsable inventory of Docs, Events, Agents, evidence, and relationships                        |
-| `/catalog.json`           | The same composed inventory as deterministic `autocatalog/graph-v1` JSON                            |
-| `/<repo>/<path>.md`       | A raw markdown twin of every page                                                                   |
-| `/llms.txt`               | The whole index in the llms.txt format                                                              |
-| The title block           | An override of Starlight's `PageTitle`: a resource's catalog key, and where its definition was read |
+| Added                           | How                                                                                                 |
+| ------------------------------- | --------------------------------------------------------------------------------------------------- |
+| Documents from every repo       | The `docs` collection is loaded from the aggregation root, ids derived from path                    |
+| Sidebar                         | One group per repository, generated from disk, titled from each document's frontmatter              |
+| Ownership                       | `owner` frontmatter, shown below every document                                                     |
+| Freshness                       | Last commit touching the file, asked of the repository that owns it                                 |
+| Both link directions            | Declared `related` edges, plus the backlinks derived from them                                      |
+| `/`                             | An index page, because no single team should own the company's front door                           |
+| `/catalog`                      | One browsable inventory of Docs, Events, Agents, evidence, and relationships                        |
+| `/catalog.json`                 | The same composed inventory as deterministic `autocatalog/graph-v1` JSON                            |
+| `/<repo>/<path>.md`             | A raw markdown twin of every page                                                                   |
+| `/llms.txt`                     | The whole index in the llms.txt format                                                              |
+| `/contracts/docs-manifest.json` | The aggregated docs index that each repository's `ac docs check` resolves links against             |
+| The title block                 | An override of Starlight's `PageTitle`: a resource's catalog key, and where its definition was read |
 
 Navigation, search and the table of contents stay Starlight's. The look is a
 shadcn/ui preset and DESIGN.md at the repository root. A site that sets its own

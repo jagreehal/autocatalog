@@ -162,7 +162,8 @@ between repositories and documents that were deleted while something still links
 to them.
 
 **`ac docs manifest`** — publishes `contracts/docs-manifest.json`, the
-aggregated index other repositories resolve links against.
+aggregated index other repositories resolve links against. `ac site` serves
+the same file at `/contracts/docs-manifest.json`.
 
 **`ac docs init-schema`** — writes the default frontmatter contract into
 `contracts/` so the organisation owns its copy from the start.

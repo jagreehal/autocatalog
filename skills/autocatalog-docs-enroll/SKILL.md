@@ -93,7 +93,7 @@ A Starlight site with the plugin — `autocatalog-docs-astro` — whose `root` p
 ac docs manifest
 ```
 
-This writes `contracts/docs-manifest.json`: what exists, and who links to what. Until it is published, cross-repository links go unchecked — which is correct at the start, and a gap to close once more than one repo has enrolled. Run it in the site's build.
+This writes `contracts/docs-manifest.json`: what exists, and who links to what. Cross-repository links stay unchecked until you publish it, which suits the first repository and needs closing once a second one enrols. Run it in the site's build. A site built with `ac site` serves the file at `/contracts/docs-manifest.json` already, so skip this step there.
 
 ### 4. Confirm
 

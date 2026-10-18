@@ -43,7 +43,7 @@ export const isMethod = (value: string): value is ProvenanceMethod => Object.has
 
 const said: Record<ProvenanceMethod, string> = {
   observed: 'Observed at runtime',
-  extracted: 'Extracted from code',
+  extracted: 'Extracted from source',
   declared: 'Declared by its owners',
   overridden: 'Overridden by its owners',
   inferred: 'Inferred',
