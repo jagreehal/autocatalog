@@ -24,6 +24,18 @@ type Story = StoryObj<typeof meta>;
 
 export const Event: Story = {};
 
+/** A draft with the badges its team gave it: the state is quiet, the labels plain. */
+export const DraftWithBadges: Story = {
+  args: {
+    pills: [
+      { text: 'v0.1.0' },
+      { text: 'draft', tone: 'quiet' },
+      { text: 'PCI' },
+      { text: 'Beta' },
+    ],
+  },
+};
+
 /** A document: crumbs from its id, and a button that copies its Markdown twin. */
 export const Document: Story = {
   args: { ...docHead, children: <h1>Payments service runbook</h1> },

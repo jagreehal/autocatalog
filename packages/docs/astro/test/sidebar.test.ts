@@ -105,7 +105,7 @@ describe('catalogSidebar', () => {
     await write(`${folder}/schema.json`, JSON.stringify({ type: 'object' }));
   }
 
-  it('groups validated events by domain, links each to its namespaced page, and lists services', async () => {
+  it('groups validated events by domain under the domain’s overview, links each to its namespaced page, and lists services', async () => {
     await publish(
       'payments-service/events/payments/Captured',
       manifest('payment.captured', 'payments', ['PaymentService'], ['LedgerService']),
@@ -120,11 +120,15 @@ describe('catalogSidebar', () => {
     expect(catalogSidebar(events)).toEqual([
       {
         label: 'Events · orders',
-        items: [{ label: 'order.placed', link: '/events/orders-service/orders/order.placed/' }],
+        items: [
+          { label: 'Overview', link: '/domains/orders/' },
+          { label: 'order.placed', link: '/events/orders-service/orders/order.placed/' },
+        ],
       },
       {
         label: 'Events · payments',
         items: [
+          { label: 'Overview', link: '/domains/payments/' },
           {
             label: 'payment.captured',
             link: '/events/payments-service/payments/payment.captured/',

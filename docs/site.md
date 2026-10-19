@@ -99,6 +99,19 @@ different ones fail the build, naming both, until `--docs-schema` picks one.
 - `/services/<name>/` lists what one service produces and consumes. The pages
   come from each event's `producers` and `consumers`, so declaring
   `producers: ['InventoryManager']` on an event creates the InventoryManager page.
+- `/domains/<domain>/` gathers the events in one domain, the services around
+  them and their owners, with a map of the domain. `/domains` lists them all.
+- Maps on service and domain pages use EventCatalog's MIT visualiser. A service
+  map shows the services on the other side of each event, and the catalog map
+  adds commands, queries and the tables and collections each service reads and
+  writes.
+- `/apis/<repository>/<name>/` renders each OpenAPI 3 spec a repository commits
+  under `contracts/` with [Scalar](https://scalar.com), and publishes the spec
+  beside it as `openapi.json`. Without JavaScript the page lists the operations.
+  A service links to the API whose title names it or whose webhooks it
+  produces.
+- `/schemas` lists every event schema with its format, version, domain and
+  owner.
 - `/fields` lists every field across every event, the services a change to it
   would reach, and the fields whose type or requiredness disagrees between
   events.
@@ -110,11 +123,15 @@ different ones fail the build, naming both, until `--docs-schema` picks one.
 
 ## For agents
 
-Every document has a Markdown twin at `<url>.md`. Its frontmatter adds
-`updated`, `source` and `url`, so an agent can cite who owns an answer and when
-it last changed. Each page's `<head>` links to its twin. Every event publishes
-its contract at `schema.json` beside its page, and `/llms.txt` lists documents and
-events together.
+Every document, event and service page has a Markdown twin at `<url>.md`. Its
+frontmatter adds `updated`, `source` and `url`, so an agent can cite who owns an
+answer and when it last changed. Each page's `<head>` links to its twin. Every
+event publishes its contract at `schema.json` beside its page. `/llms.txt` lists
+documents and events together, and `/llms-full.txt` holds the full text of
+every document and event.
+
+A ` ```mermaid ` fence in a document or an event's `index.mdx` renders as a
+diagram in both themes, and the twin keeps the source.
 
 ## Deploy with GitHub Pages
 

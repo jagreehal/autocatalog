@@ -27,6 +27,7 @@ export interface ScanOpenApiOptions {
   maxFileBytes?: number;
 }
 
+/** The operations an OpenAPI path item can hold, in the order the spec lists them. */
 export const METHODS = [
   'get',
   'put',

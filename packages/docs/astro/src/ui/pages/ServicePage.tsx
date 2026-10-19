@@ -35,6 +35,8 @@ export interface ServicePageProps {
   visualiser?: VisualiserGraph | undefined;
   /** "Produces" and "Consumes", each only when the service has any. */
   sections: Array<{ heading: string; slug: string; events: ServiceEvent[] }>;
+  /** The OpenAPI specs it serves, each with its reference page. */
+  apis?: Array<{ title: string; file: string; href: string }> | undefined;
   documents: ResourceLinksProps['links'];
   /** When EventCatalog drew this service. Inline when it can embed, else a link. */
   diagram?: EventCatalogDiagramProps | undefined;
@@ -48,6 +50,7 @@ export function ServicePage({
   flow,
   visualiser,
   sections,
+  apis = [],
   documents,
   diagram,
   owner,
@@ -91,10 +94,11 @@ export function ServicePage({
         id="message-flow"
         label="Message flow"
         visualiser={visualiser}
+        height="30rem"
         fallback={<FlowStrip label="Message flow" {...flow} />}
       />
 
-      {(sections.length > 0 || documents.length > 0 || diagram) && (
+      {(sections.length > 0 || apis.length > 0 || documents.length > 0 || diagram) && (
         <div className="grid items-start gap-6 md:grid-cols-2">
           {sections.map((section) => (
             <Card id={section.slug} key={section.slug}>
@@ -136,6 +140,40 @@ export function ServicePage({
               </CardContent>
             </Card>
           ))}
+          {apis.length > 0 && (
+            <Card id="apis">
+              <CardHeader>
+                <CardTitle role="heading" aria-level={2}>
+                  APIs
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ul className="m-0 flex list-none flex-col gap-1 p-0">
+                  {apis.map((api) => (
+                    <li key={api.href}>
+                      <Item href={api.href} size="sm">
+                        <ItemMedia>
+                          <IconTile name="api" />
+                        </ItemMedia>
+                        <ItemContent>
+                          <ItemTitle>{api.title}</ItemTitle>
+                          <ItemDescription>
+                            <code>{api.file}</code>
+                          </ItemDescription>
+                        </ItemContent>
+                        <ItemActions>
+                          <ArrowUpRightIcon
+                            aria-hidden="true"
+                            className="size-4 text-muted-foreground group-hover/item:text-foreground"
+                          />
+                        </ItemActions>
+                      </Item>
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          )}
           <ResourceLinks id="documents" heading="Documents" links={documents} />
           {diagram && (
             <Card id="diagram" className={diagram.embed ? 'md:col-span-2' : undefined}>

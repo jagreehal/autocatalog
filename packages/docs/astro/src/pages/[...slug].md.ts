@@ -3,27 +3,19 @@
 //
 // Agents ask for markdown when they can get it, using Accept: text/markdown. A
 // static site cannot negotiate content, so the .md URL offers the same thing.
-// The frontmatter adds what an agent needs to cite the page: when git last saw
-// it change, the file on its repository, and the page's own URL.
 import type { APIRoute } from 'astro';
-import { docToMarkdown } from 'autocatalog-docs-core';
 import { docsCatalog } from '../catalog';
 import { docPaths, type DocProps } from '../paths';
+import { docTwin, pageUrl } from '../twins';
 
 export const getStaticPaths = docPaths;
 
 export const GET: APIRoute<DocProps> = async ({ props, site }) => {
   const { doc } = props;
-  const record = (await docsCatalog()).manifest[doc.id];
   const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
 
-  const provenance = {
-    ...(record?.updated && { updated: record.updated }),
-    ...(record?.source && { source: record.source }),
-    ...(site && { url: new URL(`${base}${doc.id}/`, site).href }),
-  };
-
-  return new Response(docToMarkdown({ ...doc.data, ...provenance }, doc.body), {
-    headers: { 'content-type': 'text/markdown; charset=utf-8' },
-  });
+  return new Response(
+    docTwin(doc, (await docsCatalog()).manifest, pageUrl(site, base, `${doc.id}/`)),
+    { headers: { 'content-type': 'text/markdown; charset=utf-8' } },
+  );
 };

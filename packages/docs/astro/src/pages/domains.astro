@@ -1,0 +1,21 @@
+---
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import { docsCatalog } from '../catalog';
+import { domainsPageProps } from '../page-models';
+import { DomainsPage } from '../ui/pages/DomainsPage';
+
+const catalog = await docsCatalog();
+
+const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+
+---
+
+<StarlightPage
+  frontmatter={{
+    title: 'Domains',
+    description: 'The domains events name, with the services and teams around each one.',
+    tableOfContents: false,
+  }}
+>
+  <DomainsPage {...domainsPageProps(catalog, base)} />
+</StarlightPage>

@@ -63,18 +63,15 @@ repository. `owner` is required frontmatter, freshness comes from git rather tha
 from a date someone typed, and backlinks are derived. This site is that mechanism
 running on this repository. See [the docs convention](/docs/docs-convention).
 
-## What it is not
+## Where it fits
 
-It is not a place to assemble a bespoke internal portal. There is no plugin
-pipeline, no resource-type system to extend, and no server. If you need a catalog
-that hosts dashboards and custom API routes, or twenty resource types, read
-[choosing between autocatalog and EventCatalog](/docs/comparison) — that page is
-honest about where the other tool is the better answer.
+Autocatalog derives a static site from your repositories. It has no plugin
+pipeline, no resource-type system to extend, and no server. To author a catalog
+with custom pages and a wider set of resource types, or to run both tools
+together, read [autocatalog and EventCatalog](/docs/comparison).
 
-Everything here is MIT, including the MCP server and every other agent surface.
-No licence key, no plan, no telemetry. Opting into EventCatalog's diagrams with
-`ac site --eventcatalog` runs EventCatalog's build, which reports usage to
-EventCatalog.
+Everything here is MIT, including the MCP server and every other agent surface,
+with no licence key and no plan.
 
 Node.js 24 or newer. Python 3.11 or newer for the Pydantic extractor.
 

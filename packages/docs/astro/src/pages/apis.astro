@@ -1,0 +1,20 @@
+---
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import { apisPageProps } from '../apis';
+import { docsCatalog } from '../catalog';
+import { ApisPage } from '../ui/pages/ApisPage';
+
+const catalog = await docsCatalog();
+
+const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+---
+
+<StarlightPage
+  frontmatter={{
+    title: 'APIs',
+    description: 'The OpenAPI specs each repository commits under contracts/, each with its reference.',
+    tableOfContents: false,
+  }}
+>
+  <ApisPage {...apisPageProps(catalog.apis, base)} />
+</StarlightPage>

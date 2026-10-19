@@ -62,6 +62,7 @@ export {
   openApiDiscoveryAdapter,
   eventsFromOpenApiDocument,
   looksLikeOpenApi,
+  METHODS,
   idFromOperationName,
   type ScanOpenApiOptions,
   type OpenApiScanFinding,

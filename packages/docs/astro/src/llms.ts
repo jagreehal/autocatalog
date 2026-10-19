@@ -1,3 +1,4 @@
+import { twinPath } from './twins';
 import { groupByRepo, type DocListItem } from './view';
 
 export interface LlmsTxtInput {
@@ -6,7 +7,7 @@ export interface LlmsTxtInput {
   /** Site origin without a trailing slash. Empty when no `site` is configured. */
   base: string;
   items: DocListItem[];
-  /** Current events, each linked to its JSON Schema. */
+  /** Current events, each linked to its Markdown twin. */
   events?: Array<{ path: string; name: string; summary: string; owner?: string }>;
 }
 
@@ -26,7 +27,14 @@ export function renderLlmsTxt({
   items,
   events = [],
 }: LlmsTxtInput): string {
-  const lines = [`# ${title}`, '', `> ${description}`, ''];
+  const lines = [
+    `# ${title}`,
+    '',
+    `> ${description}`,
+    '',
+    `Every page below in one file: [llms-full.txt](${base}/llms-full.txt)`,
+    '',
+  ];
 
   for (const [repo, docs] of groupByRepo(items)) {
     lines.push(`## ${repo}`, '');
@@ -38,19 +46,36 @@ export function renderLlmsTxt({
     lines.push('');
   }
 
-  // Events link to their JSON Schema: for a contract, the schema is the
-  // machine-readable form, the way the .md twin is for a document.
+  // An event's twin carries its schema, so one link serves both the reader
+  // and the code generator.
   if (events.length > 0) {
     lines.push('## Events', '');
 
     for (const event of events) {
       const owner = event.owner ? `; owned by ${event.owner}` : '';
       const summary = event.summary.replace(/\.$/, '');
-      lines.push(`- [${event.name}](${base}/${event.path}schema.json): ${summary}${owner}`);
+      lines.push(`- [${event.name}](${base}/${twinPath(event.path)}): ${summary}${owner}`);
     }
 
     lines.push('');
   }
 
   return lines.join('\n');
+}
+
+/**
+ * llms-full.txt: the same header, then every twin in full, for an agent that
+ * would rather read the whole catalog in one request than follow each link.
+ */
+export function renderLlmsFullTxt({
+  title,
+  description,
+  twins,
+}: {
+  title: string;
+  description: string;
+  /** Each page's Markdown twin, documents first, then events. */
+  twins: string[];
+}): string {
+  return `${[`# ${title}`, `> ${description}`, ...twins.map((twin) => twin.trim())].join('\n\n')}\n`;
 }

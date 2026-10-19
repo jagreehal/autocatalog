@@ -51,6 +51,13 @@ const meta = {
         ],
       },
     ],
+    apis: [
+      {
+        title: 'Ledger Service API',
+        file: 'contracts/openapi.json',
+        href: '/apis/payments/openapi/',
+      },
+    ],
     documents: [{ href: '/payments/ledger-runbook', title: 'Ledger runbook', label: 'payments' }],
     owner: { team: 'Payments', href: '/owners/payments/' },
     system: 'Payment Processing',

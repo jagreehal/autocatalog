@@ -42,6 +42,8 @@ State what you could not verify as unknown. A confident sentence nobody checked 
 
 Structure a runbook as symptom → check → action. Put the check that most often ends the investigation first.
 
+Draw a flow or sequence as a ` ```mermaid ` fence. The site renders it as a diagram, and the Markdown twin keeps the source for agents.
+
 ## 4. Link across repositories by id, never by path
 
 ```yaml

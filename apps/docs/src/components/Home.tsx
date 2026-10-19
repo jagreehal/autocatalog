@@ -238,9 +238,9 @@ export function Home({ base }: HomeProps) {
         <p className="m-0 max-w-2xl text-sm text-muted-foreground">
           Already using EventCatalog, or deciding?{' '}
           <a className={link} href={href('docs/comparison')}>
-            An honest account of what each tool bets on
+            How the two tools relate
           </a>
-          , including where the other one is the better answer.
+          , and how to run them together.
         </p>
       </section>
     </div>

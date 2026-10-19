@@ -56,7 +56,7 @@ export default defineConfig({
           items: [
             { label: 'Introduction', slug: 'docs/introduction' },
             { label: 'Quick start', slug: 'docs/quick-start' },
-            { label: 'Choosing between the two', slug: 'docs/comparison' },
+            { label: 'autocatalog and EventCatalog', slug: 'docs/comparison' },
           ],
         },
         {

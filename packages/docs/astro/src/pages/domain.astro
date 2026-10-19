@@ -1,0 +1,50 @@
+---
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import type { InferGetStaticPropsType } from 'astro';
+import { docsCatalog } from '../catalog';
+import { buildDomains } from '../domains';
+import { domainPageProps } from '../page-models';
+import { setResourceContext } from '../shell';
+import { DomainPage } from '../ui/pages/DomainPage';
+
+// A domain has no page of its own to author: it is whatever its events name.
+export async function getStaticPaths() {
+  const domains = buildDomains((await docsCatalog()).events);
+
+  return domains.map((domain) => ({ params: { domain: domain.name }, props: { domain } }));
+}
+
+type Props = InferGetStaticPropsType<typeof getStaticPaths>;
+
+const { domain } = Astro.props;
+
+const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+
+const page = domainPageProps(await docsCatalog(), domain, base);
+
+setResourceContext(Astro.locals, {
+  kind: 'domain',
+  name: domain.name,
+  key: `domain:${domain.name}`,
+  pills: [],
+});
+
+// The page's sections, for Starlight's "On this page".
+const headings = [
+  { depth: 2, slug: 'events', text: 'Events' },
+  ...(page.services.length ? [{ depth: 2, slug: 'services', text: 'Services' }] : []),
+  ...(page.owners.length ? [{ depth: 2, slug: 'owners', text: 'Owners' }] : []),
+];
+---
+
+<StarlightPage
+  frontmatter={{
+    title: domain.name,
+    description:
+      page.summary ??
+      'Built from the events that name this domain, so it changes when they do.',
+  }}
+  headings={headings}
+>
+  <DomainPage client:load {...page} />
+</StarlightPage>

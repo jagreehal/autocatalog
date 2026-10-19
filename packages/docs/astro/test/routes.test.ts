@@ -43,21 +43,30 @@ it('leaves / alone when the site wrote its own front door', async () => {
   expect(patterns()).toContain('/catalog');
 });
 
-it('publishes a page for each event and earlier version, its schema, each service, each owner and the field index', async () => {
+it('publishes pages for events and earlier versions, schemas, services, owners, domains, APIs, and the field and schema indexes', async () => {
   await fs.mkdir(path.join(root, 'src/pages'), { recursive: true });
 
   expect(patterns()).toEqual(
     expect.arrayContaining([
       '/events/[repository]/[domain]/[id]',
+      '/events/[repository]/[domain]/[id].md',
       '/events/[repository]/[domain]/[id]/schema.json',
       '/events/[repository]/[domain]/[id]/v/[version]',
       '/events/[repository]/[domain]/[id]/v/[version]/schema.json',
       '/services/[name]',
+      '/services/[name].md',
       '/fields',
+      '/schemas',
+      '/apis',
+      '/apis/[repository]/[name]',
+      '/apis/[repository]/[name]/openapi.json',
       '/owners',
       '/owners/[owner]',
+      '/domains',
+      '/domains/[domain]',
       '/[...slug].md',
       '/llms.txt',
+      '/llms-full.txt',
       '/contracts/docs-manifest.json',
     ]),
   );

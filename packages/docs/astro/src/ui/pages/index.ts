@@ -1,3 +1,7 @@
+export { ApiPage, type ApiOperation, type ApiPageProps } from './ApiPage';
+
+export { ApisPage, type ApisPageProps } from './ApisPage';
+
 export { ArchitecturePage, type ArchitecturePageProps } from './ArchitecturePage';
 
 export {
@@ -6,6 +10,10 @@ export {
   type CatalogPageProps,
   type DatastoreRow,
 } from './CatalogPage';
+
+export { DomainPage, type DomainPageProps } from './DomainPage';
+
+export { DomainsPage, type DomainsPageProps } from './DomainsPage';
 
 export { EventPage, type EventPageProps } from './EventPage';
 
@@ -18,5 +26,7 @@ export { HomePage, type ExploreCard, type HomePageProps } from './HomePage';
 export { OwnerPage, type OwnedResource, type OwnerPageProps } from './OwnerPage';
 
 export { OwnersPage, type OwnersPageProps } from './OwnersPage';
+
+export { SchemasPage, type SchemaRow, type SchemasPageProps } from './SchemasPage';
 
 export { ServicePage, type ServiceEvent, type ServicePageProps } from './ServicePage';

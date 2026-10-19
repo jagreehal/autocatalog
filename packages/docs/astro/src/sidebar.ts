@@ -83,7 +83,11 @@ export function catalogSidebar(events: CatalogEvent[]): SidebarGroup[] {
   return [
     ...[...domains]
       .sort(([a], [b]) => a.localeCompare(b))
-      .map(([domain, items]) => ({ label: `Events · ${domain}`, items: items.sort(byLabel) })),
+      // Starlight group labels are plain text, so the domain's page leads its group.
+      .map(([domain, items]) => ({
+        label: `Events · ${domain}`,
+        items: [{ label: 'Overview', link: `/domains/${domain}/` }, ...items.sort(byLabel)],
+      })),
     ...(services.length > 0
       ? [
           {

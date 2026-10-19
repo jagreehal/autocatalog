@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { renderLlmsTxt } from '../src/llms';
+import { renderLlmsFullTxt, renderLlmsTxt } from '../src/llms';
 
 describe('renderLlmsTxt', () => {
   const base = 'https://docs.acme.example';
 
-  it('links documents to their markdown twins and events to their schemas', () => {
+  it('links documents and events to their markdown twins, and points at the full text', () => {
     const text = renderLlmsTxt({
       title: 'Acme',
       description: 'Everything Acme publishes.',
@@ -32,12 +32,27 @@ describe('renderLlmsTxt', () => {
     expect(text).toContain(`- [Runbook](${base}/payments-service/runbook.md): owned by Payments`);
     expect(text).toContain('## Events');
     expect(text).toContain(
-      `- [Payment captured](${base}/events/payments-service/payments/payment.captured/schema.json): A payment was captured; owned by Payments`,
+      `- [Payment captured](${base}/events/payments-service/payments/payment.captured.md): A payment was captured; owned by Payments`,
     );
+    expect(text).toContain(`[llms-full.txt](${base}/llms-full.txt)`);
   });
 
   it('leaves the events section out when nothing publishes events', () => {
     const text = renderLlmsTxt({ title: 'Acme', description: 'Docs.', base, items: [] });
     expect(text).not.toContain('## Events');
+  });
+});
+
+describe('renderLlmsFullTxt', () => {
+  it('is the header, then every twin in full', () => {
+    const text = renderLlmsFullTxt({
+      title: 'Acme',
+      description: 'Everything Acme publishes.',
+      twins: ['---\nid: a\n---\n\n# A\n', '---\nid: b\n---\n\n# B\n'],
+    });
+
+    expect(text).toBe(
+      '# Acme\n\n> Everything Acme publishes.\n\n---\nid: a\n---\n\n# A\n\n---\nid: b\n---\n\n# B\n',
+    );
   });
 });

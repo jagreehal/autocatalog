@@ -47,6 +47,7 @@ import {
   type Doc,
   type DocsManifest,
 } from 'autocatalog-docs-core';
+import { repositoryApis, type CatalogApi } from './apis';
 import { docsSiteConfig } from './config';
 import type { ShellLink } from './shell';
 import { catalogHref } from './view';
@@ -54,8 +55,8 @@ import { catalogHref } from './view';
 /** A repository whose own catalog would not compile, and why. */
 export interface RepositoryFailure {
   repository: string;
-  /** Which convention failed to compile: the repository's events or its agents. */
-  source: 'events' | 'agents' | 'resources' | 'consumers';
+  /** Which convention failed to compile: the repository's events, agents or API specs. */
+  source: 'events' | 'agents' | 'resources' | 'consumers' | 'apis';
   message: string;
 }
 
@@ -75,6 +76,8 @@ export interface DocsCatalog {
    * discovered contracts.
    */
   history: CatalogEvent[];
+  /** The OpenAPI documents each repository commits, each with a reference page. */
+  apis: CatalogApi[];
   manifest: DocsManifest;
   graph: ResourceGraph;
   summary: ResourceGraphSummary;
@@ -141,6 +144,7 @@ export async function buildDocsCatalog(
   const resourceFragments: Array<{ repository: string; graph: ResourceGraph }> = [];
   const events: CatalogEvent[] = [];
   const history: CatalogEvent[] = [];
+  const apis: CatalogApi[] = [];
 
   // Compiled per repository, and a repository that will not compile is
   // quarantined rather than allowed to fail everyone's build. The refusal to
@@ -239,7 +243,26 @@ export async function buildDocsCatalog(
     }
   }
 
+  const quarantined = new Set(
+    failures.flatMap((failure) => (failure.source === 'events' ? [failure.repository] : [])),
+  );
+
   for (const { name, repositoryRoot } of repositories) {
+    if (!quarantined.has(name)) {
+      try {
+        assertPathSegment(repositoryRoot, 'repository', name);
+        apis.push(
+          ...(await repositoryApis(name, repositoryRoot, (message) => notes.push(message))),
+        );
+      } catch (error) {
+        failures.push({
+          repository: name,
+          source: 'apis',
+          message: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+
     if (fs.existsSync(path.join(repositoryRoot, 'agents'))) {
       await quarantine(name, 'agents', async () =>
         createAgentsResourceGraph(await loadAgentsCatalog(repositoryRoot), {
@@ -354,6 +377,7 @@ export async function buildDocsCatalog(
     docs,
     events: events.sort((a, b) => a.event.frontmatter.id.localeCompare(b.event.frontmatter.id)),
     history,
+    apis,
     manifest,
     graph,
     summary: summarizeResourceGraph(graph),
@@ -368,7 +392,9 @@ export const failureSource = (failure: RepositoryFailure) =>
     ? RESOURCE_GRAPH_FILE
     : failure.source === 'consumers'
       ? CONSUMES_FILE
-      : `${failure.source}/ catalog`;
+      : failure.source === 'apis'
+        ? 'contracts/'
+        : `${failure.source}/ catalog`;
 
 /** An observation only adds evidence; a declaration or an owner says what the resource is. */
 const declares = (entry: CatalogResource | CatalogRelationship) => {
