@@ -81,6 +81,12 @@ export interface ServiceResourceAttributes {
 export interface DocumentResourceAttributes {
   repository: string;
   updated: string | null;
+  /** The document's kind, such as `adr`, when it is one the organisation keeps. */
+  kind?: string;
+  /** Its kind's status field, such as `accepted`. */
+  status?: string;
+  /** Its kind's date field, as written. */
+  date?: string;
 }
 
 export type RepositoryResourceAttributes = Record<string, never>;
@@ -169,6 +175,7 @@ export type CatalogRelationshipType =
   | 'orchestrates'
   | 'produces'
   | 'publishes'
+  | 'references'
   | 'relatesTo'
   | 'usesModel'
   | 'usesTool';

@@ -2,6 +2,7 @@
 import Default from '@astrojs/starlight/components/PageTitle.astro';
 import { z } from 'astro/zod';
 import { docsCatalog } from '../catalog';
+import { kindHeader } from '../kinds';
 import { type PageAction, pageHeader, resourceContext } from '../shell';
 import { PageTitleChrome } from '../ui/overrides/PageTitleChrome';
 import { docHref } from '../view';
@@ -17,11 +18,20 @@ const resource = resourceContext(Astro.locals);
 
 const header = pageHeader(Astro.locals);
 
-const isDoc = !resource && id in (await docsCatalog()).manifest;
+const catalog = await docsCatalog();
+
+const isDoc = !resource && id in catalog.manifest;
+
+// A decision, runbook or incident says so, with its state and what it applies to.
+const record = isDoc
+  ? kindHeader(catalog, id, import.meta.env.BASE_URL.replace(/\/?$/, '/'))
+  : undefined;
 
 const kind = resource?.kind ?? (isDoc ? 'doc' : undefined);
 
-const kindLabel = kind === 'doc' ? 'Document' : kind && kind.charAt(0).toUpperCase() + kind.slice(1);
+const kindLabel =
+  record?.kind.label ??
+  (kind === 'doc' ? 'Document' : kind && kind.charAt(0).toUpperCase() + kind.slice(1));
 
 // A document's convention field is `summary`; Starlight's own is `description`.
 // Starlight types the entry by its own schema, so the convention's field is
@@ -49,6 +59,8 @@ const actions: PageAction[] =
   primary={header?.primary}
   summary={data.description ?? data.summary}
   pills={resource?.pills ?? []}
+  status={record?.status}
+  facts={record?.facts}
   actions={actions}
 >
   <Default />

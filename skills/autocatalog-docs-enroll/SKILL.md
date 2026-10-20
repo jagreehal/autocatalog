@@ -46,6 +46,8 @@ It reads the `$id` the copy records, compares it with the canonical contract, an
 
 If the copy has no `$id`, the organisation has not published the contract at a URL yet. Say so rather than inventing one.
 
+The organisation's document kinds work the same way: `ac docs check` reads `contracts/autocatalog.conventions.json` from the handbook beside this repository, or a copy committed here, and prints which under `kinds:`. Never run `ac docs init-conventions` in a publishing repository; copy the organisation's file instead.
+
 Keep this out of the pull-request check: `ac docs check` must work offline and on every commit, while syncing reaches the network. A scheduled job, or a step before release, is the right home.
 
 ### 3. Write the first document
@@ -83,6 +85,14 @@ Commit `contracts/docs-frontmatter.json`, then edit it: turn `owner` into an `en
 
 Set `$id` to the URL this file is served from. That is the standard JSON Schema keyword for where a schema is published, and it is what lets every repository that copies the contract run `ac docs sync-schema` and find out when it has moved on.
 
+Then decide which kinds of document the organisation keeps. ADRs (`docs/adr/`), runbooks (`docs/runbooks/`) and incidents (`docs/incidents/`) work with no setup. To change them, write the conventions file in the same repository as the contract:
+
+```bash
+ac docs init-conventions
+```
+
+Edit `contracts/autocatalog.conventions.json` in place. Set a kind to `false` to turn it off; give a built-in kind a different `folder`, `label`, `columns` or `schema`; or add a kind of your own with at least a `label` and a `folder` (and a `path` for its index page when the label does not make a good URL). Keep a kind's `path` different from every repository's name. One file for the organisation, published by this repository; never one per team.
+
 ### 2. Build the site
 
 A Starlight site with the plugin — `autocatalog-docs-astro` — whose `root` points at wherever the repositories are checked out. Its README has the two files required. Do not copy anyone's documentation into this repository; it reads theirs where they wrote it.
@@ -106,7 +116,7 @@ Across every enrolled repository, against the contract, with links resolved.
 ## Anti-patterns — refuse these even if asked
 
 - **Never enrol a repository by copying its documentation into the index.** The copy stops being true on the next deploy, and the team that owns the code no longer owns the words.
-- **Never run `ac docs init-schema` in a publishing repository** when the organisation already has a contract. One contract, many repositories.
+- **Never run `ac docs init-schema` or `ac docs init-conventions` in a publishing repository** when the organisation already has its files. One contract and one conventions file, many repositories.
 - **Never scaffold placeholder documents** to make the index look populated. An empty `docs/` is honest; a directory of "TODO" is a lie with a longer half-life.
 - **Never enrol without the CI step.** An unchecked repository is where the first broken link comes from, and nobody finds it until a reader does.
 - **Never invent a `docs/` layout convention** — subdirectories are free, but the root is `docs/`, and the path is the permanent id.

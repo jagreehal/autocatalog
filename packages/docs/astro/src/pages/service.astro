@@ -51,6 +51,7 @@ setResourceContext(Astro.locals, {
 const headings = [
   ...page.sections.map(({ heading, slug }) => ({ depth: 2, slug, text: heading })),
   ...(page.apis?.length ? [{ depth: 2, slug: 'apis', text: 'APIs' }] : []),
+  ...(page.records ?? []).map(({ id, heading }) => ({ depth: 2, slug: id, text: heading })),
   ...(page.documents.length ? [{ depth: 2, slug: 'documents', text: 'Documents' }] : []),
   ...(page.diagram ? [{ depth: 2, slug: 'diagram', text: 'Diagram' }] : []),
 ];

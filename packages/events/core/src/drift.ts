@@ -1,11 +1,13 @@
+import { createHash } from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { z } from 'zod';
 import { diffSchemas, type DiffResult, type SchemaNode } from './diff';
-import { fieldPaths } from './fields';
-import { jsonObjectSchema } from './json';
+import { fieldConstraints, fieldPaths, type FieldConstraint } from './fields';
+import { jsonObjectSchema, type JsonValue } from './json';
 import { loadCatalog, type LoadedEvent } from './load';
 import { durationSeconds } from './schema';
-import { matchSnapshot, type ArchitectureSnapshot } from './snapshot';
+import { matchSnapshot, suggestRenames, type ArchitectureSnapshot } from './snapshot';
 import { isSafeName, UNSAFE_CONSUMER } from './consumes';
 import { schemaPointer, sourceLines } from './source-lines';
 import type { ResourceRef } from './resource-graph';
@@ -48,6 +50,8 @@ export interface DriftFinding {
     | 'format_changed'
     | 'field_added'
     | 'description_changed'
+    | 'meaning_changed'
+    | 'meaning_declared'
     | 'version_unchanged'
     | 'version_bumped'
     | 'producer_removed'
@@ -57,7 +61,13 @@ export interface DriftFinding {
     | 'owner_changed'
     | 'event_undocumented'
     | 'field_undeclared'
-    | 'event_unobserved';
+    | 'event_unobserved'
+    | 'field_type_mismatch'
+    | 'field_value_unexpected'
+    | 'producer_unexpected'
+    | 'channel_unexpected'
+    | 'rule_violation'
+    | 'rule_failed';
   message: string;
   /** Consumers this change can break (empty for additive/info). */
   consumers: string[];
@@ -76,6 +86,18 @@ export interface DriftFinding {
   compatibility?: Array<'backward' | 'forward'>;
   /** The field a `field_renamed` finding moved, as diff paths. */
   rename?: { from: string; to: string };
+  /**
+   * What a runtime or rule finding is about within its event: the field,
+   * producer or channel, or the rule. With the kind and the event it identifies the finding, so one
+   * already true of the base is recognised on the branch.
+   */
+  subject?: string;
+  /**
+   * What exactly was violated, such as the wrong types or a digest of the values
+   * outside an enum, so the base excuses only the same violation, not a new one
+   * on the same field.
+   */
+  fingerprint?: string;
   /**
    * A breaking change the version owns up to: the event (or API) took a major
    * bump in the same change. Still reported, with who to tell, but it no
@@ -169,6 +191,13 @@ function classify(diff: DiffResult): Classification {
         : { severity: 'additive', kind: 'field_added' };
     case 'description_changed':
       return { severity: 'info', kind: 'description_changed' };
+    // Same bytes, different meaning: every reader still parses it, and reads it wrong.
+    case 'meaning_changed':
+      return diff.meaning?.previous === undefined
+        ? { severity: 'info', kind: 'meaning_declared' }
+        : diff.meaning.current === undefined
+          ? { severity: 'suspicious', kind: 'meaning_changed' }
+          : { severity: 'breaking', kind: 'meaning_changed' };
   }
 }
 
@@ -204,6 +233,12 @@ function describe(diff: DiffResult, kind: DriftFinding['kind']): string {
       return `new field \`${diff.path}\` (${diff.detail})`;
     case 'description_changed':
       return `description of \`${diff.path}\` changed`;
+    case 'meaning_changed':
+      return diff.meaning?.current === undefined
+        ? `\`${diff.path}\` no longer declares its ${diff.meaning?.key} (was ${diff.meaning?.previous}): consumers lose the assumption they read it by`
+        : `\`${diff.path}\` changed ${diff.meaning.key} from ${diff.meaning.previous} to ${diff.meaning.current}: the schema still validates, and every consumer reading it the old way reads it wrong`;
+    case 'meaning_declared':
+      return `\`${diff.path}\` declares its ${diff.meaning?.key}: ${diff.meaning?.current}`;
     default:
       return `${diff.path}: ${diff.detail}`;
   }
@@ -227,7 +262,7 @@ function changedField(diffPath: string): string {
 }
 
 /** One field contains the other: changing `customer` reaches `customer.email`, and back. */
-function overlaps(changed: string, declared: string): boolean {
+export function overlaps(changed: string, declared: string): boolean {
   const within = (path: string, parent: string) =>
     path === parent || (path.startsWith(parent) && /^[.[]/.test(path.slice(parent.length)));
 
@@ -678,6 +713,11 @@ export interface DriftCatalogsOptions {
    * and what is documented but was not seen.
    */
   snapshot?: ArchitectureSnapshot;
+  /**
+   * The base's own snapshot. Runtime drift the base catalog already had against
+   * it is reported as information, so only what this change introduced gates.
+   */
+  baseSnapshot?: { snapshot: ArchitectureSnapshot; label: string };
 }
 
 /** A consumer only a runtime snapshot names, and how it is shown. */
@@ -861,22 +901,67 @@ export async function driftCatalogs(
     }
   }
 
-  if (options.snapshot) findings.push(...runtimeDrift(current, options.snapshot));
+  if (options.snapshot) {
+    const runtime = runtimeDrift(current, options.snapshot);
+    const base = options.baseSnapshot;
+
+    findings.push(
+      ...(base
+        ? newSinceBase(runtime, runtimeDrift(baseline, base.snapshot), base.label)
+        : runtime),
+    );
+  }
 
   return summariseDrift(findings);
 }
 
 /**
- * The catalog checked against what the running system was seen to do. Field
- * and event existence are compared the way autotel-eventcatalog's drift does,
- * so the two tools agree on the same snapshot.
+ * The runtime `typeof` names a declared JSON Schema type admits. JavaScript has
+ * no integer, so `integer` admits `number`, and a fractional sample value is
+ * what shows the declaration was violated. A formatted string admits `object`:
+ * the recorder sees a `Date` before it is sent as an ISO string.
+ */
+function admitted({ types = [], format }: FieldConstraint): Set<string> {
+  return new Set([
+    ...types,
+    ...(types.includes('integer') ? ['number'] : []),
+    ...(format && types.includes('string') ? ['object'] : []),
+  ]);
+}
+
+/** A number with a fractional part: what an `integer` field must never carry. */
+const fractionalNumber = z.number().refine((n) => !Number.isInteger(n));
+
+const quoted = (value: JsonValue): string => `\`${JSON.stringify(value)}\``;
+
+/** A name from outside the repository, printed only when it cannot inject into a report. */
+const safe = (name: string): string => (isSafeName(name) ? name : UNSAFE_CONSUMER);
+
+// Nothing in it can end a code span, a table cell or the line.
+const CODE_SPAN = /^[^`|\p{Cc}]{1,200}$/u;
+
+/** A field path from outside the repository, as a code span when it is safe to print. */
+const code = (text: string): string =>
+  CODE_SPAN.test(text) ? `\`${text}\`` : 'a field whose name is not safe to print';
+
+/** A digest of what a finding saw, comparable across runs without carrying sample values. */
+const digest = (...parts: JsonValue[]): string =>
+  createHash('sha256').update(JSON.stringify(parts)).digest('hex').slice(0, 16);
+
+/** A runtime type name, as autotel records `typeof`. */
+const TYPE_NAME = /^[a-z]{1,20}$/;
+
+/**
+ * The catalog checked against what the running system was seen to do. Events
+ * match by normalised name (`normaliseEventId`).
  *
- * Nothing here changes a contract anyone relies on, so none of it is breaking
- * or fails a compatibility strategy. An event or field the runtime sends but
- * the catalog never declared is suspicious: an undocumented contract a consumer
- * can come to depend on without review, and nobody would know to ask before
- * changing it. A documented event the snapshot did not see is information: one
- * window of traffic, or one test run, is not proof it is gone.
+ * A payload the contract says cannot happen is breaking: a field of a type the
+ * schema does not allow, or a value outside its enum, reaches consumers that
+ * trusted the contract. What runs but is not documented is suspicious: an event,
+ * a field, a producer or a channel nobody declared is a contract consumers can
+ * come to depend on unreviewed. A documented event the snapshot did not see is
+ * information: one window of traffic, or one test run, is not proof it is gone.
+ * Nothing here is a schema change, so no compatibility strategy fails on it.
  */
 export function runtimeDrift(
   current: LoadedEvent[],
@@ -884,68 +969,230 @@ export function runtimeDrift(
 ): DriftFinding[] {
   const { matches, undocumented } = matchSnapshot(current, (e) => e.frontmatter, snapshot);
   const window = snapshot.generatedAt ? ` (snapshot of ${snapshot.generatedAt})` : '';
+  const seen = new Set(matches.values());
+  const unseen = current.filter((event) => !seen.has(event));
+
+  const renames = suggestRenames(
+    undocumented,
+    unseen.map((event) => event.frontmatter.id),
+  );
+
+  const renameNote = (side: 'observed' | 'documented', name: string): string => {
+    const pair = renames.find((rename) => rename[side] === name);
+
+    if (!pair) return '';
+
+    const verb = pair.similarity >= 0.8 ? 'probably' : 'possibly';
+
+    return `. ${code(pair.observed)} is ${verb} \`${pair.documented}\` renamed (${Math.round(pair.similarity * 100)}% similar): rename one side, or document it as a new event`;
+  };
 
   const finding = (
     event: LoadedEvent,
     severity: DriftSeverity,
     kind: DriftFinding['kind'],
     message: string,
+    subject?: string,
+    fingerprint?: string,
   ): DriftFinding => ({
     domain: event.frontmatter.domain,
     eventId: event.frontmatter.id,
     severity,
     kind,
     message,
-    consumers: [],
+    // A payload that breaks the contract reaches everyone who trusted it.
+    consumers: severity === 'breaking' ? event.frontmatter.consumers : [],
     source: sourceOf(event),
+    ...(subject !== undefined && { subject }),
+    ...(fingerprint !== undefined && { fingerprint }),
   });
 
-  const unseen = undocumented.map((name): DriftFinding => {
+  const undocumentedFindings = undocumented.map((name): DriftFinding => {
     const observation = snapshot.events[name]!;
-    const from = observation.producer ? ` from ${observation.producer}` : '';
+    const from = observation.producer ? ` from ${safe(observation.producer)}` : '';
     const [domain, eventId] = name.includes('/') ? name.split(/\/(.*)/) : ['', name];
+    const printable = isSafeName(name);
 
     return {
-      domain: domain!,
-      eventId: eventId!,
+      domain: printable ? domain! : '',
+      eventId: printable ? eventId! : 'an event whose name is not safe to print',
+      subject: name,
       severity: 'suspicious',
       kind: 'event_undocumented',
-      message: `the runtime emitted this event ${observation.observedCount} time(s)${from}, but the catalog does not document it — an undocumented contract consumers can come to depend on unreviewed. Declare a contract for it, or stop emitting it`,
+      message: `the runtime emitted this event ${observation.observedCount} time(s)${from}, but the catalog does not document it — an undocumented contract consumers can come to depend on unreviewed. Declare a contract for it, or stop emitting it${renameNote('observed', name)}`,
       consumers: [],
     };
   });
 
-  const fields = [...matches].flatMap(([name, event]) => {
+  const matched = [...matches].flatMap(([name, event]) => {
+    const observation = snapshot.events[name]!;
     const declared = fieldPaths(event.schema);
+    const constraints = fieldConstraints(event.schema);
 
-    return (snapshot.events[name]!.fieldPaths ?? [])
+    const fields = (observation.fieldPaths ?? [])
       .filter((field) => !declared.has(field))
       .map((field) =>
         finding(
           event,
           'suspicious',
           'field_undeclared',
-          `runtime payloads carry \`${field}\`, which the schema does not declare — consumers can start reading it with no contract behind it. Declare it, or stop sending it`,
+          `runtime payloads carry ${code(field)}, which the schema does not declare — consumers can start reading it with no contract behind it. Declare it, or stop sending it`,
+          field,
         ),
       );
-  });
 
-  const seen = new Set(matches.values());
+    const values = Object.entries(observation.fieldStats ?? {}).flatMap(([field, stats]) => {
+      const constraint = constraints.get(field);
 
-  const absent = current.flatMap((event) =>
-    seen.has(event)
-      ? []
-      : [
+      if (!constraint) return [];
+
+      const out: DriftFinding[] = [];
+      const samples = stats.sampleValues ?? [];
+
+      if (constraint.types) {
+        const admits = admitted(constraint);
+        // A key set to undefined never reaches the wire.
+        const wrong = stats.types.filter((type) => type !== 'undefined' && !admits.has(type));
+        const named = wrong.filter((type) => TYPE_NAME.test(type));
+
+        const fractional =
+          constraint.types.includes('integer') && !constraint.types.includes('number')
+            ? samples.filter((value) => fractionalNumber.safeParse(value).success)
+            : [];
+
+        if (wrong.length > 0 || fractional.length > 0) {
+          // Sample values can be sensitive, so the report counts them and never prints them.
+          const observed =
+            wrong.length === 0
+              ? `${fractional.length} fractional number(s)`
+              : named.length === wrong.length
+                ? wrong.join(' | ')
+                : 'a type that is not safe to print';
+
+          out.push(
+            finding(
+              event,
+              'breaking',
+              'field_type_mismatch',
+              `runtime payloads carry ${code(field)} as ${observed}, but the schema declares ${constraint.types.join(' | ')}. Consumers that trust the contract will misread it: fix the producer, or change the contract`,
+              field,
+              digest([...wrong].sort(), fractional.length > 0),
+            ),
+          );
+        }
+      }
+
+      const allowed = constraint.values;
+
+      const outside = allowed
+        ? samples.filter((value) => !allowed.some((one) => Object.is(one, value)))
+        : [];
+
+      if (outside.length > 0) {
+        out.push(
           finding(
             event,
-            'info',
-            'event_unobserved',
-            `documented, but not observed in the runtime snapshot${window}; one window is not proof it is gone`,
+            'breaking',
+            'field_value_unexpected',
+            `runtime payloads set ${code(field)} to ${new Set(outside).size} value(s) outside the values the schema allows (${allowed!.map(quoted).join(', ')}). A consumer handling only those will not handle it: fix the producer, or add the value`,
+            field,
+            digest([...new Set(outside.map((value) => JSON.stringify(value)))].sort()),
           ),
-        ],
+        );
+      }
+
+      return out;
+    });
+
+    // Producers and channels the runtime used, against what the event declares.
+    const sources = [
+      { producer: observation.producer, channel: observation.channel },
+      ...(observation.sources ?? []),
+    ];
+
+    const producers = [...new Set(sources.flatMap((s) => (s.producer ? [s.producer] : [])))];
+    const channels = [...new Set(sources.flatMap((s) => (s.channel ? [s.channel] : [])))];
+    const addresses = (event.frontmatter.transport ?? []).flatMap((t) => t.address ?? []);
+
+    const unexpected = (
+      kind: 'producer_unexpected' | 'channel_unexpected',
+      used: string[],
+      declared: string[],
+      what: { one: string; list: string },
+    ) =>
+      used.flatMap((name) =>
+        declared.includes(name)
+          ? []
+          : declared.length > 0
+            ? finding(
+                event,
+                'suspicious',
+                kind,
+                `the runtime ${what.one} ${safe(name)}, which the catalog does not list (${declared.join(', ')}). Declare it, or find out why it does`,
+                name,
+              )
+            : finding(
+                event,
+                'info',
+                kind,
+                `the runtime ${what.one} ${safe(name)}; the catalog names no ${what.list}. Declare it`,
+                name,
+              ),
+      );
+
+    return [
+      ...fields,
+      ...values,
+      ...unexpected('producer_unexpected', producers, event.frontmatter.producers, {
+        one: 'saw it produced by',
+        list: 'producer',
+      }),
+      ...unexpected('channel_unexpected', channels, addresses, {
+        one: 'saw it sent on',
+        list: 'channel',
+      }),
+    ];
+  });
+
+  const absent = unseen.map((event) =>
+    finding(
+      event,
+      'info',
+      'event_unobserved',
+      `documented, but not observed in the runtime snapshot${window}; one window is not proof it is gone${renameNote('documented', event.frontmatter.id)}`,
+    ),
   );
 
-  return [...unseen, ...fields, ...absent];
+  return [...undocumentedFindings, ...matched, ...absent];
+}
+
+/** What identifies a finding across two runs: its kind, event and subject. */
+const findingKey = (f: DriftFinding): string =>
+  `${f.kind}\0${driftEventLabel(f)}\0${f.subject ?? ''}\0${f.fingerprint ?? ''}`;
+
+/**
+ * The findings the change introduced, for runtime drift and catalog rules. A
+ * finding the base already had is not this change's doing: it stays in the report, as
+ * information, so a known gap does not fail every pull request until someone
+ * fixes it and the gate gets switched off.
+ */
+export function newSinceBase(
+  findings: DriftFinding[],
+  baseline: DriftFinding[],
+  baseLabel = 'the base',
+): DriftFinding[] {
+  const before = new Set(baseline.map(findingKey));
+
+  return findings.map((f) =>
+    before.has(findingKey(f)) && f.severity !== 'info'
+      ? {
+          ...f,
+          severity: 'info',
+          consumers: [],
+          message: `${f.message} (already true on ${baseLabel}, so not this change's doing)`,
+        }
+      : f,
+  );
 }
 
 /**
@@ -978,6 +1225,10 @@ export function compatibilityViolations(finding: DriftFinding): Array<'backward'
     case 'command_outcome_changed':
     case 'type_changed':
       return ['backward', 'forward'];
+    // A schema registry accepts it either way; the strategies are about parsing.
+    case 'meaning_changed':
+    case 'meaning_declared':
+      return [];
     // A new reader rejects old data the narrower set no longer admits; an old
     // reader rejects new data of a type it never knew.
     case 'type_narrowed':

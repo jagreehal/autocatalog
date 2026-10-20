@@ -183,6 +183,8 @@ function carryForward(previous: ResourceGraph, current: ResourceGraph): Resource
       schema: _schema,
       adapter: _adapter,
       fieldAliases: _aliases,
+      fields: _fields,
+      indexes: _indexes,
       ...attributes
     } = rest.attributes;
 

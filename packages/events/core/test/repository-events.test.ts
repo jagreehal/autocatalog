@@ -27,6 +27,13 @@ it('enrols a repository that publishes only contracts/', async () => {
   expect(publishesCatalogContent(repo)).toBe(true);
 });
 
+it('enrols a repository that has only a Prisma schema', async () => {
+  await fs.mkdir(path.join(repo, 'prisma'));
+  expect(publishesCatalogContent(repo)).toBe(false);
+  await fs.writeFile(path.join(repo, 'prisma/schema.prisma'), 'model A {\n  id Int @id\n}');
+  expect(publishesCatalogContent(repo)).toBe(true);
+});
+
 it('enrols a repository that publishes only approved message contracts', async () => {
   await fs.mkdir(path.join(repo, 'src/__contracts__'), { recursive: true });
   await fs.writeFile(path.join(repo, 'src/__contracts__/notes.txt'), '{}');

@@ -1,9 +1,19 @@
-import { AUTOCATALOG_GRAPH_SPEC, type ResourceGraph } from 'autocatalog-core';
+import { AUTOCATALOG_GRAPH_SPEC, eventFrontmatter, type ResourceGraph } from 'autocatalog-core';
 import { describe, expect, it } from 'vitest';
+import type { z } from 'zod';
+import type { CatalogEvent } from '../src/catalog';
+import {
+  edgeWeight,
+  edgesForFrame,
+  liveFrame,
+  normaliseEventId,
+  replaySchedule,
+} from '../src/ui/lib/visualiser';
 import {
   catalogGraph,
   domainNeighbourhood,
   flowGraph,
+  runtimeByEvent,
   serviceNeighbourhood,
 } from '../src/visualiser';
 
@@ -37,6 +47,71 @@ describe('flowGraph', () => {
       'from-0': '/services/PaymentService/',
       'to-0': '/services/LedgerService/',
     });
+  });
+
+  it('draws the event snapshot evidence on its service edges, and leaves agents alone', () => {
+    const map = flowGraph(
+      {
+        from: [
+          { label: 'PaymentService', kind: 'service' },
+          { label: 'LegacyBilling', kind: 'service' },
+        ],
+        inbound: 'publishes',
+        centre: { label: 'Payment captured', kind: 'event' },
+        outbound: 'subscribed by',
+        to: [
+          { label: 'LedgerService', kind: 'service' },
+          { label: 'FraudService', kind: 'service' },
+          { label: 'Triage agent', kind: 'agent' },
+        ],
+      },
+      {
+        event: 'payment.captured',
+        seen: {
+          declaredProducers: ['PaymentService'],
+          declaredConsumers: ['LedgerService'],
+          observed: {
+            count: 40,
+            producers: ['PaymentService', 'LegacyBilling'],
+            consumers: ['FraudService'],
+            sources: [],
+          },
+        },
+        live: { url: '/events', event: 'message' },
+      },
+    );
+
+    expect(
+      Object.fromEntries(Object.entries(map?.evidence ?? {}).map(([id, edge]) => [id, edge.state])),
+    ).toEqual({
+      'from-0->centre': 'observed',
+      'from-1->centre': 'undocumented',
+      'centre->to-0': 'unseen',
+      'centre->to-1': 'undocumented',
+    });
+    expect(map?.live).toEqual({ url: '/events', event: 'message' });
+  });
+
+  it('claims no producer ran when the snapshot saw the event but named no producer', () => {
+    const map = flowGraph(
+      {
+        from: [{ label: 'PaymentService', kind: 'service' }],
+        inbound: 'publishes',
+        centre: { label: 'Payment captured', kind: 'event' },
+        outbound: 'subscribed by',
+        to: [{ label: 'LedgerService', kind: 'service' }],
+      },
+      {
+        event: 'payment.captured',
+        seen: {
+          declaredProducers: ['PaymentService'],
+          declaredConsumers: ['LedgerService'],
+          observed: { count: 40, producers: [], consumers: ['LedgerService'], sources: [] },
+        },
+      },
+    );
+
+    expect(Object.keys(map?.evidence ?? {})).toEqual(['centre->to-0']);
   });
 
   it('draws nothing for a kind EventCatalog has no node for', () => {
@@ -232,5 +307,195 @@ describe('commands, queries and datastores', () => {
       'service:ledger',
       'service:web',
     ]);
+  });
+});
+
+describe('runtime evidence on the map', () => {
+  const ref = (kind: string, id: string, namespace?: string) => ({
+    kind,
+    id,
+    ...(namespace && { namespace }),
+  });
+
+  const link = (type: string, from: ReturnType<typeof ref>, to: ReturnType<typeof ref>) => ({
+    type,
+    from,
+    to,
+    provenance: 'declared' as const,
+    needsReview: false,
+  });
+
+  const node = (kind: string, id: string, namespace?: string) => ({
+    ...facts,
+    ref: ref(kind, id, namespace),
+    title: id,
+    attributes: {},
+  });
+
+  const charged = ref('event', 'payment.charged', 'repo/pay');
+  const shipped = ref('event', 'order.shipped', 'repo/ship');
+  const refunded = ref('event', 'refunded', 'other/pay');
+
+  // SAFETY: as above, only kinds are plain strings.
+  const graph = {
+    spec: AUTOCATALOG_GRAPH_SPEC,
+    resources: [
+      ...['billing', 'ledger', 'audit', 'spy', 'shipping', 'refunds'].map((id) =>
+        node('service', id),
+      ),
+      node('event', 'payment.charged', 'repo/pay'),
+      node('event', 'order.shipped', 'repo/ship'),
+      node('event', 'refunded', 'other/pay'),
+      // An agent sharing a service's name; the snapshot says nothing of it.
+      node('agent', 'ledger'),
+    ],
+    relationships: [
+      link('produces', ref('service', 'billing'), charged),
+      link('consumes', charged, ref('service', 'ledger')),
+      link('consumes', charged, ref('service', 'audit')),
+      // The snapshot appended a consumer nobody declared.
+      link('consumes', charged, ref('service', 'spy')),
+      link('produces', ref('service', 'shipping'), shipped),
+      link('produces', ref('service', 'refunds'), refunded),
+      link('consumes', charged, ref('agent', 'ledger')),
+    ],
+  } as ResourceGraph;
+
+  // SAFETY: the evidence reads only these frontmatter fields.
+  const published = (
+    repository: string,
+    domain: string,
+    fields: Partial<z.input<typeof eventFrontmatter>>,
+  ): CatalogEvent => ({
+    repository,
+    event: {
+      folder: { path: '/', defaultDomain: domain, isVersioned: false, parentEventPath: null },
+      frontmatter: {
+        ...eventFrontmatter.parse({
+          version: '1.0.0',
+          name: 'e',
+          summary: 'e',
+          consumers: [],
+          ...fields,
+        }),
+        domain,
+      },
+      body: '',
+      schemaPath: 'schema.json',
+      schema: {},
+      examples: [],
+    },
+  });
+
+  const window = { firstSeen: '2026-10-01', lastSeen: '2026-10-02' };
+
+  const events = [
+    published('repo', 'pay', {
+      id: 'payment.charged',
+      producers: ['billing'],
+      consumers: ['ledger', 'audit', 'spy'],
+      observed: {
+        ...window,
+        count: 40,
+        producers: ['billing', 'rogue'],
+        consumers: ['ledger', 'spy'],
+        declaredConsumers: ['ledger', 'audit'],
+        sources: [
+          { ...window, producer: 'billing', count: 30 },
+          { ...window, producer: 'rogue', count: 10 },
+        ],
+        snapshot: { spec: 'autotel-architecture/v1', generatedAt: '2026-10-02' },
+      },
+    }),
+    published('repo', 'ship', { id: 'order.shipped', producers: ['shipping'] }),
+    published('other', 'pay', { id: 'refunded', producers: ['refunds'] }),
+  ];
+
+  const live = { url: '/events', event: 'track' };
+
+  const map = catalogGraph(graph, '/', { runtime: runtimeByEvent(events, ['repo']), live });
+
+  const evidence = map?.evidence ?? {};
+
+  const states = Object.fromEntries(
+    Object.entries(evidence).map(([id, edge]) => [id, [edge.state, edge.count]]),
+  );
+
+  it('draws what ran, what was declared and never seen, and what ran undeclared', () => {
+    expect(states).toEqual({
+      'service:billing->event:repo%2Fpay/payment.charged:produces': ['observed', 30],
+      'event:repo%2Fpay/payment.charged->service:ledger:consumes': ['observed', 40],
+      'event:repo%2Fpay/payment.charged->service:audit:consumes': ['unseen', 0],
+      'event:repo%2Fpay/payment.charged->service:spy:consumes': ['undocumented', 40],
+      'service:rogue->event:repo%2Fpay/payment.charged:produces': ['undocumented', 10],
+      'service:shipping->event:repo%2Fship/order.shipped:produces': ['unseen', 0],
+    });
+  });
+
+  it('draws a declared edge unseen when the repository’s snapshot matched none of its events', () => {
+    const matchedNothing = catalogGraph(graph, '/', {
+      runtime: runtimeByEvent(events, ['repo', 'other']),
+    });
+
+    expect(
+      matchedNothing?.evidence?.['service:refunds->event:other%2Fpay/refunded:produces']?.state,
+    ).toBe('unseen');
+  });
+
+  it('draws evidence a committed catalog carries, with no snapshot file read', () => {
+    const embedded = catalogGraph(graph, '/', { runtime: runtimeByEvent(events, []) });
+
+    expect(
+      embedded?.evidence?.['service:billing->event:repo%2Fpay/payment.charged:produces']?.state,
+    ).toBe('observed');
+  });
+
+  it('gives an undeclared producer a node of its own', () => {
+    expect(map?.graph.nodes.find((n) => n.id === 'service:rogue')?.type).toBe('service');
+  });
+
+  it('says nothing of a repository without a snapshot, and offers live only with evidence', () => {
+    expect(Object.keys(states).some((id) => id.includes('refunded'))).toBe(false);
+    expect(map?.live).toEqual(live);
+
+    const bare = catalogGraph(graph, '/', { live });
+
+    expect(bare?.evidence).toBeUndefined();
+    expect(bare?.live).toBeUndefined();
+  });
+
+  it('moves the named producer’s edge for a live frame, and every consumer’s hollow', () => {
+    const moved = edgesForFrame(evidence, { name: 'PaymentCharged', producer: 'billing' });
+
+    expect(moved).toEqual(
+      expect.arrayContaining([
+        { id: 'service:billing->event:repo%2Fpay/payment.charged:produces', hollow: false },
+        { id: 'event:repo%2Fpay/payment.charged->service:ledger:consumes', hollow: true },
+      ]),
+    );
+    expect(moved.some((edge) => edge.id.startsWith('service:rogue'))).toBe(false);
+    expect(edgesForFrame(evidence, { name: 'order.cancelled' })).toEqual([]);
+    expect(liveFrame.safeParse({ name: 7 }).success).toBe(false);
+  });
+
+  it('replays only edges that ran, busiest fastest', () => {
+    const schedule = Object.fromEntries(
+      replaySchedule(evidence).map((edge) => [edge.id, edge.interval]),
+    );
+
+    expect(schedule['event:repo%2Fpay/payment.charged->service:ledger:consumes']).toBe(600);
+    expect(schedule['service:rogue->event:repo%2Fpay/payment.charged:produces']).toBe(2100);
+    expect(schedule['event:repo%2Fpay/payment.charged->service:audit:consumes']).toBeUndefined();
+  });
+
+  it('weighs edges by volume, bounded', () => {
+    expect(edgeWeight({ state: 'unseen', count: 0, event: 'x' })).toBe(1.25);
+    expect(edgeWeight({ state: 'observed', count: 1, event: 'x' })).toBe(1.5);
+    expect(edgeWeight({ state: 'observed', count: 1e9, event: 'x' })).toBe(6);
+  });
+
+  it('normalises event names as the core does', () => {
+    expect(normaliseEventId('order.placed')).toBe(normaliseEventId('OrderPlaced'));
+    expect(normaliseEventId('order_placed-v 2')).toBe('orderplacedv2');
   });
 });

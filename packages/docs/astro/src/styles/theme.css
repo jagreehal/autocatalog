@@ -30,9 +30,9 @@
   --ac-required: var(--destructive);
 
   /* Provenance, the only colour that carries meaning (DESIGN.md). */
-  --ac-extracted: #4cc9bd;
-  --ac-declared: #8aa8ff;
-  --ac-inferred: #e0a95c;
+  --ac-extracted: oklch(0.79 0.11 185);
+  --ac-declared: oklch(0.77 0.12 264);
+  --ac-inferred: oklch(0.81 0.12 72);
   --ac-warn: #fbbf24;
 
   --ac-radius: var(--radius);
@@ -61,8 +61,11 @@
   --sl-color-hairline-shade: var(--ac-line);
 
   --sl-nav-height: 3.75rem;
-  --sl-line-height: 1.6;
+  /* One face for everything; weight and size carry the hierarchy (DESIGN.md). */
+  --sl-text-base: 0.9375rem;
+  --sl-line-height: 1.76;
   --sl-font: var(--font-sans);
+  --sl-font-mono: var(--font-sans);
   --sl-text-h1: 2rem;
   --sl-text-h2: 1.375rem;
   --sl-text-h3: 1.125rem;
@@ -73,13 +76,17 @@
 }
 
 :root[data-theme='light'] {
-  --ac-extracted: #0b7a71;
-  --ac-declared: #2f5bd3;
-  --ac-inferred: #a8620b;
+  /* 5.2:1, 5.9:1 and 4.8:1 on the background, so each reads as text too. */
+  --ac-extracted: oklch(0.51 0.095 185);
+  --ac-declared: oklch(0.5 0.16 264);
+  --ac-inferred: oklch(0.55 0.12 62);
   --ac-warn: #b45309;
 
   --sl-color-gray-6: var(--ac-panel-2);
   --sl-color-gray-7: var(--ac-panel-2);
+
+  /* Dark text on a light page needs a little less leading than the reverse. */
+  --sl-line-height: 1.7;
 
   color-scheme: light;
 }
@@ -103,14 +110,27 @@ body {
   background: var(--ac-bg);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* Prose types "->" and "!=" as written; code keeps its ligatures. */
+  font-feature-settings:
+    'calt' 0,
+    'liga' 0;
+}
+:where(code, pre, kbd, samp) {
+  font-feature-settings:
+    'calt' 1,
+    'zero' 1;
 }
 .sl-markdown-content {
   color: var(--ac-text);
 }
 .sl-markdown-content :is(h1, h2, h3, h4, h5):not(:where(.not-content *)) {
   color: var(--ac-heading);
-  font-weight: 650;
-  letter-spacing: -0.015em;
+  font-weight: 750;
+  letter-spacing: -0.04em;
+}
+:is(h1#_top, .sl-markdown-content h1:not(:where(.not-content *))) {
+  font-weight: 800;
+  letter-spacing: -0.05em;
 }
 .sl-markdown-content h2:not(:where(.not-content *)) {
   margin-top: 2.25rem;
@@ -132,13 +152,14 @@ body {
 }
 /* Prose keeps a reading measure even on a page wide enough for cards. */
 .sl-markdown-content > :is(p, ul, ol, blockquote) {
-  max-width: 72ch;
+  max-width: 64ch;
 }
 
 .site-title {
   color: var(--ac-heading);
   font-size: var(--sl-text-base);
-  font-weight: 650;
+  font-weight: 750;
+  letter-spacing: -0.04em;
 }
 
 /* The search box. Starlight's, so ⌘K, Pagefind and the dialog are unchanged. */
@@ -340,9 +361,9 @@ starlight-toc a[aria-current='true'] {
   color: var(--ac-accent);
 }
 
-/* One focus ring everywhere, in the accent, never removed. */
+/* One focus ring everywhere, in the ring colour, never removed. */
 :where(a, button, select, summary, input, [tabindex]):focus-visible {
-  outline: 2px solid var(--ac-accent);
+  outline: 2px solid var(--ring);
   outline-offset: 2px;
 }
 

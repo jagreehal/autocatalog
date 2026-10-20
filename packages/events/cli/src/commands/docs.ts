@@ -16,6 +16,8 @@ import {
   buildDocsManifest,
   checkDocs,
   DEFAULT_FRONTMATTER_SCHEMA,
+  defaultConventionsFile,
+  DOCS_CONVENTIONS_PATH,
   DOCS_MANIFEST_PATH,
   DOCS_SCHEMA_PATH,
   DocsManifestError,
@@ -36,6 +38,7 @@ function displayPath(file: string): string {
 export interface DocsCommandOptions {
   root: string;
   schema?: string;
+  conventions?: string;
   manifest?: string;
   repo?: string;
   quiet?: boolean;
@@ -89,6 +92,7 @@ async function checkoutResources(root: string, repo?: string): Promise<CatalogRe
 export async function runDocsCheck(opts: DocsCommandOptions): Promise<number> {
   const result = checkDocs(opts.root, {
     schemaPath: opts.schema,
+    conventionsPath: opts.conventions,
     manifestPath: opts.manifest,
     repo: opts.repo,
     resources: await checkoutResources(opts.root, opts.repo),
@@ -97,9 +101,14 @@ export async function runDocsCheck(opts: DocsCommandOptions): Promise<number> {
   // Which rules were applied is the first question a failure raises, so it is
   // reported on both paths — a reader fixing a failing check needs the contract
   // more than a reader watching one pass.
-  const contract = result.contractFile
-    ? `  contract: ${displayPath(result.contractFile)}`
-    : `  contract: built-in default — run 'ac docs init-schema' to own it`;
+  const contract = [
+    result.contractFile
+      ? `  contract: ${displayPath(result.contractFile)}`
+      : `  contract: built-in default — run 'ac docs init-schema' to own it`,
+    result.conventionsFile
+      ? `  kinds: ${displayPath(result.conventionsFile)}`
+      : `  kinds: built-in adr, runbook, incident — run 'ac docs init-conventions' to own them`,
+  ].join('\n');
 
   if (result.failures.length > 0) {
     for (const failure of result.failures) console.error(`${kleur.red('✗')} ${failure}`);
@@ -152,6 +161,38 @@ export async function runDocsInitSchema(opts: DocsCommandOptions): Promise<numbe
           '  ac docs check and the site both read it from here without a flag.\n' +
           '  Add "$id" with the URL this file is published at, and repositories that\n' +
           '  copy it can run ac docs sync-schema to find out when it changes.',
+      ),
+    );
+  }
+
+  return 0;
+}
+
+/**
+ * Write the built-in document kinds into `contracts/` so the organisation owns
+ * them, the way `init-schema` hands over the frontmatter contract.
+ */
+export async function runDocsInitConventions(opts: DocsCommandOptions): Promise<number> {
+  const out = opts.conventions ?? path.join(path.resolve(opts.root), DOCS_CONVENTIONS_PATH);
+
+  if (existsSync(out)) {
+    console.error(
+      `${kleur.red('✗')} ${displayPath(out)} already exists — edit it, or pass --conventions to write elsewhere`,
+    );
+
+    return 1;
+  }
+
+  await fs.mkdir(path.dirname(out), { recursive: true });
+  await fs.writeFile(out, `${JSON.stringify(defaultConventionsFile(), null, 2)}\n`);
+
+  if (!opts.quiet) {
+    console.log(kleur.green(`✓ ${displayPath(out)}`));
+    console.log(
+      kleur.dim(
+        '  Commit it in the repository that owns your conventions, usually the handbook.\n' +
+          '  Add a kind, change a folder, label or schema, or set a kind to false to turn\n' +
+          '  it off; ac docs check and the site both read it from here without a flag.',
       ),
     );
   }
@@ -239,7 +280,11 @@ export async function runDocsManifest(opts: DocsCommandOptions): Promise<number>
   let manifest;
 
   try {
-    manifest = buildDocsManifest(opts.root, { schemaPath: opts.schema, repo: opts.repo });
+    manifest = buildDocsManifest(opts.root, {
+      schemaPath: opts.schema,
+      conventionsPath: opts.conventions,
+      repo: opts.repo,
+    });
   } catch (error) {
     if (!(error instanceof DocsManifestError)) throw error;
 

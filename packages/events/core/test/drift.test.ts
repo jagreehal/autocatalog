@@ -14,6 +14,7 @@ import {
 } from '../src/drift';
 import type { JsonObject } from '../src/json';
 import { UNSAFE_CONSUMER } from '../src/consumes';
+import type { SnapshotObservation } from '../src/snapshot';
 
 let baseDir: string;
 
@@ -90,6 +91,54 @@ describe('driftCatalogs', () => {
     expect(removed?.consumers).toEqual(['LedgerService', 'NotificationService']);
     // schema changed without a version bump → suspicious
     expect(report.findings.some((f) => f.kind === 'version_unchanged')).toBe(true);
+  });
+
+  it('fails a change of meaning the schema cannot see, and notes a new declaration', async () => {
+    const meant = (amount: JsonObject, paymentId: JsonObject = {}) => ({
+      ...paymentSchema,
+      properties: {
+        ...paymentSchema.properties,
+        amount: { type: 'number', ...amount },
+        paymentId: { type: 'string', ...paymentId },
+      },
+    });
+
+    const manifest = {
+      ...paymentManifest,
+      consumerFields: { LedgerService: ['amount'], NotificationService: ['note'] },
+    };
+
+    await writeEvent(
+      baseDir,
+      'payments',
+      'PaymentCompleted',
+      manifest,
+      // A value that is not text is left out, and the rest still count.
+      meant({ 'x-meaning': { unit: 'pounds', currency: 'GBP', decimals: 2 } }),
+    );
+    await writeEvent(
+      currDir,
+      'payments',
+      'PaymentCompleted',
+      { ...manifest, version: '1.1.0' },
+      meant(
+        { 'x-meaning': { unit: 'pence', decimals: 2 } },
+        { 'x-meaning': { identifier: 'payment' } },
+      ),
+    );
+
+    const report = await driftCatalogs(baseDir, currDir);
+
+    const meaning = report.findings.filter((f) => f.kind.startsWith('meaning_'));
+
+    expect(meaning.map((f) => `${f.severity} ${f.kind} ${f.diff?.path}`)).toEqual([
+      'suspicious meaning_changed amount',
+      'breaking meaning_changed amount',
+      'info meaning_declared paymentId',
+    ]);
+    expect(meaning[1]!.message).toContain('changed unit from pounds to pence');
+    expect(meaning[1]!.consumers).toEqual(['LedgerService']);
+    expect(compatibilityBreaks(report, 'full')).toEqual([]);
   });
 
   it('narrows a removed field to the consumers that read it', async () => {
@@ -695,6 +744,12 @@ describe('runtime drift against a snapshot', () => {
       },
       {
         domain: 'payments',
+        eventId: 'payment.completed',
+        severity: 'info',
+        kind: 'producer_unexpected',
+      },
+      {
+        domain: 'payments',
         eventId: 'payment.refunded',
         severity: 'info',
         kind: 'event_unobserved',
@@ -814,6 +869,327 @@ describe('runtime drift against a snapshot', () => {
     );
 
     expect(removed?.consumers).toContain('AuditService (reported at runtime)');
+  });
+
+  const only = (events: Record<string, Partial<SnapshotObservation>>) => ({
+    ...snapshot,
+    events: Object.fromEntries(
+      Object.entries(events).map(([name, extra]) => [
+        name,
+        { ...observation(name, ['amount', 'paymentId']), ...extra },
+      ]),
+    ),
+  });
+
+  const seenAt = { firstSeen: '2026-01-01T00:00:00Z', lastSeen: '2026-01-02T00:00:00Z' };
+
+  // The same contract on both sides, so only runtime findings are reported.
+  const both = (manifest: JsonObject, schema: JsonObject) =>
+    Promise.all(
+      [baseDir, currDir].map((root) =>
+        writeEvent(root, 'payments', 'PaymentCompleted', manifest, schema),
+      ),
+    );
+
+  const kinds = (report: DriftReport) =>
+    report.findings.map((f) => `${f.severity} ${f.kind} ${f.eventId} ${f.subject ?? ''}`.trim());
+
+  it('matches a track() name to the catalog id by its normalised name', async () => {
+    const report = await driftCatalogs(baseDir, currDir, {
+      snapshot: only({ PaymentCompleted: {}, payment_refunded: {} }),
+    });
+
+    expect(kinds(report).filter((k) => /undocumented|unobserved/.test(k))).toEqual([]);
+  });
+
+  it('fails a payload the contract says cannot happen, naming who trusted it', async () => {
+    const enumSchema = {
+      ...paymentSchema,
+      properties: {
+        ...paymentSchema.properties,
+        count: { type: 'integer' },
+        status: { type: 'string', enum: ['ok', 'failed'] },
+      },
+    };
+
+    await both(paymentManifest, enumSchema);
+
+    const report = await driftCatalogs(baseDir, currDir, {
+      snapshot: only({
+        'payment.completed': {
+          fieldPaths: ['amount', 'count', 'paymentId', 'status'],
+          fieldStats: {
+            amount: { types: ['string'], sampleValues: ['12.50'] },
+            count: { types: ['number'], sampleValues: [1, 2.5] },
+            paymentId: { types: ['string', 'undefined'], sampleValues: ['p-1'] },
+            status: { types: ['string'], sampleValues: ['ok', 'pending'] },
+          },
+        },
+        'payment.refunded': {},
+      }),
+    });
+
+    expect(kinds(report)).toEqual([
+      'breaking field_type_mismatch payment.completed amount',
+      'breaking field_type_mismatch payment.completed count',
+      'breaking field_value_unexpected payment.completed status',
+      'info producer_unexpected payment.completed PaymentService',
+      'info producer_unexpected payment.refunded PaymentService',
+    ]);
+
+    const [amount, count, status] = report.findings;
+    expect(amount!.message).toContain('`amount` as string, but the schema declares number');
+    expect(amount!.consumers).toEqual(['LedgerService', 'NotificationService']);
+    expect(count!.message).toContain('`count` as 1 fractional number(s)');
+    expect(status!.message).toContain('`status` to 1 value(s) outside');
+    // Sample values can be sensitive: the report counts them and never prints them.
+    expect(JSON.stringify(report)).not.toMatch(/pending|2\.5|12\.50/);
+    expect(report.hasBreaking).toBe(true);
+    // A runtime fact, not a schema change: no registry strategy fails on it.
+    expect(compatibilityBreaks(report, 'full')).toEqual([]);
+  });
+
+  it('holds a field to every allOf part that defines it', async () => {
+    const parts: JsonObject = {
+      allOf: [
+        paymentSchema,
+        { type: 'object', properties: { status: { type: 'string' } } },
+        { type: 'object', properties: { status: { enum: ['ok', 'failed'] } } },
+      ],
+    };
+
+    await both(paymentManifest, parts);
+
+    const report = await driftCatalogs(baseDir, currDir, {
+      snapshot: only({
+        'payment.completed': {
+          fieldPaths: ['amount', 'paymentId', 'status'],
+          fieldStats: { status: { types: ['string'], sampleValues: ['ok', 'pending'] } },
+        },
+        'payment.refunded': {},
+      }),
+    });
+
+    expect(kinds(report).filter((k) => k.includes('field_'))).toEqual([
+      'breaking field_value_unexpected payment.completed status',
+    ]);
+  });
+
+  it('holds a field to what always applies, not to one anyOf branch beside it', async () => {
+    const branches: JsonObject = {
+      ...paymentSchema,
+      properties: { ...paymentSchema.properties, status: { type: 'string' } },
+      anyOf: [
+        { properties: { status: { enum: ['pending'] } } },
+        { properties: { status: { enum: ['settled'] } } },
+      ],
+    };
+
+    await both(paymentManifest, branches);
+
+    const report = await driftCatalogs(baseDir, currDir, {
+      snapshot: only({
+        'payment.completed': {
+          fieldPaths: ['amount', 'paymentId', 'status'],
+          fieldStats: { status: { types: ['string'], sampleValues: ['pending', 'settled'] } },
+        },
+        'payment.refunded': {},
+      }),
+    });
+
+    expect(kinds(report).filter((k) => k.includes('field_'))).toEqual([]);
+  });
+
+  it('does not read one oneOf branch as the whole contract for a field', async () => {
+    const union = {
+      oneOf: [
+        { type: 'object', properties: { kind: { const: 'card' }, paymentId: { type: 'string' } } },
+        { type: 'object', properties: { kind: { const: 'bank' }, paymentId: { type: 'string' } } },
+      ],
+    };
+
+    await both(paymentManifest, union);
+
+    const report = await driftCatalogs(baseDir, currDir, {
+      snapshot: only({
+        'payment.completed': {
+          fieldPaths: ['kind', 'paymentId'],
+          fieldStats: { kind: { types: ['string'], sampleValues: ['bank', 'card'] } },
+        },
+        'payment.refunded': {},
+      }),
+    });
+
+    expect(
+      kinds(report).filter((k) => k.includes('payment.completed') && !k.includes('producer')),
+    ).toEqual([]);
+  });
+
+  it('flags producers and channels the event does not declare', async () => {
+    const declared = {
+      ...paymentManifest,
+      producers: ['PaymentService'],
+      transport: [{ address: 'payments.events', protocols: ['kafka'] }],
+    };
+
+    await both(declared, paymentSchema);
+
+    const report = await driftCatalogs(baseDir, currDir, {
+      snapshot: only({
+        'payment.completed': {
+          producer: 'PaymentService',
+          channel: 'payments.events',
+          sources: [
+            { producer: 'LegacyBilling', channel: 'payments.legacy', count: 2, ...seenAt },
+            { producer: '![x](https://evil/pixel)', count: 1, ...seenAt },
+          ],
+        },
+        'payment.refunded': { producer: undefined },
+      }),
+    });
+
+    expect(kinds(report)).toEqual([
+      'suspicious producer_unexpected payment.completed LegacyBilling',
+      'suspicious producer_unexpected payment.completed ![x](https://evil/pixel)',
+      'suspicious channel_unexpected payment.completed payments.legacy',
+    ]);
+    expect(report.findings[0]!.message).toContain('does not list (PaymentService)');
+    expect(report.findings[1]!.message).toContain(UNSAFE_CONSUMER);
+    expect(renderDriftMarkdown(report)).not.toContain('evil');
+  });
+
+  it('reads a Date sent to a formatted string field as the string it becomes', async () => {
+    const dated = {
+      ...paymentSchema,
+      properties: { ...paymentSchema.properties, paidAt: { type: 'string', format: 'date-time' } },
+    };
+
+    await both(paymentManifest, dated);
+
+    const report = await driftCatalogs(baseDir, currDir, {
+      snapshot: only({
+        'payment.completed': {
+          fieldPaths: ['amount', 'paidAt', 'paymentId'],
+          fieldStats: { paidAt: { types: ['object'] } },
+        },
+        'payment.refunded': {},
+      }),
+    });
+
+    expect(kinds(report).filter((k) => k.includes('field_'))).toEqual([]);
+  });
+
+  it('prints no snapshot name that could break out of the report', async () => {
+    const report = await driftCatalogs(baseDir, currDir, {
+      snapshot: only({
+        'payment.completed': {
+          fieldPaths: ['amount', 'paymentId', 'x` @org/admins ![](https://evil/p.png)'],
+          fieldStats: { amount: { types: ['string', 'x`\n![](https://evil/t.png)'] } },
+        },
+        'payment.refunded': {},
+        '![](https://evil/e.png)': {},
+      }),
+    });
+
+    const md = renderDriftMarkdown(report);
+
+    expect(md).not.toContain('evil');
+    expect(md).toContain('a field whose name is not safe to print');
+    expect(md).toContain('a type that is not safe to print');
+    expect(md).toContain('an event whose name is not safe to print');
+  });
+
+  it('excuses only the violation the base had, not a new one on the same field', async () => {
+    const typed = {
+      ...paymentSchema,
+      properties: { ...paymentSchema.properties, status: { type: 'string', enum: ['ok'] } },
+    };
+
+    await both(paymentManifest, typed);
+
+    const run = (types: string[], values: string[]) =>
+      only({
+        'payment.completed': {
+          fieldStats: { amount: { types }, status: { types: ['string'], sampleValues: values } },
+        },
+        'payment.refunded': {},
+      });
+
+    const report = await driftCatalogs(baseDir, currDir, {
+      snapshot: run(['string', 'boolean'], ['ok', 'late', 'lost']),
+      baseSnapshot: { snapshot: run(['string'], ['ok', 'late']), label: 'origin/main' },
+    });
+
+    expect(
+      report.findings
+        .filter((f) => f.kind.startsWith('field_'))
+        .map((f) => `${f.severity} ${f.subject}`),
+    ).toEqual(['breaking amount', 'breaking status']);
+  });
+
+  it('keeps a new unsafe producer apart from the base’s', async () => {
+    await both({ ...paymentManifest, producers: ['PaymentService'] }, paymentSchema);
+
+    const run = (producer: string) =>
+      only({ 'payment.completed': { producer }, 'payment.refunded': {} });
+
+    const report = await driftCatalogs(baseDir, currDir, {
+      snapshot: run('![](https://evil/new)'),
+      baseSnapshot: { snapshot: run('![](https://evil/old)'), label: 'origin/main' },
+    });
+
+    expect(report.findings.find((f) => f.kind === 'producer_unexpected')?.severity).toBe(
+      'suspicious',
+    );
+  });
+
+  it('says when an undocumented event and an unseen one look like a rename', async () => {
+    const report = await driftCatalogs(baseDir, currDir, {
+      snapshot: only({ 'payment.completed': {}, 'payment.refund': {} }),
+    });
+
+    const undocumented = report.findings.find((f) => f.kind === 'event_undocumented');
+    const unseen = report.findings.find((f) => f.kind === 'event_unobserved');
+
+    // Both stay reported: on the day it is not a rename, one is a real removal.
+    expect(undocumented?.message).toContain(
+      '`payment.refund` is probably `payment.refunded` renamed',
+    );
+    expect(unseen?.message).toContain('`payment.refund` is probably `payment.refunded` renamed');
+  });
+
+  it('gates only on runtime drift the change introduced when given the base snapshot', async () => {
+    const run = only({
+      'payment.completed': { fieldPaths: ['amount', 'couponCode', 'paymentId'] },
+      'payment.flagged': {},
+    });
+
+    const report = await driftCatalogs(baseDir, currDir, {
+      snapshot: {
+        ...run,
+        events: {
+          ...run.events,
+          'payment.completed': {
+            ...run.events['payment.completed']!,
+            fieldPaths: ['amount', 'couponCode', 'giftCode', 'paymentId'],
+          },
+        },
+      },
+      baseSnapshot: { snapshot: run, label: 'origin/main' },
+    });
+
+    const severity = (kind: string, subject?: string) =>
+      report.findings.find(
+        (f) => f.kind === kind && (subject === undefined || f.subject === subject),
+      )?.severity;
+
+    expect(severity('event_undocumented')).toBe('info');
+    expect(severity('field_undeclared', 'couponCode')).toBe('info');
+    expect(severity('field_undeclared', 'giftCode')).toBe('suspicious');
+    expect(report.suspicious).toBe(1);
+    expect(report.findings.find((f) => f.subject === 'couponCode')?.message).toContain(
+      'already true on origin/main',
+    );
   });
 
   it('renders an undocumented event without an empty domain', async () => {

@@ -194,10 +194,11 @@ describe('mergeConsumerGraph', () => {
       ['FraudService', undefined],
       ['LedgerService', 'From the producer.'],
     ]);
-    // The producer lists LedgerService, so its edge stands as the producer drew it.
+    // The producer lists LedgerService, so its edge stands as the producer drew it,
+    // with LedgerService's own list beside it for retirements, never for drift.
     expect(merged.relationships.map((r) => [r.to.id, r.attributes])).toEqual([
       ['FraudService', undefined],
-      ['LedgerService', undefined],
+      ['LedgerService', { consumerFields: ['amount'] }],
     ]);
   });
 });
@@ -304,6 +305,7 @@ describe('consumersFromGraph', () => {
     expect(consumers.get('payments/paid')).toEqual({
       consumers: ['payments-reader'],
       fields: { 'payments-reader': ['amount'] },
+      own: {},
     });
     expect(ambiguous).toEqual([]);
   });
@@ -319,6 +321,7 @@ describe('consumersFromGraph', () => {
     expect(consumersFromGraph(graph).consumers.get('payments/paid')).toEqual({
       consumers: ['constructor'],
       fields: { constructor: ['amount'] },
+      own: {},
     });
   });
 
@@ -344,6 +347,7 @@ describe('consumersFromGraph', () => {
     expect(consumersFromGraph(graph).consumers.get('payments/paid')).toEqual({
       consumers: ['payments-reader'],
       fields: {},
+      own: {},
     });
   });
 

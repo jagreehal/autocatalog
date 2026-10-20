@@ -2,6 +2,7 @@ import { docsSchema } from '@astrojs/starlight/schema';
 import { defineCollection, z } from 'astro:content';
 import {
   declaredFrontmatterFields,
+  resolveDocKinds,
   resolveDocsLayout,
   resolveFrontmatterContract,
 } from 'autocatalog-docs-core';
@@ -10,7 +11,7 @@ import { docsLoader } from './loader';
 
 // AUTOCATALOG_DOCS_* are set by the autocatalogDocs() plugin in config:setup,
 // which fires before the loaders are invoked.
-const { root, repo, schemaPath } = docsSiteConfig();
+const { root, repo, schemaPath, conventionsPath } = docsSiteConfig();
 
 // The reader and the site must address a document the same way, so the pattern
 // and the id both come from the shared layout rather than being restated here.
@@ -58,10 +59,18 @@ const CONVENTION_FIELDS = {
  */
 const contract = resolveFrontmatterContract(root, schemaPath);
 
+// Each document kind's own fields too: an ADR's `status` is as much the
+// organisation's contract as the base schema is.
+const kindFields = resolveDocKinds(root, conventionsPath).kinds.flatMap((kind) =>
+  kind.schema ? declaredFrontmatterFields(kind.schema) : [],
+);
+
 const customFields = Object.fromEntries(
-  declaredFrontmatterFields(contract.schema)
-    .filter((field) => !STARLIGHT_FIELDS.has(field) && !(field in CONVENTION_FIELDS))
-    .map((field) => [field, z.unknown().optional()]),
+  [...new Set([...declaredFrontmatterFields(contract.schema), ...kindFields])].flatMap((field) =>
+    STARLIGHT_FIELDS.has(field) || field in CONVENTION_FIELDS
+      ? []
+      : [[field, z.unknown().optional()] as const],
+  ),
 );
 
 export const collections = {

@@ -39,6 +39,7 @@ import {
 } from './owners';
 import { type ShellLink, versionLabel } from './shell';
 import { remarkMermaid } from './mermaid';
+import { docKindIcon, documentsByKind, kindCounts, kindHref, kindNoun } from './kinds';
 import { explorerModel } from './ui/components/catalog-explorer-model';
 import type { EventCatalogDiagramProps } from './ui/components/EventCatalogDiagram';
 import type { DeliveryView } from './ui/components/DeliveryFacts';
@@ -58,7 +59,13 @@ import type {
 } from './ui/pages';
 import { catalogAnchor, groupByRepo, groupByTag, type DocListItem } from './view';
 import { buildDomains, domainHref, type Domain } from './domains';
-import { catalogGraph, domainNeighbourhood, flowGraph, serviceNeighbourhood } from './visualiser';
+import {
+  catalogGraph,
+  domainNeighbourhood,
+  flowGraph,
+  runtimeByEvent,
+  serviceNeighbourhood,
+} from './visualiser';
 
 // The view models the pages render. Everything that reads the catalog, the disk
 // or the Markdown pipeline lives here, so what reaches a React page is plain,
@@ -85,6 +92,13 @@ export function homePageProps(
       value: count,
       kind,
       href: `${base}catalog/?kind=${encodeURIComponent(kind)}`,
+    })),
+    // Decisions, runbooks and incidents are documents too, counted again here
+    // because "how many incidents" is a question the index is asked.
+    ...[...kindCounts(catalog)].map(([kind, count]) => ({
+      label: kindNoun(kind, count),
+      value: count,
+      href: kindHref(base, kind),
     })),
     {
       label: label('domain', domains),
@@ -171,6 +185,23 @@ export function homePageProps(
           },
         ]
       : []),
+    ...catalog.kinds.map((kind) => ({
+      title: kind.label,
+      text: kind.description ?? `Every document under docs/${kind.folder}/, newest first.`,
+      href: kindHref(base, kind),
+      icon: docKindIcon(kind),
+      kind: 'doc',
+    })),
+    ...(catalog.models.length > 0
+      ? [
+          {
+            title: 'Data models',
+            text: 'Every table and collection, its fields and relations, and who reads and writes it.',
+            href: `${base}data/`,
+            icon: 'data' as const,
+          },
+        ]
+      : []),
     ...(graphOwners(catalog.graph).length > 0
       ? [
           {
@@ -215,6 +246,7 @@ export function catalogPageProps(catalog: DocsCatalog, base: string): CatalogPag
     map: catalogGraph(catalog.graph, base, {
       servicePages: servicePages(catalog),
       eventPages: eventPages(catalog),
+      ...mapEvidence(catalog),
     }),
     explorer: explorerModel(catalog.graph),
   };
@@ -359,12 +391,19 @@ export function domainPageProps(
       only: domainNeighbourhood(catalog.graph, domain.name),
       servicePages: servicePages(catalog),
       eventPages: eventPages(catalog),
+      ...mapEvidence(catalog),
     }),
   };
 }
 
 /** The events with a page: every current event a repository publishes. */
 const eventPages = (catalog: DocsCatalog) => new Set(catalog.events.map(eventPath));
+
+/** What every map drawn from the catalog shows of runtime: snapshot evidence, and the live feed. */
+const mapEvidence = (catalog: DocsCatalog) => ({
+  runtime: runtimeByEvent(catalog.events, catalog.snapshots),
+  live: docsSiteConfig().live,
+});
 
 /** The services with a page: every one an event names as producer or consumer. */
 const servicePages = (catalog: DocsCatalog) =>
@@ -397,7 +436,10 @@ export function servicePageProps(
 
   const consumes = eventsForService(events, service.name, 'consumers');
 
-  const documents = documentsAbout(catalog.graph, { kind: 'service', id: service.name });
+  const { documents, records } = documentsByKind(
+    catalog.kinds,
+    documentsAbout(catalog.graph, { kind: 'service', id: service.name }),
+  );
 
   const { owner, system } = serviceFacts(catalog.graph, service.name);
 
@@ -455,10 +497,12 @@ export function servicePageProps(
       only: serviceNeighbourhood(catalog.graph, service.name),
       servicePages: servicePages(catalog),
       eventPages: eventPages(catalog),
+      ...mapEvidence(catalog),
     }),
     sections,
     apis,
     documents,
+    records,
     ...(owner && { owner }),
     ...(system && { system }),
     diagram: diagramProps(
@@ -592,11 +636,14 @@ export async function eventPageProps(
   // Earlier versions from versioned/, each with its own page under this one.
   const versions = eventVersions(catalog, entry);
 
-  const documents = documentsAbout(catalog.graph, {
-    kind: 'event',
-    namespace: `${repository}/${fm.domain}`,
-    id: fm.id,
-  });
+  const { documents, records } = documentsByKind(
+    catalog.kinds,
+    documentsAbout(catalog.graph, {
+      kind: 'event',
+      namespace: `${repository}/${fm.domain}`,
+      id: fm.id,
+    }),
+  );
 
   // The folder is the generated contract, so it is linked to rather than edited;
   // the one file in it a person writes is the optional index.mdx narrative.
@@ -625,8 +672,20 @@ export async function eventPageProps(
   const services = (names: string[]): ShellLink[] =>
     names.map((name) => ({ label: name, href: `${base}services/${name}/`, kind: 'service' }));
 
+  const seen = runtimeByEvent(catalog.events, catalog.snapshots).get(
+    `${repository}/${fm.domain}/${fm.id}`,
+  );
+
+  // A producer only the snapshot names is drawn too, marked as undocumented.
+  const unlisted = (seen?.observed?.producers ?? []).filter((name) => !fm.producers.includes(name));
+
   const flow = {
-    from: [...services(fm.producers), ...agents.producers],
+    from: [
+      ...services(fm.producers),
+      // No page of its own: nothing in the catalog names it.
+      ...unlisted.map((name): ShellLink => ({ label: name, kind: 'service' })),
+      ...agents.producers,
+    ],
     inbound: 'publishes',
     centre: { label: fm.name, detail: versionLabel(fm.version), kind: 'event' as const },
     outbound: 'subscribed by',
@@ -664,7 +723,7 @@ export async function eventPageProps(
     draft: fm.status === 'draft',
     narrativeHtml,
     flow,
-    visualiser: flowGraph(flow),
+    visualiser: flowGraph(flow, seen && { event: fm.id, seen, live: docsSiteConfig().live }),
     schema: schemaTree(event.schema),
     schemaHref: `${base}${eventPath(entry)}schema.json`,
     evidence: runtimeEvidenceView(eventRuntimeEvidence(fm), `${fm.domain}/${fm.id}`),
@@ -672,6 +731,7 @@ export async function eventPageProps(
     versions: versionLinks(versions, entry, base),
     changesHtml: await versionChangesHtml(versions, entry),
     documents,
+    records,
     facts,
     transport: fm.transport,
     delivery: deliveryView(fm.delivery, correlationPath(event)),

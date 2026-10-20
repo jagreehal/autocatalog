@@ -74,6 +74,8 @@ export {
   queryFields,
   hasFieldConflict,
   describeFieldConflict,
+  fieldPaths,
+  deprecatedFields,
   type FieldSummary,
   type FieldOccurrence,
 } from './fields';
@@ -83,6 +85,7 @@ export {
   summariseDrift,
   driftCatalogs,
   driftEventLabel,
+  newSinceBase,
   renderDriftMarkdown,
   renderDriftGitHub,
   renderVersionChangelog,
@@ -97,12 +100,19 @@ export {
 
 export { driftOpenApi } from './openapi-drift';
 
+export * from './rules';
+
+export * from './retire';
+
 export { readCatalogFreshness, type CatalogFreshness } from './catalog-artifact';
 
 export {
   readSnapshot,
   applySnapshot,
+  matchSnapshot,
+  normaliseEventId,
   SNAPSHOT_SPEC_PREFIX,
+  type FieldStats,
   type ArchitectureSnapshot,
   type SnapshotObservation,
   type SnapshotMergeResult,
@@ -242,6 +252,7 @@ export {
   createRepositoryResource,
   createResourceGraphComposer,
   isAgentSystemCatalogResource,
+  isArchitectureCatalogResource,
   isDocumentCatalogResource,
   isEventCatalogResource,
   isRepositoryCatalogResource,
@@ -254,6 +265,7 @@ export {
   type CatalogRelationshipType,
   type CatalogResource,
   type AgentSystemCatalogResource,
+  type ArchitectureCatalogResource,
   type AgentSystemResourceAttributes,
   type AgentSystemResourceKind,
   type CreateEventResourceGraphOptions,

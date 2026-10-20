@@ -6,6 +6,7 @@ import type { Command } from 'commander';
 import {
   jsonValueSchema,
   validateDiscoveryResult,
+  type JsonValue,
   type DiscoverResult,
   type DiscoveryAdapter,
   type DiscoveryContext,
@@ -13,12 +14,6 @@ import {
 import { z } from 'zod';
 
 const DISCOVERY_PROTOCOL = 'autocatalog/discovery-v1';
-
-/** What the adapter host writes to fd 3; `result` is checked by validateDiscoveryResult. */
-const discoveryMessage = z.object({
-  protocol: z.literal(DISCOVERY_PROTOCOL),
-  result: jsonValueSchema.optional(),
-});
 
 const DEFAULT_TIMEOUT_MS = 30_000;
 
@@ -209,26 +204,45 @@ async function dependencyRoots(entry: string, sourceRoot: string): Promise<strin
   return [...roots];
 }
 
-async function executeDiscoveryAdapter(input: {
+/** What an isolated host writes to fd 3: its protocol, and a result to check. */
+const hostMessage = z.object({ protocol: z.string(), result: jsonValueSchema.optional() });
+
+/**
+ * Run repository code in a child Node process under the permission model: it
+ * reads only its own dependency roots, gets no environment beyond PATH, and is
+ * killed past its time or output limit. The host script writes
+ * `{ protocol, result }` to fd 3.
+ */
+export async function runIsolated(input: {
   name: string;
   entry: string;
-  exportName: string;
-  context: DiscoveryContext;
+  root: string;
+  /** Exactly what the code may read, in place of its own dependency roots. */
+  readOnly?: string[];
+  host: string;
+  protocol: string;
+  args: string[];
+  /** Sent on stdin, for input too large for an argument. */
+  stdin?: string;
+  signal?: AbortSignal;
   timeoutMs?: number;
   maxOutputBytes?: number;
-}): Promise<DiscoverResult> {
+}): Promise<JsonValue | undefined> {
   const major = Number(process.versions.node.split('.')[0]);
 
   if (major < 24) {
     throw new AdapterExecutionError(
       'adapter_crashed',
-      'isolated discovery requires Node.js 24 or newer',
+      'isolated execution requires Node.js 24 or newer',
     );
   }
 
   const entry = await fs.realpath(input.entry);
-  const allowRead = await dependencyRoots(entry, input.context.root);
-  const { signal: _signal, ...serializableContext } = input.context;
+
+  // The permission model compares real paths, and a temporary folder is often a symlink.
+  const allowRead = input.readOnly
+    ? await Promise.all(input.readOnly.map((root) => fs.realpath(root)))
+    : await dependencyRoots(entry, input.root);
 
   const args = [
     '--permission',
@@ -236,10 +250,9 @@ async function executeDiscoveryAdapter(input: {
     ...allowRead.map((root) => `--allow-fs-read=${root}`),
     '--input-type=module',
     '--eval',
-    ADAPTER_HOST,
+    input.host,
     pathToFileURL(entry).href,
-    input.exportName,
-    Buffer.from(JSON.stringify(serializableContext)).toString('base64url'),
+    ...input.args,
   ];
 
   const timeoutMs = input.timeoutMs ?? DEFAULT_TIMEOUT_MS;
@@ -247,9 +260,9 @@ async function executeDiscoveryAdapter(input: {
 
   return new Promise((resolve, reject) => {
     const child = spawn(process.execPath, args, {
-      cwd: input.context.root,
+      cwd: input.root,
       env: { PATH: process.env.PATH ?? '', NODE_NO_WARNINGS: '1' },
-      stdio: ['ignore', 'ignore', 'pipe', 'pipe'],
+      stdio: [input.stdin === undefined ? 'ignore' : 'pipe', 'ignore', 'pipe', 'pipe'],
       windowsHide: true,
     });
 
@@ -258,27 +271,33 @@ async function executeDiscoveryAdapter(input: {
     let bytes = 0;
     let settled = false;
 
-    const finish = (error?: Error, result?: DiscoverResult) => {
+    const finish = (error?: Error, result?: JsonValue) => {
       if (settled) return;
       settled = true;
       clearTimeout(timer);
-      input.context.signal?.removeEventListener('abort', abort);
+      input.signal?.removeEventListener('abort', abort);
 
       if (error) reject(error);
-      else resolve(result!);
+      else resolve(result);
     };
 
     const abort = () => {
       child.kill('SIGKILL');
-      finish(new AdapterExecutionError('adapter_crashed', `${input.name} discovery was aborted`));
+      finish(new AdapterExecutionError('adapter_crashed', `${input.name} was aborted`));
     };
 
-    input.context.signal?.addEventListener('abort', abort, { once: true });
+    input.signal?.addEventListener('abort', abort, { once: true });
 
     const timer = setTimeout(() => {
       child.kill('SIGKILL');
       finish(new AdapterExecutionError('adapter_timeout', `${input.name} exceeded ${timeoutMs}ms`));
     }, timeoutMs);
+
+    if (input.stdin !== undefined) {
+      // A host that exits before reading its input is reported by its exit code.
+      child.stdin?.on('error', () => {});
+      child.stdin?.end(input.stdin);
+    }
 
     child.stdio[3]?.on('data', (chunk: Buffer) => {
       bytes += chunk.length;
@@ -314,13 +333,13 @@ async function executeDiscoveryAdapter(input: {
       }
 
       try {
-        const message = discoveryMessage.safeParse(
-          JSON.parse(Buffer.concat(protocol).toString('utf8')),
-        );
+        const message = hostMessage.safeParse(JSON.parse(Buffer.concat(protocol).toString('utf8')));
 
-        if (!message.success) throw new Error(`expected ${DISCOVERY_PROTOCOL}`);
+        if (!message.success || message.data.protocol !== input.protocol) {
+          throw new Error(`expected ${input.protocol}`);
+        }
 
-        finish(undefined, validateDiscoveryResult(input.name, message.data.result));
+        finish(undefined, message.data.result);
       } catch (error) {
         finish(
           new AdapterExecutionError(
@@ -331,6 +350,41 @@ async function executeDiscoveryAdapter(input: {
       }
     });
   });
+}
+
+async function executeDiscoveryAdapter(input: {
+  name: string;
+  entry: string;
+  exportName: string;
+  context: DiscoveryContext;
+  timeoutMs?: number;
+  maxOutputBytes?: number;
+}): Promise<DiscoverResult> {
+  const { signal, ...serializableContext } = input.context;
+
+  const result = await runIsolated({
+    name: input.name,
+    entry: input.entry,
+    root: input.context.root,
+    host: ADAPTER_HOST,
+    protocol: DISCOVERY_PROTOCOL,
+    args: [
+      input.exportName,
+      Buffer.from(JSON.stringify(serializableContext)).toString('base64url'),
+    ],
+    signal,
+    timeoutMs: input.timeoutMs,
+    maxOutputBytes: input.maxOutputBytes,
+  });
+
+  try {
+    return validateDiscoveryResult(input.name, result);
+  } catch (error) {
+    throw new AdapterExecutionError(
+      'adapter_protocol_invalid',
+      `${input.name}: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
 }
 
 /** Create an Adapter whose executable Implementation runs outside the CLI process. */

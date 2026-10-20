@@ -55,6 +55,10 @@ interface Entry {
   child: JsonValue;
   required: boolean;
   conditional: boolean;
+  /** Taken from one `oneOf`/`anyOf` branch, so `child` may not be how the others declare it. */
+  branched?: boolean;
+  /** Other definitions that apply as well, from `allOf` parts beside this one. */
+  also?: JsonValue[];
 }
 
 type Entries = Map<string, Entry>;
@@ -63,16 +67,28 @@ type Entries = Map<string, Entry>;
 function merge(into: Entries, from: Entries): void {
   for (const [path, entry] of from) {
     const seen = into.get(path);
-    into.set(
-      path,
-      seen
-        ? {
-            child: seen.child,
-            required: seen.required || entry.required,
-            conditional: seen.conditional && entry.conditional,
-          }
-        : entry,
-    );
+
+    if (!seen) {
+      into.set(path, entry);
+      continue;
+    }
+
+    // Only a definition that always applies binds the field: one from an
+    // `anyOf`/`oneOf` branch holds only when that branch is the one taken.
+    const always = !seen.branched ? seen : !entry.branched ? entry : undefined;
+
+    const also =
+      !seen.branched && !entry.branched
+        ? [...(seen.also ?? []), entry.child, ...(entry.also ?? [])]
+        : always?.also;
+
+    into.set(path, {
+      child: (always ?? seen).child,
+      required: seen.required || entry.required,
+      conditional: seen.conditional && entry.conditional,
+      ...(!always && { branched: true }),
+      ...(also && { also }),
+    });
   }
 }
 
@@ -91,6 +107,7 @@ function either(branches: Entries[]): Entries {
       child: found.find((e) => e !== undefined)!.child,
       required: inAll && found.every((e) => e?.required),
       conditional: !inAll || found.some((e) => e?.conditional),
+      branched: true,
     });
   }
 
@@ -225,6 +242,104 @@ export function indexFields(events: LoadedEvent[]): FieldSummary[] {
 /** Every field path one schema declares, named exactly as the field index names it. */
 export function fieldPaths(schema: JsonObject): Set<string> {
   return new Set(collect(schema, schema, '', new Set()).keys());
+}
+
+/** The field paths a schema marks `deprecated: true`: the fields on their way out. */
+export function deprecatedFields(schema: JsonObject): string[] {
+  return [...collect(schema, schema, '', new Set())].flatMap(([path, { child }]) =>
+    isJsonObject(child) && child.deprecated === true ? [path] : [],
+  );
+}
+
+/** What a schema lets one field hold: its JSON types, and the values an enum or const allows. */
+export interface FieldConstraint {
+  types?: string[];
+  values?: JsonValue[];
+  format?: string;
+}
+
+const constraintKeywords = z.object({
+  type: z
+    .union([z.string(), z.array(z.string())])
+    .optional()
+    .catch(undefined),
+  nullable: z.boolean().optional().catch(undefined),
+  enum: z.array(jsonValueSchema).optional().catch(undefined),
+  const: jsonValueSchema.optional().catch(undefined),
+  format: z.string().optional().catch(undefined),
+});
+
+/**
+ * The type and value constraints a schema puts on each field path, for checking
+ * what a running service actually sent. A field declared with neither is left
+ * out: anything is allowed there.
+ */
+export function fieldConstraints(schema: JsonObject): Map<string, FieldConstraint> {
+  const out = new Map<string, FieldConstraint>();
+
+  for (const [path, { child, branched, also = [] }] of collect(schema, schema, '', new Set())) {
+    if (branched) continue;
+
+    // Every `allOf` part applies, so a value must pass them all.
+    const constraint = [child, ...also]
+      .flatMap((definition) => (isJsonObject(definition) ? [constraintOf(definition)] : []))
+      .reduce<FieldConstraint>(
+        (all, one) => ({
+          ...((all.types || one.types) && { types: bothTypes(all.types, one.types) }),
+          ...((all.values || one.values) && { values: intersect(all.values, one.values) }),
+          ...((all.format ?? one.format) && { format: all.format ?? one.format }),
+        }),
+        {},
+      );
+
+    if (constraint.types || constraint.values) out.set(path, constraint);
+  }
+
+  return out;
+}
+
+/** What one definition of a field allows. */
+function constraintOf(definition: JsonObject): FieldConstraint {
+  const {
+    type,
+    nullable,
+    enum: values,
+    const: only,
+    format,
+  } = constraintKeywords.parse(definition);
+
+  const types = type === undefined ? [] : [type].flat();
+
+  // OpenAPI 3.0 writes "may be null" as `nullable`, not as a type.
+  if (types.length > 0 && nullable) types.push('null');
+
+  return {
+    ...(types.length > 0 && { types }),
+    ...(values && { values }),
+    ...(only !== undefined && { values: [only] }),
+    ...(format && { format }),
+  };
+}
+
+/** The types both definitions allow: `integer` is a `number`, so the two meet at `integer`. */
+function bothTypes(a: string[] | undefined, b: string[] | undefined): string[] {
+  if (!a || !b) return a ?? b ?? [];
+
+  const within = (type: string, of: string[]) =>
+    of.includes(type) || (type === 'integer' && of.includes('number'));
+
+  return [...new Set([...a.filter((t) => within(t, b)), ...b.filter((t) => within(t, a))])];
+}
+
+/** What both lists allow, where an absent list allows anything. */
+function intersect<T extends JsonValue>(a: T[] | undefined, b: T[] | undefined): T[] {
+  if (!a) return b ?? [];
+
+  if (!b) return a;
+
+  const keep = new Set(b.map((value) => JSON.stringify(value)));
+
+  return a.filter((value) => keep.has(JSON.stringify(value)));
 }
 
 const isObjectType = (type: JsonValue | undefined) =>

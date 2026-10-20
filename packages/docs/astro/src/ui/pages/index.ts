@@ -11,6 +11,10 @@ export {
   type DatastoreRow,
 } from './CatalogPage';
 
+export { DataModelPage, type DataModelField, type DataModelPageProps } from './DataModelPage';
+
+export { DataModelsPage, type DataModelsPageProps } from './DataModelsPage';
+
 export { DomainPage, type DomainPageProps } from './DomainPage';
 
 export { DomainsPage, type DomainsPageProps } from './DomainsPage';
@@ -23,9 +27,19 @@ export { FieldsPage, type FieldCarrier, type FieldRow, type FieldsPageProps } fr
 
 export { HomePage, type ExploreCard, type HomePageProps } from './HomePage';
 
+export {
+  KindIndexPage,
+  type KindCell,
+  type KindChainLink,
+  type KindIndexPageProps,
+  type KindRow,
+} from './KindIndexPage';
+
 export { OwnerPage, type OwnedResource, type OwnerPageProps } from './OwnerPage';
 
 export { OwnersPage, type OwnersPageProps } from './OwnersPage';
+
+export { RetirementsPage, type RetirementRow, type RetirementsPageProps } from './RetirementsPage';
 
 export { SchemasPage, type SchemaRow, type SchemasPageProps } from './SchemasPage';
 

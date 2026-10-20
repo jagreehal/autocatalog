@@ -36,17 +36,22 @@ const HISTORY_VERSIONS = 10;
 /** Where autotel-subscribers' ArchitectureSnapshotSubscriber is documented to write. */
 export const RUNTIME_SNAPSHOT = '.autotel/snapshot.json';
 
+/** Where Prisma looks for a schema, so a repository with one has data models to publish. */
+const PRISMA_SCHEMAS = ['prisma/schema.prisma', 'prisma/schema', 'schema.prisma'];
+
 /**
  * Whether a directory under an aggregation root is an enrolled repository: it
- * has a conventional root, or approved message contracts beside its tests. Not
- * for deciding whether the root itself is one repository: a company keeps its
- * shared contracts at the root of the aggregation too.
+ * has a conventional root, approved message contracts beside its tests, or a
+ * Prisma schema the site reads its data models from. Whether the root itself is
+ * one repository is {@link isSingleRepository}'s question, since a company keeps
+ * its shared contracts at the root of the aggregation too.
  */
 export function publishesCatalogContent(dir: string): boolean {
   return (
     PUBLISHED_ROOTS.some((name) => fs.existsSync(path.join(dir, name))) ||
     hasMessageContracts(dir) ||
-    hasResourceGraph(dir)
+    hasResourceGraph(dir) ||
+    PRISMA_SCHEMAS.some((name) => fs.existsSync(path.join(dir, name)))
   );
 }
 
@@ -112,6 +117,8 @@ export interface LoadRepositoryEventsOptions {
   history?: boolean;
   /** Told about what was left out but did not stop the load, such as a malformed snapshot. */
   onWarning?: (message: string) => void;
+  /** Told that the repository's runtime snapshot was read, whatever it matched. */
+  onSnapshot?: () => void;
 }
 
 /**
@@ -130,13 +137,13 @@ export async function loadRepositoryEvents(
 
   if (isDirectory(committed)) {
     const events = (await loadCatalogSnapshot(committed)).events;
-    await applyRuntimeSnapshot(repositoryRoot, events, options.onWarning);
+    await applyRuntimeSnapshot(repositoryRoot, events, options);
 
     return events;
   }
 
   const current = await discoverContracts(repositoryRoot);
-  await applyRuntimeSnapshot(repositoryRoot, current, options.onWarning);
+  await applyRuntimeSnapshot(repositoryRoot, current, options);
 
   if (!options.history) return current;
 
@@ -152,7 +159,7 @@ export async function loadRepositoryEvents(
 async function applyRuntimeSnapshot(
   repositoryRoot: string,
   events: LoadedEvent[],
-  warn: (message: string) => void = () => {},
+  options: LoadRepositoryEventsOptions,
 ): Promise<void> {
   const file = path.join(repositoryRoot, RUNTIME_SNAPSHOT);
   const current = events.filter((event) => !event.folder.isVersioned);
@@ -168,12 +175,14 @@ async function applyRuntimeSnapshot(
   try {
     applySnapshot(joined, await readSnapshot(file));
   } catch (error) {
-    warn(
+    options.onWarning?.(
       `${RUNTIME_SNAPSHOT} was not applied, so no runtime evidence is shown — ${error instanceof Error ? error.message : String(error)}`,
     );
 
     return;
   }
+
+  options.onSnapshot?.();
 
   for (const [index, event] of current.entries()) {
     const { observed, meta, provenance } = joined[index]!;

@@ -10,7 +10,8 @@ export type DiffKind =
   | 'required_removed'
   | 'description_changed'
   | 'enum_changed'
-  | 'format_changed';
+  | 'format_changed'
+  | 'meaning_changed';
 
 export interface DiffResult {
   kind: DiffKind;
@@ -58,6 +59,8 @@ export interface DiffResult {
    */
   typeDirection?: 'widened' | 'narrowed' | 'changed';
   isRequired?: boolean;
+  /** Which `x-meaning` assumption moved: changed, dropped, or declared for the first time. */
+  meaning?: { key: string; previous?: string; current?: string };
 }
 
 /** Anything that can sit under a schema keyword: a subschema, a list, or plain JSON. */
@@ -140,8 +143,29 @@ const KIND_ORDER: DiffKind[] = [
   'required_removed',
   'format_changed',
   'enum_changed',
+  'meaning_changed',
   'description_changed',
 ];
+
+/**
+ * `x-meaning` on a field: what its value means, which no validator checks. A
+ * number in pounds and one in pence pass the same schema.
+ */
+const meaningOf = (node: SchemaNode): Record<string, string> =>
+  // A value that is not text is left out; the rest still count.
+  Object.fromEntries(
+    Object.entries(isSchemaNode(node['x-meaning']) ? node['x-meaning'] : {}).flatMap(
+      ([key, value]) => {
+        const text = z.string().safeParse(value);
+
+        return text.success ? [[key, text.data]] : [];
+      },
+    ),
+  );
+
+/** Kinds that change nothing a validator sees. */
+const isAnnotation = (finding: DiffResult): boolean =>
+  finding.kind === 'description_changed' || finding.kind === 'meaning_changed';
 
 export function typeLabel(s: SchemaNode | boolean | undefined): string {
   // JSON Schema allows a boolean where a schema is expected. `false` rejects
@@ -453,6 +477,25 @@ function compareNode(
       // Adding a format rejects values that were accepted; dropping one only
       // accepts more. Swapping one for another can go either way.
       constraint: constraintDirection('format', previous.format, current.format) ?? undefined,
+    });
+  }
+
+  const [meantBefore, meantNow] = [meaningOf(previous), meaningOf(current)];
+
+  for (const key of [...new Set([...Object.keys(meantBefore), ...Object.keys(meantNow)])].sort()) {
+    const [before, now] = [meantBefore[key], meantNow[key]];
+
+    if (before === now) continue;
+
+    results.push({
+      kind: 'meaning_changed',
+      path,
+      detail: `${key}: ${before ?? '∅'} → ${now ?? '∅'}`,
+      meaning: {
+        key,
+        ...(before !== undefined && { previous: before }),
+        ...(now !== undefined && { current: now }),
+      },
     });
   }
 
@@ -967,7 +1010,7 @@ function walkPair(
     // so they are replaced by one finding that cannot be cleared automatically.
     const negated: DiffResult[] = [];
     walkPair(before, after, childPath, depth + 1, negated, roots);
-    const changesValidation = negated.filter((finding) => finding.kind !== 'description_changed');
+    const changesValidation = negated.filter((finding) => !isAnnotation(finding));
 
     if (changesValidation.length > 0) {
       results.push({
@@ -1076,9 +1119,7 @@ function walkPair(
     // Annotation-only edits change nothing a validator sees, so they must not
     // trip the conservative rule — a reworded description failing CI teaches
     // people to ignore the gate.
-    const branchChangesValidation = branchResults.some(
-      (finding) => finding.kind !== 'description_changed',
-    );
+    const branchChangesValidation = branchResults.some((finding) => !isAnnotation(finding));
 
     if (keyword === 'oneOf' && branchChangesValidation) {
       results.push({

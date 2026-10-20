@@ -19,14 +19,21 @@ export interface DocEntry {
  */
 export function listItems(entries: DocEntry[], manifest: DocsManifest): DocListItem[] {
   return entries
-    .map((entry) => ({
-      id: entry.id,
-      repo: entry.id.split('/')[0] ?? '',
-      title: entry.data.title,
-      owner: entry.data.owner,
-      updated: manifest[entry.id]?.updated ?? null,
-      tags: entry.data.tags ?? [],
-    }))
+    .map((entry) => {
+      const record = manifest[entry.id];
+
+      return {
+        id: entry.id,
+        repo: entry.id.split('/')[0] ?? '',
+        title: entry.data.title,
+        owner: entry.data.owner,
+        updated: record?.updated ?? null,
+        tags: entry.data.tags ?? [],
+        ...(record?.kind && { kind: record.kind }),
+        ...(record?.status && { status: record.status }),
+        ...(record?.date && { date: record.date }),
+      };
+    })
     .sort((a, b) => a.id.localeCompare(b.id));
 }
 

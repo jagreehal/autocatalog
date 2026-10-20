@@ -7,6 +7,10 @@ export interface DocListItem {
   /** ISO date of the last commit touching the file, or null if git cannot say. */
   updated: string | null;
   tags: string[];
+  /** Its kind, state and date, when it is a decision, runbook or incident. */
+  kind?: string | undefined;
+  status?: string | undefined;
+  date?: string | undefined;
 }
 
 /**
@@ -22,7 +26,13 @@ export function day(iso: string | null | undefined): string | null {
 
   if (Number.isNaN(parsed.getTime())) return null;
 
-  return parsed.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  // In UTC, so a date-only value (`2026-10-18`) is that day wherever the site is built.
+  return parsed.toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'UTC',
+  });
 }
 
 /**

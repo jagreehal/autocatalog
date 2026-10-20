@@ -22,16 +22,24 @@ import {
   asDriftFinding,
   parseResourceGraph,
   readOptionalResourceJson,
+  type ArchitectureSnapshot,
   type DriftFinding,
   type ResourceGraph,
   consumersFromGraph,
   shownName,
   UNSAFE_CONSUMER,
   type EventConsumers,
+  composeResourceGraphs,
+  createEventResourceGraph,
+  loadCatalog,
+  RULES_DIRECTORY,
+  isEventCatalogResource,
+  type LoadedEvent,
 } from 'autocatalog-core';
 import { linkAgentsToEvents } from 'autocatalog-agents-core';
 import { discoverDiscoveryAdapters } from '../adapters';
 import { publishedLine, readCompanyIndex, repositoryName } from '../company-index';
+import { discoverRules, runRules } from '../rules';
 import { ARTIFACT_RESOURCES_FILE } from './resources';
 
 const execFileAsync = promisify(execFile);
@@ -50,6 +58,11 @@ export interface RunDriftOptions {
   allowCodeExecution?: boolean;
   /** A runtime architecture snapshot to check the current catalog against. */
   snapshot?: string;
+  /**
+   * The base's snapshot, so only runtime drift this change introduced gates.
+   * With --base-ref, the same file as committed at the base is used by default.
+   */
+  baseSnapshot?: string;
   /**
    * The company site's `/catalog.json`, as a URL or a file: consumers other
    * repositories declare, so the gate names them too.
@@ -94,6 +107,8 @@ async function catalogsForGitRef(opts: RunDriftOptions & { baseRef: string }): P
   current: string;
   /** The two source trees, for contracts that live beside the events. */
   sources: [string, string];
+  /** The base worktree and the repository, for files anywhere in it. */
+  repositories: [string, string];
   cleanup: () => Promise<void>;
 }> {
   const currentRoot = await fs.realpath(path.resolve(opts.root ?? process.cwd()));
@@ -178,6 +193,7 @@ async function catalogsForGitRef(opts: RunDriftOptions & { baseRef: string }): P
       base: baseEvents,
       current: currentEvents,
       sources: [path.join(worktree, relativeRoot), currentRoot],
+      repositories: [worktree, gitRoot],
       cleanup: async () => {
         if (worktreeAdded) {
           await execFileAsync('git', ['worktree', 'remove', '--force', worktree], { cwd: gitRoot });
@@ -196,6 +212,26 @@ async function catalogsForGitRef(opts: RunDriftOptions & { baseRef: string }): P
     await fs.rm(temp, { recursive: true, force: true });
     throw error;
   }
+}
+
+/** The graph with each event's payload schema, so a rule can read its fields. */
+function withPayloads(graph: ResourceGraph, events: LoadedEvent[]): ResourceGraph {
+  const schemas = new Map(
+    events.map((e) => [`${e.frontmatter.domain}/${e.frontmatter.id}`, e.schema]),
+  );
+
+  return {
+    ...graph,
+    resources: graph.resources.map((resource) => {
+      const schema = isEventCatalogResource(resource)
+        ? schemas.get(`${resource.ref.namespace}/${resource.ref.id}`)
+        : undefined;
+
+      return schema && isEventCatalogResource(resource)
+        ? { ...resource, attributes: { ...resource.attributes, payloadSchema: schema } }
+        : resource;
+    }),
+  };
 }
 
 /** The resource graph `ac scan --out` put in a catalog artifact, if it has one. */
@@ -253,6 +289,37 @@ async function companyConsumers(
   }
 }
 
+/**
+ * The snapshot runtime drift on the base is measured against: the one named,
+ * or, comparing against a Git ref, the same file as the base committed it.
+ * None when the base has no snapshot: then every runtime finding is new.
+ */
+async function baselineSnapshot(
+  opts: RunDriftOptions,
+  repositories: [string, string] | undefined,
+): Promise<{ snapshot: ArchitectureSnapshot; label: string } | undefined> {
+  if (opts.baseSnapshot) {
+    return { snapshot: await readSnapshot(opts.baseSnapshot), label: opts.baseSnapshot };
+  }
+
+  if (!repositories || !opts.snapshot || !opts.baseRef) return undefined;
+
+  const [baseRoot, currentRoot] = repositories;
+  const snapshotFile = await fs.realpath(path.resolve(opts.snapshot));
+  const relative = path.relative(currentRoot, snapshotFile);
+
+  // A snapshot from outside the repository has no committed counterpart.
+  if (relative.startsWith('..') || path.isAbsolute(relative)) return undefined;
+
+  const file = path.join(baseRoot, relative);
+  const stat = await fs.lstat(file).catch(() => undefined);
+
+  // Only a regular file the base committed, never a symlink out of the worktree.
+  if (!stat?.isFile()) return undefined;
+
+  return { snapshot: await readSnapshot(file), label: opts.baseRef };
+}
+
 export async function runDrift(opts: RunDriftOptions): Promise<number> {
   if (Boolean(opts.base) === Boolean(opts.baseRef)) {
     throw new Error('Specify exactly one of --base or --base-ref');
@@ -269,6 +336,10 @@ export async function runDrift(opts: RunDriftOptions): Promise<number> {
   const current = generated?.current ?? path.resolve(opts.current ?? './events');
 
   try {
+    const baseSnapshot = snapshot
+      ? await baselineSnapshot(opts, generated?.repositories)
+      : undefined;
+
     // Agents that declare they consume an event are its consumers too. They are
     // linked against the baseline, because that is the contract they rely on.
     const agentsRoot = opts.baseRef
@@ -307,6 +378,7 @@ export async function runDrift(opts: RunDriftOptions): Promise<number> {
       },
       sourceRoot: generated?.sources[1],
       snapshot,
+      baseSnapshot,
     });
 
     // An API published beside the events breaks its clients the same way, but
@@ -341,9 +413,46 @@ export async function runDrift(opts: RunDriftOptions): Promise<number> {
     const resourceFindings: DriftFinding[] =
       before && after ? driftResources(before, after).map(asDriftFinding) : [];
 
-    const report = resourceFindings.length
-      ? summariseDrift([...eventReport.findings, ...resourceFindings])
-      : eventReport;
+    // The repository's own rules, as the base has them: a change cannot loosen
+    // the policy it is checked against. Only --base-ref has a base tree to trust,
+    // and the rules read nothing else, not even installed packages the change
+    // could have altered.
+    let rules: DriftFinding[] = [];
+
+    if (generated) {
+      rules = await runRules({
+        root: generated.sources[0],
+        graphs: async () => {
+          const [baseEvents, currentEvents] = await Promise.all([
+            loadCatalog(base, { skipVersioned: true }),
+            loadCatalog(current, { skipVersioned: true }),
+          ]);
+
+          return {
+            current: composeResourceGraphs(
+              withPayloads(createEventResourceGraph(currentEvents), currentEvents),
+              ...(after ? [after] : []),
+            ),
+            base: composeResourceGraphs(
+              withPayloads(createEventResourceGraph(baseEvents), baseEvents),
+              ...(before ? [before] : []),
+            ),
+          };
+        },
+        baseLabel: opts.baseRef,
+        allowCodeExecution: opts.allowCodeExecution,
+      });
+    } else if (
+      !opts.quiet &&
+      (await discoverRules(path.resolve(opts.root ?? process.cwd()))).length > 0
+    ) {
+      console.warn(`! ${RULES_DIRECTORY} was not run: rules run with --base-ref, from the base`);
+    }
+
+    const report =
+      resourceFindings.length || rules.length
+        ? summariseDrift([...eventReport.findings, ...resourceFindings, ...rules])
+        : eventReport;
 
     const incompatible = opts.compatibility
       ? compatibilityBreaks(report, opts.compatibility)

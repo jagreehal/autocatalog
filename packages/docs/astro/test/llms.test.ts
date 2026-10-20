@@ -37,6 +37,31 @@ describe('renderLlmsTxt', () => {
     expect(text).toContain(`[llms-full.txt](${base}/llms-full.txt)`);
   });
 
+  it("says a decision's kind, state and date beside its owner", () => {
+    const text = renderLlmsTxt({
+      title: 'Acme',
+      description: 'Docs.',
+      base,
+      items: [
+        {
+          id: 'payments-service/adr/0002-kafka',
+          repo: 'payments-service',
+          title: 'Use Kafka',
+          owner: 'Payments',
+          updated: null,
+          tags: [],
+          kind: 'adr',
+          status: 'accepted',
+          date: '2026-03-14',
+        },
+      ],
+    });
+
+    expect(text).toContain(
+      `- [Use Kafka](${base}/payments-service/adr/0002-kafka.md): owned by Payments; adr, accepted, 2026-03-14`,
+    );
+  });
+
   it('leaves the events section out when nothing publishes events', () => {
     const text = renderLlmsTxt({ title: 'Acme', description: 'Docs.', base, items: [] });
     expect(text).not.toContain('## Events');

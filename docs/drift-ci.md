@@ -36,7 +36,8 @@ jobs:
       # Scans origin/main and the PR through the same adapters, then compares.
       # Exits 1 on breaking changes and names the consumers they break.
       # Add --allow-code-execution only on a locked-down runner when runtime
-      # adapters (for example Zod) are required and PR code is trusted.
+      # adapters (for example Zod) or catalog rules (docs/rules) are required
+      # and PR code is trusted.
       # Optional: gate on Schema Registry compatibility instead of severity
       # - run: pnpm exec ac drift --base-ref origin/main --root . --format github --compatibility backward
       - run: pnpm exec ac drift --base-ref origin/main --root . --format github
@@ -70,12 +71,14 @@ format: pipe it to whatever already posts to your chat tool.
 | Field renamed                     | breaking   | the same, under a name nobody reads yet  |
 | Field type changed                | breaking   | parsers on both sides disagree           |
 | Field becomes required            | breaking   | payloads that omit it become invalid     |
+| Field meaning changed             | breaking   | it parses, and every reader misreads it  |
 | Enum narrowed                     | breaking   | already-published values become invalid  |
 | Delivery promise changed/removed  | breaking   | consumers built on it, as on a field     |
 | Maximum lateness lengthened       | breaking   | consumers stop waiting too soon          |
 | New access to another team's data | breaking   | it couples one team to another's storage |
 | Field no longer required          | suspicious | consumers relying on presence may break  |
 | Format changed                    | suspicious | semantic change without a structural one |
+| Field meaning no longer declared  | suspicious | readers lose the assumption they read by |
 | Schema changed, version unchanged | suspicious | version discipline is the whole point    |
 | New optional field / widened enum | additive   | safe                                     |
 | New delivery promise              | additive   | nobody relied on it yet                  |
@@ -94,6 +97,35 @@ is deliberately narrow: exactly one field removed and one added under the same
 parent, with the same type. Anything looser is a guess, and a wrong guess hides
 a removal, so two fields moving at once, or a rename that also changes the
 type, are reported as the separate changes they are.
+
+### Changes in meaning
+
+A schema says `amount` is a number. It cannot say the number is pence, not
+pounds, so no schema diff sees the day it switches. Declare what a field means
+beside it, under `x-meaning`:
+
+```json
+{
+  "amount": {
+    "type": "number",
+    "x-meaning": { "unit": "pence", "currency": "GBP" }
+  },
+  "placedAt": {
+    "type": "string",
+    "format": "date-time",
+    "x-meaning": { "timezone": "UTC" }
+  }
+}
+```
+
+Any key works, with a text value. `unit`, `currency`, `timezone`, `identifier` (what the value
+identifies) and `ordering` cover most fields. `ac drift` compares them field by
+field: a changed value is breaking and names the consumers that read the field,
+a dropped one is suspicious, and declaring one for the first time is info. A
+registry accepts all three, so no `--compatibility` strategy fails on them. In
+Zod, `z.number().meta({ 'x-meaning': { unit: 'pence' } })` carries through to
+the schema. A [catalog rule](/docs/rules) can require the declaration, for
+example on every field named `amount`.
 
 The "version stayed" warning names the consumers the changes reach, and nobody
 else: a consumer that declared it does not read the changed field is not told a
@@ -236,18 +268,47 @@ ones and labelled with how the snapshot knows: `FraudService (seen at runtime)`
 when it saw the delivery, `(reported at runtime)` when message metadata named
 it. A consumer already declared is named once, as declared.
 
-| Runtime finding                   | Severity   | Rationale                                                                             |
-| --------------------------------- | ---------- | ------------------------------------------------------------------------------------- |
-| Event emitted, not in the catalog | suspicious | an undocumented contract: consumers can come to depend on it with nobody reviewing it |
-| Field observed, not in the schema | suspicious | the same, one field at a time; names the field and the event, lands on the contract   |
-| Event documented, never seen      | info       | one test run or traffic window is not proof the event is gone                         |
+| Runtime finding                         | Severity   | Rationale                                                                                    |
+| --------------------------------------- | ---------- | -------------------------------------------------------------------------------------------- |
+| Field sent as a type the schema forbids | breaking   | the payload breaks the contract consumers trusted: `amount` as a string where it is a number |
+| Value outside the schema's enum         | breaking   | a consumer handling only the declared values meets one it does not know                      |
+| Event emitted, not in the catalog       | suspicious | an undocumented contract: consumers can come to depend on it with nobody reviewing it        |
+| Field observed, not in the schema       | suspicious | the same, one field at a time; names the field and the event, lands on the contract          |
+| Producer or channel the event omits     | suspicious | something sends the event, or sends it somewhere, that its page does not say                 |
+| Producer or channel, none declared      | info       | the event names none; declare what the runtime saw                                           |
+| Event documented, never seen            | info       | one test run or traffic window is not proof the event is gone                                |
 
-None of these breaks a consumer that relies on a documented contract, so none
-is `breaking` and no compatibility strategy fails on them. Gate on them with
-`--fail-on suspicious`. Events and fields are matched the way
-`autotel-eventcatalog drift` matches them, so the two tools agree on the same
-snapshot. A declared field the snapshot never carried is not reported: an
-optional field absent from one run says nothing.
+The two breaking findings are payloads the contract says cannot happen, so they
+fail the default gate and name the event's consumers. A key set to `undefined`
+never reaches the wire and is not a type. JavaScript has no integer, so an
+`integer` field fails on a fractional sample value, not on `number`, and a
+`Date` sent to a string field with a `format` counts as the string it becomes.
+The report counts rejected values and never prints them. A field
+declared differently in each branch of a `oneOf` is not checked: no one branch
+is its contract. The rest gate with `--fail-on suspicious`. None is a schema
+change, so no compatibility strategy fails on them.
+
+Event names ignore case and `.`, `_`, `-`, so `track('order.placed')` is the
+catalog's `OrderPlaced`. An exact name wins over
+a loose one, and a loose name that fits two events is refused rather than
+guessed. When an event that ran undocumented and one documented but unseen have
+similar names, both findings say it could be a rename: `` `payment.refund` is
+probably `payment.refunded` renamed (87% similar) ``. Both stay reported, since
+on the day it is not a rename one of them is a real removal.
+
+A declared field the snapshot never carried is not reported: an optional field
+absent from one run says nothing.
+
+### Only what the change introduced
+
+A gap the default branch already has would otherwise fail every pull request
+until someone fixes it, and that is how a gate gets switched off. With
+`--base-ref`, drift reads the snapshot as the base committed it, at the same
+path, and checks the base catalog against it too. A runtime finding already
+true on the base is still reported, as `info` and saying so, and does not fail
+the change. Commit the snapshot for this to work; without one at the base,
+every runtime finding counts. Name another file with `--base-snapshot <file>`,
+which also works with `--base`/`--current`.
 
 After the change in [experiment 05](https://github.com/jagreehal/autocatalog/tree/main/experiments),
 where every order gains `couponCode` and a large one also emits

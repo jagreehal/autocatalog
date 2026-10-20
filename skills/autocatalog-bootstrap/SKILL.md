@@ -28,6 +28,16 @@ repo has no events — the scan reads JSON Schema, OpenAPI (`webhooks`,
 source you have read and trust. A company format needs an adapter of its own:
 see `docs/adapters.md`.
 
+No contracts at all, but the tests record an autotel snapshot? Start from what
+ran:
+
+```bash
+ac from-snapshot .autotel/snapshot.json --out ./events
+```
+
+Each event it writes is a draft marked for review. Move each contract into the
+code that sends it, then `ac scan` finds it from then on.
+
 ## 2. Work the gaps, hardest first
 
 Three questions, in this order. Each has a command that answers it.

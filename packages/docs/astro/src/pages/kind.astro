@@ -1,0 +1,33 @@
+---
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import type { InferGetStaticPropsType } from 'astro';
+import { docsCatalog } from '../catalog';
+import { kindIndexProps } from '../kinds';
+import { KindIndexPage } from '../ui/pages/KindIndexPage';
+
+// One index per kind with documents, at the path its conventions give it:
+// every decision, runbook or incident across every repository.
+export async function getStaticPaths() {
+  const catalog = await docsCatalog();
+
+  return catalog.kinds.map((kind) => ({ params: { kind: kind.path }, props: { kind } }));
+}
+
+type Props = InferGetStaticPropsType<typeof getStaticPaths>;
+
+const { kind } = Astro.props;
+
+const page = kindIndexProps(await docsCatalog(), kind);
+---
+
+<StarlightPage
+  frontmatter={{
+    title: kind.label,
+    description:
+      kind.description ??
+      `Every document under docs/${kind.folder}/ in every enrolled repository, newest first.`,
+    tableOfContents: false,
+  }}
+>
+  <KindIndexPage client:load {...page} />
+</StarlightPage>

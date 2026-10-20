@@ -1,3 +1,4 @@
+import { z } from 'astro/zod';
 import { resourceKey, type ResourceGraph, type ResourceRef } from 'autocatalog-core';
 import { aboutReference } from 'autocatalog-docs-core';
 import { catalogHref, docHref } from './view';
@@ -8,7 +9,16 @@ export interface ResourceLink {
   title: string;
   /** The repository a document sits in, or the `kind/id` a resource is named by. */
   label: string;
+  /** A document's kind, such as `adr`, when it is one the organisation keeps. */
+  kind?: string;
+  /** Its kind's state, such as `accepted`. */
+  status?: string;
 }
+
+// What the docs Adapter records about a document's kind; free-form in the graph.
+const documentKind = z
+  .object({ kind: z.string().optional(), status: z.string().optional() })
+  .catch({});
 
 // Versions are left out: a page shows the current version, and the edge was
 // drawn to it.
@@ -24,15 +34,19 @@ export function documentsAbout(graph: ResourceGraph, target: ResourceRef): Resou
     .flatMap(({ from }) => {
       const doc = byKey.get(resourceKey(from));
 
-      return doc
-        ? [
-            {
-              href: docHref(`${from.namespace}/${from.id}`),
-              title: doc.title,
-              label: from.namespace ?? '',
-            },
-          ]
-        : [];
+      if (!doc) return [];
+
+      const { kind, status } = documentKind.parse(doc.attributes);
+
+      return [
+        {
+          href: docHref(`${from.namespace}/${from.id}`),
+          title: doc.title,
+          label: from.namespace ?? '',
+          ...(kind && { kind }),
+          ...(status && { status }),
+        },
+      ];
     });
 }
 

@@ -14,7 +14,9 @@
 @import 'tailwindcss/utilities.css' layer(utilities);
 @import 'tw-animate-css';
 @import 'shadcn/tailwind.css';
-@import '@fontsource-variable/ibm-plex-sans';
+/* Self-hosted: the font ships with the site, so a page makes no request to a font CDN. */
+@import '@fontsource-variable/jetbrains-mono';
+@import '@fontsource-variable/jetbrains-mono/wght-italic.css';
 /* `prose`, for Markdown rendered inside components (a version's changes). */
 @plugin '@tailwindcss/typography';
 
@@ -26,7 +28,7 @@
 
 @theme inline {
   --font-heading: var(--font-sans);
-  --font-sans: 'IBM Plex Sans Variable', sans-serif;
+  --font-sans: 'JetBrains Mono Variable', ui-monospace, SFMono-Regular, Menlo, monospace;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -67,73 +69,81 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/*
+ * Contrast, measured against WCAG 2.1 AA (4.5:1 for text) in both themes:
+ * muted text is 7.05:1 on the light background and 8.37:1 on the dark one,
+ * destructive is 5.3:1 and 6:1 on its own 10% tint, and primary text on primary
+ * is above 14:1 in both. Re-check these after changing a token (DESIGN.md).
+ */
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.148 0.004 228.8);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.148 0.004 228.8);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.148 0.004 228.8);
-  --primary: oklch(0.511 0.096 186.391);
-  --primary-foreground: oklch(0.984 0.014 180.72);
-  --secondary: oklch(0.967 0.001 286.375);
-  --secondary-foreground: oklch(0.21 0.006 285.885);
-  --muted: oklch(0.963 0.002 197.1);
-  --muted-foreground: oklch(0.56 0.021 213.5);
-  --accent: oklch(0.963 0.002 197.1);
-  --accent-foreground: oklch(0.218 0.008 223.9);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.925 0.005 214.3);
-  --input: oklch(0.925 0.005 214.3);
-  --ring: oklch(0.723 0.014 214.4);
+  /* Blueprint-tinted neutrals: paper, ink and rules share one cool hue (DESIGN.md). */
+  --background: oklch(0.982 0.005 225);
+  --foreground: oklch(0.235 0.028 248);
+  --card: oklch(0.996 0.003 225);
+  --card-foreground: oklch(0.235 0.028 248);
+  --popover: oklch(0.996 0.003 225);
+  --popover-foreground: oklch(0.235 0.028 248);
+  --primary: oklch(0.26 0.03 248);
+  --primary-foreground: oklch(0.98 0.005 225);
+  --secondary: oklch(0.962 0.008 228);
+  --secondary-foreground: oklch(0.235 0.028 248);
+  --muted: oklch(0.962 0.008 228);
+  --muted-foreground: oklch(0.45 0.022 245);
+  --accent: oklch(0.95 0.012 228);
+  --accent-foreground: oklch(0.235 0.028 248);
+  --destructive: oklch(0.53 0.19 27);
+  --border: oklch(0.875 0.013 240);
+  --input: oklch(0.875 0.013 240);
+  --ring: oklch(0.51 0.095 185);
   --chart-1: oklch(0.855 0.138 181.071);
   --chart-2: oklch(0.704 0.14 182.503);
   --chart-3: oklch(0.6 0.118 184.704);
   --chart-4: oklch(0.511 0.096 186.391);
   --chart-5: oklch(0.437 0.078 188.216);
   --radius: 0.625rem;
-  --sidebar: oklch(0.987 0.002 197.1);
-  --sidebar-foreground: oklch(0.148 0.004 228.8);
-  --sidebar-primary: oklch(0.6 0.118 184.704);
-  --sidebar-primary-foreground: oklch(0.984 0.014 180.72);
-  --sidebar-accent: oklch(0.963 0.002 197.1);
-  --sidebar-accent-foreground: oklch(0.218 0.008 223.9);
-  --sidebar-border: oklch(0.925 0.005 214.3);
-  --sidebar-ring: oklch(0.723 0.014 214.4);
+  --sidebar: oklch(0.975 0.007 228);
+  --sidebar-foreground: oklch(0.235 0.028 248);
+  --sidebar-primary: oklch(0.26 0.03 248);
+  --sidebar-primary-foreground: oklch(0.98 0.005 225);
+  --sidebar-accent: oklch(0.95 0.012 228);
+  --sidebar-accent-foreground: oklch(0.235 0.028 248);
+  --sidebar-border: oklch(0.875 0.013 240);
+  --sidebar-ring: oklch(0.51 0.095 185);
 }
 
 [data-theme='dark'] {
-  --background: oklch(0.148 0.004 228.8);
-  --foreground: oklch(0.987 0.002 197.1);
-  --card: oklch(0.218 0.008 223.9);
-  --card-foreground: oklch(0.987 0.002 197.1);
-  --popover: oklch(0.218 0.008 223.9);
-  --popover-foreground: oklch(0.987 0.002 197.1);
-  --primary: oklch(0.437 0.078 188.216);
-  --primary-foreground: oklch(0.984 0.014 180.72);
-  --secondary: oklch(0.274 0.006 286.033);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.275 0.011 216.9);
-  --muted-foreground: oklch(0.723 0.014 214.4);
-  --accent: oklch(0.275 0.011 216.9);
-  --accent-foreground: oklch(0.987 0.002 197.1);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.56 0.021 213.5);
+  /* Deep slate, not black, with the same hue as the light theme's rules. */
+  --background: oklch(0.205 0.032 250);
+  --foreground: oklch(0.945 0.012 230);
+  --card: oklch(0.235 0.034 250);
+  --card-foreground: oklch(0.945 0.012 230);
+  --popover: oklch(0.235 0.034 250);
+  --popover-foreground: oklch(0.945 0.012 230);
+  --primary: oklch(0.93 0.015 225);
+  --primary-foreground: oklch(0.21 0.03 250);
+  --secondary: oklch(0.26 0.034 250);
+  --secondary-foreground: oklch(0.945 0.012 230);
+  --muted: oklch(0.26 0.034 250);
+  --muted-foreground: oklch(0.76 0.022 235);
+  --accent: oklch(0.27 0.036 250);
+  --accent-foreground: oklch(0.945 0.012 230);
+  --destructive: oklch(0.73 0.16 25);
+  --border: oklch(0.34 0.032 248);
+  --input: oklch(0.38 0.032 248);
+  --ring: oklch(0.79 0.11 185);
   --chart-1: oklch(0.855 0.138 181.071);
   --chart-2: oklch(0.704 0.14 182.503);
   --chart-3: oklch(0.6 0.118 184.704);
   --chart-4: oklch(0.511 0.096 186.391);
   --chart-5: oklch(0.437 0.078 188.216);
-  --sidebar: oklch(0.218 0.008 223.9);
-  --sidebar-foreground: oklch(0.987 0.002 197.1);
-  --sidebar-primary: oklch(0.704 0.14 182.503);
-  --sidebar-primary-foreground: oklch(0.277 0.046 192.524);
-  --sidebar-accent: oklch(0.275 0.011 216.9);
-  --sidebar-accent-foreground: oklch(0.987 0.002 197.1);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.56 0.021 213.5);
+  --sidebar: oklch(0.19 0.03 250);
+  --sidebar-foreground: oklch(0.945 0.012 230);
+  --sidebar-primary: oklch(0.93 0.015 225);
+  --sidebar-primary-foreground: oklch(0.21 0.03 250);
+  --sidebar-accent: oklch(0.27 0.036 250);
+  --sidebar-accent-foreground: oklch(0.945 0.012 230);
+  --sidebar-border: oklch(0.34 0.032 248);
+  --sidebar-ring: oklch(0.79 0.11 185);
 }
 
 @layer base {
@@ -193,21 +203,9 @@
 }
 
 /*
- * Accessibility adjustments to the preset, measured against WCAG 2.1 AA (4.5:1
- * for text) in both themes. Kept apart from the preset's own values so that a
- * preset applied with the shadcn CLI does not silently undo them; re-check
- * these after applying one (DESIGN.md).
+ * The visualiser's stylesheet sets a system font on its root, outside any
+ * layer. One more element in the selector lets the site's face reach the map.
  */
-:root:not([data-theme='dark']) {
-  /* 5.35:1 on muted surfaces; the preset's was 4.15:1. */
-  --muted-foreground: oklch(0.5 0.021 213.5);
-  /* 5.63:1 on its own 10% tint, as a destructive badge or alert draws it. */
-  --destructive: oklch(0.52 0.21 27);
-}
-[data-theme='dark'] {
-  /* The preset's dark primary is a fill (2.62:1 as text); this one reads as
-     text and links at 8.14:1, with its foreground at 5.97:1 on it. */
-  --primary: oklch(0.704 0.14 182.503);
-  --primary-foreground: oklch(0.277 0.046 192.524);
-  --destructive: oklch(0.75 0.17 22);
+html .eventcatalog-visualizer {
+  font-family: var(--font-sans);
 }

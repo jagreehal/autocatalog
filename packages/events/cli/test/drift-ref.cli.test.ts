@@ -129,3 +129,86 @@ describe('ac drift --base-ref on an autotel-message-contract approved file', () 
     }
   });
 });
+
+describe('ac drift --base-ref --snapshot', () => {
+  let repo: string;
+  let snapshotPath: string;
+
+  const snapshot = (...names: string[]) =>
+    `${JSON.stringify({
+      spec: 'autotel-architecture/v1',
+      generatedAt: '2026-01-01T00:00:00Z',
+      service: 'payments',
+      events: Object.fromEntries(
+        names.map((name) => [
+          name,
+          { name, observedCount: 1, firstSeen: '', lastSeen: '', fieldPaths: ['id'] },
+        ]),
+      ),
+    })}\n`;
+
+  beforeAll(async () => {
+    repo = await fs.mkdtemp(path.join(os.tmpdir(), 'autocatalog-drift-snapshot-test-'));
+    const schemaPath = path.join(repo, 'schemas', 'payment.completed.schema.json');
+    snapshotPath = path.join(repo, '.autotel', 'snapshot.json');
+    await fs.mkdir(path.dirname(schemaPath), { recursive: true });
+    await fs.mkdir(path.dirname(snapshotPath), { recursive: true });
+    await fs.writeFile(
+      schemaPath,
+      JSON.stringify({
+        $id: 'payment.completed',
+        title: 'Payment Completed',
+        type: 'object',
+        properties: { id: { type: 'string' } },
+        'x-autocatalog': { id: 'payment.completed', version: '1.0.0', domain: 'payments' },
+      }),
+    );
+    // The base already emits an event nobody documented.
+    await fs.writeFile(snapshotPath, snapshot('payment.completed', 'cart.abandoned'));
+    await execFileAsync('git', ['init'], { cwd: repo });
+    await execFileAsync('git', ['config', 'user.email', 'test@example.com'], { cwd: repo });
+    await execFileAsync('git', ['config', 'user.name', 'Test'], { cwd: repo });
+    await execFileAsync('git', ['add', '.'], { cwd: repo });
+    await execFileAsync('git', ['commit', '-m', 'baseline'], { cwd: repo });
+  });
+
+  afterAll(async () => {
+    await fs.rm(repo, { recursive: true, force: true });
+  });
+
+  const drift = () =>
+    runDrift({
+      baseRef: 'HEAD',
+      root: repo,
+      snapshot: snapshotPath,
+      failOn: 'suspicious',
+      quiet: true,
+      adapters: [jsonSchemaDiscoveryAdapter],
+    });
+
+  it('does not fail a change for runtime drift the base already had', async () => {
+    await expect(drift()).resolves.toBe(0);
+  });
+
+  it('finds the base snapshot outside --root, at the same place in the repository', async () => {
+    await expect(
+      runDrift({
+        baseRef: 'HEAD',
+        root: path.join(repo, 'schemas'),
+        snapshot: snapshotPath,
+        failOn: 'suspicious',
+        quiet: true,
+        adapters: [jsonSchemaDiscoveryAdapter],
+      }),
+    ).resolves.toBe(0);
+  });
+
+  it('fails runtime drift the change introduced', async () => {
+    await fs.writeFile(
+      snapshotPath,
+      snapshot('payment.completed', 'cart.abandoned', 'order.flagged'),
+    );
+
+    await expect(drift()).resolves.toBe(1);
+  });
+});
