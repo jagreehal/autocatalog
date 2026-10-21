@@ -1,5 +1,30 @@
 # autocatalog-cli
 
+## 0.4.0
+
+### Minor Changes
+
+- 5cd0cb5: Retirements, meaning checks, catalog rules and runtime evidence.
+
+  - `ac retire <event> [field]` says whether a field or event can go yet, consumer by consumer, from declarations, snapshots and pacts. The site's Retirements page tracks each deprecated event and field.
+  - `x-meaning` declares a field's unit, currency or timezone, and `ac drift` fails a change to it.
+  - Catalog rules in `contracts/rules/` run from the base branch with `ac drift --base-ref --allow-code-execution` and gate on the violations a change adds.
+  - `ac drift --snapshot` checks payload types and enums, and names undeclared producers and channels.
+  - `ac from-snapshot` drafts contracts from an autotel snapshot.
+  - Site maps show what ran on each edge, with Replay and Live modes (`ac site --live-url`).
+  - Document kinds for ADRs, runbooks and incidents, and pages for Prisma, Drizzle and Mongoose models.
+  - A living map home page, JetBrains Mono and a blueprint palette.
+
+### Patch Changes
+
+- Updated dependencies [5cd0cb5]
+- Updated dependencies [59855f0]
+  - autocatalog-docs-core@0.2.0
+  - autocatalog-docs-astro@0.4.0
+  - autocatalog-core@0.3.0
+  - autocatalog-agents-core@0.2.2
+  - autocatalog-adapter-zod@0.2.1
+
 ## 0.3.1
 
 ### Patch Changes
