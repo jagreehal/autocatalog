@@ -1,5 +1,24 @@
 # autocatalog-core
 
+## 0.3.0
+
+### Minor Changes
+
+- 5cd0cb5: Retirements, meaning checks, catalog rules and runtime evidence.
+
+  - `ac retire <event> [field]` says whether a field or event can go yet, consumer by consumer, from declarations, snapshots and pacts. The site's Retirements page tracks each deprecated event and field.
+  - `x-meaning` declares a field's unit, currency or timezone, and `ac drift` fails a change to it.
+  - Catalog rules in `contracts/rules/` run from the base branch with `ac drift --base-ref --allow-code-execution` and gate on the violations a change adds.
+  - `ac drift --snapshot` checks payload types and enums, and names undeclared producers and channels.
+  - `ac from-snapshot` drafts contracts from an autotel snapshot.
+  - Site maps show what ran on each edge, with Replay and Live modes (`ac site --live-url`).
+  - Document kinds for ADRs, runbooks and incidents, and pages for Prisma, Drizzle and Mongoose models.
+  - A living map home page, JetBrains Mono and a blueprint palette.
+
+### Patch Changes
+
+- 59855f0: `autocatalog site` adds domain pages with maps, API reference pages for OpenAPI specs under `contracts/`, and a schema index. Service maps show the services on the other side of each event, and the catalog map includes commands, queries and datastores. Mermaid fences render as diagrams, events show their badges and draft status, event and service pages get Markdown twins, and `llms-full.txt` holds the full text for agents.
+
 ## 0.2.0
 
 ### Minor Changes
