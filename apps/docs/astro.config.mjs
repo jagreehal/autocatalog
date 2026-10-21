@@ -18,14 +18,9 @@ export default defineConfig({
     starlight({
       title: 'autocatalog',
       description:
-        'Event catalogs generated from the code that runs, with provenance on every field.',
+        'All your docs, events and services in one place, built from every team’s repository.',
       favicon: '/favicon.svg',
-      customCss: [
-        '@fontsource/jetbrains-mono',
-        '@fontsource/jetbrains-mono/500.css',
-        '@fontsource/jetbrains-mono/600.css',
-        './src/styles/theme.css',
-      ],
+      customCss: ['./src/styles/theme.css'],
       social: [
         { icon: 'github', label: 'GitHub', href: 'https://github.com/jagreehal/autocatalog' },
       ],
@@ -75,6 +70,9 @@ export default defineConfig({
           label: 'Keeping it honest',
           items: [
             { label: 'Drift gating in CI', slug: 'docs/drift-ci' },
+            { label: 'Runtime evidence with autotel', slug: 'docs/runtime-evidence' },
+            { label: 'Catalog rules', slug: 'docs/rules' },
+            { label: 'Retiring a field', slug: 'docs/retire' },
             { label: 'Cross-domain delivery', slug: 'docs/cross-domain-delivery' },
             { label: 'Production operation', slug: 'docs/production' },
           ],

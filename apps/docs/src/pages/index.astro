@@ -1,11 +1,13 @@
 ---
 import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
-import { Home } from '../components/Home';
+import { HomeHero, HomeSections } from '../components/Home';
+import { LivingMap } from '../components/LivingMap';
+import '../styles/home.css';
 
 // The home page the plugin would otherwise generate is an index of documents.
-// A project's front door has a different job: say what the tool does, and show
-// the one thing that makes it different, which is provenance. Hydrated only
-// for the code blocks' highlighting.
+// A project's front door has a different job: show every team's docs, events
+// and services on one map, with where each fact came from. Only the map runs
+// in the browser; the rest is static.
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 ---
 
@@ -18,10 +20,32 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
     head: [],
   }}
 >
-  <Home client:idle base={base} />
+  <div class="not-content" data-home>
+    <section class="pt-2 lg:pt-8" aria-label="Introduction">
+      <HomeHero base={base} />
+      <div>
+        <LivingMap client:idle />
+      </div>
+    </section>
+    <HomeSections base={base} />
+  </div>
 </StarlightPage>
 
+<script>
+  for (const button of document.querySelectorAll<HTMLButtonElement>('[data-copy]')) {
+    button.addEventListener('click', async () => {
+      await navigator.clipboard.writeText(button.dataset.copy ?? '');
+      button.textContent = 'Copied';
+      setTimeout(() => (button.textContent = 'Copy'), 1600);
+    });
+  }
+</script>
+
 <style is:global>
+  /* Wider than Starlight's splash width, so the map has room; unlayered to win over it. */
+  html:not([data-has-sidebar]):has([data-home]) {
+    --sl-content-width: 85rem;
+  }
   /*
    * Starlight prints the page title above the content. On the home page that is
    * the wordmark already sitting in the header, one line up. Hidden rather than

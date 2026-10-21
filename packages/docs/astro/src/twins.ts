@@ -27,6 +27,8 @@ export function docTwin(doc: Doc, manifest: DocsManifest, url?: string): string 
 
   return docToMarkdown(
     {
+      // The kind its folder gave it, which the file itself may not say.
+      ...(record?.kind && { kind: record.kind }),
       ...doc.data,
       ...(record?.updated && { updated: record.updated }),
       ...(record?.source && { source: record.source }),

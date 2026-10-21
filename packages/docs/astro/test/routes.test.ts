@@ -3,6 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { afterEach, beforeEach, expect, it } from 'vitest';
+import { RESERVED_SEGMENTS } from '../src/kinds';
 import { autocatalogDocsRoutes } from '../src/routes';
 
 let root: string;
@@ -43,7 +44,7 @@ it('leaves / alone when the site wrote its own front door', async () => {
   expect(patterns()).toContain('/catalog');
 });
 
-it('publishes pages for events and earlier versions, schemas, services, owners, domains, APIs, and the field and schema indexes', async () => {
+it('publishes pages for events and earlier versions, schemas, services, owners, domains, APIs, data models, and the field and schema indexes', async () => {
   await fs.mkdir(path.join(root, 'src/pages'), { recursive: true });
 
   expect(patterns()).toEqual(
@@ -64,10 +65,27 @@ it('publishes pages for events and earlier versions, schemas, services, owners, 
       '/owners/[owner]',
       '/domains',
       '/domains/[domain]',
+      '/data',
+      '/data/[repository]/[name]',
+      '/data/[repository]/[name].md',
       '/[...slug].md',
       '/llms.txt',
       '/llms-full.txt',
       '/contracts/docs-manifest.json',
     ]),
   );
+});
+
+it("keeps a document kind's index from taking the address of a page the site publishes", async () => {
+  await fs.mkdir(path.join(root, 'src/pages'), { recursive: true });
+
+  const segments = patterns().flatMap((pattern) => {
+    const first = pattern.split('/')[1] ?? '';
+
+    return first && !first.startsWith('[') && !RESERVED_SEGMENTS.has(first) ? [first] : [];
+  });
+
+  // A kind index sits at /<path>/, below every static page in priority.
+  expect(patterns()).toContain('/[kind]');
+  expect(segments).toEqual([]);
 });

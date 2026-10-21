@@ -14,8 +14,12 @@ export interface DocsSiteConfig {
   repository: string | undefined;
   /** Path to a committed JSON Schema, or undefined for the built-in contract. */
   schemaPath: string | undefined;
+  /** Path to the organisation's conventions file, or undefined to find it by convention. */
+  conventionsPath: string | undefined;
   title: string;
   description: string;
+  /** A server-sent events feed the maps can follow live. */
+  live: { url: string; event: string } | undefined;
 }
 
 export function docsSiteConfig(): DocsSiteConfig {
@@ -26,9 +30,17 @@ export function docsSiteConfig(): DocsSiteConfig {
     repo: process.env.AUTOCATALOG_DOCS_REPO || undefined,
     repository: process.env.AUTOCATALOG_DOCS_REPOSITORY || undefined,
     schemaPath: process.env.AUTOCATALOG_DOCS_SCHEMA || undefined,
+    conventionsPath: process.env.AUTOCATALOG_DOCS_CONVENTIONS || undefined,
     title: process.env.AUTOCATALOG_DOCS_TITLE ?? 'Documentation',
     description:
       process.env.AUTOCATALOG_DOCS_DESCRIPTION ??
       'Documentation committed beside the code it describes, aggregated into one index.',
+    live: process.env.AUTOCATALOG_DOCS_LIVE_URL
+      ? {
+          url: process.env.AUTOCATALOG_DOCS_LIVE_URL,
+          // EventSource's default event name.
+          event: process.env.AUTOCATALOG_DOCS_LIVE_EVENT || 'message',
+        }
+      : undefined,
   };
 }

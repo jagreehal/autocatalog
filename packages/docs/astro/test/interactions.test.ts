@@ -10,6 +10,7 @@ import { SchemaTree } from '../src/ui/components/SchemaTree';
 import { schemaTree } from '../src/ui/lib/schema-tree';
 import { PageTitleChrome } from '../src/ui/overrides/PageTitleChrome';
 import { FieldsPage, type FieldRow } from '../src/ui/pages/FieldsPage';
+import { KindIndexPage } from '../src/ui/pages/KindIndexPage';
 
 afterEach(() => {
   cleanup();
@@ -264,5 +265,40 @@ describe('Copy page as Markdown', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Copy page as Markdown' }));
 
     expect(await screen.findByRole('button', { name: 'Copy failed' })).toBeTruthy();
+  });
+});
+
+describe('KindIndexPage behaviour', () => {
+  const row = (id: string, status: string) => ({
+    id,
+    title: id,
+    href: `/payments/adr/${id}/`,
+    repository: 'payments',
+    status,
+    cells: { status: { text: status, status: true } },
+  });
+
+  it('filters by a status of any spelling, one written like All included', () => {
+    render(
+      createElement(KindIndexPage, {
+        columns: [{ field: 'status', heading: 'Status' }],
+        rows: [row('first', ' all'), row('second', 'on hold')],
+        statuses: [' all', 'on hold'],
+        repositories: ['payments'],
+        chains: [],
+      }),
+    );
+
+    fireEvent.click(screen.getByRole('radio', { name: 'all 1' }));
+
+    expect(status()).toBe('1 of 2 documents');
+
+    fireEvent.click(screen.getByRole('radio', { name: 'on hold 1' }));
+
+    expect(status()).toBe('1 of 2 documents');
+
+    fireEvent.click(screen.getByRole('radio', { name: 'All 2' }));
+
+    expect(status()).toBe('2 documents');
   });
 });

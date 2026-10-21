@@ -50,6 +50,47 @@
   background: var(--muted-foreground) !important;
   animation: none !important;
 }
+/*
+ * Runtime evidence on the map's edges (and their swatches in its key), in the
+ * provenance colours: observed reads as extracted, never seen is dashed like
+ * inferred, ran-but-undocumented takes the inferred colour.
+ */
+/* EventCatalog pins every edge's stroke (through --ec-edge-stroke) and width with !important. */
+[data-graph] .ac-edge-observed {
+  --ec-edge-stroke: var(--color-extracted);
+}
+[data-graph] .ac-edge-unseen {
+  --ec-edge-stroke: var(--muted-foreground);
+}
+[data-graph] .ac-edge-undocumented {
+  --ec-edge-stroke: var(--color-inferred);
+}
+/* The weight is set on each path as --ac-edge-weight, from the snapshot's count. */
+[data-graph] .eventcatalog-visualizer [class*='ac-edge-'] .react-flow__edge-path {
+  stroke-width: var(--ac-edge-weight, 1.5) !important;
+}
+[data-graph] .ac-edge-unseen :is(.react-flow__edge-path, line) {
+  stroke-dasharray: 5 4;
+  opacity: 0.7;
+}
+[data-graph] svg[class^='ac-edge-'] line {
+  stroke: var(--ec-edge-stroke);
+  stroke-width: 2;
+}
+/* Markers in the text colour, so they read against an edge of any colour or weight. */
+[data-graph] .ac-marker {
+  fill: var(--foreground);
+  pointer-events: none;
+}
+[data-graph] .ac-marker-hollow {
+  fill: var(--background);
+  stroke: var(--foreground);
+  stroke-width: 1.5;
+}
+/* Reduced motion: an edge that fired brightens in place rather than carrying a marker. */
+[data-graph] .eventcatalog-visualizer .react-flow__edge.ac-pulse .react-flow__edge-path {
+  stroke-width: 6 !important;
+}
 /* ArchitecturePage: EventCatalog brings its own layout, so it gets the whole content column. */
 :root:has([data-eventcatalog]) {
   --sl-content-width: 100%;

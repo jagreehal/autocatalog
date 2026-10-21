@@ -706,11 +706,10 @@ function fullPipeline(dir, tmp) {
 
     for (const wanted of [
       'Runtime evidence',
-      'Saved snapshot',
-      '2 recorded observations',
-      'Declared BillingService, AnalyticsService',
-      'Reported in snapshot BillingService',
-      'Declared, absent from snapshot AnalyticsService',
+      'From a saved snapshot',
+      'Observed at runtime 2 times',
+      'BillingService Declared, and reported in snapshot',
+      'AnalyticsService Declared, absent from snapshot',
       'Orders runbook',
       'Consuming order.placed',
     ]) {

@@ -167,9 +167,12 @@ function onSide(side: Side, finding: DriftFinding): DriftFinding {
 
   const compatibility = (['backward', 'forward'] as const).filter((mode) => api.has(mode));
 
+  // A change of meaning breaks a client whichever side reads it.
   const severity =
-    finding.kind === 'description_changed'
-      ? 'info'
+    finding.kind === 'description_changed' ||
+    finding.kind === 'meaning_changed' ||
+    finding.kind === 'meaning_declared'
+      ? finding.severity
       : compatibility.includes('backward')
         ? 'breaking'
         : 'additive';

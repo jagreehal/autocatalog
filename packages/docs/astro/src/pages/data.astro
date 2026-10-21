@@ -1,0 +1,21 @@
+---
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import { docsCatalog } from '../catalog';
+import { dataModelsPageProps } from '../data-models';
+import { DataModelsPage } from '../ui/pages/DataModelsPage';
+
+const catalog = await docsCatalog();
+
+const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+---
+
+<StarlightPage
+  frontmatter={{
+    title: 'Data models',
+    description:
+      'Every table and collection the repositories define, read from their Prisma, Drizzle and Mongoose code.',
+    tableOfContents: false,
+  }}
+>
+  <DataModelsPage {...dataModelsPageProps(catalog.graph, catalog.models, catalog.events, base)} />
+</StarlightPage>

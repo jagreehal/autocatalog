@@ -13,6 +13,7 @@ export { rehypeDocsBase } from './links';
 
 import { buildDocsCatalog } from './catalog';
 import { graphOwners } from './owners';
+import { retirementsPageProps } from './retirements';
 import { catalogSidebar, docsSidebar } from './sidebar';
 import { eventCatalogEmbeds } from './eventcatalog';
 import { reactRendererIntegration, siteHasReact } from './react-integration';
@@ -47,8 +48,19 @@ export interface AutocatalogDocsOptions {
   repository?: string;
   /** Committed JSON Schema the frontmatter must satisfy. */
   schema?: string;
+  /**
+   * The organisation's document kinds. Omit and the site finds
+   * `contracts/autocatalog.conventions.json` the way it finds the contract.
+   */
+  conventions?: string;
   /** One sentence describing what is aggregated here, used on / and llms.txt. */
   description?: string;
+  /**
+   * A server-sent events URL the maps follow in their live mode: each frame's
+   * JSON names the event that fired (`{ "name": "order.placed", "producer"? }`).
+   * `event` is the SSE event name frames arrive under; `message` by default.
+   */
+  live?: { url: string; event?: string };
 }
 
 /**
@@ -88,8 +100,18 @@ export default function autocatalogDocs(opts: AutocatalogDocsOptions = {}): Star
 
         if (opts.repository) process.env.AUTOCATALOG_DOCS_REPOSITORY ??= opts.repository;
 
+        if (opts.live) {
+          process.env.AUTOCATALOG_DOCS_LIVE_URL ??= opts.live.url;
+
+          if (opts.live.event) process.env.AUTOCATALOG_DOCS_LIVE_EVENT ??= opts.live.event;
+        }
+
         if (opts.schema) {
           process.env.AUTOCATALOG_DOCS_SCHEMA ??= path.resolve(projectRoot, opts.schema);
+        }
+
+        if (opts.conventions) {
+          process.env.AUTOCATALOG_DOCS_CONVENTIONS ??= path.resolve(projectRoot, opts.conventions);
         }
 
         // Read back rather than reusing the locals above: an environment
@@ -113,6 +135,7 @@ export default function autocatalogDocs(opts: AutocatalogDocsOptions = {}): Star
           repo: effective.repo,
           repository: effective.repository,
           schemaPath: effective.schemaPath,
+          conventionsPath: effective.conventionsPath,
           includeDates: false,
         });
 
@@ -137,7 +160,13 @@ export default function autocatalogDocs(opts: AutocatalogDocsOptions = {}): Star
                       { label: 'Fields', link: '/fields' },
                     ]
                   : []),
+                ...(retirementsPageProps(catalog, '/').retirements.length > 0
+                  ? [{ label: 'Retirements', link: '/retirements' }]
+                  : []),
                 ...(catalog.apis.length > 0 ? [{ label: 'APIs', link: '/apis' }] : []),
+                // Decisions, runbooks, incidents: each kind with documents.
+                ...catalog.kinds.map((kind) => ({ label: kind.label, link: `/${kind.path}` })),
+                ...(catalog.models.length > 0 ? [{ label: 'Data models', link: '/data' }] : []),
                 ...(graphOwners(catalog.graph).length > 0
                   ? [{ label: 'Owners', link: '/owners' }]
                   : []),

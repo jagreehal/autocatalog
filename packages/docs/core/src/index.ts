@@ -18,7 +18,31 @@ export {
   type FrontmatterValidator,
   frontmatterValidator,
   resolveFrontmatterContract,
+  type PublishedFile,
+  resolvePublishedFile,
 } from './frontmatter';
+
+export {
+  DEFAULT_DOC_KINDS,
+  defaultConventionsFile,
+  type DocKind,
+  docKind,
+  type DocKindResolution,
+  docKinds,
+  DOCS_CONVENTIONS_PATH,
+  type DocsConventions,
+  docsConventionsSchema,
+  type KindCheck,
+  kindContract,
+  kindFailure,
+  kindValidator,
+  type ResolvedDocKinds,
+  resolveDocKinds,
+  SUPERSEDE_FIELDS,
+  type Supersession,
+  supersession,
+  textField,
+} from './kinds';
 
 export { headCommit, lastChanged, sourceUrl, webUrl } from './git';
 

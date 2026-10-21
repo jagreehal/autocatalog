@@ -40,7 +40,12 @@ export function renderLlmsTxt({
     lines.push(`## ${repo}`, '');
 
     for (const doc of docs) {
-      lines.push(`- [${doc.title}](${base}/${doc.id}.md): owned by ${doc.owner}`);
+      // A decision's state and date are what an agent asks of it first.
+      const kind = doc.kind ? [doc.kind, doc.status, doc.date].filter(Boolean).join(', ') : '';
+
+      lines.push(
+        `- [${doc.title}](${base}/${doc.id}.md): owned by ${doc.owner}${kind && `; ${kind}`}`,
+      );
     }
 
     lines.push('');
@@ -74,7 +79,7 @@ export function renderLlmsFullTxt({
 }: {
   title: string;
   description: string;
-  /** Each page's Markdown twin, documents first, then events. */
+  /** Each page's Markdown twin, documents first, then events, then data models. */
   twins: string[];
 }): string {
   return `${[`# ${title}`, `> ${description}`, ...twins.map((twin) => twin.trim())].join('\n\n')}\n`;

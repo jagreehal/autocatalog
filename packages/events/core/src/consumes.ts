@@ -174,6 +174,12 @@ export interface GraphConsumers {
 const declaredFields = (edge: CatalogRelationship): string[] | undefined =>
   edgeFields.parse(edge.attributes).fields;
 
+/** What a consumer said it reads of an event its producer already lists it on. */
+const ownFields = z
+  .object({ consumerFields: z.array(z.string()) })
+  .partial()
+  .catch({});
+
 /**
  * Two declarations of one consumer reading one event, as one edge. The fields
  * add up; one that names none says it may read anything, so the edge then
@@ -215,6 +221,19 @@ export function mergeConsumerGraph(graph: ResourceGraph, fragment: ResourceGraph
     if (!existing) relationships.set(key, edge);
     else if (existing.source?.file === CONSUMES_FILE)
       relationships.set(key, withFields(existing, edge));
+    else {
+      // The consumer's own list rides beside the producer's word: drift never
+      // reads it, a retirement does, since only the consumer knows what it reads.
+      const own = declaredFields(edge);
+      const before = ownFields.parse(existing.attributes).consumerFields ?? [];
+
+      if (own) {
+        relationships.set(key, {
+          ...existing,
+          attributes: { ...existing.attributes, consumerFields: [...new Set([...before, ...own])] },
+        });
+      }
+    }
   }
 
   return {
@@ -232,6 +251,11 @@ export interface EventConsumers {
   consumers: string[];
   /** Payload paths each consumer says it reads, by consumer name. */
   fields: Record<string, string[]>;
+  /**
+   * What consumers said for themselves of an event whose producer already
+   * lists them. Never narrows drift; a retirement reads it.
+   */
+  own: Record<string, string[]>;
 }
 
 const edgeFields = z
@@ -301,6 +325,7 @@ export function consumersFromGraph(
   const consumers = new Map<string, EventConsumers>();
   // What each consumer of each event reads, by `domain/id`, as edges arrive.
   const reads = new Map<string, Map<string, Set<string> | 'anything'>>();
+  const said = new Map<string, Map<string, string[]>>();
   const ambiguous = new Set<string>();
   const rejected = new Set<string>();
 
@@ -327,6 +352,12 @@ export function consumersFromGraph(
     if (!safeName) rejected.add(shownName(edge.to.id));
 
     const { fields } = edgeFields.parse(edge.attributes);
+    const { consumerFields } = ownFields.parse(edge.attributes);
+
+    if (safeName && consumerFields?.every((field) => FIELD_PATH.test(field))) {
+      said.set(event.key, (said.get(event.key) ?? new Map()).set(name, consumerFields));
+    }
+
     const usage = reads.get(event.key) ?? new Map<string, Set<string> | 'anything'>();
     const before = usage.get(name);
 
@@ -351,6 +382,7 @@ export function consumersFromGraph(
       fields: Object.fromEntries(
         [...usage].flatMap(([name, read]) => (read === 'anything' ? [] : [[name, [...read]]])),
       ),
+      own: Object.fromEntries(said.get(key) ?? []),
     });
 
   return {

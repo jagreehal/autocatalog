@@ -69,6 +69,7 @@ export function autocatalogDocsRoutes(root: string): AstroIntegration {
           ['/services/[name].md', path.join(here, 'pages/service.md.ts')],
           ['/fields', path.join(here, 'pages/fields.astro')],
           ['/schemas', path.join(here, 'pages/schemas.astro')],
+          ['/retirements', path.join(here, 'pages/retirements.astro')],
           ['/apis', path.join(here, 'pages/apis.astro')],
           ['/apis/[repository]/[name]', path.join(here, 'pages/api.astro')],
           ['/apis/[repository]/[name]/openapi.json', path.join(here, 'pages/api-spec.json.ts')],
@@ -76,6 +77,12 @@ export function autocatalogDocsRoutes(root: string): AstroIntegration {
           ['/owners/[owner]', path.join(here, 'pages/owner.astro')],
           ['/domains', path.join(here, 'pages/domains.astro')],
           ['/domains/[domain]', path.join(here, 'pages/domain.astro')],
+          ['/data', path.join(here, 'pages/data.astro')],
+          ['/data/[repository]/[name]', path.join(here, 'pages/data-model.astro')],
+          ['/data/[repository]/[name].md', path.join(here, 'pages/data-model.md.ts')],
+          // Each document kind's index, at the path its conventions give it.
+          // Below every static page, and kind paths are checked against them.
+          ['/[kind]', path.join(here, 'pages/kind.astro')],
           // Registered before Starlight's catch-all resolves a `.md` request,
           // so the twin wins over a page whose slug happens to end in `.md`.
           ['/[...slug].md', path.join(here, 'pages/[...slug].md.ts')],

@@ -1,0 +1,60 @@
+/*
+ * The home page (DESIGN.md, "The home page"). The components carry their own
+ * utilities; this is only what a utility cannot say: the blueprint grid, a band
+ * that runs edge to edge, and the moving dashes of a breaking edge.
+ */
+@layer components {
+  /* The closing band runs edge to edge; clipping keeps the page from scrolling sideways. */
+  body:has([data-home]) {
+    overflow-x: clip;
+  }
+
+  [data-home] {
+    --grid: color-mix(in oklch, var(--border) 55%, var(--background));
+    --grid-major: var(--border);
+  }
+  [data-home] code {
+    font-size: 0.93em;
+    font-weight: 500;
+  }
+  [data-home] :is(p, li) code {
+    white-space: nowrap;
+  }
+  [data-home] [aria-label='Fact sheet'] code {
+    white-space: normal;
+  }
+
+  [data-blueprint] {
+    background-image:
+      linear-gradient(var(--grid-major) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid-major) 1px, transparent 1px),
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-position: -1px -1px;
+    background-size:
+      120px 120px,
+      120px 120px,
+      24px 24px,
+      24px 24px;
+  }
+  section[data-blueprint] {
+    background-image:
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+  [data-bleed] {
+    margin-inline: calc(50% - 50vw);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    [data-flow] {
+      animation: home-flow 0.9s linear infinite;
+    }
+  }
+  @keyframes home-flow {
+    to {
+      stroke-dashoffset: -14;
+    }
+  }
+}

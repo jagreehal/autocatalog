@@ -33,6 +33,20 @@ ac drift --base-ref origin/main --root . --consumers https://catalog.example.com
 
 The output names when that index was published. Declarations made since then are not in it, so mention the date when you report who is affected.
 
+### What the tests sent
+
+When the repository commits an autotel snapshot, check the catalog against what ran too:
+
+```bash
+ac drift --base-ref origin/main --root . --snapshot .autotel/snapshot.json
+```
+
+A payload the contract forbids (a wrong type, a value outside an enum) is `breaking`. An event, field, producer or channel the code uses but the catalog never declares is `suspicious`. With `--base-ref`, anything the base snapshot already showed drops to info, so you see only what your change introduced.
+
+### The repository's own rules
+
+A `rule_violation` finding comes from a rule in `contracts/rules/` (see `docs/rules.md`), and `ac drift` runs those only with `--allow-code-execution`. Fix what the rule names. Changing the rule or its `rules.json` exceptions to get a pull request through needs the rule owner's agreement, the same as lowering `--fail-on`.
+
 ## 2. Decide, using the classification
 
 - **Additive** — proceed.
@@ -42,6 +56,20 @@ The output names when that index was published. Declarations made since then are
   - **coordinate**: name the consuming services in the pull request and agree the order of deploys with the teams that own them.
 
 If neither is possible, the change is a decision for the humans who own the consumers. Present the drift output and stop rather than choosing for them.
+
+### Before removing a field or an event
+
+Ask whether it can go yet:
+
+```bash
+ac retire payments/payment.completed amount --catalog https://catalog.example.com/catalog.json
+```
+
+It exits 1 while any consumer needs the field, is unknown, or has not said which fields it reads. Report the consumers it names and its next steps. Remove the field only when it exits 0.
+
+### A change in meaning
+
+A field that keeps its type but changes unit, currency or timezone breaks every consumer silently. When you change what a value means, update its `x-meaning` beside the field so `ac drift` reports it as breaking. Never leave `x-meaning` stale to get a pull request through.
 
 ## 3. Write it down for people
 

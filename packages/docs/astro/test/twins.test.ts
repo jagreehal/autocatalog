@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { eventFrontmatter } from 'autocatalog-core';
 import type { CatalogEvent } from '../src/catalog';
-import { eventTwin, serviceTwin, twinPath } from '../src/twins';
+import { docTwin, eventTwin, serviceTwin, twinPath } from '../src/twins';
 
 const entry = (body = ''): CatalogEvent => ({
   repository: 'payments-service',
@@ -22,6 +22,36 @@ const entry = (body = ''): CatalogEvent => ({
     body,
     schema: { type: 'object', properties: { amount: { type: 'number' } } },
   } as never,
+});
+
+describe('docTwin', () => {
+  it('says the kind a folder gave a document, which its own frontmatter may leave out', () => {
+    const md = docTwin(
+      {
+        id: 'payments-service/adr/0002-kafka',
+        repo: 'payments-service',
+        file: 'payments-service/docs/adr/0002-kafka.md',
+        data: { title: 'Use Kafka', owner: 'Payments', status: 'accepted', date: '2026-03-14' },
+        body: 'We moved.\n',
+      },
+      {
+        'payments-service/adr/0002-kafka': {
+          owner: 'Payments',
+          title: 'Use Kafka',
+          updated: null,
+          source: null,
+          edit: null,
+          linkedFrom: [],
+          kind: 'adr',
+          status: 'accepted',
+          date: '2026-03-14',
+        },
+      },
+    );
+
+    expect(md).toMatch(/^---\nkind: adr\ntitle: Use Kafka\n/);
+    expect(md).toContain('status: accepted\ndate: 2026-03-14\n');
+  });
 });
 
 describe('twinPath', () => {

@@ -15,10 +15,11 @@ import {
   resourceFiles,
   type ResourceScanOptions,
 } from './resource-files';
-import { jsonObjectSchema, type JsonObject, type JsonValue } from './json';
+import { jsonObjectSchema, jsonValueSchema, type JsonObject, type JsonValue } from './json';
 import {
   resourceKey,
   isArchitectureCatalogResource,
+  type CatalogRelationship,
   type CatalogResource,
   type ResourceGraph,
   type ResourceRef,
@@ -260,6 +261,90 @@ function mongooseObject(
   return schema;
 }
 
+/**
+ * A Mongoose schema's fields as its page lists them: each one's type as
+ * written, the options that constrain it, and the model a `ref` points at.
+ */
+function mongooseFields(
+  node: ts.Expression,
+  variables: Map<string, ts.Expression>,
+  open = new Set<string>(),
+): ModelField[] {
+  if (!ts.isObjectLiteralExpression(node)) return [];
+
+  return [...objectFields(node)].map(([name, value]) =>
+    mongooseFieldDetail(name, value, variables, open),
+  );
+}
+
+function mongooseFieldDetail(
+  name: string,
+  node: ts.Expression,
+  variables: Map<string, ts.Expression>,
+  open: Set<string>,
+): ModelField {
+  if (ts.isIdentifier(node) && variables.has(node.text) && !open.has(node.text))
+    return mongooseFieldDetail(
+      name,
+      variables.get(node.text)!,
+      variables,
+      new Set([...open, node.text]),
+    );
+
+  if (ts.isArrayLiteralExpression(node)) {
+    const [item] = node.elements;
+
+    const inner =
+      item && ts.isExpression(item)
+        ? mongooseFieldDetail(name, item, variables, open)
+        : { name, type: 'Mixed' };
+
+    return {
+      ...inner,
+      list: true,
+      ...(inner.relation && { relation: { ...inner.relation, many: true } }),
+    };
+  }
+
+  if (ts.isNewExpression(node) && node.expression.getText().endsWith('Schema'))
+    return {
+      name,
+      type: 'Object',
+      fields: node.arguments?.[0] ? mongooseFields(node.arguments[0], variables, open) : [],
+    };
+  const options = objectFields(node);
+
+  if (ts.isObjectLiteralExpression(node) && !options.has('type'))
+    return { name, type: 'Object', fields: mongooseFields(node, variables, open) };
+  const type = options.get('type');
+
+  if (type && (ts.isArrayLiteralExpression(type) || ts.isNewExpression(type)))
+    return {
+      ...mongooseFieldDetail(name, type, variables, open),
+      ...mongooseOptions(name, options),
+    };
+
+  return {
+    name,
+    type: (type ?? node).getText().replace(/^.*\./, ''),
+    ...mongooseOptions(name, options),
+  };
+}
+
+function mongooseOptions(name: string, options: Map<string, ts.Expression>) {
+  const values = literal(options.get('enum'));
+  const ref = textLiteral(options.get('ref'));
+  const fallback = options.get('default');
+
+  return {
+    ...(literal(options.get('required')) !== true && { optional: true }),
+    ...(literal(options.get('unique')) === true && { unique: true }),
+    ...(fallback && { default: fallback.getText() }),
+    ...(Array.isArray(values) && { enum: values.map(String) }),
+    ...(ref && { relation: { model: ref, many: false, fields: [name] } }),
+  } satisfies Partial<ModelField>;
+}
+
 function sourceResource(
   ref: ResourceRef<'collection' | 'table'>,
   schema: JsonObject,
@@ -276,13 +361,31 @@ function sourceResource(
   };
 }
 
-/** Remove `//` comments. String literals stay whole: they may contain `//`, `{` or `}`. */
-function withoutPrismaComments(content: string): string {
+interface PrismaDoc {
+  text: string;
+  /** The comment is the whole line, so it documents the line below it. */
+  own: boolean;
+}
+
+/**
+ * Remove `//` comments. String literals stay whole: they may contain `//`, `{`
+ * or `}`. A `///` comment is Prisma's documentation for what it sits on, so its
+ * text is kept by line number.
+ */
+function withoutPrismaComments(content: string) {
+  const docs = new Map<number, PrismaDoc>();
   let output = '';
   let quoted = false;
+  let line = 1;
+  let lineStart = 0;
 
   for (let index = 0; index < content.length; index++) {
     const char = content[index]!;
+
+    if (char === '\n') {
+      line++;
+      lineStart = index + 1;
+    }
 
     if (quoted) {
       if (char === '\\') {
@@ -295,6 +398,13 @@ function withoutPrismaComments(content: string): string {
     } else if (char === '"') quoted = true;
     else if (char === '/' && content[index + 1] === '/') {
       const end = content.indexOf('\n', index);
+      const comment = content.slice(index, end === -1 ? undefined : end);
+
+      if (comment.startsWith('///'))
+        docs.set(line, {
+          text: comment.slice(3).trim(),
+          own: content.slice(lineStart, index).trim() === '',
+        });
 
       if (end === -1) break;
       index = end - 1;
@@ -304,7 +414,20 @@ function withoutPrismaComments(content: string): string {
     output += char;
   }
 
-  return output;
+  return { code: output, docs };
+}
+
+// Bounds the walk, so a schema of nothing but `///` lines stays linear.
+const MAX_DOC_LINES = 50;
+
+/** The `///` lines directly above a line, as one paragraph: the last 50 at most. */
+function docAbove(docs: Map<number, PrismaDoc>, line: number): string | undefined {
+  const lines: string[] = [];
+
+  for (let above = line - 1; docs.get(above)?.own && lines.length < MAX_DOC_LINES; above--)
+    lines.unshift(docs.get(above)!.text);
+
+  return lines.join('\n').trim() || undefined;
 }
 
 interface PrismaBlock {
@@ -312,6 +435,10 @@ interface PrismaBlock {
   name: string;
   line: number;
   lines: string[];
+  /** Its `///` documentation. */
+  doc?: string | undefined;
+  /** Each line's `///` documentation, trailing it or directly above it. */
+  docs: Array<string | undefined>;
 }
 
 /**
@@ -319,14 +446,14 @@ interface PrismaBlock {
  * the text; a brace inside a string does not open or close a block.
  */
 function prismaBlocks(content: string, file: string, skipped: string[]): PrismaBlock[] {
-  const code = withoutPrismaComments(content);
+  const { code, docs } = withoutPrismaComments(content);
   const blocks: PrismaBlock[] = [];
   let depth = 0;
   let quoted = false;
   let line = 1;
   let headerStart = 0;
   let bodyStart = 0;
-  let open: Omit<PrismaBlock, 'lines'> | undefined;
+  let open: Pick<PrismaBlock, 'keyword' | 'name' | 'line'> | undefined;
 
   for (let index = 0; index < code.length; index++) {
     const char = code[index];
@@ -357,7 +484,22 @@ function prismaBlocks(content: string, file: string, skipped: string[]): PrismaB
       depth--;
 
       if (depth === 0) {
-        if (open?.name) blocks.push({ ...open, lines: code.slice(bodyStart, index).split('\n') });
+        if (open?.name) {
+          const lines = code.slice(bodyStart, index).split('\n');
+          const start = open.line;
+
+          blocks.push({
+            ...open,
+            lines,
+            doc: docAbove(docs, start),
+            docs: lines.map((_, i) => {
+              const own = docs.get(start + i);
+
+              return own && !own.own ? own.text : docAbove(docs, start + i);
+            }),
+          });
+        }
+
         headerStart = index + 1;
       }
     }
@@ -370,6 +512,295 @@ function prismaBlocks(content: string, file: string, skipped: string[]): PrismaB
 
 const mappedName = (text: string, attribute: '@map' | '@@map' | '@@schema') =>
   new RegExp(`(?:^|\\s)${attribute}\\("([^"]*)"\\)`).exec(text)?.[1];
+
+/** The text between an attribute's parentheses, nested calls and strings included. */
+function attributeArguments(text: string, attribute: string): string | undefined {
+  const start = new RegExp(`(?:^|\\s)${attribute}\\(`).exec(text);
+
+  if (!start) return undefined;
+  const from = start.index + start[0].length;
+  let depth = 1;
+  let quoted = false;
+
+  for (let index = from; index < text.length; index++) {
+    const char = text[index];
+
+    if (quoted) {
+      if (char === '\\') index++;
+      else if (char === '"') quoted = false;
+    } else if (char === '"') quoted = true;
+    else if (char === '(') depth++;
+    else if (char === ')' && --depth === 0) return text.slice(from, index).trim();
+  }
+
+  return undefined;
+}
+
+/** `fields: [a, b(sort: Desc)]` as `['a', 'b']`. */
+function namedList(text: string, name?: string): string[] | undefined {
+  const list = new RegExp(name ? `${name}:\\s*\\[([^\\]]*)\\]` : '^\\s*\\[([^\\]]*)\\]').exec(
+    text,
+  )?.[1];
+
+  if (list === undefined) return undefined;
+
+  // An item's arguments may hold commas of their own: `email(sort: Desc, length: 10)`.
+  let depth = 0;
+  let names = '';
+
+  for (const char of list) {
+    if (char === '(') depth++;
+    else if (char === ')') depth = Math.max(0, depth - 1);
+    else if (depth === 0) names += char;
+  }
+
+  return names
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+/** The relation a model's field points at, beside the column it may hold. */
+export interface ModelRelation {
+  /** The related model, as the code names it. */
+  model: string;
+  /** The related resource, once the scan found it. */
+  to?: ResourceRef;
+  /** A list of related records rather than one. */
+  many: boolean;
+  /** Prisma's relation name, which pairs the two sides of one relation. */
+  name?: string;
+  /** This model's columns that hold the related key: present on the side that owns the foreign key. */
+  fields?: string[];
+  /** The related model's columns those hold. */
+  references?: string[];
+}
+
+/** One field of a model as its page shows it, beside the JSON Schema drift compares. */
+export interface ModelField {
+  /** As the code names it. */
+  name: string;
+  /** The database's own name, when it differs. */
+  column?: string;
+  /** As the schema declares it: `String`, `Currency`, `varchar`. */
+  type: string;
+  list?: boolean;
+  optional?: boolean;
+  id?: boolean;
+  unique?: boolean;
+  /** The default as written, such as `now()` or `"pending"`. */
+  default?: string;
+  /** Set by the ORM on every update. */
+  updatedAt?: boolean;
+  enum?: string[];
+  doc?: string;
+  relation?: ModelRelation;
+  /** An embedded type's own fields. */
+  fields?: ModelField[];
+}
+
+export interface ModelIndex {
+  fields: string[];
+  unique: boolean;
+  /** A composite primary key, as `@@id` declares one. */
+  primary?: boolean;
+  name?: string;
+}
+
+const relationRef = z.object({
+  kind: z.string(),
+  namespace: z.string().optional(),
+  id: z.string(),
+  version: z.string().optional(),
+});
+
+export const modelFields: z.ZodType<ModelField[]> = z.array(
+  z.object({
+    name: z.string(),
+    column: z.string().optional(),
+    type: z.string(),
+    list: z.boolean().optional(),
+    optional: z.boolean().optional(),
+    id: z.boolean().optional(),
+    unique: z.boolean().optional(),
+    default: z.string().optional(),
+    updatedAt: z.boolean().optional(),
+    enum: z.array(z.string()).optional(),
+    doc: z.string().optional(),
+    relation: z
+      .object({
+        model: z.string(),
+        to: relationRef.optional(),
+        many: z.boolean(),
+        name: z.string().optional(),
+        fields: z.array(z.string()).optional(),
+        references: z.array(z.string()).optional(),
+      })
+      .optional(),
+    get fields() {
+      return modelFields.optional();
+    },
+  }),
+);
+
+export const modelIndexes = z.array(
+  z.object({
+    fields: z.array(z.string()),
+    unique: z.boolean(),
+    primary: z.boolean().optional(),
+    name: z.string().optional(),
+  }),
+);
+
+const PRISMA_PRIMITIVES = new Map(
+  Object.entries<JsonObject>({
+    String: { type: 'string' },
+    Boolean: { type: 'boolean' },
+    Int: { type: 'integer' },
+    Float: { type: 'number' },
+    Decimal: { type: 'string', format: 'decimal' },
+    BigInt: { type: 'string', pattern: '^-?[0-9]+$' },
+    DateTime: { type: 'string', format: 'date-time' },
+    Bytes: { type: 'string', contentEncoding: 'base64' },
+    Json: {},
+  }),
+);
+
+interface PrismaContext {
+  file: string;
+  skipped: string[];
+  enums: Map<string, string[]>;
+  /** MongoDB's embedded `type` blocks. */
+  composites: Map<string, PrismaBlock>;
+  models: Map<string, ResourceRef<'collection' | 'table'>>;
+}
+
+/** A model's or embedded type's fields, its JSON Schema, and each field's column. */
+function prismaFields(block: PrismaBlock, context: PrismaContext, open: Set<string>) {
+  const { file, skipped, enums, composites, models } = context;
+  const fields: ModelField[] = [];
+  const properties: JsonObject = {};
+  const required: string[] = [];
+  const aliases = new Map<string, string>();
+
+  for (const [index, line] of block.lines.entries()) {
+    // `Unsupported("geometry(Point, 4326)")?`: the type's argument comes before its modifier.
+    const match = /^\s*(\w+)\s+(\w+)(?:\("[^"]*"\))?(\[\]|\?)?(.*)$/.exec(line);
+
+    if (!match) continue;
+    const [, name = '', type = '', modifier, options = ''] = match;
+    const column = mappedName(options, '@map') ?? name;
+    const fallback = attributeArguments(options, '@default');
+    const doc = block.docs[index];
+
+    const field: ModelField = {
+      name,
+      type,
+      ...(column !== name && { column }),
+      ...(modifier === '[]' && { list: true }),
+      ...(modifier === '?' && { optional: true }),
+      ...(/(?:^|\s)@id\b/.test(options) && { id: true }),
+      ...(/(?:^|\s)@unique\b/.test(options) && { unique: true }),
+      ...(fallback !== undefined && { default: fallback }),
+      ...(/(?:^|\s)@updatedAt\b/.test(options) && { updatedAt: true }),
+      ...(doc && { doc }),
+    };
+
+    const related = models.get(type);
+
+    // A relation is the link between two models, not a column of either: it
+    // stays out of the schema drift compares, and the field holding the key is
+    // a column of its own.
+    if (related) {
+      const relation = attributeArguments(options, '@relation') ?? '';
+
+      const relationName =
+        /^"([^"]*)"/.exec(relation)?.[1] ?? /name:\s*"([^"]*)"/.exec(relation)?.[1];
+
+      const keys = namedList(relation, 'fields');
+      const references = namedList(relation, 'references');
+
+      fields.push({
+        ...field,
+        relation: {
+          model: type,
+          to: related,
+          many: modifier === '[]',
+          ...(relationName && { name: relationName }),
+          ...(keys && { fields: keys }),
+          ...(references && { references }),
+        },
+      });
+      continue;
+    }
+
+    const values = enums.get(type);
+    const composite = composites.get(type);
+    let schema = PRISMA_PRIMITIVES.get(type) ?? (values && { type: 'string', enum: values });
+
+    if (values) field.enum = values;
+
+    if (!schema && composite && !open.has(type)) {
+      const embedded = prismaFields(composite, context, new Set([...open, type]));
+      field.fields = embedded.fields;
+      schema = embedded.schema;
+    }
+
+    if (!schema) {
+      skipped.push(`${file}: unsupported Prisma field ${block.name}.${name} (${type})`);
+      schema = {};
+    }
+
+    if (modifier === '[]') schema = { type: 'array', items: schema };
+
+    if (modifier === '?') schema = { anyOf: [schema, { type: 'null' }] };
+    properties[column] = schema;
+    aliases.set(name, column);
+    required.push(column);
+    fields.push(field);
+  }
+
+  return { fields, schema: { type: 'object', properties, required }, aliases };
+}
+
+/** `@@index`, `@@unique` and `@@id`, by the fields each covers. */
+function prismaIndexes(block: PrismaBlock): ModelIndex[] {
+  return block.lines.flatMap((line) => {
+    const kind = /^\s*@@(index|unique|id)\s*\(/.exec(line)?.[1];
+    const args = kind && attributeArguments(line.trim(), `@@${kind}`);
+    const fields = args ? (namedList(args) ?? namedList(args, 'fields')) : undefined;
+
+    if (!fields) return [];
+    const name = args && /(?:name|map):\s*"([^"]*)"/.exec(args)?.[1];
+
+    return [
+      {
+        fields,
+        unique: kind !== 'index',
+        ...(kind === 'id' && { primary: true }),
+        ...(name && { name }),
+      },
+    ];
+  });
+}
+
+/** A model's fields, kept by reference so a relation found later can be resolved in place. */
+interface ParsedModel {
+  resource: CatalogResource;
+  ref: ResourceRef;
+  fields: ModelField[];
+  file: string;
+  line: number;
+}
+
+/** Record a model's fields on its resource, once each relation's target is resolved. */
+function describeModel({ resource, fields }: ParsedModel, indexes: ModelIndex[] = []): void {
+  resource.attributes = {
+    ...resource.attributes,
+    fields: jsonValueSchema.parse(fields),
+    ...(indexes.length && { indexes: jsonValueSchema.parse(indexes) }),
+  };
+}
 
 interface PrismaModel {
   ref: ResourceRef<'collection' | 'table'>;
@@ -407,8 +838,6 @@ function prismaResources(
       }),
     );
 
-  const related = new Set(all.flatMap((item) => (item.keyword === 'model' ? [item.name] : [])));
-
   const kind = all.some(
     (block) =>
       block.keyword === 'datasource' &&
@@ -417,76 +846,103 @@ function prismaResources(
     ? 'collection'
     : 'table';
 
-  const primitives = new Map(
-    Object.entries<JsonObject>({
-      String: { type: 'string' },
-      Boolean: { type: 'boolean' },
-      Int: { type: 'integer' },
-      Float: { type: 'number' },
-      Decimal: { type: 'string', format: 'decimal' },
-      BigInt: { type: 'string', pattern: '^-?[0-9]+$' },
-      DateTime: { type: 'string', format: 'date-time' },
-      Bytes: { type: 'string', contentEncoding: 'base64' },
-      Json: {},
-    }),
-  );
+  // Every model's identity first, so a relation can name one declared later.
+  const refs = new Map<string, ResourceRef<'collection' | 'table'>>();
+
+  for (const block of all) {
+    if (block.keyword !== 'model') continue;
+    const body = block.lines.join('\n');
+    const table = mappedName(body, '@@map') ?? block.name;
+    const sqlSchema = mappedName(body, '@@schema');
+
+    refs.set(block.name, { kind, namespace, id: sqlSchema ? `${sqlSchema}.${table}` : table });
+  }
+
+  const context: PrismaContext = {
+    file: '',
+    skipped,
+    enums,
+    composites: new Map(
+      all.flatMap((item) => (item.keyword === 'type' ? [[item.name, item]] : [])),
+    ),
+    models: refs,
+  };
+
+  const parsed: ParsedModel[] = [];
 
   for (const { relative: file, blocks: fileBlocks } of blocks)
     for (const block of fileBlocks) {
       if (block.keyword !== 'model') continue;
       const symbol = block.name;
-      const body = block.lines.join('\n');
-      const table = mappedName(body, '@@map') ?? symbol;
-      const sqlSchema = mappedName(body, '@@schema');
-      const properties: JsonObject = {};
-      const required: string[] = [];
-      const aliases = new Map<string, string>();
-
-      for (const line of block.lines) {
-        const field = /^\s*(\w+)\s+(\w+)(\[\]|\?)?(.*)$/.exec(line);
-
-        if (!field) continue;
-        const [, name, type, modifier, options] = field;
-
-        if (!name || !type || related.has(type)) continue;
-        const column = mappedName(options ?? '', '@map') ?? name;
-
-        let schema =
-          primitives.get(type) ??
-          (enums.has(type) ? { type: 'string', enum: enums.get(type)! } : {});
-
-        if (!primitives.has(type) && !enums.has(type))
-          skipped.push(`${file}: unsupported Prisma field ${symbol}.${name} (${type})`);
-
-        if (modifier === '[]') schema = { type: 'array', items: schema };
-
-        if (modifier === '?') schema = { anyOf: [schema, { type: 'null' }] };
-        properties[column] = schema;
-        aliases.set(name, column);
-        required.push(column);
-      }
-
-      const ref: ResourceRef<'collection' | 'table'> = {
-        kind,
-        namespace,
-        id: sqlSchema ? `${sqlSchema}.${table}` : table,
-      };
-
-      const resource = sourceResource(
-        ref,
-        { type: 'object', properties, required },
-        'prisma',
-        file,
-        symbol,
-        block.line,
-      );
+      const ref = refs.get(symbol)!;
+      const { fields, schema, aliases } = prismaFields(block, { ...context, file }, new Set());
+      const indexes = prismaIndexes(block);
+      const resource = sourceResource(ref, schema, 'prisma', file, symbol, block.line);
 
       resource.attributes = { ...resource.attributes, fieldAliases: Object.fromEntries(aliases) };
+
+      if (block.doc) resource.summary = block.doc;
       graph.resources.push(resource);
       models.set(`${symbol[0]!.toLowerCase()}${symbol.slice(1)}`, { ref, aliases });
+      const model = { resource, ref, fields, file, line: block.line };
+
+      describeModel(model, indexes);
+      parsed.push(model);
     }
 
+  graph.relationships.push(...modelReferences(parsed));
+
   return { graph, models };
+}
+
+/**
+ * A `references` edge from each model to every other model it holds a key of,
+ * so a map can join them. A many-to-many relation with no key on either side
+ * is drawn once, from the model whose name sorts first. A model's relation to
+ * itself is on its page rather than on the map.
+ */
+function modelReferences(models: ParsedModel[]): CatalogRelationship[] {
+  const edges = new Map<string, CatalogRelationship>();
+  const byKey = new Map(models.map((model) => [resourceKey(model.ref), model]));
+
+  for (const model of models)
+    for (const field of model.fields) {
+      const to = field.relation?.to;
+
+      if (!to || resourceKey(to) === resourceKey(model.ref)) continue;
+
+      const opposite = byKey
+        .get(resourceKey(to))
+        ?.fields.find(
+          (other) =>
+            other.relation?.to &&
+            resourceKey(other.relation.to) === resourceKey(model.ref) &&
+            other.relation.name === field.relation!.name,
+        );
+
+      const holdsKey =
+        field.relation!.fields?.length ||
+        (field.relation!.many &&
+          opposite?.relation?.many &&
+          resourceKey(model.ref) < resourceKey(to));
+
+      if (!holdsKey) continue;
+      const key = `${resourceKey(model.ref)}->${resourceKey(to)}`;
+      const edge = edges.get(key);
+      const names = z.array(z.string()).catch([]).parse(edge?.attributes?.fields);
+
+      edges.set(key, {
+        type: 'references',
+        from: model.ref,
+        to,
+        provenance: 'extracted',
+        needsReview: false,
+        source: edge?.source ?? { type: 'code', file: model.file, line: model.line },
+        attributes: { fields: [...names, field.name] },
+      });
+    }
+
+  return [...edges.values()];
 }
 
 /** A model, table or Prisma client that a local name refers to. */
@@ -708,6 +1164,7 @@ function mongooseModels(
   const { ast, relative, namespace, skipped } = context;
   const resources: CatalogResource[] = [];
   const locals = new Map<string, Binding>();
+  const models: Array<ParsedModel & { model: string }> = [];
 
   const isModelCall = (node: ts.Node): node is ts.CallExpression =>
     ts.isCallExpression(node) &&
@@ -754,6 +1211,15 @@ function mongooseModels(
       ast.getLineAndCharacterOfPosition(call.getStart()).line + 1,
     );
 
+    models.push({
+      model,
+      resource,
+      ref,
+      fields: mongooseFields(definition.arguments[0], values),
+      file: relative,
+      line: resource.source!.line ?? 1,
+    });
+
     if (!collection) {
       resource.provenance.fields.id = 'inferred';
       resource.needsReview = true;
@@ -765,11 +1231,12 @@ function mongooseModels(
     resources.push(resource);
   }
 
-  return { resources, locals };
+  return { resources, locals, models };
 }
 
 function drizzleResources(ast: ts.SourceFile, namespace: string, file: string, skipped: string[]) {
   const resources: CatalogResource[] = [];
+  const models: ParsedModel[] = [];
   const tables = new Map<string, ResourceRef<'table'>>();
   const constructors = new Map<string, string>();
 
@@ -810,16 +1277,45 @@ function drizzleResources(ast: ts.SourceFile, namespace: string, file: string, s
         const properties: JsonObject = {};
         const required: string[] = [];
         const aliases: JsonObject = {};
+        const fields: ModelField[] = [];
 
         for (const [name, expression] of objectFields(call.arguments[1])) {
           let base = expression;
           let nonNullable = false;
           let array = false;
+          const field: ModelField = { name, type: '' };
 
           while (ts.isCallExpression(base) && ts.isPropertyAccessExpression(base.expression)) {
             const modifier = base.expression.name.text;
+            const [argument] = base.arguments;
 
             if (modifier === 'notNull' || modifier === 'primaryKey') nonNullable = true;
+
+            if (modifier === 'primaryKey') field.id = true;
+
+            if (modifier === 'unique') field.unique = true;
+
+            if (modifier === 'default' && argument) field.default = argument.getText();
+
+            if (modifier === 'defaultNow') field.default = 'now()';
+
+            // `.references(() => users.id)`: the table is resolved once every file is read.
+            const target =
+              modifier === 'references' && argument && ts.isArrowFunction(argument)
+                ? argument.body
+                : undefined;
+
+            if (
+              target &&
+              ts.isPropertyAccessExpression(target) &&
+              ts.isIdentifier(target.expression)
+            )
+              field.relation = {
+                model: target.expression.text,
+                many: false,
+                fields: [name],
+                references: [target.name.text],
+              };
 
             if (modifier === 'array') array = true;
             base = base.expression.expression;
@@ -873,6 +1369,14 @@ function drizzleResources(ast: ts.SourceFile, namespace: string, file: string, s
           properties[column] = schema;
           aliases[name] = column;
           required.push(column);
+          fields.push({
+            ...field,
+            type,
+            ...(column !== name && { column }),
+            ...(array && { list: true }),
+            ...(!nonNullable && type !== 'serial' && { optional: true }),
+            ...(Array.isArray(values) && { enum: values.map(String) }),
+          });
         }
 
         const ref: ResourceRef<'table'> = { kind: 'table', namespace, id };
@@ -889,6 +1393,13 @@ function drizzleResources(ast: ts.SourceFile, namespace: string, file: string, s
 
         resource.attributes = { ...resource.attributes, fieldAliases: aliases };
         resources.push(resource);
+        models.push({
+          resource,
+          ref,
+          fields,
+          file,
+          line: ast.getLineAndCharacterOfPosition(node.getStart()).line + 1,
+        });
       }
     }
 
@@ -897,7 +1408,7 @@ function drizzleResources(ast: ts.SourceFile, namespace: string, file: string, s
 
   visit(ast);
 
-  return { resources, tables };
+  return { resources, models, tables };
 }
 
 const SOURCE_EXTENSIONS = ['.ts', '.tsx', '.mts', '.cts', '.js', '.jsx', '.mjs', '.cjs'];
@@ -1040,7 +1551,14 @@ function withoutCompetingSchemas(graphs: ResourceGraph[], skipped: string[]): Re
     resources: graph.resources.map((resource) => {
       if (!competing.has(resourceKey(resource.ref)) || !isArchitectureCatalogResource(resource))
         return resource;
-      const { schema: _schema, fieldAliases: _aliases, ...attributes } = resource.attributes;
+
+      const {
+        schema: _schema,
+        fieldAliases: _aliases,
+        fields: _fields,
+        indexes: _indexes,
+        ...attributes
+      } = resource.attributes;
 
       return {
         ...resource,
@@ -1092,13 +1610,33 @@ export async function scanModelResources(
     if (content !== undefined) schemaFiles.push({ relative: relativeTo(file), content });
   }
 
-  const prisma = prismaResources(schemaFiles, namespace, skipped);
-  graphs.push(prisma.graph);
+  // Each schema is read on its own, with its own datasource: a multi-file
+  // schema is the folder `prisma/schema/`, any other is its file's folder.
+  const schemas = new Map<string, typeof schemaFiles>();
+
+  for (const file of schemaFiles) {
+    const folder =
+      /^(?:.*\/)?prisma\/schema\//.exec(file.relative)?.[0] ?? path.posix.dirname(file.relative);
+
+    schemas.set(folder, [...(schemas.get(folder) ?? []), file]);
+  }
+
+  const prisma = { models: new Map<string, PrismaModel>() };
+
+  for (const group of schemas.values()) {
+    const { graph, models } = prismaResources(group, namespace, skipped);
+
+    graphs.push(graph);
+
+    for (const [name, model] of models) prisma.models.set(name, model);
+  }
 
   // First pass: what each file defines, imports and exports. Its syntax tree
   // is dropped; the second pass parses again only the files that use a model.
   const modules = new Map<string, ModuleInfo>();
   const drizzleTables = new Map<string, ResourceRef<'table'>>();
+  const drizzleModels: Array<{ file: string; model: ParsedModel }> = [];
+  const mongooseModelsByName = new Map<string, ParsedModel>();
 
   for (const file of files.filter(isSourceFile)) {
     const content = await read(file);
@@ -1128,6 +1666,7 @@ export async function scanModelResources(
     if (content.includes('drizzle-orm')) {
       const drizzle = drizzleResources(ast, namespace, relative, skipped);
       graph.resources.push(...drizzle.resources);
+      drizzleModels.push(...drizzle.models.map((model) => ({ file, model })));
 
       for (const [local, ref] of drizzle.tables) {
         locals.set(local, { kind: 'model', ref, inferred: false });
@@ -1138,6 +1677,8 @@ export async function scanModelResources(
     if (content.includes('mongoose')) {
       const mongoose = mongooseModels(values, { ast, relative, namespace, skipped });
       graph.resources.push(...mongoose.resources);
+
+      for (const model of mongoose.models) mongooseModelsByName.set(model.model, model);
 
       for (const [local, binding] of mongoose.locals) locals.set(local, binding);
     }
@@ -1204,6 +1745,29 @@ export async function scanModelResources(
 
     return target && imported ? exported(target, imported.name, seen) : undefined;
   };
+
+  // A Drizzle reference names a table's variable as its own file sees it: one
+  // of its own tables, else an import. A Mongoose ref names a registered model.
+  for (const { file, model } of drizzleModels)
+    for (const { relation } of model.fields) {
+      const binding = relation && bound(file, relation.model, new Set());
+
+      if (relation && binding?.kind === 'model' && binding.ref.kind === 'table')
+        relation.to = binding.ref;
+    }
+
+  for (const model of mongooseModelsByName.values())
+    for (const { relation } of model.fields) {
+      const to = relation && mongooseModelsByName.get(relation.model)?.ref;
+
+      if (relation && to) relation.to = to;
+    }
+
+  const related = [...drizzleModels.map(({ model }) => model), ...mongooseModelsByName.values()];
+
+  for (const model of related) describeModel(model);
+
+  graphs.push({ ...emptyResourceGraph(), relationships: modelReferences(related) });
 
   // Second pass: accesses, in the files that can reach a model.
   for (const [file, info] of modules) {

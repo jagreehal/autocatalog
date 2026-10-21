@@ -1,7 +1,7 @@
 /** @jsxImportSource react */
 import '@eventcatalog/visualiser/styles-core.css';
-import type { DslGraph } from '@eventcatalog/visualiser';
 import { cn } from 'cn';
+import type { VisualiserGraph } from '#ui/lib/visualiser.ts';
 import { lazy, Suspense, useEffect, useRef, useState, type ReactNode } from 'react';
 
 // React Flow, dagre and mermaid come to a quarter of a megabyte gzipped, so
@@ -11,7 +11,7 @@ const Visualiser = lazy(() => import('./Visualiser'));
 export interface GraphProps {
   id: string;
   label: string;
-  visualiser?: { graph: DslGraph; hrefs: Record<string, string> };
+  visualiser?: VisualiserGraph;
   /** The live map's height; a one-hop flow needs less than the whole catalog. */
   height?: keyof typeof heights;
   /** The static picture (a flow strip): for a reader without JavaScript, and when there is no map. */
@@ -83,6 +83,8 @@ export function Graph({ id, label, visualiser, height = '20rem', fallback }: Gra
               label={label}
               graph={visualiser.graph}
               hrefs={visualiser.hrefs}
+              evidence={visualiser.evidence}
+              live={visualiser.live}
               direction={direction}
             />
           </Suspense>

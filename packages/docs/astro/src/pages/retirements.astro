@@ -1,0 +1,20 @@
+---
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import { docsCatalog } from '../catalog';
+import { retirementsPageProps } from '../retirements';
+import { RetirementsPage } from '../ui/pages/RetirementsPage';
+
+const catalog = await docsCatalog();
+
+const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+---
+
+<StarlightPage
+  frontmatter={{
+    title: 'Retirements',
+    description: 'Every deprecated event and field, and where each of its consumers stands.',
+    tableOfContents: false,
+  }}
+>
+  <RetirementsPage client:load {...retirementsPageProps(catalog, base)} />
+</StarlightPage>

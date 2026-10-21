@@ -58,6 +58,15 @@ repository that only consumes other teams' events. `--catalog <url|file>`
 checks each declared field against the schema the producer publishes on the
 company site. See [validation](/docs/events/validation).
 
+**`ac retire <event> [field]`** — says whether a field, or a whole event, can
+be removed yet. It lists every consumer the evidence knows of and where each
+stands: needs it, unknown, unspecified or clear. Evidence comes from the event's
+own consumers, `--catalog <url|file>` (what other repositories declare),
+`--snapshot <file>` (who was seen receiving it) and `--pacts <path|url>` (pact
+files, or a Pact Broker with `--pact-provider` and `--pact-token-env`). Exits 0
+when ready and 1 when blocked; `--format json` for scripts. See
+[retiring a field](/docs/retire).
+
 **`ac health`** — scores events on completeness, ownership, examples and
 versioning. `--min <score>` exits non-zero below a threshold.
 
@@ -70,12 +79,16 @@ versioning. `--min <score>` exits non-zero below a threshold.
 `--fail-on breaking | suspicious | never`. `--format github` annotates the pull
 request diff; `--compatibility backward | forward | full | none` gates on a
 Schema Registry strategy instead of severity. `--snapshot <file>` adds runtime
-drift from an autotel snapshot to the same report: undocumented events and
-undeclared fields (suspicious), documented events never seen (info), and the
-consumers it recorded. `--consumers <url|file>` reads the company site's
+drift from an autotel snapshot to the same report: payloads of a type or value
+the schema forbids (breaking), undocumented events, fields, producers and
+channels (suspicious), documented events never seen (info), and the consumers it
+recorded. With `--base-ref`, a runtime finding the base already had does not
+fail the change; `--base-snapshot <file>` names the base's snapshot otherwise. `--consumers <url|file>` reads the company site's
 `/catalog.json` and names the consumers other repositories declare, with
 `--consumers-token-env` for a private site and `--repository` when two
-repositories publish the same event. See [drift gating](/docs/drift-ci).
+repositories publish the same event. With `--base-ref` and `--allow-code-execution` it also
+runs the base branch's [catalog rules](/docs/rules) from `contracts/rules/`. See
+[drift gating](/docs/drift-ci).
 
 **`ac fields [query]`** — shows which events carry a field and which consumers
 it reaches. With no query it lists every field by usage; with one it details a
@@ -86,6 +99,16 @@ requiredness disagrees between events. See [fields](/docs/events/fields).
 
 **`ac import`** — imports schemas and examples from a GitHub repository, one
 event at a time or from a manifest. See [importing](/docs/events/importing).
+
+**`ac from-snapshot <file>`** — writes draft events from a runtime
+architecture snapshot, for a repository that has no contracts yet. Each event
+the snapshot saw becomes a `draft`, `inferred`, needs-review event: a schema
+typed from the fields its payloads carried (nothing required, no enums, and no
+sample values, which can be sensitive), the producers, consumers and channels
+the snapshot recorded, and its runtime evidence. Events the snapshot names
+without a domain go under `--domain`, or the snapshot's service. It is a place
+to start: move each contract into the code that sends it, so `ac scan` finds it
+from then on.
 
 **`ac from-asyncapi <file>`** — imports an AsyncAPI 2.x or 3.x document.
 `--strict` fails the command if any message was skipped.
@@ -142,6 +165,9 @@ names repositories directly, and a root builds from checkouts on disk. `--dev`
 serves instead of building. `--eventcatalog` builds EventCatalog into the site
 and embeds its diagrams. `--docs-schema` names the docs frontmatter contract to
 enforce; without it the site uses the root's, else an enrolled repository's.
+`--docs-conventions` names the conventions file, found the same way.
+`--live-url` gives the maps' Live mode a server-sent events feed to follow, and
+`--live-event` the SSE event name its frames use.
 See [the company site](/docs/site).
 
 **`ac to-eventcatalog <dir>`** writes the catalog into an EventCatalog project
@@ -159,7 +185,9 @@ of them take an optional root and default to the current directory.
 
 **`ac docs check`** — validates frontmatter against the contract, plus links
 between repositories and documents that were deleted while something still links
-to them.
+to them. An ADR, runbook or incident is also checked against its kind's schema,
+and its `supersedes` and `supersededBy` ids must resolve. `--conventions` names
+the conventions file when the default lookup should not choose it.
 
 **`ac docs manifest`** — publishes `contracts/docs-manifest.json`, the
 aggregated index other repositories resolve links against. `ac site` serves
@@ -167,6 +195,12 @@ the same file at `/contracts/docs-manifest.json`.
 
 **`ac docs init-schema`** — writes the default frontmatter contract into
 `contracts/` so the organisation owns its copy from the start.
+
+**`ac docs init-conventions`** — writes the built-in document kinds (ADRs,
+runbooks, incidents) into `contracts/autocatalog.conventions.json` for the
+organisation to edit: add a kind, change a folder, label or schema, or turn a
+kind off. It refuses to overwrite a file that exists; `--conventions` writes
+elsewhere.
 
 **`ac docs sync-schema`** — checks that copy against the organisation's
 canonical one, found from the `$id` the copy records. `--write` takes the

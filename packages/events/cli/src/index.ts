@@ -106,6 +106,10 @@ export function buildProgram(): Command {
       'JSON Schema for frontmatter (defaults to contracts/docs-frontmatter.json, then the built-in contract)',
     )
     .option(
+      '--conventions <file>',
+      'document kinds to enforce (defaults to contracts/autocatalog.conventions.json, then the built-in kinds)',
+    )
+    .option(
       '--manifest <file>',
       'published index to resolve links against (contracts/docs-manifest.json)',
     )
@@ -114,7 +118,13 @@ export function buildProgram(): Command {
     .action(
       async (
         root: string | undefined,
-        opts: { schema?: string; manifest?: string; repo?: string; quiet: boolean },
+        opts: {
+          schema?: string;
+          conventions?: string;
+          manifest?: string;
+          repo?: string;
+          quiet: boolean;
+        },
       ) => {
         const { runDocsCheck } = await import('./commands/docs');
         process.exit(await runDocsCheck({ root: root ?? process.cwd(), ...opts }));
@@ -128,13 +138,23 @@ export function buildProgram(): Command {
       '--schema <file>',
       'JSON Schema for frontmatter (defaults to contracts/docs-frontmatter.json, then the built-in contract)',
     )
+    .option(
+      '--conventions <file>',
+      'document kinds to enforce (defaults to contracts/autocatalog.conventions.json, then the built-in kinds)',
+    )
     .option('--manifest <file>', 'output path (defaults to contracts/docs-manifest.json)')
     .option('--repo <name>', 'name for a single repository publishing its own docs/')
     .option('-q, --quiet', 'suppress non-error output', false)
     .action(
       async (
         root: string | undefined,
-        opts: { schema?: string; manifest?: string; repo?: string; quiet: boolean },
+        opts: {
+          schema?: string;
+          conventions?: string;
+          manifest?: string;
+          repo?: string;
+          quiet: boolean;
+        },
       ) => {
         const { runDocsManifest } = await import('./commands/docs');
         process.exit(await runDocsManifest({ root: root ?? process.cwd(), ...opts }));
@@ -162,6 +182,19 @@ export function buildProgram(): Command {
     .action(async (root: string | undefined, opts: { schema?: string; quiet: boolean }) => {
       const { runDocsInitSchema } = await import('./commands/docs');
       process.exit(await runDocsInitSchema({ root: root ?? process.cwd(), ...opts }));
+    });
+
+  docs
+    .command('init-conventions [root]')
+    .description('Write the default document kinds (ADRs, runbooks, incidents) to edit')
+    .option(
+      '--conventions <file>',
+      'output path (defaults to contracts/autocatalog.conventions.json)',
+    )
+    .option('-q, --quiet', 'suppress non-error output', false)
+    .action(async (root: string | undefined, opts: { conventions?: string; quiet: boolean }) => {
+      const { runDocsInitConventions } = await import('./commands/docs');
+      process.exit(await runDocsInitConventions({ root: root ?? process.cwd(), ...opts }));
     });
 
   program
@@ -197,6 +230,10 @@ export function buildProgram(): Command {
       'runtime architecture snapshot (autotel) to check the current catalog against',
     )
     .option(
+      '--base-snapshot <file>',
+      "the base's snapshot, so only runtime drift this change introduced fails (default with --base-ref: the same file at that ref)",
+    )
+    .option(
       '--consumers <url|file>',
       "the company site's /catalog.json: consumers other repositories declare",
     )
@@ -223,6 +260,7 @@ export function buildProgram(): Command {
         failOn: 'breaking' | 'suspicious' | 'never';
         compatibility?: CompatibilityMode;
         snapshot?: string;
+        baseSnapshot?: string;
         quiet: boolean;
       }) => {
         const { runDrift } = await import('./commands/drift');
@@ -237,6 +275,7 @@ export function buildProgram(): Command {
             failOn: opts.failOn,
             compatibility: opts.compatibility,
             snapshot: opts.snapshot,
+            baseSnapshot: opts.baseSnapshot,
             consumers: opts.consumers,
             consumersTokenEnv: opts.consumersTokenEnv,
             repository: opts.repository,
@@ -352,6 +391,73 @@ export function buildProgram(): Command {
         await runFromAsyncApi({ file, out: opts.out, quiet: opts.quiet, strict: opts.strict }),
       );
     });
+
+  program
+    .command('from-snapshot <file>')
+    .description(
+      'Write draft events from a runtime snapshot (autotel), for a repository with no contracts yet',
+    )
+    .option('-o, --out <dir>', 'events output directory', './events')
+    .option(
+      '--domain <name>',
+      'domain for events the snapshot names without one (default: its service)',
+    )
+    .option('-q, --quiet', 'suppress non-error output', false)
+    .action(async (file: string, opts: { out: string; domain?: string; quiet: boolean }) => {
+      const { runFromSnapshot } = await import('./commands/from-snapshot');
+      process.exit(
+        await runFromSnapshot({ file, out: opts.out, domain: opts.domain, quiet: opts.quiet }),
+      );
+    });
+
+  program
+    .command('retire <event> [field]')
+    .description(
+      'Say whether a field, or a whole event, can be removed yet: each consumer, where it stands, and what has to happen first',
+    )
+    .option('--events <dir>', 'events directory', './events')
+    .option(
+      '--catalog <url|file>',
+      "the company site's /catalog.json: consumers other repositories declare",
+    )
+    .option(
+      '--catalog-token-env <name>',
+      'environment variable holding a bearer token for --catalog',
+    )
+    .option('--repository <name>', "this repository's name on the company site")
+    .option(
+      '--snapshot <file>',
+      'runtime architecture snapshot (autotel): who was seen receiving it',
+    )
+    .option('--pacts <path|url>', 'a pact file, a folder of them, or a Pact Broker base URL')
+    .option(
+      '--pact-provider <name>',
+      "the provider's name in the broker (default: the event's producer)",
+    )
+    .option('--pact-token-env <name>', 'environment variable holding a bearer token for the broker')
+    .option('--format <format>', 'markdown | json', 'markdown')
+    .option('-q, --quiet', 'only the exit code: 0 ready, 1 blocked', false)
+    .action(
+      async (
+        event: string,
+        field: string | undefined,
+        opts: {
+          events: string;
+          catalog?: string;
+          catalogTokenEnv?: string;
+          repository?: string;
+          snapshot?: string;
+          pacts?: string;
+          pactProvider?: string;
+          pactTokenEnv?: string;
+          format: 'markdown' | 'json';
+          quiet: boolean;
+        },
+      ) => {
+        const { runRetire } = await import('./commands/retire');
+        process.exit(await runRetire({ event, ...(field !== undefined && { field }), ...opts }));
+      },
+    );
 
   program
     .command('health')
@@ -517,6 +623,12 @@ export function buildProgram(): Command {
       '--docs-schema <file>',
       'docs frontmatter contract to enforce (defaults to <root>/contracts/docs-frontmatter.json, then the one an enrolled repository publishes)',
     )
+    .option(
+      '--docs-conventions <file>',
+      'document kinds to publish (defaults to <root>/contracts/autocatalog.conventions.json, then the one an enrolled repository publishes)',
+    )
+    .option('--live-url <url>', "a server-sent events feed the maps' Live mode follows")
+    .option('--live-event <name>', 'the SSE event name its frames arrive under (default: message)')
     .action(
       async (
         root: string | undefined,
@@ -532,6 +644,9 @@ export function buildProgram(): Command {
           dev: boolean;
           eventcatalog: boolean;
           docsSchema?: string;
+          docsConventions?: string;
+          liveUrl?: string;
+          liveEvent?: string;
         },
       ) => {
         const { runSite } = await import('./commands/site');

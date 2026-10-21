@@ -44,6 +44,18 @@ Structure a runbook as symptom → check → action. Put the check that most oft
 
 Draw a flow or sequence as a ` ```mermaid ` fence. The site renders it as a diagram, and the Markdown twin keeps the source for agents.
 
+### Decisions, runbooks and incidents
+
+These are kinds of document, and the folder sets the kind. `ac docs check` prints `kinds:` beside the contract: the conventions file in force, or the built-in kinds. Read the file when there is one, because the organisation may have renamed a folder, changed a schema or added a kind of its own; its `schema` lists the fields each kind requires.
+
+With the built-in kinds:
+
+- **ADR**: `docs/adr/NNNN-short-title.md`. Write `status` (proposed, accepted, rejected, deprecated, superseded) and `date` (the day it was decided, `YYYY-MM-DD`). Body: Context, Decision, Consequences. When it replaces an earlier decision, write `supersedes: [<repo>/adr/<id>]` here and set the old one's `status: superseded` and `supersededBy: [<this id>]`. Never edit an accepted decision to say something new; write a new one that supersedes it.
+- **Runbook**: `docs/runbooks/<what-it-fixes>.md`. Optional `severity` (sev1 to sev4) and `lastTested`, the day someone last followed it end to end. Leave `lastTested` out rather than guess it.
+- **Incident**: `docs/incidents/YYYY-MM-DD-<what-broke>.md`. Write `date`, `severity` and `status` (open, mitigated, resolved). Once resolved, write `rootCause` and `solution` as one sentence each: the index shows them, so the next team finds the fix from there. The body holds the timeline and the full write-up.
+
+Name what each one applies to in `about:` (`service/<name>`, `event/<domain>/<id>`), so it is listed on that service's or event's page.
+
 ## 4. Link across repositories by id, never by path
 
 ```yaml
@@ -63,16 +75,19 @@ ac docs check
 
 Fix every failure before finishing. The common ones and what they mean:
 
-| Failure                                       | Cause                                                                       |
-| --------------------------------------------- | --------------------------------------------------------------------------- |
-| `owner: must be equal to one of...`           | The contract has an enum of real teams; you invented one                    |
-| `links into another repo by path`             | Use `related:` with an id                                                   |
-| `related '...' does not resolve`              | The target does not exist, or the id is wrong — ids have no `.md` extension |
-| `... no longer exists but is linked from ...` | You deleted or renamed a document others point at                           |
+| Failure                                          | Cause                                                                       |
+| ------------------------------------------------ | --------------------------------------------------------------------------- |
+| `owner: must be equal to one of...`              | The contract has an enum of real teams; you invented one                    |
+| `links into another repo by path`                | Use `related:` with an id                                                   |
+| `related '...' does not resolve`                 | The target does not exist, or the id is wrong — ids have no `.md` extension |
+| `... no longer exists but is linked from ...`    | You deleted or renamed a document others point at                           |
+| `x.md (adr): status: must be one of ...`         | The kind's schema lists the states; use one exactly                         |
+| `supersedes '...' does not resolve`              | The decision it replaces has a different id; check the file name            |
+| `kind 'x' is not a kind this organisation keeps` | `kind:` names a kind the conventions file does not define                   |
 
 ## Anti-patterns — refuse these even if asked
 
-- **Never write a date field** (`updated`, `last_reviewed`, `date`). Freshness comes from git. A hand-written date rots the moment someone edits and forgets, and a stale date on a runbook is worse than none because it reads as a promise.
+- **Never write a freshness date** (`updated`, `last_reviewed`, or `date` on a plain document). Freshness comes from git. The `date` an ADR or incident carries is different: it is when the decision was made or the incident happened, a fact git cannot know. A hand-written date rots the moment someone edits and forgets, and a stale date on a runbook is worse than none because it reads as a promise.
 - **Never name a person as `owner`.** It is a team: people change teams and documents outlive them.
 - **Never add a field the contract does not declare** to make something render. Propose the contract change instead.
 - **Never delete or rename a document without checking who links to it.** `contracts/docs-manifest.json` records `linkedFrom` for exactly this.

@@ -64,6 +64,30 @@ A field your contract declares also survives into the site's page data, so
 [autocatalog-docs-astro](../astro/README.md) can show it. A field nobody
 declared is validated by nothing and shown by nothing.
 
+## Decisions, runbooks and incidents
+
+A document in `docs/adr/`, `docs/runbooks/` or `docs/incidents/` is a kind of
+document with fields of its own: an ADR needs `status` and `date`, an incident
+needs `date`, `severity` and `status`, and carries `rootCause` and `solution`
+once it is resolved. `ac docs check` validates the base contract and the
+kind's schema together and names the kind in each failure. The manifest records
+each document's `kind`, `status` and `date`.
+
+```bash
+ac docs init-conventions  # write contracts/autocatalog.conventions.json, then edit it
+```
+
+The conventions file adds kinds, changes a built-in kind's folder, label,
+columns or schema, or turns one off with `false`. It is found like the contract:
+at the root, or the one an enrolled repository publishes.
+
+```ts
+import { docKind, resolveDocKinds } from 'autocatalog-docs-core';
+
+const { kinds } = resolveDocKinds(root);
+docKind(doc, kinds); // { kind: { id: 'adr', ... } } for docs/adr/0001-kafka.md
+```
+
 ## What else it enforces
 
 - **No relative links into sibling repositories.** `](../../other-repo/...)`

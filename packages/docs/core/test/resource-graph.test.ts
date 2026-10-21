@@ -35,6 +35,9 @@ const manifest: DocsManifest = {
     source: null,
     edit: null,
     linkedFrom: [],
+    kind: null,
+    status: null,
+    date: null,
   },
   'acme-handbook/incident-policy': {
     title: 'Incident policy',
@@ -43,6 +46,9 @@ const manifest: DocsManifest = {
     source: null,
     edit: null,
     linkedFrom: ['payments-service/runbook'],
+    kind: null,
+    status: null,
+    date: null,
   },
 };
 

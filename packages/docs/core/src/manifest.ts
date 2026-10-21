@@ -1,12 +1,8 @@
 import { z } from 'zod';
 import { lastChanged, sourceUrl } from './git';
 import { type Doc, readDocs, type ReadDocsOptions } from './read-docs';
-import {
-  type Frontmatter,
-  frontmatterSchema,
-  frontmatterValidator,
-  resolveFrontmatterContract,
-} from './frontmatter';
+import { type Frontmatter, frontmatterSchema, resolveFrontmatterContract } from './frontmatter';
+import { type DocKind, kindFailure, kindValidator, resolveDocKinds, textField } from './kinds';
 
 /** The published path the convention reserves for the aggregated index. */
 export const DOCS_MANIFEST_PATH = 'contracts/docs-manifest.json';
@@ -22,6 +18,12 @@ const docsManifestEntrySchema = z.object({
   edit: z.string().nullable(),
   /** Ids of documents declaring this one in `related`. Sorted for determinism. */
   linkedFrom: z.array(z.string()),
+  /** The document's kind (`adr`, `runbook`, ...), or null for a plain document. */
+  kind: z.string().nullable(),
+  /** The value of its kind's status field, when it has one. */
+  status: z.string().nullable(),
+  /** The value of its kind's date field, when it has one. */
+  date: z.string().nullable(),
 });
 
 const docsManifestSchema = z.record(z.string(), docsManifestEntrySchema);
@@ -37,6 +39,11 @@ export interface BuildDocsManifestOptions extends ReadDocsOptions {
    * contract.
    */
   schemaPath?: string;
+  /**
+   * Path to the organisation's conventions file. Omit and the convention looks
+   * for `contracts/autocatalog.conventions.json` the way it finds the contract.
+   */
+  conventionsPath?: string;
   /** Skip git lookups. Used by tests and by callers that only need structure. */
   includeDates?: boolean;
 }
@@ -63,18 +70,19 @@ export function buildDocsManifest(
 ): DocsManifest {
   const docs = readDocs(root, options);
 
-  const validator = frontmatterValidator(
+  const validate = kindValidator(
     resolveFrontmatterContract(root, options.schemaPath).schema,
+    resolveDocKinds(root, options.conventionsPath).kinds,
   );
 
   const failures: string[] = [];
-  const valid: Array<Doc & { front: Frontmatter }> = [];
+  const valid: Array<Doc & { front: Frontmatter; kind: DocKind | null }> = [];
 
   for (const doc of docs) {
-    const issues = validator.validate(doc.data);
+    const { kind, issues } = validate(doc);
 
     if (issues.length > 0) {
-      for (const issue of issues) failures.push(`${doc.file}: ${issue.path}: ${issue.message}`);
+      for (const issue of issues) failures.push(kindFailure(doc.file, kind, issue));
       continue;
     }
 
@@ -92,7 +100,7 @@ export function buildDocsManifest(
       continue;
     }
 
-    valid.push({ ...doc, front: front.data });
+    valid.push({ ...doc, front: front.data, kind });
   }
 
   if (failures.length > 0) throw new DocsManifestError(failures);
@@ -107,6 +115,9 @@ export function buildDocsManifest(
       source: options.includeDates === false ? null : sourceUrl(root, doc.file),
       edit: options.includeDates === false ? null : sourceUrl(root, doc.file, 'edit'),
       linkedFrom: [],
+      kind: doc.kind?.id ?? null,
+      status: textField(doc.data, doc.kind?.statusField),
+      date: textField(doc.data, doc.kind?.dateField),
     };
   }
 

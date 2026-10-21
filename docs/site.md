@@ -105,30 +105,77 @@ different ones fail the build, naming both, until `--docs-schema` picks one.
   map shows the services on the other side of each event, and the catalog map
   adds commands, queries and the tables and collections each service reads and
   writes.
+- When a repository has a snapshot, the maps draw it on each producer and
+  consumer edge. An edge that ran is solid in the extracted colour, and thicker
+  the more often it ran. One the catalog declares that the snapshot never saw is
+  dashed and grey. One that ran though nobody declared it, a consumer or
+  producer only the snapshot names, is in the inferred colour. Event names
+  ignore case and `.`, `_`, `-`, so `order.placed` is `OrderPlaced`. A
+  repository without a snapshot draws its edges as before.
+- Those maps also have a Replay mode, which sends markers across the edges that
+  ran, more often where the snapshot saw more, and a Live mode when the site is
+  given a server-sent events feed. Live moves an edge each time a frame names its
+  event: a JSON frame like `{ "name": "order.placed", "producer": "OrderService" }`
+  moves that producer's edge, or every producer's when it names none, and every
+  consumer's edge with a hollow marker, since a producer's frame does not prove
+  delivery. Pass `ac site --live-url <url>` (and `--live-event <name>`, the SSE
+  event name, `message` by default), or set `live: { url, event }` on the
+  `autocatalogDocs` plugin. The site only listens; it does not
+  serve the feed. With reduced motion an edge brightens in place instead of
+  carrying a marker.
 - `/apis/<repository>/<name>/` renders each OpenAPI 3 spec a repository commits
   under `contracts/` with [Scalar](https://scalar.com), and publishes the spec
   beside it as `openapi.json`. Without JavaScript the page lists the operations.
   A service links to the API whose title names it or whose webhooks it
   produces.
+- `/data/<repository>/<model>/` is one table or collection: where its
+  definition was read, who owns it, its fields (type, required, primary key,
+  unique, default, database name, enum values, the model a key column points
+  at), its relations, its indexes, an entity-relationship diagram of the model
+  and every model one relation away, and the services that read and write it.
+  `/data` lists every model with its datastore, repository, owner, field count,
+  readers and writers. Maps and the Catalog link each table and collection to
+  its page. Models come from each repository's `.autocatalog/resources.json`,
+  or, without one, from the site scanning the repository's Prisma, Drizzle and
+  Mongoose code; see [brownfield resources](/docs/brownfield-resources).
 - `/schemas` lists every event schema with its format, version, domain and
   owner.
 - `/fields` lists every field across every event, the services a change to it
   would reach, and the fields whose type or requiredness disagrees between
   events.
+- `/retirements` lists each deprecated event, and each field a schema marks
+  `deprecated: true`, with where every consumer stands
+  ([retiring a field](/docs/retire)). It appears once there is one.
 - `/catalog` shows the whole knowledge graph, and `/catalog.json` holds the same
   graph as JSON.
+- `/decisions/`, `/runbooks/` and `/incidents/` list every ADR, runbook and
+  incident across every repository, newest first, in a table of the columns the
+  conventions file names. The status shows as a badge, and the table filters by
+  status and by repository. The decisions page also draws each supersede chain,
+  oldest first. A kind the organisation adds gets the same page at its own
+  `path`, and a kind with no documents gets no page. The Catalog sidebar group
+  and the home page's Explore cards link each one, and the home page counts
+  them.
+- A decision, runbook or incident page is still the document, with its state as
+  a badge under the title and its kind, date, other fields, what it applies to
+  (its `about:` targets, linked to their service and event pages) and what it
+  supersedes or was superseded by.
+- Service and event pages list the decisions, runbooks and incidents that name
+  them in `about:`, one card per kind, beside their other documents.
 - `/contracts/docs-manifest.json` lists every document and who links to it.
   Point `ac docs check --manifest` at it and each repository's CI catches a link
   to a missing document, or a rename that would orphan a link from elsewhere.
 
 ## For agents
 
-Every document, event and service page has a Markdown twin at `<url>.md`. Its
+Every document, event, service and data model page has a Markdown twin at `<url>.md`. Its
 frontmatter adds `updated`, `source` and `url`, so an agent can cite who owns an
 answer and when it last changed. Each page's `<head>` links to its twin. Every
 event publishes its contract at `schema.json` beside its page. `/llms.txt` lists
 documents and events together, and `/llms-full.txt` holds the full text of
-every document and event.
+every document, event and data model. A decision, runbook or incident's twin
+also carries `kind`, even when its folder alone set it, and its `llms.txt` line
+ends with its kind, status and date.
 
 A ` ```mermaid ` fence in a document or an event's `index.mdx` renders as a
 diagram in both themes, and the twin keeps the source.

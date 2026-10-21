@@ -17,6 +17,13 @@ export const DEFAULT_SCAN_EXCLUDE = [
   'coverage',
   '.turbo',
   '.pnpm-store',
+  // Framework build output and vendored dependencies: copies of code, not its source.
+  '.next',
+  '.output',
+  '.svelte-kit',
+  '.vercel',
+  'out',
+  'vendor',
 ];
 
 export function pascalCase(input: string): string {

@@ -54,6 +54,14 @@ Promotion preserves evidence and survives subsequent scans. Source-only rescans 
 
 Static adapters discover Mongoose schemas, Prisma models and Drizzle tables without executing repository code. They extract collection/table JSON Schema and recognizable read/write operations, including relative imports and Prisma field mappings. Dynamic models and unsupported constructs produce scan diagnostics. Review extracted contracts before using them as authoritative compatibility gates.
 
+Beside the JSON Schema, each table or collection carries `attributes.fields`, one entry per field as the code names it, for its page on the site:
+
+- Prisma: type, list and optional, `@id`, `@unique`, `@default`, `@updatedAt`, the `@map` column name, enum values, MongoDB composite `type` blocks as nested `fields`, and `///` documentation (a model's own becomes its `summary`). A relation field records the related model and resource, whether it holds one or many, its `@relation` name, and on the side that stores the key, its `fields` and `references`. `@@index`, `@@unique` and `@@id` become `attributes.indexes`.
+- Drizzle: column name, `primaryKey()`, `unique()`, `default()` and `defaultNow()`, enum values, and `.references(() => table.column)`, followed to the table in any file.
+- Mongoose: type, `required`, `unique`, `default`, `enum`, nested schemas, and `ref: 'Model'`, followed to that model's collection.
+
+A relation between two models also becomes a `references` relationship, from the model that holds the key to the model it points at, so the catalog map can join them. A many-to-many relation without a key on either side is drawn once. A model's relation to itself stays on its page.
+
 For Mongoose models that are built dynamically, export the actual models' schemas in application-controlled code with the core API:
 
 ```ts
@@ -133,6 +141,8 @@ Backstage Components with `spec.type: service` become services. Processed `owned
 ## Several repositories on one site
 
 The site composes every enrolled repository's `.autocatalog/resources.json`. A repository may add its own resources and relationships, and runtime evidence to any resource. It may not redefine or take ownership of a resource another repository already declares, including its events: that repository's resource graph is quarantined, and the build and `/catalog` name the repository, the resource and who declares it, as for contradicting events. Repositories are composed in name order, so the first declaration stands. A `resources.json` that cannot be read or does not match the graph contract is quarantined the same way, naming the file; the rest of the site builds.
+
+A repository that commits no `resources.json` is scanned by the site itself, with the same passive scan `ac resources scan` runs: its Prisma, Drizzle and Mongoose models get pages with no setup. A repository with only a Prisma schema (`prisma/schema.prisma`, `prisma/schema/` or `schema.prisma`) is enrolled for this alone. Drizzle and Mongoose models are found when the repository is enrolled for something else; otherwise commit the output of `ac resources scan`. Commit it too when the site should not parse the repository's source on every build, or when the scan needs `.autocatalog/config.json` to name the datastore.
 
 ## Registries and CloudEvents
 

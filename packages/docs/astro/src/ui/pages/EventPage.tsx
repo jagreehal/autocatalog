@@ -44,6 +44,8 @@ export interface EventPageProps {
   versions: EventVersionsProps['versions'];
   changesHtml?: string | null | undefined;
   documents: ResourceLinksProps['links'];
+  /** Decisions, runbooks and incidents about it: one card per kind that has any. */
+  records?: ResourceLinksProps[] | undefined;
   /** The facts that identify the event, beyond the title and crumbs above. */
   facts: Array<[label: string, value: string, href?: string]>;
   transport?: TransportEntry[] | undefined;
@@ -71,6 +73,7 @@ export function EventPage({
   versions,
   changesHtml,
   documents,
+  records = [],
   facts,
   transport,
   delivery,
@@ -190,6 +193,9 @@ export function EventPage({
           <div className="flex flex-col gap-6">
             <RuntimeEvidence evidence={evidence} />
             <Examples examples={examples} />
+            {records.map((record) => (
+              <ResourceLinks key={record.id} {...record} />
+            ))}
             <ResourceLinks id="documents" heading="Documents" links={documents} />
             {!inlineDiagram && diagramCard}
           </div>

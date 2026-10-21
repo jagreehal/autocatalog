@@ -34,6 +34,11 @@ export interface RunSiteOptions {
    * publishes.
    */
   docsSchema?: string;
+  /** The document kinds to publish, found like the contract when left out. */
+  docsConventions?: string;
+  /** A server-sent events feed the maps' Live mode follows, and the SSE event name its frames use. */
+  liveUrl?: string;
+  liveEvent?: string;
 }
 
 /**
@@ -121,6 +126,14 @@ export async function runSite(opts: RunSiteOptions): Promise<number> {
     return 1;
   }
 
+  const docsConventions = opts.docsConventions && path.resolve(opts.docsConventions);
+
+  if (docsConventions && !(await fs.stat(docsConventions).catch(() => null))?.isFile()) {
+    console.error(kleur.red(`--docs-conventions: no file at ${opts.docsConventions}`));
+
+    return 1;
+  }
+
   if (opts.eventcatalog && opts.dev) {
     console.error(kleur.red('--eventcatalog draws diagrams at build time; leave out --dev.'));
 
@@ -180,7 +193,10 @@ export async function runSite(opts: RunSiteOptions): Promise<number> {
           ...(opts.base && { AUTOCATALOG_SITE_BASE: opts.base }),
           ...(opts.title && { AUTOCATALOG_DOCS_TITLE: opts.title }),
           ...(docsSchema && { AUTOCATALOG_DOCS_SCHEMA: docsSchema }),
+          ...(docsConventions && { AUTOCATALOG_DOCS_CONVENTIONS: docsConventions }),
           ...(eventcatalog && { AUTOCATALOG_EVENTCATALOG: eventcatalog.embedsFile }),
+          ...(opts.liveUrl && { AUTOCATALOG_DOCS_LIVE_URL: opts.liveUrl }),
+          ...(opts.liveEvent && { AUTOCATALOG_DOCS_LIVE_EVENT: opts.liveEvent }),
         },
       },
     );

@@ -5,11 +5,123 @@ import {
   type CatalogResource,
   type ResourceGraph,
 } from 'autocatalog-core';
+import type { CatalogEvent } from './catalog';
 import type { ShellLink } from './shell';
 import { catalogAnchor } from './view';
-import type { VisualiserGraph } from './ui/lib/visualiser';
+import {
+  normaliseEventId,
+  type EdgeEvidence,
+  type LiveFeed,
+  type VisualiserGraph,
+} from './ui/lib/visualiser';
 
 export type { VisualiserGraph };
+
+/** What a repository's snapshot said of one event, for the map's edges. */
+export interface EventRuntime {
+  declaredProducers: string[];
+  declaredConsumers: string[];
+  /** Absent when the repository has a snapshot that never saw the event. */
+  observed?: {
+    count: number;
+    producers: string[];
+    consumers: string[];
+    sources: Array<{ producer?: string | undefined; count: number }>;
+  };
+}
+
+/**
+ * Snapshot evidence by event, keyed `<namespace>/<id>` as the graph names the
+ * event. Only repositories with a snapshot: without one, an event nobody saw is
+ * not evidence of anything, and the map draws it as it always did.
+ */
+export function runtimeByEvent(
+  events: CatalogEvent[],
+  snapshots: string[],
+): Map<string, EventRuntime> {
+  // Covered by a snapshot read with the repository, even one that matched
+  // nothing, or by evidence a committed catalog already carries.
+  const covered = new Set([
+    ...snapshots,
+    ...events.flatMap(({ repository, event }) => (event.frontmatter.observed ? [repository] : [])),
+  ]);
+
+  return new Map(
+    events.flatMap(({ repository, event }): Array<[string, EventRuntime]> => {
+      if (!covered.has(repository)) return [];
+
+      const fm = event.frontmatter;
+      const seen = fm.observed;
+
+      return [
+        [
+          `${repository}/${fm.domain}/${fm.id}`,
+          {
+            declaredProducers: fm.producers,
+            // The snapshot appends the consumers it saw; this is what was declared.
+            declaredConsumers: seen?.declaredConsumers ?? fm.consumers,
+            ...(seen && {
+              observed: {
+                count: seen.count,
+                producers: seen.producers,
+                consumers: seen.consumers,
+                sources: seen.sources ?? [],
+              },
+            }),
+          },
+        ],
+      ];
+    }),
+  );
+}
+
+/**
+ * What the snapshot says of one producer's or consumer's edge to an event.
+ * Nothing when it saw the event but named no producer: that says the event
+ * ran, not which declared producer sent it, so the edge makes no claim.
+ */
+export function edgeEvidence(
+  role: 'produces' | 'consumes',
+  event: string,
+  service: string,
+  runtime: EventRuntime,
+): EdgeEvidence | undefined {
+  const seen = runtime.observed;
+  const key = normaliseEventId(event);
+
+  if (role === 'produces') {
+    if (seen && seen.producers.length === 0) return undefined;
+
+    const ran = seen?.producers.includes(service) ?? false;
+
+    const fromSources = seen?.sources
+      .filter((source) => source.producer === service)
+      .reduce((sum, source) => sum + source.count, 0);
+
+    return {
+      state: !ran
+        ? 'unseen'
+        : runtime.declaredProducers.includes(service)
+          ? 'observed'
+          : 'undocumented',
+      count: seen && ran ? fromSources || seen.count : 0,
+      event: key,
+      producer: service,
+    };
+  }
+
+  const ran = seen?.consumers.includes(service) ?? false;
+
+  return {
+    state: !ran
+      ? 'unseen'
+      : runtime.declaredConsumers.includes(service)
+        ? 'observed'
+        : 'undocumented',
+    count: ran ? seen!.count : 0,
+    event: key,
+  };
+}
 
 /** Our kinds that EventCatalog has a node for. Anything else stays off the map. */
 const NODE_TYPES = new Map<string, GraphNode['type']>([
@@ -49,13 +161,17 @@ type FlowNode = ShellLink & { detail?: string };
  * One hop around a resource, the same three columns the static flow strip
  * draws: what feeds it, the resource, and what it feeds.
  */
-export function flowGraph(flow: {
-  from: FlowNode[];
-  inbound: string;
-  centre: FlowNode;
-  outbound: string;
-  to: FlowNode[];
-}): VisualiserGraph | undefined {
+export function flowGraph(
+  flow: {
+    from: FlowNode[];
+    inbound: string;
+    centre: FlowNode;
+    outbound: string;
+    to: FlowNode[];
+  },
+  /** For an event: its snapshot evidence, drawn on the service edges as the catalog map draws it. */
+  runtime?: { event: string; seen: EventRuntime; live?: LiveFeed | undefined },
+): VisualiserGraph | undefined {
   const hrefs: Record<string, string> = {};
 
   const node = (link: FlowNode, id: string): GraphNode[] => {
@@ -85,7 +201,30 @@ export function flowGraph(flow: {
     ...to.map((target) => edge(centre.id, target.id, flow.outbound)),
   ];
 
-  return { graph: { nodes, edges, options: { legend: true, search: nodes.length > 6 } }, hrefs };
+  const evidence: Record<string, EdgeEvidence> = {};
+
+  if (runtime) {
+    const services = [
+      ...flow.from.map((link, i) => ['produces', link, `from-${i}->centre`] as const),
+      ...flow.to.map((link, i) => ['consumes', link, `centre->to-${i}`] as const),
+    ];
+
+    for (const [role, link, id] of services) {
+      const edge =
+        link.kind === 'service' && edgeEvidence(role, runtime.event, link.label, runtime.seen);
+
+      if (edge) evidence[id] = edge;
+    }
+  }
+
+  const evidenced = Object.keys(evidence).length > 0;
+
+  return {
+    graph: { nodes, edges, options: { legend: true, search: nodes.length > 6 } },
+    hrefs,
+    ...(evidenced && { evidence }),
+    ...(evidenced && runtime?.live && { live: runtime.live }),
+  };
 }
 
 export interface CatalogGraphOptions {
@@ -95,6 +234,10 @@ export interface CatalogGraphOptions {
   servicePages?: Set<string>;
   /** Events with a page of their own, by path relative to the base. */
   eventPages?: Set<string>;
+  /** Snapshot evidence, from `runtimeByEvent`; the map draws each edge by it. */
+  runtime?: Map<string, EventRuntime>;
+  /** A server-sent events feed the map can follow live, when there is evidence to key it to. */
+  live?: LiveFeed;
 }
 
 /**
@@ -107,7 +250,7 @@ export interface CatalogGraphOptions {
 export function catalogGraph(
   graph: ResourceGraph,
   base: string,
-  { only, servicePages, eventPages }: CatalogGraphOptions = {},
+  { only, servicePages, eventPages, runtime, live }: CatalogGraphOptions = {},
 ): VisualiserGraph | undefined {
   const titles = new Map(
     graph.resources.map((resource) => [resourceKey(resource.ref), resource.title]),
@@ -150,6 +293,8 @@ export function catalogGraph(
 
   const drawn = new Set(nodes.map((node) => node.id));
 
+  const evidence: Record<string, EdgeEvidence> = {};
+
   const edges = graph.relationships.flatMap((relationship): GraphEdge[] => {
     const source = resourceKey(relationship.from);
 
@@ -159,9 +304,26 @@ export function catalogGraph(
 
     const known = EDGES.get(relationship.type);
 
+    const id = `${source}->${target}:${relationship.type}`;
+
+    if (relationship.type === 'produces' || relationship.type === 'consumes') {
+      const [event, service] =
+        relationship.type === 'produces'
+          ? [relationship.to, relationship.from]
+          : [relationship.from, relationship.to];
+
+      // Snapshots name services; an agent of the same name is someone else.
+      const seen =
+        service.kind === 'service' ? runtime?.get(`${event.namespace}/${event.id}`) : undefined;
+
+      const edge = seen && edgeEvidence(relationship.type, event.id, service.id, seen);
+
+      if (edge) evidence[id] = edge;
+    }
+
     return [
       {
-        id: `${source}->${target}:${relationship.type}`,
+        id,
         source: known?.reverse ? target : source,
         target: known?.reverse ? source : target,
         type: known?.type ?? 'calls',
@@ -170,9 +332,46 @@ export function catalogGraph(
     ];
   });
 
+  // A producer the snapshot saw sending a drawn event, though nothing declares
+  // it: drawn as such, with a node of its own when the catalog has none.
+  for (const resource of graph.resources) {
+    const event = resourceKey(resource.ref);
+
+    const seen = runtime?.get(`${resource.ref.namespace}/${resource.ref.id}`);
+
+    if (resource.ref.kind !== 'event' || !drawn.has(event) || !seen?.observed) continue;
+
+    for (const producer of seen.observed.producers) {
+      if (seen.declaredProducers.includes(producer)) continue;
+
+      const service = resourceKey({ kind: 'service', id: producer });
+
+      if (!drawn.has(service)) {
+        drawn.add(service);
+        nodes.push({ id: service, type: 'service', label: producer, metadata: {} });
+
+        if (servicePages?.has(producer)) hrefs[service] = `${base}services/${producer}/`;
+      }
+
+      const id = `${service}->${event}:produces`;
+
+      const edge = edgeEvidence('produces', resource.ref.id, producer, seen);
+
+      if (edge) evidence[id] = edge;
+      edges.push({ id, source: service, target: event, type: 'publishes', label: 'publishes' });
+    }
+  }
+
   if (edges.length === 0) return undefined;
 
-  return { graph: { nodes, edges, options: { legend: true, search: true } }, hrefs };
+  const evidenced = Object.keys(evidence).length > 0;
+
+  return {
+    graph: { nodes, edges, options: { legend: true, search: true } },
+    hrefs,
+    ...(evidenced && { evidence }),
+    ...(evidenced && live && { live }),
+  };
 }
 
 /** A resource's own page when it has one, else its row in the Catalog. */

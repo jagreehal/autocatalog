@@ -4,6 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { applySnapshot, readSnapshot, type AdapterEvent } from '../src/index';
+import { suggestRenames } from '../src/snapshot';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
@@ -139,5 +140,51 @@ describe('applySnapshot', () => {
 
     expect(payment.provenance?.fields?.consumers).toBeUndefined();
     expect(payment.observed?.consumers).toEqual(['LedgerService', 'FraudService']);
+  });
+});
+
+describe('matching names', () => {
+  const run = (...names: string[]) => ({
+    spec: 'autotel-architecture/v0',
+    generatedAt: '',
+    service: 's',
+    events: Object.fromEntries(
+      names.map((name) => [name, { name, observedCount: 1, firstSeen: '', lastSeen: '' }]),
+    ),
+  });
+
+  it('reads a dotted track() name as the PascalCase catalog id', () => {
+    const placed = event('OrderPlaced', []);
+
+    const result = applySnapshot([placed], run('order.placed'));
+
+    expect(result.undocumented).toEqual([]);
+    expect(placed.observed?.count).toBe(1);
+  });
+
+  it('prefers an exact name, and refuses one only the loose form could pick', () => {
+    const exact = event('order.placed', []);
+    const other = { ...event('OrderPlaced', []), domain: 'other' };
+
+    applySnapshot([exact, other], run('order.placed'));
+    expect(exact.observed?.count).toBe(1);
+    expect(other.observed).toBeUndefined();
+
+    expect(() => applySnapshot([exact, other], run('order_placed'))).toThrow(/Ambiguous/);
+    expect(applySnapshot([exact, other], run('other/order-placed')).observed).toBe(1);
+  });
+});
+
+describe('suggestRenames', () => {
+  it('pairs each name once, best match first, and ignores the unrelated', () => {
+    expect(
+      suggestRenames(
+        ['payment.refund', 'order.shipped', 'zebra'],
+        ['payment.refunded', 'order.shipping', 'customer.created'],
+      ),
+    ).toEqual([
+      { observed: 'payment.refund', documented: 'payment.refunded', similarity: 0.867 },
+      { observed: 'order.shipped', documented: 'order.shipping', similarity: 0.769 },
+    ]);
   });
 });

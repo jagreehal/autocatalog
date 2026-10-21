@@ -4,7 +4,8 @@ import type { CatalogResource } from 'autocatalog-core';
 import { z } from 'zod';
 import { resolveAbout } from './about';
 import { DOCS_MANIFEST_PATH } from './manifest';
-import { frontmatterSchema, frontmatterValidator, resolveFrontmatterContract } from './frontmatter';
+import { frontmatterSchema, resolveFrontmatterContract } from './frontmatter';
+import { kindFailure, kindValidator, resolveDocKinds, supersession } from './kinds';
 import { readDocs, type ReadDocsOptions } from './read-docs';
 
 export interface CheckDocsOptions extends ReadDocsOptions {
@@ -14,6 +15,12 @@ export interface CheckDocsOptions extends ReadDocsOptions {
    * contract so a company that has not written one yet still gets an index.
    */
   schemaPath?: string;
+  /**
+   * Path to the organisation's conventions file. Omit and the convention looks
+   * for `contracts/autocatalog.conventions.json` the way it finds the contract,
+   * falling back to the built-in kinds.
+   */
+  conventionsPath?: string;
   /**
    * Published index to resolve cross-repository links against. Omit and
    * cross-repo targets go unchecked, which is correct before the first index
@@ -40,6 +47,8 @@ export interface CheckDocsResult {
    * raises, and the answer is a file somebody can open.
    */
   contractFile: string | null;
+  /** The conventions file whose kinds were enforced, or null for the built-in kinds. */
+  conventionsFile: string | null;
 }
 
 const relatedOnly = frontmatterSchema.pick({ related: true });
@@ -69,7 +78,8 @@ function readManifest(
 export function checkDocs(root: string, options: CheckDocsOptions = {}): CheckDocsResult {
   const docs = readDocs(root, options);
   const contract = resolveFrontmatterContract(root, options.schemaPath);
-  const validator = frontmatterValidator(contract.schema);
+  const conventions = resolveDocKinds(root, options.conventionsPath);
+  const validate = kindValidator(contract.schema, conventions.kinds);
   const manifest = readManifest(options.manifestPath, root);
 
   const present = new Set(docs.map((doc) => doc.id));
@@ -80,10 +90,10 @@ export function checkDocs(root: string, options: CheckDocsOptions = {}): CheckDo
   const kinds = new Set<string>(options.resources?.map((resource) => resource.ref.kind));
 
   for (const doc of docs) {
-    const issues = validator.validate(doc.data);
+    const { kind, issues } = validate(doc);
 
     if (issues.length > 0) {
-      for (const issue of issues) failures.push(`${doc.file}: ${issue.path}: ${issue.message}`);
+      for (const issue of issues) failures.push(kindFailure(doc.file, kind, issue));
       continue;
     }
 
@@ -106,18 +116,31 @@ export function checkDocs(root: string, options: CheckDocsOptions = {}): CheckDo
       continue;
     }
 
-    for (const target of front.data.related ?? []) {
-      // Own documents resolve against the filesystem. Cross-repo targets exist
-      // only in the published index, so before one exists there is nothing to
-      // check against. A stale index rejects a link that would have worked and
-      // never accepts one that is broken, so publish the target first.
-      const targetRepo = target.split('/')[0] ?? '';
+    // A decision names the one it replaces by id too, so a renamed ADR breaks
+    // its chain as loudly as a renamed runbook breaks a `related:` link. The
+    // kind's own schema has already said these are arrays of ids.
+    const succession = kind ? supersession(doc.data) : { supersedes: [], supersededBy: [] };
 
-      const dangling = owned.has(targetRepo)
-        ? !present.has(target)
-        : manifest !== null && !(target in manifest);
+    const references = [
+      ['related', front.data.related ?? []],
+      ['supersedes', succession.supersedes],
+      ['supersededBy', succession.supersededBy],
+    ] as const;
 
-      if (dangling) failures.push(`${doc.file}: related '${target}' does not resolve`);
+    for (const [field, targets] of references) {
+      for (const target of targets) {
+        // Own documents resolve against the filesystem. Cross-repo targets exist
+        // only in the published index, so before one exists there is nothing to
+        // check against. A stale index rejects a link that would have worked and
+        // never accepts one that is broken, so publish the target first.
+        const targetRepo = target.split('/')[0] ?? '';
+
+        const dangling = owned.has(targetRepo)
+          ? !present.has(target)
+          : manifest !== null && !(target in manifest);
+
+        if (dangling) failures.push(`${doc.file}: ${field} '${target}' does not resolve`);
+      }
     }
 
     const about = aboutOnly.safeParse(doc.data);
@@ -151,5 +174,6 @@ export function checkDocs(root: string, options: CheckDocsOptions = {}): CheckDo
     repos: owned.size,
     checkedCrossRepoLinks: manifest !== null,
     contractFile: contract.file,
+    conventionsFile: conventions.file,
   };
 }
