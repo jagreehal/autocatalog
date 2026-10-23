@@ -35,8 +35,8 @@ export function rehypeDocsBase(base: string) {
   return () => (tree: Node, file: { path?: string }) => {
     // Read when a document is rendered, not when the config is: the plugin
     // sets the root in config:setup, after astro.config.mjs called this.
-    const { root, repo } = docsSiteConfig();
-    const layout = resolveDocsLayout(root, repo === undefined ? {} : { repo });
+    const { root, repo, repository } = docsSiteConfig();
+    const layout = resolveDocsLayout(root, { repo, repository });
 
     rewrite(tree, (url) => {
       const document = file.path ? documentUrl(url, file.path, layout) : undefined;
@@ -72,9 +72,9 @@ function documentUrl(url: string, from: string, layout: DocsLayout): string | un
   const source = path.relative(layout.root, from).split(path.sep).join('/');
   const file = path.relative(layout.root, target).split(path.sep).join('/');
   // Another repository's documents are linked by id; `ac docs check` says so.
-  const docs = layout.single ? 'docs/' : `${source.split('/')[0]}/docs/`;
+  const owner = layout.rootFor(source);
 
-  if (!source.startsWith(docs) || !file.startsWith(docs) || !fs.existsSync(target)) {
+  if (!owner || layout.rootFor(file) !== owner || !fs.existsSync(target)) {
     return undefined;
   }
 

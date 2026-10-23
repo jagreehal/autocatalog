@@ -1,14 +1,7 @@
 /** @jsxImportSource react */
 import { layoutGraph, NodeGraph } from '@eventcatalog/visualiser';
 import type { DslGraph } from '@eventcatalog/visualiser';
-import {
-  type CSSProperties,
-  type KeyboardEvent,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+import { type CSSProperties, type KeyboardEvent, useEffect, useRef, useState } from 'react';
 import { ToggleGroup, ToggleGroupItem } from '#ui/components/ui/toggle-group.tsx';
 import {
   edgesForFrame,
@@ -17,6 +10,7 @@ import {
   replaySchedule,
   type EdgeEvidence,
   type LiveFeed,
+  type FlowStepData,
 } from '#ui/lib/visualiser.ts';
 
 // The visualiser's legend counts and colours nodes by collection name, which
@@ -31,7 +25,7 @@ const COLLECTIONS = new Map([
 
 /**
  * EventCatalog's own visualiser (MIT, @eventcatalog/visualiser) as an island:
- * its nodes, edge labels, dagre layout, zoom controls, legend and node search,
+ * its nodes, edge labels, ELK layout, zoom controls, legend and node search,
  * fed from the autocatalog graph. Graph keeps a static flow in <noscript>
  * for a reader without JavaScript.
  */
@@ -46,8 +40,8 @@ interface Props {
   evidence?: Record<string, EdgeEvidence> | undefined;
   /** A server-sent events feed, offered as the live mode. */
   live?: LiveFeed | undefined;
-  /** Left to right where there is room; top to bottom in a narrow column, where a row would shrink to nothing. */
-  direction?: 'LR' | 'TB';
+  /** A flow's steps by node id: their titles for the walkthrough, and their lanes. */
+  steps?: Record<string, FlowStepData> | undefined;
 }
 
 const MODES = ['static', 'replay', 'live'] as const;
@@ -106,56 +100,58 @@ const KEY: Array<[EdgeEvidence['state'], string]> = [
   ['undocumented', 'Ran, not in the catalog'],
 ];
 
-export default function Visualiser({
-  id,
-  label,
-  graph,
-  hrefs,
-  evidence,
-  live,
-  direction = 'LR',
-}: Props) {
+export default function Visualiser({ id, label, graph, hrefs, evidence, live, steps }: Props) {
   const root = useRef<HTMLDivElement>(null);
 
   const [mode, setMode] = useState<Mode>('static');
 
   const [status, setStatus] = useState<string>();
 
-  // EventCatalog's own dagre layout, with its own spacing for a DSL graph.
-  const laid = useMemo(() => {
-    const { nodes, edges } = layoutGraph(graph.nodes, graph.edges, {
-      rankdir: direction,
-      nodesep: 60,
-      ranksep: 120,
-    });
+  const [laid, setLaid] = useState<Awaited<ReturnType<typeof layoutGraph>>>();
+
+  // EventCatalog's own ELK layout, left to right; the map zooms to fit a narrow box.
+  useEffect(() => {
+    let current = true;
 
     const labels = new Map(graph.nodes.map((node) => [node.id, node.label]));
 
-    return {
-      // A node that opens a page says so to assistive technology: a link,
-      // named for its resource, opened by Enter as well as a click.
-      nodes: nodes.map((node) => ({
-        ...node,
-        type: COLLECTIONS.get(node.type ?? '') ?? node.type,
-        ...(hrefs[node.id] && { ariaRole: 'link' as const, ariaLabel: labels.get(node.id) }),
-      })),
-      // What the snapshot says of an edge is drawn on it: weight for volume,
-      // a dash for never seen, the inferred colour for undocumented.
-      edges: edges.map((edge) => {
-        const seen = evidence?.[edge.id];
+    void layoutGraph(graph.nodes, graph.edges).then(({ nodes, edges }) => {
+      if (!current) return;
 
-        return seen
-          ? {
-              ...edge,
-              className: `ac-edge-${seen.state}`,
-              // SAFETY: a custom property, which CSSProperties has no key for;
-              // EventCatalog's !important width leaves CSS the only way in.
-              style: { ...edge.style, '--ac-edge-weight': edgeWeight(seen) } as CSSProperties,
-            }
-          : edge;
-      }),
+      setLaid({
+        // A node that opens a page says so to assistive technology: a link,
+        // named for its resource, opened by Enter as well as a click.
+        nodes: nodes.map((node) => ({
+          ...node,
+          ...(steps?.[node.id] && { data: { ...node.data, ...steps[node.id] } }),
+          type: COLLECTIONS.get(node.type ?? '') ?? node.type,
+          ...(hrefs[node.id] && { ariaRole: 'link' as const, ariaLabel: labels.get(node.id) }),
+        })),
+        // What the snapshot says of an edge is drawn on it: weight for volume,
+        // a dash for never seen, the inferred colour for undocumented.
+        edges: edges.map((edge) => {
+          const seen = evidence?.[edge.id];
+
+          return seen
+            ? {
+                ...edge,
+                className: `ac-edge-${seen.state}`,
+                // SAFETY: a custom property, which CSSProperties has no key for;
+                // EventCatalog's !important width leaves CSS the only way in.
+                style: { ...edge.style, '--ac-edge-weight': edgeWeight(seen) } as CSSProperties,
+              }
+            : edge;
+        }),
+      });
+    });
+
+    return () => {
+      current = false;
     };
-  }, [graph, hrefs, direction, evidence]);
+  }, [graph, hrefs, evidence, steps]);
+
+  // A process, drawn step by step: the visualiser's walkthrough follows it.
+  const isFlow = graph.edges.some((edge) => edge.type === 'flow-step');
 
   // Replay and live move markers over the drawn edges; static moves nothing.
   useEffect(() => {
@@ -273,21 +269,22 @@ export default function Visualiser({
         className="min-h-0 flex-1 overflow-hidden rounded-xl border bg-background"
         data-graph-portal
       />
-      <NodeGraph
-        id={id}
-        nodes={laid.nodes}
-        edges={laid.edges}
-        includeKey
-        showSearch={graph.options?.search ?? false}
-        mode="full"
-        zoomOnScroll={false}
-        showFlowWalkthrough={false}
-        // As EventCatalog's own pages do outside message flows: no envelope looping
-        // along every edge. 4.1.5's NodeGraph drops `disableMessageAnimation`
-        // rather than passing it on, so `animated` is what reaches the edges.
-        animated={false}
-        onNodeClick={(node) => open(node.id)}
-      />
+      {laid && (
+        <NodeGraph
+          id={id}
+          nodes={laid.nodes}
+          edges={laid.edges}
+          includeKey
+          showSearch={graph.options?.search ?? false}
+          mode="full"
+          zoomOnScroll={false}
+          showFlowWalkthrough={isFlow}
+          // As EventCatalog's own pages do outside message flows: no envelope
+          // looping along every edge.
+          disableMessageAnimation
+          onNodeClick={(node) => open(node.id)}
+        />
+      )}
     </div>
   );
 }

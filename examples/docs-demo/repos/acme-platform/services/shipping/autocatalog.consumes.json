@@ -1,0 +1,5 @@
+{
+  "consumes": [
+    { "service": "ShippingService", "event": "orders/order.placed", "fields": ["orderId"] }
+  ]
+}

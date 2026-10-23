@@ -128,6 +128,57 @@ different ones fail the build, naming both, until `--docs-schema` picks one.
   beside it as `openapi.json`. Without JavaScript the page lists the operations.
   A service links to the API whose title names it or whose webhooks it
   produces.
+- `/specs/<repository>/<name>/` shows any other specification a repository
+  commits under `contracts/`, as written and highlighted, with the file beside
+  it under its own name. A WSDL, XML Schema, XML, GraphQL or RAML file counts by
+  its extension, and a JSON or YAML file when it declares `asyncapi:`. Any other
+  JSON or YAML file counts when a sidecar beside it declares it:
+  `carrier-sla.autocatalog.json` holding
+  `{ "specification": { "name": "Carrier SLAs", "summary": "…", "service": "ShippingService" } }`.
+  The service it names, or one its title names, lists it under APIs and
+  specifications. A sidecar naming a service no event mentions is a build
+  warning. Only regular files up to 1 MB of text are published. `/specs` lists
+  them all.
+- `/flows/<repository>/<id>/` draws a business process a repository declares in
+  `flows/<id>.md`: each step, the branches between them and the Markdown below
+  the frontmatter. The map walks through it one step at a time, and groups it by
+  domain or by owning team, as boxes or lanes. Each step names an event as
+  `domain/id`, a service or an agent, or someone outside the catalog:
+
+  ```yaml
+  ---
+  title: Order to dispatch
+  steps:
+    - id: customer
+      actor: { name: Customer }
+      next_step: { id: pay, label: Pays }
+    - id: pay
+      service: PaymentService
+      next_steps:
+        - { id: captured, label: Card accepted }
+        - { id: declined, label: Card declined }
+    - id: captured
+      event: payments/payment.captured
+    - id: declined
+      title: Ask for another card
+  ---
+  ```
+
+  An `externalSystem` step takes a `name`, `summary` and `url`, and a `custom`
+  step a `title`, `summary` and `url`. A flow can name
+  another repository's resources. One whose step names nothing in the catalog
+  is left out with a warning. `ac docs check` fails a flow that does not hold
+  together (a step leading nowhere, a step naming two things, a link that is not
+  a web address) and leaves a step naming something outside the checkout to the
+  site, since one repository's CI cannot see the others. The walkthrough starts
+  at the first step nothing leads to, so a flow where every step has one leading
+  to it is a build warning. A hop the
+  catalog does not back, such as a service the flow says produces an event no
+  producer declaration names, is a build warning, and the flow still publishes:
+  the flow is what the team says happens, and the catalog is what the code
+  declares. Event and service pages list the flows they are a step in, and
+  `/flows` lists them all.
+
 - `/data/<repository>/<model>/` is one table or collection: where its
   definition was read, who owns it, its fields (type, required, primary key,
   unique, default, database name, enum values, the model a key column points

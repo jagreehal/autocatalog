@@ -34,6 +34,8 @@ export interface ScanCatalogOptions {
   limits?: DiscoveryLimits;
   /** Runtime evidence to join onto what the scanners found. */
   snapshot?: ArchitectureSnapshot;
+  /** How far above `root` to look for CODEOWNERS: a monorepo's root, for one of its packages. */
+  ownersWithin?: string;
 }
 
 export interface ScanCatalogResult {
@@ -100,7 +102,7 @@ export async function scanCatalog(opts: ScanCatalogOptions): Promise<ScanCatalog
     };
   }
 
-  const codeowners = await loadCodeowners(root);
+  const codeowners = await loadCodeowners(root, opts.ownersWithin);
 
   for (const event of events) enrichEvent(event, codeowners);
 

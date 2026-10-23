@@ -1,12 +1,19 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { type JsonObject, parseFrontmatter, stringifyFrontmatter } from 'autocatalog-core';
+import {
+  type CatalogRoot,
+  findCatalogRoots,
+  type JsonObject,
+  parseFrontmatter,
+  stringifyFrontmatter,
+} from 'autocatalog-core';
 
 /**
  * One authored document, addressed by its path rather than a declared id.
  *
  *   payments-service/docs/runbook.md    -> payments-service/runbook
  *   payments-service/docs/ops/replay.md -> payments-service/ops/replay
+ *   acme-platform/services/orders/docs/runbook.md -> orders/runbook
  *
  * An id that lives in frontmatter can disagree with where the file actually is.
  * A path cannot.
@@ -26,29 +33,37 @@ export interface Doc {
 
 export interface ReadDocsOptions {
   /**
-   * Treat the root itself as a single publishing repository under this name,
-   * instead of aggregating every `<repo>/docs` tree across sibling repositories.
-   * Defaults to the root directory's own name when `<root>/docs` exists.
+   * Treat the root itself as a publishing repository under this name. Defaults
+   * to the root directory's own name when the root is one repository.
    */
   repo?: string;
+  /**
+   * The root's Repository identity, when it is not `repo`. A package below the
+   * root cannot publish under it.
+   */
+  repository?: string;
 }
 
 /** Where the documents are and how a matched path becomes an id. */
 export interface DocsLayout {
   /** Absolute aggregation root. Every path is relative to it. */
   root: string;
-  /** True when the root is one repository publishing its own `docs/`. */
-  single: boolean;
+  /** Each repository or package with a `docs/` folder, one per name. */
+  roots: CatalogRoot[];
   /** Glob pattern, relative to the root and always forward-slashed. */
   pattern: string;
+  /** The repository whose `docs/` holds a path, or undefined for none. */
+  rootFor(file: string): CatalogRoot | undefined;
   /** Repository that owns a matched path. */
   repoFor(file: string): string;
   /** Id for a matched path: `<repo>/<path without docs/ and without .md>`. */
   idFor(file: string): string;
 }
 
+const docsDir = (root: CatalogRoot) => (root.path ? `${root.path}/docs/` : 'docs/');
+
 /**
- * Decide which shape the root is in, and how ids are derived from it.
+ * Find every `docs/` and decide how ids are derived from it.
  *
  * Split out because more than one reader has to agree: the CLI check, the
  * manifest builder, and an Astro content collection all address the same
@@ -56,22 +71,39 @@ export interface DocsLayout {
  */
 export function resolveDocsLayout(root: string, options: ReadDocsOptions = {}): DocsLayout {
   const absolute = path.resolve(root);
-  const single = options.repo !== undefined || fs.existsSync(path.join(absolute, 'docs'));
-  const defaultRepo = options.repo ?? path.basename(absolute);
 
-  const repoFor = (file: string): string =>
-    // Single-repo layout has no leading repo segment; supply it.
-    single ? defaultRepo : file.split('/')[0]!;
+  // Two folders of one name would publish the same ids; the site names the
+  // later one and leaves all of it out, and so does this.
+  const roots = findCatalogRoots(absolute, {
+    name: options.repo,
+    repository: options.repository,
+  }).filter(
+    (candidate) =>
+      candidate.duplicateOf === undefined && fs.existsSync(path.join(candidate.dir, 'docs')),
+  );
+
+  const dirs = roots.map((candidate) => docsDir(candidate).slice(0, -1));
+
+  const rootFor = (file: string) => roots.find((candidate) => file.startsWith(docsDir(candidate)));
+
+  const repoFor = (file: string): string => {
+    const owner = rootFor(file);
+
+    if (!owner) throw new Error(`${file} is not in any repository's docs/`);
+
+    return owner.name;
+  };
 
   return {
     root: absolute,
-    single,
-    pattern: single ? 'docs/**/*.md' : '*/docs/**/*.md',
+    roots,
+    pattern: `${dirs.length > 1 ? `{${dirs.join(',')}}` : (dirs[0] ?? 'docs')}/**/*.md`,
+    rootFor,
     repoFor,
     idFor(file: string): string {
-      const rest = file.split('/').slice(single ? 1 : 2);
+      const rest = file.slice(docsDir(rootFor(file)!).length);
 
-      return `${repoFor(file)}/${rest.join('/').replace(/\.md$/, '')}`;
+      return `${repoFor(file)}/${rest.replace(/\.md$/, '')}`;
     },
   };
 }
@@ -79,10 +111,8 @@ export function resolveDocsLayout(root: string, options: ReadDocsOptions = {}): 
 /**
  * Read every document the convention exposes under the aggregation root.
  *
- * Works in both shapes without being told which: a company index sees many
- * sibling repositories, while a single repository running its own CI check sees
- * only its own `docs/`. Requiring callers to know the difference is the kind of
- * config that turns a convention into a framework.
+ * Works in every shape without being told which: sibling checkouts, packages
+ * inside a monorepo, or one repository running its own CI check.
  */
 export function readDocs(root: string, options: ReadDocsOptions = {}): Doc[] {
   const layout = resolveDocsLayout(root, options);

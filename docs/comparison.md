@@ -60,7 +60,9 @@ join EventCatalog Federation as a source
 - pages for services and domains, each with a map of what it produces and
   consumes, and who sits on the other side
 - a catalog map of every service, event, command and datastore
-- API reference pages for each committed OpenAPI spec
+- API reference pages for each committed OpenAPI spec, and a page for any
+  other specification (WSDL, XML Schema, GraphQL, AsyncAPI)
+- business process flows that cross repositories, grouped by domain or team
 - a schema index, a field index and owner pages
 - your teams' Markdown docs, with Mermaid diagrams, owner and last-changed date
 - `llms.txt`, `llms-full.txt`, and a Markdown copy of every document, event and

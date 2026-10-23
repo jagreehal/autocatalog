@@ -98,6 +98,36 @@ describe('ac docs check', () => {
     expect(await runDocsCheck({ root, quiet: true })).toBe(0);
   });
 
+  it('leaves a flow naming another repository to the site, and fails one that does not hold together', async () => {
+    await write(
+      'payments-service/events/payments/Settled/autocatalog.json',
+      JSON.stringify({
+        spec: 'autocatalog/v2',
+        id: 'payment.settled',
+        version: '1.0.0',
+        name: 'Settled',
+        summary: 'Settled.',
+        domain: 'payments',
+        producers: ['LedgerService'],
+        schema: 'schema.json',
+      }),
+    );
+    await write('payments-service/events/payments/Settled/schema.json', '{"type":"object"}');
+
+    const flow = (service: string, next: string) =>
+      `---\ntitle: Settle\nsteps:\n  - id: ledger\n    service: ${service}\n    next_step: ${next}\n  - id: settled\n    event: payments/payment.settled\n---\n`;
+
+    await write('payments-service/flows/settle.md', flow('LedgerService', 'settled'));
+    expect(await runDocsCheck({ root, quiet: true })).toBe(0);
+
+    // Another repository's service: not in this checkout, so the site checks it.
+    await write('payments-service/flows/settle.md', flow('BillingService', 'settled'));
+    expect(await runDocsCheck({ root, quiet: true })).toBe(0);
+
+    await write('payments-service/flows/settle.md', flow('LedgerService', 'nowhere'));
+    expect(await runDocsCheck({ root, quiet: true })).toBe(1);
+  });
+
   it('names the contract when the check fails, not only when it passes', async () => {
     // Whoever is fixing a failure needs to know which rules produced it — and
     // an agent following /autocatalog-docs reads the contract from this line.

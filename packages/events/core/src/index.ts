@@ -301,9 +301,11 @@ export { readContractFile, type ContractFileResult } from './contract-file';
 
 export {
   loadRepositoryEvents,
+  findCatalogRoots,
   isSingleRepository,
   publishesCatalogContent,
   RUNTIME_SNAPSHOT,
+  type CatalogRoot,
   type LoadRepositoryEventsOptions,
 } from './repository-events';
 

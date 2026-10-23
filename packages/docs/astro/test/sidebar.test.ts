@@ -73,12 +73,27 @@ describe('docsSidebar', () => {
   it('reads the single-repository shape too', async () => {
     await write('docs/runbook.md', doc('Runbook'));
 
-    expect(docsSidebar(root, 'payments-service')).toEqual([
+    expect(docsSidebar(root, { repo: 'payments-service' })).toEqual([
       {
         label: 'payments-service',
         items: [{ label: 'Runbook', link: '/payments-service/runbook' }],
       },
     ]);
+  });
+
+  it('leaves out a package the catalog quarantines for sharing the root identity', async () => {
+    await write('package.json', '{}');
+    await write('docs/workspace.md', doc('Workspace'));
+    await write('services/orders/package.json', '{}');
+    await write('services/orders/docs/index.md', doc('Orders'));
+    const options = { repo: 'platform', repository: 'orders' };
+
+    const catalog = await buildDocsCatalog(root, { ...options, includeDates: false });
+
+    expect(catalog.docs.map(({ id }) => id)).toEqual(['platform/workspace']);
+    expect(
+      docsSidebar(root, options).flatMap(({ items }) => items.map(({ link }) => link)),
+    ).toEqual(['/platform/workspace']);
   });
 
   it('returns nothing when no repository has enrolled yet', () => {

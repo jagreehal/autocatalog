@@ -6,16 +6,27 @@ import { generateExampleFromSchema } from './example-gen';
 import { isJsonObject } from './json';
 import { ownerForPath, parseCodeowners, type CodeownersRule } from './codeowners';
 
-export async function loadCodeowners(root: string): Promise<CodeownersRule[]> {
-  for (const rel of ['CODEOWNERS', '.github/CODEOWNERS', 'docs/CODEOWNERS']) {
-    try {
-      return parseCodeowners(await fs.readFile(path.join(root, rel), 'utf8'));
-    } catch {
-      // try the next location
-    }
-  }
+/**
+ * The CODEOWNERS that covers `root`: its own, or, for a package inside a
+ * monorepo, the nearest one above it, read no higher than `within`.
+ */
+export async function loadCodeowners(root: string, within = root): Promise<CodeownersRule[]> {
+  const top = path.resolve(within);
 
-  return [];
+  for (let dir = path.resolve(root); ; dir = path.dirname(dir)) {
+    for (const rel of ['CODEOWNERS', '.github/CODEOWNERS', 'docs/CODEOWNERS']) {
+      try {
+        const rules = parseCodeowners(await fs.readFile(path.join(dir, rel), 'utf8'));
+        const base = path.relative(dir, path.resolve(root)).split(path.sep).join('/');
+
+        return base ? rules.map((rule) => ({ ...rule, base })) : rules;
+      } catch {
+        // try the next location
+      }
+    }
+
+    if (dir === top || !dir.startsWith(top + path.sep)) return [];
+  }
 }
 
 /** No declared team + a CODEOWNERS match on the defining file → inferred owner. */

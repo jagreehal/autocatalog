@@ -7,7 +7,7 @@ import { builtInDiscoveryAdapters } from './built-in-adapters';
 import { scanCatalog } from './scan-catalog';
 import { hasMessageContracts, messageContractDiscoveryAdapter } from './scan-message-contract';
 import { loadCatalogSnapshot, type LoadedEvent } from './load';
-import { isRealFileInside } from './utils';
+import { DEFAULT_SCAN_EXCLUDE, isRealFileInside } from './utils';
 import { applySnapshot, readSnapshot } from './snapshot';
 import { RESOURCE_GRAPH_FILE } from './resource-store';
 import { CONSUMES_FILE } from './consumes';
@@ -18,7 +18,7 @@ const execFileAsync = promisify(execFile);
 const CONTRACTS = 'contracts';
 
 // A repository that only consumes other teams' events still publishes that fact.
-const PUBLISHED_ROOTS = ['docs', 'events', 'agents', CONTRACTS, CONSUMES_FILE];
+const PUBLISHED_ROOTS = ['docs', 'events', 'agents', 'flows', CONTRACTS, CONSUMES_FILE];
 
 /** Where scanning looks for CODEOWNERS, read at each commit with the contracts. */
 const CODEOWNERS = ['CODEOWNERS', '.github/CODEOWNERS', 'docs/CODEOWNERS'];
@@ -36,6 +36,28 @@ const HISTORY_VERSIONS = 10;
 /** Where autotel-subscribers' ArchitectureSnapshotSubscriber is documented to write. */
 export const RUNTIME_SNAPSHOT = '.autotel/snapshot.json';
 
+/**
+ * Whether a conventional folder holds catalog content. A monorepo's `docs/` or
+ * `events/` can instead be a package, or a folder of packages, such as a docs
+ * site's source.
+ */
+function isCatalogFolder(folder: string): boolean {
+  if (!fs.existsSync(folder)) return false;
+
+  if (fs.existsSync(path.join(folder, 'package.json'))) return false;
+
+  try {
+    return !fs
+      .readdirSync(folder, { withFileTypes: true })
+      .some(
+        (entry) =>
+          entry.isDirectory() && fs.existsSync(path.join(folder, entry.name, 'package.json')),
+      );
+  } catch {
+    return true;
+  }
+}
+
 /** Where Prisma looks for a schema, so a repository with one has data models to publish. */
 const PRISMA_SCHEMAS = ['prisma/schema.prisma', 'prisma/schema', 'schema.prisma'];
 
@@ -48,8 +70,11 @@ const PRISMA_SCHEMAS = ['prisma/schema.prisma', 'prisma/schema', 'schema.prisma'
  */
 export function publishesCatalogContent(dir: string): boolean {
   return (
-    PUBLISHED_ROOTS.some((name) => fs.existsSync(path.join(dir, name))) ||
-    hasMessageContracts(dir) ||
+    PUBLISHED_ROOTS.some((name) => isCatalogFolder(path.join(dir, name))) ||
+    // Only a package or checkout: the search walks below, and a plain folder
+    // of packages would otherwise claim every package's contracts as its own.
+    (REPOSITORY_MARKERS.some((name) => fs.existsSync(path.join(dir, name))) &&
+      hasMessageContracts(dir)) ||
     hasResourceGraph(dir) ||
     PRISMA_SCHEMAS.some((name) => fs.existsSync(path.join(dir, name)))
   );
@@ -79,7 +104,7 @@ function hasResourceGraph(dir: string): boolean {
 }
 
 /** Roots that make the directory holding them one repository, never a folder of them. */
-const SINGLE_ROOTS = ['docs', 'events', 'agents'];
+const SINGLE_ROOTS = ['docs', 'events', 'agents', 'flows'];
 
 /** What a repository's own root carries and a folder of checkouts does not. */
 const REPOSITORY_MARKERS = ['.git', 'package.json'];
@@ -97,7 +122,7 @@ const REPOSITORY_MARKERS = ['.git', 'package.json'];
  * must not hide every repository enrolled under it.
  */
 export function isSingleRepository(root: string): boolean {
-  if (SINGLE_ROOTS.some((name) => fs.existsSync(path.join(root, name)))) return true;
+  if (SINGLE_ROOTS.some((name) => isCatalogFolder(path.join(root, name)))) return true;
 
   if (!REPOSITORY_MARKERS.some((name) => fs.existsSync(path.join(root, name)))) return false;
 
@@ -106,6 +131,136 @@ export function isSingleRepository(root: string): boolean {
     .some((entry) => entry.isDirectory() && fs.existsSync(path.join(root, entry.name, '.git')));
 
   return !holdsCheckouts && (hasMessageContracts(root) || hasResourceGraph(root));
+}
+
+/** A directory that publishes catalog content, wherever it sits below the root. */
+export interface CatalogRoot {
+  /** The folder's own name, its pages' namespace: moving it does not change it. */
+  name: string;
+  /** Its Repository identity: the name, unless the root was given one of its own. */
+  repository: string;
+  /** Absolute path. */
+  dir: string;
+  /** Path below the aggregation root, forward-slashed; `''` for the root itself. */
+  path: string;
+  /** Roots inside this one: theirs to publish, so this one's scans skip them. */
+  nested: string[];
+  /** Set when an earlier root has the same name: the path of that one, which publishes instead. */
+  duplicateOf?: string;
+}
+
+/** Folders that hold a root's content or its test data, never another root. */
+const NOT_ROOTS = new Set([
+  'docs',
+  'events',
+  'agents',
+  'flows',
+  CONTRACTS,
+  'models',
+  'prisma',
+  'test',
+  'tests',
+  'fixtures',
+  '__fixtures__',
+  // Sample code: each is a catalog of its own, built from its own root.
+  'examples',
+  'experiments',
+  'starters',
+  'templates',
+]);
+
+/**
+ * Every directory under `root` that publishes catalog content: sibling
+ * checkouts, packages inside a monorepo, or both. Each publishes under its
+ * folder's name, so where it sits is never part of its identity.
+ *
+ * The root itself counts only when it is plainly one repository
+ * ({@link isSingleRepository}), or when `name` is given for it; otherwise it is
+ * a folder of repositories whose own `contracts/` belong to the company.
+ *
+ * A root's whole-tree scans (approved message contracts, data models) skip
+ * the roots nested in it: pass `nested` as `exclude`. Two roots of one name
+ * cannot both publish, by name or by identity; the deeper one, or the later by
+ * path at the same depth, carries `duplicateOf`.
+ */
+export function findCatalogRoots(
+  root: string,
+  options: {
+    name?: string;
+    repository?: string;
+    /** Told about a folder that could not be read; the search carries on around it. */
+    onWarning?: (message: string) => void;
+  } = {},
+): CatalogRoot[] {
+  const top = path.resolve(root);
+  const exclude = new Set(DEFAULT_SCAN_EXCLUDE);
+  const found: CatalogRoot[] = [];
+
+  if (options.name !== undefined || isSingleRepository(top)) {
+    const name = options.name ?? path.basename(top);
+
+    found.push({ name, repository: options.repository ?? name, dir: top, path: '', nested: [] });
+  }
+
+  const walk = (dir: string): void => {
+    let entries: fs.Dirent[];
+
+    try {
+      entries = fs.readdirSync(dir, { withFileTypes: true });
+    } catch (error) {
+      const where = path.relative(top, dir).split(path.sep).join('/');
+
+      options.onWarning?.(
+        `${where}: not searched for repositories — ${error instanceof Error ? error.message : String(error)}`,
+      );
+
+      return;
+    }
+
+    for (const entry of entries) {
+      if (
+        !entry.isDirectory() ||
+        entry.name.startsWith('.') ||
+        exclude.has(entry.name) ||
+        NOT_ROOTS.has(entry.name)
+      )
+        continue;
+
+      const child = path.join(dir, entry.name);
+
+      if (publishesCatalogContent(child))
+        found.push({
+          name: entry.name,
+          repository: entry.name,
+          dir: child,
+          path: path.relative(top, child).split(path.sep).join('/'),
+          nested: [],
+        });
+      walk(child);
+    }
+  };
+
+  walk(top);
+  // Shallowest first, so a package nested deeper can never take a checkout's name.
+  const depth = (candidate: CatalogRoot) => (candidate.path ? candidate.path.split('/').length : 0);
+
+  found.sort((a, b) => depth(a) - depth(b) || a.path.localeCompare(b.path));
+
+  const first = new Map<string, CatalogRoot>();
+
+  for (const candidate of found) {
+    candidate.nested = found.flatMap(({ dir }) =>
+      dir.startsWith(candidate.dir + path.sep) ? [dir] : [],
+    );
+
+    // A root renamed by its identity claims both names.
+    const earlier = first.get(candidate.name) ?? first.get(candidate.repository);
+
+    if (earlier) candidate.duplicateOf = earlier.path;
+    else for (const key of [candidate.name, candidate.repository]) first.set(key, candidate);
+  }
+
+  return found;
 }
 
 export interface LoadRepositoryEventsOptions {
@@ -119,6 +274,10 @@ export interface LoadRepositoryEventsOptions {
   onWarning?: (message: string) => void;
   /** Told that the repository's runtime snapshot was read, whatever it matched. */
   onSnapshot?: () => void;
+  /** How far above the repository to look for CODEOWNERS: its monorepo's root. */
+  ownersWithin?: string;
+  /** Directories the whole-repository scan skips: packages that publish for themselves. */
+  exclude?: string[];
 }
 
 /**
@@ -142,7 +301,7 @@ export async function loadRepositoryEvents(
     return events;
   }
 
-  const current = await discoverContracts(repositoryRoot);
+  const current = await discoverContracts(repositoryRoot, options);
   await applyRuntimeSnapshot(repositoryRoot, current, options);
 
   if (!options.history) return current;
@@ -202,7 +361,10 @@ async function applyRuntimeSnapshot(
  * their tests: `__contracts__/*.approved.txt` is narrow enough that nothing
  * stray matches it, and its walk skips node_modules, dist and dot-folders.
  */
-async function discoverContracts(repositoryRoot: string): Promise<LoadedEvent[]> {
+async function discoverContracts(
+  repositoryRoot: string,
+  { ownersWithin, exclude }: LoadRepositoryEventsOptions = {},
+): Promise<LoadedEvent[]> {
   const outRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'autocatalog-repository-'));
   const hasContracts = isDirectory(path.join(repositoryRoot, CONTRACTS));
 
@@ -213,6 +375,8 @@ async function discoverContracts(repositoryRoot: string): Promise<LoadedEvent[]>
       wholeRepository: [messageContractDiscoveryAdapter],
       outRoot,
       adapters: hasContracts ? builtInDiscoveryAdapters : [messageContractDiscoveryAdapter],
+      ownersWithin,
+      exclude,
     });
 
     if (scan.errors.length > 0) throw new Error(scan.errors.join('; '));

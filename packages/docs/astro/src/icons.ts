@@ -28,6 +28,7 @@ import {
   SunIcon,
   TableIcon,
   UsersIcon,
+  WorkflowIcon,
   WrenchIcon,
   ZapIcon,
 } from 'lucide-react';
@@ -53,6 +54,7 @@ export const icons = {
   book: BookOpenIcon,
   layers: LayersIcon,
   braces: BracesIcon,
+  flow: WorkflowIcon,
   copy: CopyIcon,
   external: ArrowUpRightIcon,
   arrow: ArrowRightIcon,
