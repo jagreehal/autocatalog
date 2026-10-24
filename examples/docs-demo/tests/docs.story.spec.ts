@@ -60,11 +60,11 @@ test.describe('The company documentation index', () => {
   test('documents from every repository land on one index', async ({ page }, testInfo) => {
     story.init(testInfo, { tags: ['docs', 'aggregate'] });
 
-    given('three repositories that each committed their own docs/');
+    given('repositories, and packages inside a monorepo, that each committed their own docs/');
     await page.goto('/');
 
     then('the index reports what it aggregated');
-    await expect(page.getByText('5 documents from 3 repositories')).toBeVisible();
+    await expect(page.getByText('8 documents from 6 repositories')).toBeVisible();
 
     when('a repository section is read');
     then('its documents are listed under its own name');
@@ -205,10 +205,13 @@ test.describe('The company documentation index', () => {
     await expect(index.getByRole('link', { name: 'Payment captured' })).toBeVisible();
 
     when('an engineer narrows the index to Agents');
-    await page.getByRole('radio', { name: /^agent 1$/i }).click();
+    // Clicked again until the index has hydrated and listens.
+    await expect(async () => {
+      await page.getByRole('radio', { name: /^agent 1$/i }).click();
+      await expect(page.getByText('1 resource', { exact: true })).toBeVisible({ timeout: 500 });
+    }).toPass();
 
     then('the Agent remains with its evidence and model connection');
-    await expect(page.getByText('1 resource', { exact: true })).toBeVisible();
     const agent = page.locator('[data-resource][data-kind="agent"]');
     await expect(agent.getByRole('link', { name: 'Refund agent' })).toBeVisible();
     await expect(index.getByRole('link', { name: 'Payment captured' })).toBeHidden();
@@ -250,10 +253,111 @@ test.describe('The company documentation index', () => {
 
     when('the reader filters the field index by that service');
     await page.goto('/fields/');
-    await page.getByPlaceholder('Filter by field, event or service').fill('paymentId');
-
     then('only the fields that match stay on screen');
-    await expect(page.locator('tr[data-search]:visible')).toHaveCount(1);
+    // Typed again until the table has hydrated and listens.
+    const filter = page.getByPlaceholder('Filter by field, event or service');
+    await expect(async () => {
+      await filter.fill('');
+      await filter.fill('paymentId');
+      await expect(page.locator('tr[data-search]:visible')).toHaveCount(1, { timeout: 500 });
+    }).toPass();
+  });
+
+  test('a monorepo publishes each package as if it were its own repository', async ({
+    page,
+  }, testInfo) => {
+    story.init(testInfo, { tags: ['monorepo', 'events', 'docs'] });
+
+    given('acme-platform keeps orders and shipping under services/, each with its own docs/');
+    await page.goto('/acme-platform/workspace/');
+
+    when("a reader follows the workspace page to the orders package's runbook");
+    await page.locator('main').getByRole('link', { name: 'Orders runbook' }).first().click();
+
+    then('it is published under the package name, not the path it sits at');
+    await expect(page).toHaveURL(/\/orders\/runbook\/?$/);
+
+    when('the reader opens the event the runbook is about');
+    await page.goto('/events/orders/orders/order.placed/');
+
+    then("the consumer another package declared is on it, and the monorepo's owner");
+    const participants = page.getByText(/Consumed by/);
+    await expect(participants.getByRole('link', { name: 'ShippingService' })).toBeVisible();
+    await expect(participants.getByRole('link', { name: 'acme/orders' })).toBeVisible();
+  });
+
+  test('a specification the catalog has no model for is published as written', async ({
+    page,
+    request,
+  }, testInfo) => {
+    story.init(testInfo, { tags: ['specifications'] });
+
+    given('payments-service commits a WSDL under contracts/, its sidecar naming PaymentService');
+    await page.goto('/services/PaymentService/');
+
+    when('a reader opens it from the service it belongs to');
+    await page.getByRole('link', { name: /Card gateway/ }).click();
+
+    then('the page shows the source, and the file downloads under its own name');
+    await expect(page).toHaveURL(/\/specs\/payments-service\/card-gateway\/?$/);
+    await expect(page.getByLabel('contracts/card-gateway.wsdl')).toContainText(
+      '<portType name="CardGatewayPort">',
+    );
+
+    const wsdl = await request.get('/specs/payments-service/card-gateway/card-gateway.wsdl');
+
+    expect(wsdl.ok()).toBe(true);
+    expect(await wsdl.text()).toContain('<definitions name="CardGateway"');
+  });
+
+  test('a business process crosses repositories, and groups into lanes by domain', async ({
+    page,
+  }, testInfo) => {
+    story.init(testInfo, { tags: ['flows', 'monorepo'] });
+
+    given(
+      'acme-platform declares Order to dispatch under flows/, naming payments-service resources',
+    );
+    await page.goto('/flows/');
+    await page.getByRole('link', { name: 'Order to dispatch' }).click();
+
+    then('every step is listed in order, each linked to its page in the catalog');
+    const steps = page.locator('#steps');
+    await expect(steps.getByRole('link', { name: /^4\. Payment captured/ })).toHaveAttribute(
+      'href',
+      '/events/payments-service/payments/payment.captured/',
+    );
+    await expect(steps).toContainText('Then Payment captured (Card accepted)');
+
+    when('the reader walks through the flow from the start');
+    const map = page.getByRole('region', { name: 'Flow' });
+    await expect(map.locator('.react-flow__node')).toHaveCount(9);
+    // Pressed again until the walkthrough has hydrated and listens.
+    await expect(async () => {
+      await map.getByTitle('Start walking through the flow').click();
+      await expect(map.getByTitle('Stop (Esc)')).toBeVisible({ timeout: 500 });
+    }).toPass();
+    await map.getByTitle('Next (→)').first().click();
+
+    then('each step is called by its title, not its id');
+    await expect(map.getByRole('heading', { name: 'Take payment' })).toBeVisible();
+    await map.getByTitle('Stop (Esc)').click();
+
+    when('the reader groups the map by domain');
+    await map.getByRole('button', { name: /Group by/ }).click();
+    await page.getByRole('menuitemradio', { name: /Domain/ }).click();
+
+    then('the payments and orders steps sit in their own groups');
+    await expect(map.getByText('payments', { exact: true })).toBeVisible();
+    await expect(map.getByText('orders', { exact: true })).toBeVisible();
+
+    when('the reader opens the event');
+    await page.goto('/events/payments-service/payments/payment.captured/');
+
+    then('it lists the flow it is a step in');
+    await expect(
+      page.locator('#flows').getByRole('link', { name: /Order to dispatch/ }),
+    ).toBeVisible();
   });
 
   test('an agent finds the markdown and the contract without guessing', async ({

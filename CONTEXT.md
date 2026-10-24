@@ -52,9 +52,13 @@ Defines the terms this project uses. Consistent language across docs, code, and 
 
 **Document** — Markdown committed under a repository's conventional `docs/` root. Its path supplies its collision-safe identity; frontmatter supplies declared title, ownership, summary, tags, related-document edges, and the Resources it is `about`. A Document is a first-class Resource, not content attached to another Resource.
 
-**Repository** — A structural Resource inferred from the filesystem layout or an Agent repository URL. Docs and Events use the conventional repository directory name; Agents use `repository.id` when declared and otherwise the URL basename. The explicit id is the override Seam when those conventions differ. All Adapters emit the same minimal Repository fact, allowing composition without fuzzy name matching. A Repository `publishes` Documents and `defines` Events or Agents.
+**Repository** — A structural Resource inferred from the filesystem layout or an Agent repository URL. Docs and Events use the name of the folder that publishes them, wherever it sits below the root (`findCatalogRoots`): a sibling checkout or a package inside a monorepo, so moving a folder never changes its identity; Agents use `repository.id` when declared and otherwise the URL basename. The explicit id is the override Seam when those conventions differ. All Adapters emit the same minimal Repository fact, allowing composition without fuzzy name matching. A Repository `publishes` Documents and `defines` Events or Agents.
 
 **MDX** — Markdown with embedded components. `index.mdx` is optional and used for free form documentation or narrative override. It is not the canonical source of event metadata.
+
+**Flow** — A business process a repository declares in `flows/<id>.md`: steps that each name an Event, Service or Agent (resolved as `about:` is, across repositories) or someone outside the catalog, and the labelled branches between them. Declared, never inferred: events joining two services do not make a process. The site checks each hop against producer and consumer declarations and warns where the catalog does not back it, without changing either. Lanes come from each step's domain and owning team.
+
+**Specification** — A file under `contracts/` that is neither an event contract nor OpenAPI (WSDL, XML Schema, XML, GraphQL, RAML, AsyncAPI, or JSON or YAML a `*.autocatalog.json` sidecar declares), published as written on its own page and linked to the service its sidecar or title names.
 
 **Service** — An inferred entity with no on-disk representation. Built entirely from the `producers` and `consumers` fields on events. The `/services` page lists all services. `/services/:name` shows what each produces and consumes. Auto-generated. No MDX files. No manual definitions.
 

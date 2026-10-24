@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions name="CardGateway"
+  targetNamespace="https://acme.example/payments/card-gateway"
+  xmlns="http://schemas.xmlsoap.org/wsdl/"
+  xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+  xmlns:tns="https://acme.example/payments/card-gateway"
+  xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+
+  <message name="CaptureRequest">
+    <part name="paymentId" type="xsd:string"/>
+    <part name="amount" type="xsd:integer"/>
+    <part name="currency" type="xsd:string"/>
+  </message>
+
+  <message name="CaptureResponse">
+    <part name="captureId" type="xsd:string"/>
+    <part name="status" type="xsd:string"/>
+  </message>
+
+  <portType name="CardGatewayPort">
+    <operation name="Capture">
+      <input message="tns:CaptureRequest"/>
+      <output message="tns:CaptureResponse"/>
+    </operation>
+  </portType>
+
+  <binding name="CardGatewayBinding" type="tns:CardGatewayPort">
+    <soap:binding style="rpc" transport="http://schemas.xmlsoap.org/soap/http"/>
+    <operation name="Capture">
+      <soap:operation soapAction="https://acme.example/payments/card-gateway/Capture"/>
+    </operation>
+  </binding>
+
+  <service name="CardGatewayService">
+    <port name="CardGatewayPort" binding="tns:CardGatewayBinding">
+      <soap:address location="https://gateway.acme.example/soap"/>
+    </port>
+  </service>
+</definitions>

@@ -1,6 +1,8 @@
 export interface CodeownersRule {
   pattern: string;
   owners: string[];
+  /** Where the scanned root sits below the CODEOWNERS file's directory, for a package in a monorepo. */
+  base?: string;
 }
 
 /** Parse a CODEOWNERS file. Later rules win, per GitHub semantics. */
@@ -49,7 +51,8 @@ export function ownerForPath(rules: CodeownersRule[], relPath: string): string |
   let match: CodeownersRule | undefined;
 
   for (const rule of rules) {
-    if (patternToRegex(rule.pattern).test(relPath)) match = rule;
+    if (patternToRegex(rule.pattern).test(rule.base ? `${rule.base}/${relPath}` : relPath))
+      match = rule;
   }
 
   return match?.owners[0]?.replace(/^@/, '');

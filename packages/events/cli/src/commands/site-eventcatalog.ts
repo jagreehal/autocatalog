@@ -2,11 +2,7 @@ import { spawn } from 'node:child_process';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import kleur from 'kleur';
-import {
-  isSingleRepository,
-  loadRepositoryEvents,
-  publishesCatalogContent,
-} from 'autocatalog-core';
+import { findCatalogRoots, loadRepositoryEvents } from 'autocatalog-core';
 import { ignoredDirectory } from '../enrol';
 import {
   exportToEventCatalog,
@@ -48,24 +44,23 @@ export const EVENTCATALOG_DIR = 'eventcatalog';
 
 /**
  * Each repository's events under an aggregation root, read the way the site
- * reads them: the root itself when it is one, else each child, through the same
+ * reads them: every checkout or package that publishes, through the same
  * loader. A repository that does not load is left out, as the site quarantines it.
  */
 async function eventSources(root: string): Promise<EventCatalogSource[]> {
-  const repositories = isSingleRepository(root)
-    ? [root]
-    : (await fs.readdir(root, { withFileTypes: true }))
-        .filter((entry) => entry.isDirectory())
-        .map((entry) => path.join(root, entry.name))
-        .filter(publishesCatalogContent);
-
   const sources: EventCatalogSource[] = [];
 
-  for (const repository of repositories.sort()) {
-    try {
-      const events = await loadRepositoryEvents(repository, { history: true });
+  for (const { name, dir, nested, duplicateOf } of findCatalogRoots(root)) {
+    if (duplicateOf !== undefined) continue;
 
-      if (events.length > 0) sources.push({ name: path.basename(repository), events });
+    try {
+      const events = await loadRepositoryEvents(dir, {
+        history: true,
+        ownersWithin: root,
+        exclude: nested,
+      });
+
+      if (events.length > 0) sources.push({ name, events });
     } catch {
       // The site build names the repository and the reason.
     }

@@ -38,12 +38,14 @@ export const RESERVED_SEGMENTS = new Set([
   'domains',
   'events',
   'fields',
+  'flows',
   'llms-full.txt',
   'llms.txt',
   'owners',
   'retirements',
   'schemas',
   'services',
+  'specs',
 ]);
 
 /**

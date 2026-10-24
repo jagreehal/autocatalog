@@ -9,11 +9,7 @@ export function docsLoader(layout: DocsLayout): Loader {
     generateId: ({ entry }) => layout.idFor(entry),
   });
 
-  const identity = JSON.stringify([
-    layout.root,
-    layout.pattern,
-    layout.idFor(layout.single ? 'docs/index.md' : 'repo/docs/index.md'),
-  ]);
+  const identity = JSON.stringify([layout.root, layout.roots]);
 
   return {
     name: 'autocatalog-documents',

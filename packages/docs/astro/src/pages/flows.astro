@@ -1,0 +1,20 @@
+---
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import { docsCatalog } from '../catalog';
+import { flowsPageProps } from '../flows';
+import { FlowsPage } from '../ui/pages/FlowsPage';
+
+const catalog = await docsCatalog();
+
+const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+---
+
+<StarlightPage
+  frontmatter={{
+    title: 'Flows',
+    description: 'The business processes each repository declares under flows/, step by step.',
+    tableOfContents: false,
+  }}
+>
+  <FlowsPage {...flowsPageProps(catalog.flows, base)} />
+</StarlightPage>

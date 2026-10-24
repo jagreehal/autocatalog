@@ -375,7 +375,7 @@ export function catalogGraph(
 }
 
 /** A resource's own page when it has one, else its row in the Catalog. */
-function pageOf(
+export function pageOf(
   resource: CatalogResource,
   base: string,
   { servicePages, eventPages }: Pick<CatalogGraphOptions, 'servicePages' | 'eventPages'>,

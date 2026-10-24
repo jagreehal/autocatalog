@@ -20,8 +20,8 @@ let cached: DocsManifest | undefined;
  */
 export function docsManifest(): DocsManifest {
   if (!cached) {
-    const { root, repo, schemaPath } = docsSiteConfig();
-    cached = buildDocsManifest(root, { repo, schemaPath });
+    const { root, repo, repository, schemaPath } = docsSiteConfig();
+    cached = buildDocsManifest(root, { repo, repository, schemaPath });
   }
 
   return cached;

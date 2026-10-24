@@ -445,6 +445,138 @@ describe('documentation catalog projection', () => {
   });
 });
 
+describe('packages inside a monorepo', () => {
+  beforeEach(async () => {
+    await write('platform/package.json', '{"workspaces":["services/*"]}');
+    await write('platform/CODEOWNERS', '/services/orders/ @acme/orders\n');
+    await write(
+      'platform/docs/workspace.md',
+      '---\ntitle: Workspace\nowner: Platform\n---\n\nSee [[orders/runbook]].\n',
+    );
+    await write('platform/services/orders/package.json', '{}');
+    await write(
+      'platform/services/orders/contracts/orders/order.placed.json',
+      JSON.stringify({ type: 'object', properties: { orderId: { type: 'string' } } }),
+    );
+    await write(
+      'platform/services/orders/docs/runbook.md',
+      '---\ntitle: Orders runbook\nowner: Orders\n---\n\nOperate it.\n',
+    );
+    await write('platform/services/shipping/package.json', '{}');
+    await write(
+      'platform/services/shipping/autocatalog.consumes.json',
+      JSON.stringify({
+        consumes: [{ service: 'ShippingService', event: 'orders/order.placed' }],
+      }),
+    );
+  });
+
+  it('composes each package as its own repository, wherever it sits', async () => {
+    const catalog = await buildDocsCatalog(root, { includeDates: false });
+
+    expect(catalog.failures).toEqual([]);
+    expect(catalog.docs.map(({ id }) => id)).toEqual(['platform/workspace', 'orders/runbook']);
+    expect(
+      catalog.events.map(({ repository, event }) => [
+        repository,
+        event.frontmatter.id,
+        event.frontmatter.owner?.team,
+      ]),
+    ).toEqual([['orders', 'order.placed', 'acme/orders']]);
+    expect(
+      catalog.graph.relationships
+        .filter((r) => r.type === 'consumes')
+        .map((r) => [r.from.namespace, r.from.id, r.to.id]),
+    ).toEqual([['orders/orders', 'order.placed', 'ShippingService']]);
+  });
+
+  it("leaves a package's approved contracts to the package, not the monorepo root", async () => {
+    await write('platform/services/orders/src/__contracts__/OrderShipped.approved.txt', '{}');
+
+    const catalog = await buildDocsCatalog(path.join(root, 'platform'), { includeDates: false });
+
+    expect(
+      catalog.events
+        .filter(({ event }) => event.frontmatter.id === 'order.shipped')
+        .map(({ repository }) => repository),
+    ).toEqual(['orders']);
+  });
+
+  it('publishes nothing from a quarantined folder, its documents included', async () => {
+    // Nearer the root, so the monorepo's package is the one left out.
+    await write('orders/docs/legacy.md', '---\ntitle: Legacy\nowner: Orders\n---\n\nOld.\n');
+
+    const catalog = await buildDocsCatalog(root, { includeDates: false });
+
+    expect(catalog.docs.map(({ id }) => id)).toContain('orders/legacy');
+    expect(catalog.docs.map(({ id }) => id)).not.toContain('orders/runbook');
+    expect(catalog.events).toEqual([]);
+  });
+
+  it('quarantines a package named like the identity the root was given', async () => {
+    const catalog = await buildDocsCatalog(path.join(root, 'platform'), {
+      repository: 'orders',
+      includeDates: false,
+    });
+
+    expect(catalog.failures).toContainEqual({
+      repository: 'orders',
+      source: 'name',
+      message:
+        'services/orders and the root both publish as orders; rename one folder to publish both',
+    });
+    expect(catalog.docs.map(({ id }) => id)).toEqual(['platform/workspace']);
+    expect(catalog.events).toEqual([]);
+  });
+
+  it('builds around a folder it cannot read, and says which', async () => {
+    // Not a dot-folder, which the search never enters anyway.
+    const cache = path.join(root, 'platform/cache/inner');
+    await fs.mkdir(cache, { recursive: true });
+    await fs.chmod(path.dirname(cache), 0o000);
+
+    try {
+      const catalog = await buildDocsCatalog(root, { includeDates: false });
+
+      expect(catalog.failures).toEqual([]);
+      expect(catalog.docs.map(({ id }) => id)).toEqual(['platform/workspace', 'orders/runbook']);
+      expect(catalog.warnings).toContainEqual(
+        expect.stringMatching(/^platform\/cache: not searched for repositories/),
+      );
+    } finally {
+      await fs.chmod(path.dirname(cache), 0o755);
+    }
+  });
+
+  it("gives the root's identity override to the root alone, not its packages", async () => {
+    const catalog = await buildDocsCatalog(path.join(root, 'platform'), {
+      repository: 'acme-platform',
+      includeDates: false,
+    });
+
+    const publishedBy = (id: string) =>
+      catalog.graph.relationships
+        .filter((r) => r.type === 'publishes' && r.to.id === id)
+        .map((r) => r.from.id);
+
+    expect(publishedBy('workspace')).toEqual(['acme-platform']);
+    expect(publishedBy('runbook')).toEqual(['orders']);
+  });
+
+  it('quarantines the second folder of one name, and says where both are', async () => {
+    await write('orders/docs/legacy.md', '---\ntitle: Legacy\nowner: Orders\n---\n\nOld.\n');
+
+    const catalog = await buildDocsCatalog(root, { includeDates: false });
+
+    expect(catalog.failures).toContainEqual({
+      repository: 'orders',
+      source: 'name',
+      message:
+        'platform/services/orders and orders both publish as orders; rename one folder to publish both',
+    });
+  });
+});
+
 describe('agents linked to events across repositories', () => {
   async function writeConsumingAgent(consumes: string[]): Promise<void> {
     await write(

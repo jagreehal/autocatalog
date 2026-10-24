@@ -118,7 +118,11 @@ export default function autocatalogDocs(opts: AutocatalogDocsOptions = {}): Star
         // override wins, and a sidebar built from a different checkout to the
         // pages is worse than no sidebar.
         const effective = docsSiteConfig();
-        const sidebar = docsSidebar(effective.root, effective.repo);
+
+        const sidebar = docsSidebar(effective.root, {
+          repo: effective.repo,
+          repository: effective.repository,
+        });
 
         if (sidebar.length === 0) {
           logger.warn(
@@ -164,6 +168,10 @@ export default function autocatalogDocs(opts: AutocatalogDocsOptions = {}): Star
                   ? [{ label: 'Retirements', link: '/retirements' }]
                   : []),
                 ...(catalog.apis.length > 0 ? [{ label: 'APIs', link: '/apis' }] : []),
+                ...(catalog.flows.length > 0 ? [{ label: 'Flows', link: '/flows' }] : []),
+                ...(catalog.specifications.length > 0
+                  ? [{ label: 'Specifications', link: '/specs' }]
+                  : []),
                 // Decisions, runbooks, incidents: each kind with documents.
                 ...catalog.kinds.map((kind) => ({ label: kind.label, link: `/${kind.path}` })),
                 ...(catalog.models.length > 0 ? [{ label: 'Data models', link: '/data' }] : []),

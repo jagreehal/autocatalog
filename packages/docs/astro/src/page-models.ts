@@ -22,6 +22,8 @@ import { z } from 'zod';
 import { sourceUrl } from 'autocatalog-docs-core';
 import { documentsAbout } from './about';
 import { apiPath, apisForService, apiTitle } from './apis';
+import { specificationPath, specificationsForService } from './specifications';
+import { flowRecords } from './flows';
 import { failureSource, type CatalogEvent, type DocsCatalog } from './catalog';
 import { docsSiteConfig } from './config';
 import { eventCatalogEmbeds } from './eventcatalog';
@@ -181,6 +183,28 @@ export function homePageProps(
             text: 'The OpenAPI specs repositories commit, each with its reference.',
             href: `${base}apis/`,
             icon: 'api' as const,
+            kind: 'service',
+          },
+        ]
+      : []),
+    ...(catalog.flows.length > 0
+      ? [
+          {
+            title: 'Flows',
+            text: 'Business processes step by step, grouped by domain or team.',
+            href: `${base}flows/`,
+            icon: 'flow' as const,
+            kind: 'service',
+          },
+        ]
+      : []),
+    ...(catalog.specifications.length > 0
+      ? [
+          {
+            title: 'Specifications',
+            text: 'WSDL, XML Schema, GraphQL, AsyncAPI and other specifications, as written.',
+            href: `${base}specs/`,
+            icon: 'braces' as const,
             kind: 'service',
           },
         ]
@@ -397,7 +421,7 @@ export function domainPageProps(
 }
 
 /** The events with a page: every current event a repository publishes. */
-const eventPages = (catalog: DocsCatalog) => new Set(catalog.events.map(eventPath));
+export const eventPages = (catalog: DocsCatalog) => new Set(catalog.events.map(eventPath));
 
 /** What every map drawn from the catalog shows of runtime: snapshot evidence, and the live feed. */
 const mapEvidence = (catalog: DocsCatalog) => ({
@@ -406,7 +430,7 @@ const mapEvidence = (catalog: DocsCatalog) => ({
 });
 
 /** The services with a page: every one an event names as producer or consumer. */
-const servicePages = (catalog: DocsCatalog) =>
+export const servicePages = (catalog: DocsCatalog) =>
   new Set(buildServices(catalog.events.map(({ event }) => event)).keys());
 
 /** EventCatalog's drawing of one resource, or undefined when `ac site --eventcatalog` made none. */
@@ -436,10 +460,15 @@ export function servicePageProps(
 
   const consumes = eventsForService(events, service.name, 'consumers');
 
-  const { documents, records } = documentsByKind(
+  const { documents, records: kindRecords } = documentsByKind(
     catalog.kinds,
     documentsAbout(catalog.graph, { kind: 'service', id: service.name }),
   );
+
+  const records = [
+    ...kindRecords,
+    ...flowRecords(catalog.flows, { kind: 'service', id: service.name }, base),
+  ];
 
   const { owner, system } = serviceFacts(catalog.graph, service.name);
 
@@ -485,11 +514,18 @@ export function servicePageProps(
     ];
   });
 
-  const apis = apisForService(catalog.apis, events, service.name).map((api) => ({
-    title: apiTitle(api),
-    file: api.file,
-    href: `${base}${apiPath(api)}`,
-  }));
+  const apis = [
+    ...apisForService(catalog.apis, events, service.name).map((api) => ({
+      title: apiTitle(api),
+      file: api.file,
+      href: `${base}${apiPath(api)}`,
+    })),
+    ...specificationsForService(catalog.specifications, events, service.name).map((spec) => ({
+      title: spec.title,
+      file: spec.file,
+      href: `${base}${specificationPath(spec)}`,
+    })),
+  ];
 
   return {
     flow,
@@ -636,7 +672,7 @@ export async function eventPageProps(
   // Earlier versions from versioned/, each with its own page under this one.
   const versions = eventVersions(catalog, entry);
 
-  const { documents, records } = documentsByKind(
+  const { documents, records: kindRecords } = documentsByKind(
     catalog.kinds,
     documentsAbout(catalog.graph, {
       kind: 'event',
@@ -644,6 +680,15 @@ export async function eventPageProps(
       id: fm.id,
     }),
   );
+
+  const records = [
+    ...kindRecords,
+    ...flowRecords(
+      catalog.flows,
+      { kind: 'event', namespace: `${repository}/${fm.domain}`, id: fm.id },
+      base,
+    ),
+  ];
 
   // The folder is the generated contract, so it is linked to rather than edited;
   // the one file in it a person writes is the optional index.mdx narrative.

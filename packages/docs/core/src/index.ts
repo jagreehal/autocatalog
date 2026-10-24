@@ -78,3 +78,13 @@ export {
   type DescribesRelationships,
   resolveAbout,
 } from './about';
+
+export {
+  type Flow,
+  FLOWS_DIR,
+  type FlowStep,
+  type FlowStepKind,
+  readFlows,
+  type ReadFlowsOptions,
+  type ReadFlowsResult,
+} from './flows';

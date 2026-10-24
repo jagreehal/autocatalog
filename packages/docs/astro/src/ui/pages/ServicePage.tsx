@@ -151,7 +151,7 @@ export function ServicePage({
             <Card id="apis">
               <CardHeader>
                 <CardTitle role="heading" aria-level={2}>
-                  APIs
+                  APIs and specifications
                 </CardTitle>
               </CardHeader>
               <CardContent>

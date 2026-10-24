@@ -22,6 +22,8 @@ mkdir -p docs
 
 `docs/` at the repository root. Nothing else is configuration: the shape is detected from disk.
 
+In a monorepo, give each package that owns code its own `docs/`, beside its `package.json`. The site publishes each package under its folder name, as if it were its own repository, and reads CODEOWNERS from the monorepo root. Keep workspace-wide documents in the root's `docs/`.
+
 ### 2. Find out which contract applies
 
 ```bash

@@ -1,0 +1,7 @@
+{
+  "specification": {
+    "name": "Card gateway",
+    "summary": "The acquirer's SOAP interface PaymentService calls to capture a card payment.",
+    "service": "PaymentService"
+  }
+}
