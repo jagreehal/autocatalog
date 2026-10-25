@@ -81,13 +81,13 @@ export interface DescribesRelationships {
 export function createDescribesRelationships(
   docs: Doc[],
   resources: CatalogResource[],
-  options: { repository?: string } = {},
+  options: { repositories?: ReadonlyMap<string, string> } = {},
 ): DescribesRelationships {
   const relationships = new Map<string, CatalogRelationship<'describes'>>();
   const failures: string[] = [];
 
   for (const doc of docs) {
-    const repository = options.repository ?? doc.repo;
+    const repository = options.repositories?.get(doc.repo) ?? doc.repo;
 
     for (const target of [...new Set(frontmatterSchema.parse(doc.data).about ?? [])].sort()) {
       const resolution = resolveAbout(target, resources, repository);

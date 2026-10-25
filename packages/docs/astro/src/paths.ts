@@ -13,9 +13,9 @@ import { docsSiteConfig } from './config';
  * pages Starlight renders.
  */
 export function docPaths() {
-  const { root, repo } = docsSiteConfig();
+  const { root, repo, repository } = docsSiteConfig();
 
-  return readDocs(root, repo === undefined ? {} : { repo }).map((doc) => ({
+  return readDocs(root, { repo, repository }).map((doc) => ({
     params: { slug: doc.id },
     props: { doc },
   }));

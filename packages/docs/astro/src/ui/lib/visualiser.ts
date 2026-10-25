@@ -23,9 +23,28 @@ export interface LiveFeed {
 }
 
 /** What the visualiser island is given: the graph, and where each node links. */
+/** The lanes a flow step's resource sits in, as the visualiser groups a flow by them. */
+export interface StepLanes {
+  domain?: { id: string; name: string };
+  team?: { id: string; name: string };
+  /** A person or system outside the catalog: a lane of their own. */
+  external?: boolean;
+}
+
+/** What the visualiser reads from a flow step's node data. */
+export interface FlowStepData {
+  step: { id: string; title: string; summary?: string };
+  lanes?: StepLanes;
+}
+
 export interface VisualiserGraph {
   graph: DslGraph;
   hrefs: Record<string, string>;
+  /**
+   * A flow's steps by node id: what the walkthrough calls each one, and the
+   * lanes the map offers to group the flow by.
+   */
+  steps?: Record<string, FlowStepData>;
   /** Runtime evidence by edge id, only where a snapshot covers the map. */
   evidence?: Record<string, EdgeEvidence>;
   live?: LiveFeed;

@@ -266,6 +266,17 @@ the sibling repositories checked out beside it. Point `root` at a directory that
 contains `docs/` instead — with `repo` naming it — to publish one repository's
 own documentation, which is what this site does.
 
+Repositories do not have to sit one level down. Every folder below `root` with
+its own `docs/`, `events/`, `contracts/` or `autocatalog.consumes.json` publishes
+under its folder name, so the packages of a monorepo publish the way separate
+checkouts do: `acme-platform/services/orders/docs/runbook.md` is `/orders/runbook`.
+A package's owners come from the nearest CODEOWNERS above it. Two folders with
+the same name cannot both publish: the one nearer the root keeps the name, and
+the site names the other and leaves it out. `test/`, `tests/`, `fixtures/`,
+`examples/`, `experiments/`, `starters/` and `templates/` folders are never
+searched, and a `docs/` or `events/` folder that holds packages, such as a docs
+site's source, is read as packages.
+
 Leave the sidebar out and it is generated from what is on disk, one group per
 repository. Configure a sidebar and yours is kept, which is the right call once a
 site has enough pages to need sections.

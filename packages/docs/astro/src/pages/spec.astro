@@ -1,0 +1,41 @@
+---
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import type { InferGetStaticPropsType } from 'astro';
+import { docsCatalog } from '../catalog';
+import { setPageHeader } from '../shell';
+import { specificationPageProps } from '../specifications';
+import { SpecificationPage } from '../ui/pages/SpecificationPage';
+
+export async function getStaticPaths() {
+  const catalog = await docsCatalog();
+
+  return catalog.specifications.map((spec) => ({
+    params: { repository: spec.repository, name: spec.name },
+    props: { spec },
+  }));
+}
+
+type Props = InferGetStaticPropsType<typeof getStaticPaths>;
+
+const { spec } = Astro.props;
+
+const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+
+const catalog = await docsCatalog();
+
+const page = specificationPageProps(spec, catalog.events, base);
+
+setPageHeader(Astro.locals, {
+  actions: [{ label: 'Download', href: page.downloadHref, icon: 'braces' }],
+});
+---
+
+<StarlightPage
+  frontmatter={{
+    title: spec.title,
+    description: spec.summary ?? `The ${spec.format} ${spec.repository} commits at ${spec.file}.`,
+    tableOfContents: false,
+  }}
+>
+  <SpecificationPage client:load {...page} />
+</StarlightPage>

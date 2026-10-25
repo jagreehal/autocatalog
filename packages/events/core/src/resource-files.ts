@@ -5,6 +5,7 @@ import { DEFAULT_SCAN_EXCLUDE, isRealFileInside } from './utils';
 
 export interface ResourceScanOptions {
   root: string;
+  /** Folder names skipped anywhere, or absolute paths skipped exactly. */
   exclude?: string[];
   outDir?: string;
   maxFiles?: number;
@@ -50,8 +51,9 @@ export async function resourceFiles(
     for (const entry of entries) {
       if (full) return;
 
-      if (ignored.has(entry.name)) continue;
       const file = path.join(directory, entry.name);
+
+      if (ignored.has(entry.name) || ignored.has(file)) continue;
 
       if (options.outDir && path.resolve(options.outDir) === file) continue;
 

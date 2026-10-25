@@ -1,4 +1,4 @@
-import { existsSync, readdirSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import kleur from 'kleur';
@@ -9,6 +9,7 @@ import {
 import {
   type CatalogResource,
   createEventResourceGraph,
+  findCatalogRoots,
   loadRepositoryEvents,
   resourceKey,
 } from 'autocatalog-core';
@@ -21,7 +22,7 @@ import {
   DOCS_MANIFEST_PATH,
   DOCS_SCHEMA_PATH,
   DocsManifestError,
-  resolveDocsLayout,
+  readFlows,
   syncFrontmatterContract,
 } from 'autocatalog-docs-core';
 
@@ -51,21 +52,12 @@ export interface DocsCommandOptions {
  * contributes nothing rather than failing the docs check twice.
  */
 async function checkoutResources(root: string, repo?: string): Promise<CatalogResource[]> {
-  const layout = resolveDocsLayout(root, { repo });
-
-  const atRoot =
-    layout.single || ['events', 'agents'].some((dir) => existsSync(path.join(root, dir)));
-
-  const repositories = atRoot
-    ? [{ name: repo ?? path.basename(layout.root), dir: layout.root }]
-    : readdirSync(layout.root, { withFileTypes: true })
-        .filter((entry) => entry.isDirectory())
-        .map((entry) => ({ name: entry.name, dir: path.join(layout.root, entry.name) }));
-
   const resources: CatalogResource[] = [];
 
-  for (const { name, dir } of repositories) {
-    const graph = await loadRepositoryEvents(dir)
+  for (const { name, dir, nested, duplicateOf } of findCatalogRoots(root, { name: repo })) {
+    if (duplicateOf !== undefined) continue;
+
+    const graph = await loadRepositoryEvents(dir, { ownersWithin: root, exclude: nested })
       .then((events) => createEventResourceGraph(events, { repository: name }))
       .catch(() => undefined);
 
@@ -90,13 +82,29 @@ async function checkoutResources(root: string, repo?: string): Promise<CatalogRe
  * between them. Exit code is what CI reads.
  */
 export async function runDocsCheck(opts: DocsCommandOptions): Promise<number> {
+  const resources = await checkoutResources(opts.root, opts.repo);
+
   const result = checkDocs(opts.root, {
     schemaPath: opts.schema,
     conventionsPath: opts.conventions,
     manifestPath: opts.manifest,
     repo: opts.repo,
-    resources: await checkoutResources(opts.root, opts.repo),
+    resources,
   });
+
+  // A flow that does not hold together is left off the site, so it fails
+  // here, where it can be fixed before merging. A step naming another
+  // repository's resource is the composed site's to resolve: one checkout
+  // does not hold every repository's events, services and agents.
+  const flows = readFlows(
+    findCatalogRoots(opts.root, { name: opts.repo }).flatMap(({ repository, dir, duplicateOf }) =>
+      duplicateOf === undefined ? [{ repository, dir }] : [],
+    ),
+    { resources, relationships: [] },
+    { deferMissing: true },
+  );
+
+  const failures = [...result.failures, ...flows.failures];
 
   // Which rules were applied is the first question a failure raises, so it is
   // reported on both paths — a reader fixing a failing check needs the contract
@@ -110,8 +118,8 @@ export async function runDocsCheck(opts: DocsCommandOptions): Promise<number> {
       : `  kinds: built-in adr, runbook, incident — run 'ac docs init-conventions' to own them`,
   ].join('\n');
 
-  if (result.failures.length > 0) {
-    for (const failure of result.failures) console.error(`${kleur.red('✗')} ${failure}`);
+  if (failures.length > 0) {
+    for (const failure of failures) console.error(`${kleur.red('✗')} ${failure}`);
     console.error(kleur.dim(contract));
 
     return 1;
@@ -122,7 +130,11 @@ export async function runDocsCheck(opts: DocsCommandOptions): Promise<number> {
       ? 'schema + links'
       : 'schema only, no published index yet';
 
-    console.log(kleur.green(`✓ ${result.docs} doc(s) across ${result.repos} repo(s) (${scope})`));
+    const flowCount = flows.flows.length > 0 ? `, ${flows.flows.length} flow(s)` : '';
+
+    console.log(
+      kleur.green(`✓ ${result.docs} doc(s)${flowCount} across ${result.repos} repo(s) (${scope})`),
+    );
     console.log(kleur.dim(contract));
   }
 

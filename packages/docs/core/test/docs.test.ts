@@ -67,18 +67,47 @@ describe('resolveDocsLayout', () => {
     const layout = resolveDocsLayout(root);
     // An Astro content collection globs the pattern itself and only asks for
     // the id, so both sides must come from here.
-    expect(layout.pattern).toBe('*/docs/**/*.md');
+    expect(layout.pattern).toBe('payments-service/docs/**/*.md');
     expect(layout.idFor('payments-service/docs/ops/replay.md')).toBe(readDocs(root)[0]!.id);
     expect(layout.repoFor('payments-service/docs/ops/replay.md')).toBe('payments-service');
   });
 
-  it('switches shape for a single repository publishing its own docs/', async () => {
+  it('names the root for a single repository publishing its own docs/', async () => {
     await write('docs/runbook.md', doc('Runbook'));
 
     const layout = resolveDocsLayout(root, { repo: 'payments-service' });
-    expect(layout.single).toBe(true);
     expect(layout.pattern).toBe('docs/**/*.md');
     expect(layout.idFor('docs/runbook.md')).toBe('payments-service/runbook');
+  });
+
+  it('finds the docs of packages inside a monorepo, named for their folder', async () => {
+    await write('platform/package.json', '{}');
+    await write('platform/docs/workspace.md', doc('Workspace'));
+    await write('platform/services/orders/package.json', '{}');
+    await write('platform/services/orders/docs/runbook.md', doc('Runbook'));
+    await write('payments-service/docs/runbook.md', doc('Runbook'));
+    // Test data is never a repository, wherever it sits.
+    await write('platform/services/orders/test/fixtures/docs/stray.md', doc('Stray'));
+
+    expect(readDocs(root).map(({ id, repo }) => [id, repo])).toEqual([
+      ['payments-service/runbook', 'payments-service'],
+      ['platform/workspace', 'platform'],
+      ['orders/runbook', 'orders'],
+    ]);
+  });
+});
+
+describe('a root given an identity of its own', () => {
+  it('keeps out a package publishing under that identity, as the catalog does', async () => {
+    await write('package.json', '{}');
+    await write('docs/workspace.md', doc('Workspace'));
+    await write('services/orders/package.json', '{}');
+    await write('services/orders/docs/index.md', doc('Orders'));
+
+    const layout = resolveDocsLayout(root, { repo: 'platform', repository: 'orders' });
+
+    expect(layout.roots.map(({ name }) => name)).toEqual(['platform']);
+    expect(layout.pattern).toBe('docs/**/*.md');
   });
 });
 

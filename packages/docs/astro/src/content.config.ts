@@ -11,11 +11,11 @@ import { docsLoader } from './loader';
 
 // AUTOCATALOG_DOCS_* are set by the autocatalogDocs() plugin in config:setup,
 // which fires before the loaders are invoked.
-const { root, repo, schemaPath, conventionsPath } = docsSiteConfig();
+const { root, repo, repository, schemaPath, conventionsPath } = docsSiteConfig();
 
 // The reader and the site must address a document the same way, so the pattern
 // and the id both come from the shared layout rather than being restated here.
-const layout = resolveDocsLayout(root, repo === undefined ? {} : { repo });
+const layout = resolveDocsLayout(root, { repo, repository });
 
 /** Starlight's own frontmatter. A company field of the same name must not fight it. */
 const STARLIGHT_FIELDS = new Set([

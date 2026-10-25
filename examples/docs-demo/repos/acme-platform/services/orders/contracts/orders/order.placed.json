@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Order placed",
+  "description": "A customer placed an order and payment was authorised.",
+  "x-autocatalog": { "producers": ["OrderService"] },
+  "type": "object",
+  "required": ["orderId", "customerId", "total"],
+  "properties": {
+    "orderId": { "type": "string" },
+    "customerId": { "type": "string" },
+    "total": { "type": "integer", "description": "Minor units." }
+  }
+}

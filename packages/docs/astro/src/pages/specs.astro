@@ -1,0 +1,21 @@
+---
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import { docsCatalog } from '../catalog';
+import { specificationsPageProps } from '../specifications';
+import { SpecificationsPage } from '../ui/pages/SpecificationsPage';
+
+const catalog = await docsCatalog();
+
+const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+---
+
+<StarlightPage
+  frontmatter={{
+    title: 'Specifications',
+    description:
+      'The WSDL, XML Schema, GraphQL, AsyncAPI and other specifications each repository commits under contracts/.',
+    tableOfContents: false,
+  }}
+>
+  <SpecificationsPage {...specificationsPageProps(catalog.specifications, base)} />
+</StarlightPage>

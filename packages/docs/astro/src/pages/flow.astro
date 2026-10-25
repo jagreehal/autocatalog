@@ -1,0 +1,40 @@
+---
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import type { InferGetStaticPropsType } from 'astro';
+import { docsCatalog } from '../catalog';
+import { flowPageProps } from '../flows';
+import { eventPages, servicePages } from '../page-models';
+import { FlowPage } from '../ui/pages/FlowPage';
+
+export async function getStaticPaths() {
+  const catalog = await docsCatalog();
+
+  return catalog.flows.map((flow) => ({
+    params: { repository: flow.repository, id: flow.id },
+    props: { flow },
+  }));
+}
+
+type Props = InferGetStaticPropsType<typeof getStaticPaths>;
+
+const { flow } = Astro.props;
+
+const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+
+const catalog = await docsCatalog();
+
+const page = await flowPageProps(flow, catalog, base, {
+  servicePages: servicePages(catalog),
+  eventPages: eventPages(catalog),
+});
+---
+
+<StarlightPage
+  frontmatter={{
+    title: flow.title,
+    description: flow.summary ?? `A flow ${flow.repository} declares in ${flow.file}.`,
+    tableOfContents: false,
+  }}
+>
+  <FlowPage client:load {...page} />
+</StarlightPage>

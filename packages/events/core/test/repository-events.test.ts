@@ -5,6 +5,7 @@ import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   builtInDiscoveryAdapters,
+  findCatalogRoots,
   loadRepositoryEvents,
   isSingleRepository,
   publishesCatalogContent,
@@ -34,8 +35,9 @@ it('enrols a repository that has only a Prisma schema', async () => {
   expect(publishesCatalogContent(repo)).toBe(true);
 });
 
-it('enrols a repository that publishes only approved message contracts', async () => {
+it('enrols a package that publishes only approved message contracts', async () => {
   await fs.mkdir(path.join(repo, 'src/__contracts__'), { recursive: true });
+  await fs.writeFile(path.join(repo, 'package.json'), '{}');
   await fs.writeFile(path.join(repo, 'src/__contracts__/notes.txt'), '{}');
   expect(publishesCatalogContent(repo)).toBe(false);
   await fs.writeFile(path.join(repo, 'src/__contracts__/OrderPlaced.approved.txt'), '{}');
@@ -201,6 +203,89 @@ it("infers the owner from the repository's CODEOWNERS, matched on the repository
 
   expect(event?.frontmatter.owner?.team).toBe('acme/payments');
   expect(event?.frontmatter.provenance.fields.owner).toBe('inferred');
+});
+
+describe('a monorepo', () => {
+  const write = async (file: string, body: string) => {
+    await fs.mkdir(path.dirname(path.join(repo, file)), { recursive: true });
+    await fs.writeFile(path.join(repo, file), body);
+  };
+
+  const contract = JSON.stringify({ type: 'object', properties: { id: { type: 'string' } } });
+
+  beforeEach(async () => {
+    await write('platform/package.json', '{}');
+    await write('platform/CODEOWNERS', '* @acme/platform\n/services/orders/ @acme/orders\n');
+    await write('platform/docs/workspace.md', '# Workspace\n');
+    await write('platform/services/orders/package.json', '{}');
+    await write('platform/services/orders/contracts/orders/order.placed.json', contract);
+    await write('platform/services/orders/test/fixtures/contracts/x.json', contract);
+    await write('payments-service/contracts/payments/payment.captured.json', contract);
+  });
+
+  it('publishes each package beside the checkouts, named for its folder', () => {
+    expect(findCatalogRoots(repo).map(({ name, path }) => [name, path])).toEqual([
+      ['payments-service', 'payments-service'],
+      ['platform', 'platform'],
+      ['orders', 'platform/services/orders'],
+    ]);
+  });
+
+  it('finds the same packages when the monorepo is the root', () => {
+    expect(findCatalogRoots(path.join(repo, 'platform')).map(({ name }) => name)).toEqual([
+      'platform',
+      'orders',
+    ]);
+  });
+
+  it('keeps a checkout’s name when a package nested deeper shares it', async () => {
+    await write('orders/contracts/orders/order.shipped.json', contract);
+
+    expect(
+      findCatalogRoots(repo).map(({ name, path, duplicateOf }) => [name, path, duplicateOf]),
+    ).toEqual([
+      ['orders', 'orders', undefined],
+      ['payments-service', 'payments-service', undefined],
+      ['platform', 'platform', undefined],
+      ['orders', 'platform/services/orders', 'orders'],
+    ]);
+  });
+
+  it('reads a docs/ or events/ folder of packages as packages, not catalog content', async () => {
+    await write('platform/packages/docs/site/package.json', '{}');
+    await write('platform/packages/docs/site/README.md', '# Site\n');
+    await write('platform/apps/docs/package.json', '{}');
+
+    expect(findCatalogRoots(path.join(repo, 'platform')).map(({ name }) => name)).toEqual([
+      'platform',
+      'orders',
+    ]);
+  });
+
+  it('leaves sample code to be built from its own root', async () => {
+    await write('platform/examples/shop/docs/index.md', '# Shop\n');
+
+    expect(findCatalogRoots(path.join(repo, 'platform')).map(({ name }) => name)).toEqual([
+      'platform',
+      'orders',
+    ]);
+  });
+
+  it("owns a package's events by the monorepo's CODEOWNERS, never one above the root", async () => {
+    const orders = path.join(repo, 'platform/services/orders');
+
+    const [event] = await loadRepositoryEvents(orders, { ownersWithin: repo });
+
+    expect(event?.frontmatter.owner?.team).toBe('acme/orders');
+
+    await write('CODEOWNERS', '* @someone-else\n');
+
+    const [outside] = await loadRepositoryEvents(path.join(repo, 'payments-service'), {
+      ownersWithin: path.join(repo, 'payments-service'),
+    });
+
+    expect(outside?.frontmatter.owner).toBeUndefined();
+  });
 });
 
 describe("a contracts-only repository's git history", () => {

@@ -36,13 +36,14 @@ function documentUrl(id: string): string {
 
 export interface CreateDocsResourceGraphOptions {
   /**
-   * Repository identity, when the id namespace is not the repository's name.
+   * Repository identity per id namespace, where the two differ.
    *
    * A document's id is its address, and a site already served from `/<repo>/`
    * usually shortens that namespace. Events and Agents join on the repository's
    * real name, so the two are allowed to differ and only this one is identity.
+   * A namespace not listed is its own repository, as a monorepo's packages are.
    */
-  repository?: string;
+  repositories?: ReadonlyMap<string, string>;
 }
 
 /**
@@ -71,7 +72,7 @@ export function createDocsResourceGraph(
     // refused any document these fields do not parse for.
     const front = frontmatterSchema.parse(doc.data);
     const ref = documentRef(doc.id);
-    const repositoryName = options.repository ?? doc.repo;
+    const repositoryName = options.repositories?.get(doc.repo) ?? doc.repo;
     const repository = createRepositoryResource(repositoryName);
 
     const resource: DocumentCatalogResource = {

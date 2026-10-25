@@ -8,7 +8,7 @@
     "title": { "type": "string", "minLength": 1 },
     "owner": {
       "description": "A team, not a person. People change teams; documents outlive them.",
-      "enum": ["Reliability", "Payments", "Data Platform"]
+      "enum": ["Reliability", "Payments", "Data Platform", "Platform"]
     },
     "summary": { "type": "string" },
     "tier": {

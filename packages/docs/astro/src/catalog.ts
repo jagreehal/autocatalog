@@ -13,8 +13,7 @@ import {
   createResourceGraphComposer,
   isEventCatalogResource,
   loadRepositoryEvents,
-  isSingleRepository,
-  publishesCatalogContent,
+  findCatalogRoots,
   resourceKey,
   type LoadedEvent,
   summarizeResourceGraph,
@@ -48,13 +47,15 @@ import {
   headCommit,
   readDocs,
   resolveDocKinds,
-  resolveDocsLayout,
   type BuildDocsManifestOptions,
   type Doc,
   type DocKind,
   type DocsManifest,
+  type Flow,
+  readFlows,
 } from 'autocatalog-docs-core';
 import { repositoryApis, type CatalogApi } from './apis';
+import { repositorySpecifications, type CatalogSpecification } from './specifications';
 import { publishedKinds, RESERVED_SEGMENTS } from './kinds';
 import { catalogModels, modelPath, type CatalogModel } from './data-models';
 import { docsSiteConfig } from './config';
@@ -87,8 +88,12 @@ export interface DocsCatalog {
   history: CatalogEvent[];
   /** The OpenAPI documents each repository commits, each with a reference page. */
   apis: CatalogApi[];
+  /** Every other specification each repository commits (WSDL, XML Schema, AsyncAPI…), each with a page. */
+  specifications: CatalogSpecification[];
   /** The tables and collections each repository defines, each with a page. */
   models: CatalogModel[];
+  /** The business processes each repository declares under flows/, each with a page. */
+  flows: Flow[];
   manifest: DocsManifest;
   /** The document kinds with at least one document, each with an index page. */
   kinds: DocKind[];
@@ -107,36 +112,13 @@ export interface DocsCatalog {
   warnings: string[];
 }
 
-export interface BuildDocsCatalogOptions extends BuildDocsManifestOptions {
-  /** Repository identity, when the id namespace is not the repository's name. */
-  repository?: string;
-}
-
-export function repositoryRoots(root: string, docs: Doc[], repo?: string): Map<string, string> {
-  const layout = resolveDocsLayout(root, { repo });
-
-  if (layout.single || isSingleRepository(root)) {
-    const name = repo ?? docs[0]?.repo ?? path.basename(path.resolve(root));
-
-    return new Map([[name, layout.single ? layout.root : path.resolve(root)]]);
-  }
-
-  const roots = new Map<string, string>();
-
-  for (const entry of fs.readdirSync(layout.root, { withFileTypes: true })) {
-    if (!entry.isDirectory()) continue;
-    const repositoryRoot = path.join(layout.root, entry.name);
-
-    if (publishesCatalogContent(repositoryRoot)) roots.set(entry.name, repositoryRoot);
-  }
-
-  return roots;
-}
+export type BuildDocsCatalogOptions = BuildDocsManifestOptions;
 
 /**
  * Build the one graph the documentation site publishes. Filesystem layout is
- * the Adapter: sibling `<repo>/docs` and `<repo>/events` roots join through the
- * same inferred Repository resource, without fuzzy name matching.
+ * the Adapter: every `docs/`, `events/` and `contracts/`, in sibling checkouts
+ * or in a monorepo's packages, joins through the same inferred Repository
+ * resource, without fuzzy name matching.
  */
 export async function buildDocsCatalog(
   root: string,
@@ -144,10 +126,25 @@ export async function buildDocsCatalog(
 ): Promise<DocsCatalog> {
   const docs = readDocs(root, options);
   const manifest = documentsManifest(root, options);
+  // Left out of a repository without quarantining it, such as an unreadable snapshot.
+  const notes: string[] = [];
+
+  const roots = findCatalogRoots(root, {
+    name: options.repo,
+    repository: options.repository,
+    onWarning: (message) => notes.push(message),
+  });
+
+  // Only the root can carry an identity that is not its name.
+  const identities = new Map(
+    roots.flatMap(({ name, repository, duplicateOf }) =>
+      duplicateOf === undefined ? [[name, repository] as const] : [],
+    ),
+  );
 
   const composer = createResourceGraphComposer();
 
-  const docsGraph = createDocsResourceGraph(docs, manifest, { repository: options.repository });
+  const docsGraph = createDocsResourceGraph(docs, manifest, { repositories: identities });
   composer.add(docsGraph);
 
   // Which repositories declared each resource and relationship, so one
@@ -166,6 +163,7 @@ export async function buildDocsCatalog(
   const events: CatalogEvent[] = [];
   const history: CatalogEvent[] = [];
   const apis: CatalogApi[] = [];
+  const specifications: CatalogSpecification[] = [];
 
   // Compiled per repository, and a repository that will not compile is
   // quarantined rather than allowed to fail everyone's build. The refusal to
@@ -198,24 +196,36 @@ export async function buildDocsCatalog(
 
   // Sorted, so which of two contradicting repositories is quarantined does not
   // depend on the order the filesystem lists them in.
-  const found = [...repositoryRoots(root, docs, options.repo)]
-    .map(([repository, repositoryRoot]) => ({
-      name: options.repository ?? repository,
-      repositoryRoot,
+  const found = roots
+    .map((catalogRoot) => ({
+      ...catalogRoot,
+      name: catalogRoot.repository,
+      repositoryRoot: catalogRoot.dir,
     }))
-    .sort((a, b) => a.name.localeCompare(b.name));
+    .sort((a, b) => a.name.localeCompare(b.name) || a.path.localeCompare(b.path));
 
   // A repository's name is the first segment of its pages' addresses, so one
-  // named like a page the site already has is left out until it is renamed.
-  const repositories = found.filter(({ name }) => !RESERVED_SEGMENTS.has(name));
+  // named like a page the site already has, or like another folder found
+  // first, is left out until it is renamed.
+  const repositories: typeof found = [];
 
-  for (const { name } of found)
+  for (const candidate of found) {
+    const { name, path: where, duplicateOf } = candidate;
+
     if (RESERVED_SEGMENTS.has(name))
       failures.push({
         repository: name,
         source: 'name',
         message: `/${name}/ is one of the site's own pages; rename the repository's folder to publish it`,
       });
+    else if (duplicateOf !== undefined)
+      failures.push({
+        repository: name,
+        source: 'name',
+        message: `${where} and ${duplicateOf || 'the root'} both publish as ${name}; rename one folder to publish both`,
+      });
+    else repositories.push(candidate);
+  }
 
   const kinds = publishedKinds(
     resolveDocKinds(root, options.conventionsPath).kinds,
@@ -226,15 +236,13 @@ export async function buildDocsCatalog(
   // Every repository's events first, so an agent in one repository can name an
   // event another publishes and the edge lands on that exact Event resource.
   const graphEvents: GraphEvent[] = [];
-  // Left out of a repository without quarantining it, such as an unreadable snapshot.
-  const notes: string[] = [];
   const snapshots: string[] = [];
 
-  for (const { name, repositoryRoot } of repositories) {
+  for (const { name, repositoryRoot, nested } of repositories) {
     try {
       const resourceGraph =
         (await readResourceGraph(repositoryRoot)) ??
-        (await scannedModels(repositoryRoot, name, notes));
+        (await scannedModels(repositoryRoot, name, notes, root, nested));
 
       if (resourceGraph)
         resourceFragments.push({ repository: name, repositoryRoot, graph: resourceGraph });
@@ -254,6 +262,8 @@ export async function buildDocsCatalog(
 
     const graph = await quarantine(name, 'events', async () => {
       loaded = await loadRepositoryEvents(repositoryRoot, {
+        ownersWithin: root,
+        exclude: nested,
         history: true,
         onWarning: (message) => notes.push(`${name}: ${message}`),
         onSnapshot: () => snapshots.push(name),
@@ -298,6 +308,9 @@ export async function buildDocsCatalog(
         apis.push(
           ...(await repositoryApis(name, repositoryRoot, (message) => notes.push(message))),
         );
+        specifications.push(
+          ...repositorySpecifications(name, repositoryRoot, (message) => notes.push(message)),
+        );
       } catch (error) {
         failures.push({
           repository: name,
@@ -314,6 +327,17 @@ export async function buildDocsCatalog(
           urls: false,
           events: graphEvents,
         }),
+      );
+    }
+  }
+
+  // A sidecar naming a service no event mentions links to nothing; said, not linked.
+  const services = new Set(buildServices(events.map(({ event }) => event)).keys());
+
+  for (const spec of specifications) {
+    for (const service of spec.services.filter((name) => !services.has(name))) {
+      notes.push(
+        `${spec.repository}: ${spec.file} names service ${service}, which no event produces or consumes`,
       );
     }
   }
@@ -382,7 +406,7 @@ export async function buildDocsCatalog(
   composed = consumerFragments.reduce(mergeConsumerGraph, composed);
 
   const about = createDescribesRelationships(docs, composed.resources, {
-    repository: options.repository,
+    repositories: identities,
   });
 
   composed = mergeArchitectureGraphs(composed, {
@@ -390,6 +414,14 @@ export async function buildDocsCatalog(
     resources: [],
     relationships: about.relationships,
   });
+
+  // Read against the whole composed catalog, so a flow can cross repositories.
+  const flows = readFlows(
+    repositories
+      .filter(({ name }) => !quarantined.has(name))
+      .map(({ name, repositoryRoot }) => ({ repository: name, dir: repositoryRoot })),
+    composed,
+  );
 
   failures.sort((a, b) =>
     `${a.repository}/${a.source}`.localeCompare(`${b.repository}/${b.source}`),
@@ -400,6 +432,8 @@ export async function buildDocsCatalog(
   // refuse.
   const warnings = [
     ...about.failures.map((failure) => `${failure}, so it is missing from the graph`),
+    ...flows.failures.map((failure) => `${failure}, so it is left out`),
+    ...flows.warnings,
     ...failures.map((failure) =>
       failure.source === 'name'
         ? `${failure.repository} is missing from the graph — ${failure.message}`
@@ -439,6 +473,8 @@ export async function buildDocsCatalog(
     events: events.sort((a, b) => a.event.frontmatter.id.localeCompare(b.event.frontmatter.id)),
     history,
     apis,
+    specifications,
+    flows: flows.flows,
     models: models.map((model) => ({
       ...model,
       resource: { ...model.resource, url: modelPath(model) },
@@ -463,8 +499,10 @@ async function scannedModels(
   repositoryRoot: string,
   repository: string,
   notes: string[],
+  ownersWithin: string,
+  nested: string[],
 ): Promise<ResourceGraph | undefined> {
-  const { graph, errors } = await modelScan(path.resolve(repositoryRoot));
+  const { graph, errors } = await modelScan(path.resolve(repositoryRoot), ownersWithin, nested);
 
   for (const error of errors) notes.push(`${repository}: data models were not scanned: ${error}`);
 
@@ -484,8 +522,9 @@ declare global {
 const modelScans = (globalThis.autocatalogModelScans ??= new Map());
 
 /** One scan per repository checkout per process. */
-function modelScan(root: string): ModelScan {
-  const known = modelScans.get(root);
+function modelScan(root: string, ownersWithin: string, nested: string[]): ModelScan {
+  const key = JSON.stringify([root, nested]);
+  const known = modelScans.get(key);
 
   if (known) return known;
 
@@ -497,6 +536,8 @@ function modelScan(root: string): ModelScan {
 
     const { graph, errors } = await scanModelResources({
       root,
+      // Packages below publish their own models.
+      exclude: nested,
       service: config.service,
       datastore: config.datastore,
       database: config.database,
@@ -505,13 +546,13 @@ function modelScan(root: string): ModelScan {
     const owned = resolveResourceOwnership(graph, {
       ...config.ownership,
       claims: [],
-      codeowners: await loadCodeowners(root),
+      codeowners: await loadCodeowners(root, ownersWithin),
     });
 
     return { graph: owned.graph, errors };
   })();
 
-  modelScans.set(root, scan);
+  modelScans.set(key, scan);
 
   return scan;
 }

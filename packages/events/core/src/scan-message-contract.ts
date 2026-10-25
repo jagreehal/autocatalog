@@ -25,6 +25,7 @@ import { DEFAULT_SCAN_EXCLUDE, pascalCase } from './utils';
  */
 export interface ScanMessageContractOptions {
   root: string;
+  /** Folder names skipped anywhere, or absolute paths skipped exactly. */
   exclude?: string[];
   outDir?: string;
   signal?: AbortSignal;
@@ -135,7 +136,8 @@ async function walkApprovedFiles(
       // Directories are walked and regular files read. A symlink is neither: it
       // could name any file on this machine, and the catalog gets published.
       if (entry.isDirectory()) {
-        if (!exclude.has(entry.name) && !entry.name.startsWith('.')) await walk(full);
+        if (!exclude.has(entry.name) && !exclude.has(full) && !entry.name.startsWith('.'))
+          await walk(full);
       } else if (
         entry.isFile() &&
         path.basename(dir) === CONTRACTS_DIR &&

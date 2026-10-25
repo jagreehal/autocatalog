@@ -1,0 +1,23 @@
+asyncapi: 3.0.0
+info:
+  title: Order events
+  version: 1.0.0
+  description: What OrderService announces once a customer places an order.
+channels:
+  orderPlaced:
+    address: orders.placed
+    messages:
+      orderPlaced:
+        name: order.placed
+        payload:
+          type: object
+          required: [orderId, customerId, total]
+          properties:
+            orderId: { type: string }
+            customerId: { type: string }
+            total: { type: integer, description: Minor units. }
+operations:
+  publishOrderPlaced:
+    action: send
+    channel:
+      $ref: '#/channels/orderPlaced'

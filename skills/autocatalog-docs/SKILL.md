@@ -28,6 +28,8 @@ If `additionalProperties` is `false`, a field the contract does not declare will
 
 `<owning-repo>/docs/<path>.md`. The id readers and links use is derived from that path — `payments-service/docs/ops/replay.md` is `payments-service/ops/replay` — so the path is the URL and the permanent name. Choose it once, deliberately.
 
+In a monorepo the owning folder is the package: `services/orders/docs/runbook.md` publishes as `orders/runbook`.
+
 Never write documentation into the aggregating site's repository. A document there has no owning team and no code to stay true to.
 
 ## 3. Write from the source, not from the summary
@@ -55,6 +57,16 @@ With the built-in kinds:
 - **Incident**: `docs/incidents/YYYY-MM-DD-<what-broke>.md`. Write `date`, `severity` and `status` (open, mitigated, resolved). Once resolved, write `rootCause` and `solution` as one sentence each: the index shows them, so the next team finds the fix from there. The body holds the timeline and the full write-up.
 
 Name what each one applies to in `about:` (`service/<name>`, `event/<domain>/<id>`), so it is listed on that service's or event's page.
+
+### Business processes
+
+A process that crosses services, such as checkout to dispatch, goes in `flows/<id>.md` beside `docs/`, in the repository that owns the process. Its frontmatter lists `title` and `steps`. Each step has an `id`, names one thing (`event: <domain>/<id>`, `service:`, `agent:`, `actor: { name }`, `externalSystem: { name, url }` or `custom: { title }`), and leads on with `next_step` or `next_steps`, each with an optional `label` for the branch. The Markdown body explains the process.
+
+Write the steps from the code and the event declarations. A hop you write that no producer or consumer declaration backs shows as a warning on the site; fix the declaration or the flow, whichever is wrong.
+
+### Specifications
+
+A WSDL, XML Schema, GraphQL schema or AsyncAPI document goes under `contracts/`, and the site publishes it as written. To attach one to a service, or to publish a JSON or YAML file, add `<name>.autocatalog.json` beside it: `{ "specification": { "name": "...", "summary": "...", "service": "<service>" } }`.
 
 ## 4. Link across repositories by id, never by path
 
@@ -84,6 +96,8 @@ Fix every failure before finishing. The common ones and what they mean:
 | `x.md (adr): status: must be one of ...`         | The kind's schema lists the states; use one exactly                         |
 | `supersedes '...' does not resolve`              | The decision it replaces has a different id; check the file name            |
 | `kind 'x' is not a kind this organisation keeps` | `kind:` names a kind the conventions file does not define                   |
+| `step 'x' leads to 'y', which is not a step`     | A `next_step` names an id no step in the flow has                           |
+| `step 'x' names service and actor`               | A step names one thing; split it into two steps                             |
 
 ## Anti-patterns — refuse these even if asked
 

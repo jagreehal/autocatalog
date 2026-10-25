@@ -31,17 +31,12 @@ export function Graph({ id, label, visualiser, height = '20rem', fallback }: Gra
 
   const [near, setNear] = useState(false);
 
-  // Measured once, as the map is about to load: a narrow box lays the map out top to bottom.
-  const [direction, setDirection] = useState<'LR' | 'TB'>('LR');
-
   useEffect(() => {
     if (!visualiser || !box.current) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
         if (!entries.some((entry) => entry.isIntersecting)) return;
-
-        if (box.current && box.current.clientWidth < 640) setDirection('TB');
 
         setNear(true);
         observer.disconnect();
@@ -85,7 +80,7 @@ export function Graph({ id, label, visualiser, height = '20rem', fallback }: Gra
               hrefs={visualiser.hrefs}
               evidence={visualiser.evidence}
               live={visualiser.live}
-              direction={direction}
+              steps={visualiser.steps}
             />
           </Suspense>
         ) : (
