@@ -23,7 +23,8 @@ export async function startMcpServer(argv: string[] = process.argv.slice(2)): Pr
   const resolved = resolve(root);
   const eventsRoot = resolve(resolved, eventsDir);
 
-  const catalog = await loadCatalog(eventsRoot);
+  // --events-dir may sit anywhere below the root; the root is still the repository.
+  const catalog = await loadCatalog(eventsRoot, resolved);
 
   process.stderr.write(
     `autocatalog mcp: loaded ${catalog.events.length} events from ${eventsRoot}\n`,

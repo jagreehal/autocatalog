@@ -1,0 +1,40 @@
+---
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import type { InferGetStaticPropsType } from 'astro';
+import { docsCatalog } from '../catalog';
+import { designPageProps } from '../designs';
+import { eventPages, servicePages } from '../page-models';
+import { DesignPage } from '../ui/pages/DesignPage';
+
+export async function getStaticPaths() {
+  const catalog = await docsCatalog();
+
+  return catalog.designs.map((design) => ({
+    params: { repository: design.repository, id: design.id },
+    props: { design },
+  }));
+}
+
+type Props = InferGetStaticPropsType<typeof getStaticPaths>;
+
+const { design } = Astro.props;
+
+const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+
+const catalog = await docsCatalog();
+
+const page = await designPageProps(design, catalog, base, {
+  servicePages: servicePages(catalog),
+  eventPages: eventPages(catalog),
+});
+---
+
+<StarlightPage
+  frontmatter={{
+    title: design.title,
+    description: design.summary ?? `A design ${design.repository} proposes in ${design.file}.`,
+    tableOfContents: false,
+  }}
+>
+  <DesignPage client:load {...page} />
+</StarlightPage>

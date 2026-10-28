@@ -1,6 +1,7 @@
 ---
 title: Order to dispatch
 summary: From a customer paying to a carrier collecting the parcel, across payments, orders and shipping.
+lanes: { by: domain, style: lanes }
 steps:
   - id: customer
     actor:

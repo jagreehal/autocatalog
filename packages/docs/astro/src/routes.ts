@@ -75,6 +75,8 @@ export function autocatalogDocsRoutes(root: string): AstroIntegration {
           ['/apis/[repository]/[name]/openapi.json', path.join(here, 'pages/api-spec.json.ts')],
           ['/flows', path.join(here, 'pages/flows.astro')],
           ['/flows/[repository]/[id]', path.join(here, 'pages/flow.astro')],
+          ['/designs', path.join(here, 'pages/designs.astro')],
+          ['/designs/[repository]/[id]', path.join(here, 'pages/design.astro')],
           ['/specs', path.join(here, 'pages/specs.astro')],
           ['/specs/[repository]/[name]', path.join(here, 'pages/spec.astro')],
           ['/specs/[repository]/[name]/[file]', path.join(here, 'pages/spec-file.ts')],

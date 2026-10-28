@@ -7,7 +7,11 @@ import {
   type EventRuntimeEvidence,
   readCatalogFreshness,
   summariseDrift,
+  composeResourceGraphs,
   createCatalogProjection,
+  createEventResourceGraph,
+  isEventCatalogResource,
+  type ResourceGraph,
   loadCatalogSnapshot as loadCatalogSnapshotCore,
   eventToLlmText,
   catalogToLlmText,
@@ -23,7 +27,13 @@ import {
   type FieldSummary,
   type JsonObject,
 } from 'autocatalog-core';
-import { linkAgentsToEvents, withEventParticipants } from 'autocatalog-agents-core';
+import {
+  createAgentsResourceGraph,
+  hasAgentCatalog,
+  linkAgentsToEvents,
+  loadCatalog as loadAgentsCatalog,
+  withEventParticipants,
+} from 'autocatalog-agents-core';
 
 const execFileAsync = promisify(execFile);
 
@@ -67,6 +77,15 @@ function summarise(e: LoadedEvent): EventSummary {
 
 export interface CatalogSnapshot extends CatalogProjection {
   eventsRoot: string;
+  /** The repository the events belong to: where its flows/, designs/ and agents live. */
+  repoRoot: string;
+  /**
+   * What a map draws, as the site composes it: the events and services, and
+   * the agent catalog's agents, tools and models with their own edges.
+   */
+  mapGraph: ResourceGraph;
+  /** Why the agent catalog is not on the maps, when it does not compile. */
+  mapGraphFailure?: string;
   freshness: CatalogFreshness;
 }
 
@@ -90,7 +109,45 @@ export async function loadCatalog(
     ? withEventParticipants(snapshot.events, agents.participants)
     : snapshot.events;
 
-  return { eventsRoot, freshness, ...createCatalogProjection({ ...snapshot, events }) };
+  const projection = createCatalogProjection({ ...snapshot, events });
+
+  // From the events as declared: folded in, an agent would also be drawn as a service.
+  const eventGraph = createEventResourceGraph(
+    snapshot.events.filter((event) => !event.folder.isVersioned),
+  );
+
+  let mapGraph = eventGraph;
+
+  let mapGraphFailure: string | undefined;
+
+  // An agent catalog that does not compile stays off the maps, and says why,
+  // rather than taking every other tool down with it.
+  if (hasAgentCatalog(repoRoot)) {
+    try {
+      mapGraph = composeResourceGraphs(
+        eventGraph,
+        createAgentsResourceGraph(await loadAgentsCatalog(repoRoot), {
+          urls: false,
+          events: eventGraph.resources.filter(isEventCatalogResource).map((resource) => ({
+            ref: resource.ref,
+            domain: resource.attributes.domain,
+            id: resource.ref.id,
+          })),
+        }),
+      );
+    } catch (error) {
+      mapGraphFailure = error instanceof Error ? error.message : String(error);
+    }
+  }
+
+  return {
+    eventsRoot,
+    repoRoot: path.resolve(repoRoot),
+    mapGraph,
+    ...(mapGraphFailure && { mapGraphFailure }),
+    freshness,
+    ...projection,
+  };
 }
 
 /** What the catalog is, and whether it can still be believed. */

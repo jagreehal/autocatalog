@@ -1,20 +1,8 @@
 import type { DslGraph } from '@eventcatalog/visualiser';
+import type { Diagram, DiagramNode, EdgeEvidence, FlowStepData } from 'autocatalog-docs-core';
 import { z } from 'zod';
 
-/**
- * What a runtime snapshot says of one edge. `observed`: it ran. `unseen`: the
- * catalog declares it and the repository's snapshot never saw it.
- * `undocumented`: it ran and nobody declared it.
- */
-export interface EdgeEvidence {
-  state: 'observed' | 'unseen' | 'undocumented';
-  /** Times the snapshot saw it; 0 when unseen. */
-  count: number;
-  /** The event the edge carries, normalised, so a live frame can find it. */
-  event: string;
-  /** Set on a producer's edge, so a live frame moves only the producer it names. */
-  producer?: string;
-}
+export type { EdgeEvidence, FlowStepData, StepLanes } from 'autocatalog-docs-core';
 
 /** Where a live map listens: a server-sent events URL, and the event name its frames carry. */
 export interface LiveFeed {
@@ -23,20 +11,6 @@ export interface LiveFeed {
 }
 
 /** What the visualiser island is given: the graph, and where each node links. */
-/** The lanes a flow step's resource sits in, as the visualiser groups a flow by them. */
-export interface StepLanes {
-  domain?: { id: string; name: string };
-  team?: { id: string; name: string };
-  /** A person or system outside the catalog: a lane of their own. */
-  external?: boolean;
-}
-
-/** What the visualiser reads from a flow step's node data. */
-export interface FlowStepData {
-  step: { id: string; title: string; summary?: string };
-  lanes?: StepLanes;
-}
-
 export interface VisualiserGraph {
   graph: DslGraph;
   hrefs: Record<string, string>;
@@ -45,6 +19,12 @@ export interface VisualiserGraph {
    * lanes the map offers to group the flow by.
    */
   steps?: Record<string, FlowStepData>;
+  /** How a flow's map is grouped when it opens, as its frontmatter says. */
+  lanes?: Diagram['lanes'];
+  /** Simpler levels of the same map: 2 without its messages, 1 its domains and systems. */
+  levels?: { 1?: Pick<DslGraph, 'nodes' | 'edges'>; 2?: Pick<DslGraph, 'nodes' | 'edges'> };
+  /** Node ids drawn as proposed: a design's parts the catalog does not have yet. */
+  proposed?: string[];
   /** Runtime evidence by edge id, only where a snapshot covers the map. */
   evidence?: Record<string, EdgeEvidence>;
   live?: LiveFeed;
@@ -106,3 +86,22 @@ export const edgeWeight = (evidence: EdgeEvidence): number =>
   evidence.state === 'unseen'
     ? 1.25
     : Math.min(6, 1.5 + Math.log10(Math.max(evidence.count, 1)) * 2.2);
+
+/**
+ * A level 1 domain or system as the card the visualiser draws one as, which
+ * edges connect to; its layout node is a container, which they do not.
+ */
+export function asGroupCard<N extends { id: string; type?: string | undefined; data: object }>(
+  node: N,
+  source: Pick<DiagramNode, 'label' | 'metadata'> | undefined,
+): N {
+  const group = source?.metadata.group;
+
+  if (group !== 'domain' && group !== 'system') return node;
+
+  const card = { id: node.id, name: source!.label, summary: source!.metadata.summary };
+
+  return group === 'domain'
+    ? { ...node, type: 'context-domain', data: { domain: card, mode: 'full', navigable: false } }
+    : { ...node, type: 'system', data: { system: card, mode: 'full', navigable: false } };
+}

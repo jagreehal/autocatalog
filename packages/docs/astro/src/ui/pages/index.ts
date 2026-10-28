@@ -52,3 +52,7 @@ export { SpecificationsPage, type SpecificationsPageProps } from './Specificatio
 export { FlowPage, type FlowPageProps, type FlowPageStep } from './FlowPage';
 
 export { FlowsPage, type FlowsPageProps } from './FlowsPage';
+
+export { DesignPage, type DesignPageProps } from './DesignPage';
+
+export { DesignsPage, type DesignsPageProps } from './DesignsPage';

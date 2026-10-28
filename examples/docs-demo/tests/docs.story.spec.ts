@@ -310,7 +310,7 @@ test.describe('The company documentation index', () => {
     expect(await wsdl.text()).toContain('<definitions name="CardGateway"');
   });
 
-  test('a business process crosses repositories, and groups into lanes by domain', async ({
+  test('a business process crosses repositories, and opens in lanes by domain', async ({
     page,
   }, testInfo) => {
     story.init(testInfo, { tags: ['flows', 'monorepo'] });
@@ -329,9 +329,15 @@ test.describe('The company documentation index', () => {
     );
     await expect(steps).toContainText('Then Payment captured (Card accepted)');
 
-    when('the reader walks through the flow from the start');
+    then("the map opens in lanes by domain, as the flow's frontmatter says");
     const map = page.getByRole('region', { name: 'Flow' });
-    await expect(map.locator('.react-flow__node')).toHaveCount(9);
+    await expect(map.getByText('payments', { exact: true })).toBeVisible();
+    await expect(map.getByText('orders', { exact: true })).toBeVisible();
+    await expect(page).toHaveURL(/group=domain&groupStyle=lanes/);
+
+    when('the reader walks through the flow from the start');
+    // Nine steps, beside the lanes they sit in.
+    await expect(map.locator('.react-flow__node:not(.react-flow__node-swimlane)')).toHaveCount(9);
     // Pressed again until the walkthrough has hydrated and listens.
     await expect(async () => {
       await map.getByTitle('Start walking through the flow').click();
@@ -342,14 +348,6 @@ test.describe('The company documentation index', () => {
     then('each step is called by its title, not its id');
     await expect(map.getByRole('heading', { name: 'Take payment' })).toBeVisible();
     await map.getByTitle('Stop (Esc)').click();
-
-    when('the reader groups the map by domain');
-    await map.getByRole('button', { name: /Group by/ }).click();
-    await page.getByRole('menuitemradio', { name: /Domain/ }).click();
-
-    then('the payments and orders steps sit in their own groups');
-    await expect(map.getByText('payments', { exact: true })).toBeVisible();
-    await expect(map.getByText('orders', { exact: true })).toBeVisible();
 
     when('the reader opens the event');
     await page.goto('/events/payments-service/payments/payment.captured/');

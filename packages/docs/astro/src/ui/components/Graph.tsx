@@ -81,6 +81,9 @@ export function Graph({ id, label, visualiser, height = '20rem', fallback }: Gra
               evidence={visualiser.evidence}
               live={visualiser.live}
               steps={visualiser.steps}
+              lanes={visualiser.lanes}
+              levels={visualiser.levels}
+              proposed={visualiser.proposed}
             />
           </Suspense>
         ) : (

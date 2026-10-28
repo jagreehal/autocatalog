@@ -27,7 +27,15 @@ export interface FlowStep {
   url?: string | undefined;
   /** The steps it leads to, in the order written, each with its branch label. */
   next: Array<{ id: string; label?: string | undefined }>;
+  /** The lanes the author puts it in, over what the catalog says. */
+  lane?: StepLane | undefined;
 }
+
+/** What a flow's steps can be grouped by, as EventCatalog's visualiser names them. */
+export type FlowGroupBy = 'domain' | 'system' | 'team' | 'domain-system';
+
+/** A step's lanes by name: the domain, system or team it sits in. */
+export type StepLane = Partial<Record<'domain' | 'system' | 'team', string>>;
 
 /**
  * A business process a repository declares: the steps in order, with their
@@ -45,6 +53,8 @@ export interface Flow {
   /** The Markdown narrative below the frontmatter. */
   body: string;
   steps: FlowStep[];
+  /** How its map is grouped when it opens: by what, and as lanes or boxes. */
+  lanes?: { by: FlowGroupBy; style: 'lanes' | 'boxes' } | undefined;
 }
 
 const text = z.string().trim().min(1);
@@ -80,13 +90,27 @@ const stepSchema = z
       .optional(),
     next_step: target.optional(),
     next_steps: z.array(target).optional(),
+    lane: z
+      .object({ domain: text.optional(), system: text.optional(), team: text.optional() })
+      .strict()
+      .refine((lane) => Object.keys(lane).length > 0, 'name a domain, system or team')
+      .optional(),
   })
   .strict();
+
+const groupBy = z.enum(['domain', 'system', 'team', 'domain-system']);
+
+// `lanes: team` groups by team as boxes; the object form also picks the style.
+const lanesSchema = z.union([
+  groupBy.transform((by) => ({ by, style: 'boxes' as const })),
+  z.object({ by: groupBy, style: z.enum(['lanes', 'boxes']).default('boxes') }).strict(),
+]);
 
 const flowSchema = z
   .object({
     title: text,
     summary: text.optional(),
+    lanes: lanesSchema.optional(),
     steps: z.array(stepSchema).min(1),
   })
   .strict();
@@ -223,6 +247,7 @@ function readFlow(
     summary: parsed.data.summary,
     body: content.trim(),
     steps,
+    lanes: parsed.data.lanes,
   };
 }
 
@@ -248,7 +273,7 @@ function resolveStep(
     if (!ids.has(id)) throw new Error(`step '${step.id}' leads to '${id}', which is not a step`);
   }
 
-  const base = { id: step.id, summary: step.summary, next };
+  const base = { id: step.id, summary: step.summary, next, lane: step.lane };
 
   if (step.event ?? step.service ?? step.agent) {
     const kind = step.event ? 'event' : step.service ? 'service' : 'agent';

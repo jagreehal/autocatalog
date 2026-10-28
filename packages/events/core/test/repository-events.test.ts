@@ -288,7 +288,8 @@ describe('a monorepo', () => {
   });
 });
 
-describe("a contracts-only repository's git history", () => {
+// Each test commits several times; spawning git takes seconds on Windows.
+describe("a contracts-only repository's git history", { timeout: 30_000 }, () => {
   const git = (...args: string[]) =>
     execFileSync('git', ['-c', 'user.name=Test', '-c', 'user.email=test@example.com', ...args], {
       cwd: repo,

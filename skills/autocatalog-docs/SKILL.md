@@ -60,7 +60,9 @@ Name what each one applies to in `about:` (`service/<name>`, `event/<domain>/<id
 
 ### Business processes
 
-A process that crosses services, such as checkout to dispatch, goes in `flows/<id>.md` beside `docs/`, in the repository that owns the process. Its frontmatter lists `title` and `steps`. Each step has an `id`, names one thing (`event: <domain>/<id>`, `service:`, `agent:`, `actor: { name }`, `externalSystem: { name, url }` or `custom: { title }`), and leads on with `next_step` or `next_steps`, each with an optional `label` for the branch. The Markdown body explains the process.
+A process that crosses services, such as checkout to dispatch, goes in `flows/<id>.md` beside `docs/`, in the repository that owns the process. Its frontmatter lists `title` and `steps`. Each step has an `id`, names one thing (`event: <domain>/<id>`, `service:`, `agent:`, `actor: { name }`, `externalSystem: { name, url }` or `custom: { title }`), and leads on with `next_step` or `next_steps`, each with an optional `label` for the branch. The Markdown body explains the process. `lanes: team` (or `{ by: domain|system|team, style: lanes|boxes }`) sets how its map opens, and a step's `lane: { team: … }` puts it in a lane the catalog does not.
+
+Put architecture you have not built yet in `designs/<id>.md`: `title`, `status` (draft, proposed, accepted, rejected), `resources` (each `{ ref: service/PaymentService }` for one the catalog has, or `{ id, type, name?, summary?, parent? }`), `relations` (`{ from, to, kind: sends|receives|routes-through|reads|writes|connects }`, with `sends` and `receives` going from the service to the message) and `notes`. The site marks the parts the catalog lacks as new. An agent with the MCP server can draw a draft first with `show_map({ design })` and save the frontmatter it returns.
 
 Write the steps from the code and the event declarations. A hop you write that no producer or consumer declaration backs shows as a warning on the site; fix the declaration or the flow, whichever is wrong.
 

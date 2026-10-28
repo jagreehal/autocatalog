@@ -32,18 +32,26 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsup",
+    "build": "tsup && node scripts/build-view.mjs",
     "test": "vitest run"
   },
   "dependencies": {
+    "@modelcontextprotocol/ext-apps": "1.7.5",
     "@modelcontextprotocol/sdk": "^1.32.1",
     "autocatalog-agents-core": "workspace:*",
     "autocatalog-core": "workspace:*",
+    "autocatalog-docs-core": "workspace:*",
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@eventcatalog/visualiser": "5.1.2",
     "@types/node": "^26.6.4",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
     "autocatalog-adapter-zod": "workspace:*",
+    "esbuild": "0.28.2",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
     "tsup": "^8.5.1",
     "typescript": "^6.0.3",
     "vitest": "^5.0.3"

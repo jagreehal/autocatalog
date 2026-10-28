@@ -169,6 +169,7 @@ export default function autocatalogDocs(opts: AutocatalogDocsOptions = {}): Star
                   : []),
                 ...(catalog.apis.length > 0 ? [{ label: 'APIs', link: '/apis' }] : []),
                 ...(catalog.flows.length > 0 ? [{ label: 'Flows', link: '/flows' }] : []),
+                ...(catalog.designs.length > 0 ? [{ label: 'Designs', link: '/designs' }] : []),
                 ...(catalog.specifications.length > 0
                   ? [{ label: 'Specifications', link: '/specs' }]
                   : []),

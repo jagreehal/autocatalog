@@ -91,6 +91,12 @@
 [data-graph] .eventcatalog-visualizer .react-flow__edge.ac-pulse .react-flow__edge-path {
   stroke-width: 6 !important;
 }
+/* A design's proposed parts: drawn in outline, as not built yet. */
+[data-graph] .react-flow__node.ac-node-proposed {
+  outline: 2px dashed var(--color-inferred);
+  outline-offset: 4px;
+  border-radius: 0.5rem;
+}
 /* ArchitecturePage: EventCatalog brings its own layout, so it gets the whole content column. */
 :root:has([data-eventcatalog]) {
   --sl-content-width: 100%;

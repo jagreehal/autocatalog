@@ -123,3 +123,33 @@ it('leaves out a flow naming a repository that was quarantined, and says so', as
     ),
   );
 });
+
+it('opens a flow grouped as its frontmatter says, with a step’s own lane over the catalog’s', async () => {
+  await event('payments-service', 'payments', 'payment.captured', 'PaymentService');
+  await write(
+    'handbook/flows/checkout.md',
+    flow
+      .replace('title: Checkout\n', 'title: Checkout\nlanes: { by: team, style: lanes }\n')
+      .replace(
+        '    actor: { name: Customer }\n',
+        '    actor: { name: Customer }\n    lane: { team: Storefront }\n',
+      )
+      .replace(
+        '    event: payments/payment.captured\n',
+        '    event: payments/payment.captured\n    lane: { team: Finance }\n',
+      ),
+  );
+
+  await write('handbook/docs/index.md', '---\ntitle: Handbook\nowner: Ops\n---\n');
+
+  const catalog = await buildDocsCatalog(root, { includeDates: false });
+
+  const map = flowVisualiser(catalog.flows[0]!, catalog, '/', {});
+
+  expect(map.lanes).toEqual({ by: 'team', style: 'lanes' });
+  expect(map.steps?.customer?.lanes).toEqual({ team: { id: 'Storefront', name: 'Storefront' } });
+  expect(map.steps?.captured?.lanes).toEqual({
+    domain: { id: 'payments', name: 'payments' },
+    team: { id: 'Finance', name: 'Finance' },
+  });
+});

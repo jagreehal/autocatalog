@@ -184,6 +184,44 @@ it('leaves out a flow that does not hold together, naming the file and the step'
   ]);
 });
 
+it('reads how a flow groups its map, and refuses a grouping or lane it cannot draw', async () => {
+  await write(
+    'orders/flows/team.md',
+    flow
+      .replace('summary: From', 'lanes: team\nsummary: From')
+      .replace(
+        '    service: ShippingService\n',
+        '    service: ShippingService\n    lane: { system: Warehouse }\n',
+      ),
+  );
+  await write(
+    'orders/flows/lanes.md',
+    flow.replace('summary: From', 'lanes: { by: system, style: lanes }\nsummary: From'),
+  );
+  await write(
+    'orders/flows/owner.md',
+    flow.replace('summary: From', 'lanes: owner\nsummary: From'),
+  );
+  await write(
+    'orders/flows/empty.md',
+    flow.replace('    service: ShippingService\n', '    service: ShippingService\n    lane: {}\n'),
+  );
+
+  const result = readFlows(repositories(), catalog);
+
+  expect(result.flows.map(({ id, lanes }) => [id, lanes])).toEqual([
+    ['lanes', { by: 'system', style: 'lanes' }],
+    ['team', { by: 'team', style: 'boxes' }],
+  ]);
+  expect(result.flows[1]!.steps.find((step) => step.id === 'ship')!.lane).toEqual({
+    system: 'Warehouse',
+  });
+  expect(result.failures.sort()).toEqual([
+    expect.stringMatching(/^orders\/flows\/empty\.md: .*name a domain, system or team/),
+    expect.stringMatching(/^orders\/flows\/owner\.md: .*lanes/),
+  ]);
+});
+
 it('refuses a step link that is not a web address', async () => {
   await write(
     'orders/flows/link.md',

@@ -22,6 +22,7 @@ import {
   DOCS_MANIFEST_PATH,
   DOCS_SCHEMA_PATH,
   DocsManifestError,
+  readDesigns,
   readFlows,
   syncFrontmatterContract,
 } from 'autocatalog-docs-core';
@@ -96,15 +97,16 @@ export async function runDocsCheck(opts: DocsCommandOptions): Promise<number> {
   // here, where it can be fixed before merging. A step naming another
   // repository's resource is the composed site's to resolve: one checkout
   // does not hold every repository's events, services and agents.
-  const flows = readFlows(
-    findCatalogRoots(opts.root, { name: opts.repo }).flatMap(({ repository, dir, duplicateOf }) =>
-      duplicateOf === undefined ? [{ repository, dir }] : [],
-    ),
-    { resources, relationships: [] },
-    { deferMissing: true },
+  const checkouts = findCatalogRoots(opts.root, { name: opts.repo }).flatMap(
+    ({ repository, dir, duplicateOf }) => (duplicateOf === undefined ? [{ repository, dir }] : []),
   );
 
-  const failures = [...result.failures, ...flows.failures];
+  const flows = readFlows(checkouts, { resources, relationships: [] }, { deferMissing: true });
+
+  // The same for a design: one that does not hold together is left off the site.
+  const designs = readDesigns(checkouts, { resources, relationships: [] }, { deferMissing: true });
+
+  const failures = [...result.failures, ...flows.failures, ...designs.failures];
 
   // Which rules were applied is the first question a failure raises, so it is
   // reported on both paths — a reader fixing a failing check needs the contract
@@ -130,7 +132,10 @@ export async function runDocsCheck(opts: DocsCommandOptions): Promise<number> {
       ? 'schema + links'
       : 'schema only, no published index yet';
 
-    const flowCount = flows.flows.length > 0 ? `, ${flows.flows.length} flow(s)` : '';
+    const flowCount = [
+      flows.flows.length > 0 ? `, ${flows.flows.length} flow(s)` : '',
+      designs.designs.length > 0 ? `, ${designs.designs.length} design(s)` : '',
+    ].join('');
 
     console.log(
       kleur.green(`✓ ${result.docs} doc(s)${flowCount} across ${result.repos} repo(s) (${scope})`),
