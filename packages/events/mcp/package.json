@@ -1,6 +1,6 @@
 {
   "name": "autocatalog-mcp",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "MCP server that answers questions about an event catalog over stdio.",
   "license": "MIT",
   "repository": {

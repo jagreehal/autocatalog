@@ -1,5 +1,29 @@
 # autocatalog-mcp
 
+## 0.2.0
+
+### Minor Changes
+
+- 3968aaa: - `designs/<id>.md` proposes architecture you have not built yet, in the
+  vocabulary of EventCatalog Studio's model. Each design gets a page that marks
+  what the catalog has and what is new, with three levels of detail.
+  `ac docs check` checks designs as it checks flows.
+  - `show_map` draws the catalog, a flow or a design as an interactive diagram in
+    Claude, ChatGPT and other MCP App hosts, with runtime evidence on each edge.
+    It follows the host's theme and size, opens full screen on request, and tells
+    the agent which node you picked. An agent can sketch a design in the chat and
+    hand you the file to commit.
+  - A flow's `lanes:` sets how its map opens, and a step's `lane:` sets which lane
+    it sits in. Flows can also group by system.
+
+### Patch Changes
+
+- Updated dependencies [3968aaa]
+- Updated dependencies [96719f9]
+  - autocatalog-docs-core@0.3.0
+  - autocatalog-core@0.4.0
+  - autocatalog-agents-core@0.2.3
+
 ## 0.1.2
 
 ### Patch Changes
