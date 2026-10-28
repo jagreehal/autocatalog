@@ -1,6 +1,6 @@
 {
   "name": "autocatalog-adapter-zod",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "defineEvent() and Zod to JSON Schema extraction, so a Zod schema is the catalog entry.",
   "license": "MIT",
   "repository": {
