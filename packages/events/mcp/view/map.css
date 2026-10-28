@@ -1,0 +1,67 @@
+html,
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+}
+.ac-map {
+  position: relative;
+  box-sizing: border-box;
+}
+.ac-expand {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 10;
+  padding: 6px 10px;
+  border: 1px solid rgb(var(--ec-page-border, 229, 229, 229));
+  border-radius: 6px;
+  background: rgb(var(--ec-card-bg, 255, 255, 255));
+  color: rgb(var(--ec-page-text, 23, 23, 23));
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+/* The host's dark theme, in the colours the catalog site uses for the map. */
+[data-theme='dark'] .eventcatalog-visualizer,
+[data-theme='dark'] .ac-map {
+  --ec-page-bg: 10, 10, 10;
+  --ec-card-bg: 23, 23, 23;
+  --ec-page-border: 38, 38, 38;
+  --ec-page-text: 250, 250, 250;
+  --ec-page-text-muted: 161, 161, 161;
+  --ec-accent: 229, 229, 229;
+  --ec-bg-dots: #404040;
+}
+[data-theme='dark'] body {
+  background: rgb(10, 10, 10);
+}
+/* Runtime evidence on the edges, as the catalog site draws it. */
+.ac-edge-observed {
+  --ec-edge-stroke: #16a34a;
+}
+.ac-edge-unseen {
+  --ec-edge-stroke: #94a3b8;
+}
+.ac-edge-undocumented {
+  --ec-edge-stroke: #d97706;
+}
+.eventcatalog-visualizer [class*='ac-edge-'] .react-flow__edge-path {
+  stroke-width: var(--ac-edge-weight, 1.5) !important;
+}
+.ac-edge-unseen .react-flow__edge-path {
+  stroke-dasharray: 5 4;
+  opacity: 0.7;
+}
+.ac-empty {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  color: #64748b;
+  font-size: 14px;
+}
+/* A design's proposed parts: drawn in outline, as not built yet. */
+.react-flow__node.ac-node-proposed {
+  outline: 2px dashed #d97706;
+  outline-offset: 4px;
+  border-radius: 8px;
+}

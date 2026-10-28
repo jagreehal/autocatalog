@@ -39,6 +39,7 @@ export const RESERVED_SEGMENTS = new Set([
   'events',
   'fields',
   'flows',
+  'designs',
   'llms-full.txt',
   'llms.txt',
   'owners',

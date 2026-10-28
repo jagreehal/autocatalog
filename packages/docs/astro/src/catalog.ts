@@ -51,7 +51,9 @@ import {
   type Doc,
   type DocKind,
   type DocsManifest,
+  type Design,
   type Flow,
+  readDesigns,
   readFlows,
 } from 'autocatalog-docs-core';
 import { repositoryApis, type CatalogApi } from './apis';
@@ -94,6 +96,8 @@ export interface DocsCatalog {
   models: CatalogModel[];
   /** The business processes each repository declares under flows/, each with a page. */
   flows: Flow[];
+  /** The architecture each repository proposes under designs/, each with a page. */
+  designs: Design[];
   manifest: DocsManifest;
   /** The document kinds with at least one document, each with an index page. */
   kinds: DocKind[];
@@ -415,13 +419,14 @@ export async function buildDocsCatalog(
     relationships: about.relationships,
   });
 
-  // Read against the whole composed catalog, so a flow can cross repositories.
-  const flows = readFlows(
-    repositories
-      .filter(({ name }) => !quarantined.has(name))
-      .map(({ name, repositoryRoot }) => ({ repository: name, dir: repositoryRoot })),
-    composed,
-  );
+  const enrolled = repositories
+    .filter(({ name }) => !quarantined.has(name))
+    .map(({ name, repositoryRoot }) => ({ repository: name, dir: repositoryRoot }));
+
+  // Read against the whole composed catalog, so a flow or design can cross repositories.
+  const flows = readFlows(enrolled, composed);
+
+  const designs = readDesigns(enrolled, composed);
 
   failures.sort((a, b) =>
     `${a.repository}/${a.source}`.localeCompare(`${b.repository}/${b.source}`),
@@ -433,6 +438,7 @@ export async function buildDocsCatalog(
   const warnings = [
     ...about.failures.map((failure) => `${failure}, so it is missing from the graph`),
     ...flows.failures.map((failure) => `${failure}, so it is left out`),
+    ...designs.failures.map((failure) => `${failure}, so it is left out`),
     ...flows.warnings,
     ...failures.map((failure) =>
       failure.source === 'name'
@@ -475,6 +481,7 @@ export async function buildDocsCatalog(
     apis,
     specifications,
     flows: flows.flows,
+    designs: designs.designs,
     models: models.map((model) => ({
       ...model,
       resource: { ...model.resource, url: modelPath(model) },

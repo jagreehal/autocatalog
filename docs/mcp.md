@@ -1,7 +1,7 @@
 ---
 title: MCP for coding agents
 owner: Maintainers
-summary: Twelve tools that let an AI coding agent query the catalog and ask what a change breaks.
+summary: Thirteen tools that let an AI coding agent query the catalog, ask what a change breaks, and draw the architecture in the conversation.
 tags:
   - agents
   - reference
@@ -48,11 +48,41 @@ status to stderr, and speaks over stdio. No network access is involved.
 | `check_change`             | What a proposed schema breaks, classified, and who it breaks          |
 | `catalog_status`           | Catalog revision, working-tree freshness and review state             |
 | `get_investigation_bundle` | Impact, compatibility and a handoff to autotel-mcp                    |
+| `show_map`                 | The catalog, a flow or a design as a diagram in the conversation      |
 
 In practice an agent asks things like "what fields does `payment.completed`
 require?", "which events carry `customerId`?", or "which services consume
 anything in the payments domain?" and gets generated state rather than a summary
 of a summary.
+
+## Diagrams in the conversation
+
+`show_map` is an [MCP App](https://modelcontextprotocol.io/extensions/apps). In
+Claude, ChatGPT and other hosts that run apps, it opens an interactive diagram
+in the chat, which EventCatalog's MIT visualiser draws. A client without app
+support gets the text answer. Pass a `focus` written the way `about:` names a
+resource:
+
+- `service/PaymentService`, `domain/payments`, `event/payments/payment.captured`
+  draw the part of the catalog around it, with runtime evidence on each edge
+  where a snapshot covers it.
+- `flow/<id>` draws a flow under `flows/`, grouped as its frontmatter says.
+- `design/<id>` draws a design under `designs/` at three levels, with what the
+  catalog does not have yet drawn in outline.
+
+Leave out `focus` to draw the whole catalog. To sketch architecture you have
+not built, the agent passes `design` instead: the resources, relations and
+notes a design file holds. The map marks which parts the catalog already has,
+and the text result carries the frontmatter. Save it as `designs/<id>.md` and
+open a pull request.
+
+The map follows the host: its light or dark theme, the height it allows, and a
+full screen button where the host offers one. Clicking a node tells the agent
+which one the reader picked, without posting to the conversation, so "what
+does this one do?" means that node.
+
+The text result lists every edge with its evidence, so the agent can explain the
+map it drew.
 
 ## The two that change what an agent does
 

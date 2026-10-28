@@ -81,10 +81,49 @@ export {
 
 export {
   type Flow,
+  type FlowGroupBy,
   FLOWS_DIR,
   type FlowStep,
   type FlowStepKind,
   readFlows,
   type ReadFlowsOptions,
   type ReadFlowsResult,
+  type StepLane,
 } from './flows';
+
+export {
+  catalogDiagram,
+  type CatalogDiagramOptions,
+  type Diagram,
+  type DiagramEdge,
+  type DiagramEdgeType,
+  type DiagramNode,
+  type DiagramNodeMetadata,
+  type DiagramNodeType,
+  DIAGRAM_NODE_TYPES,
+  domainNeighbourhood,
+  edgeEvidence,
+  type EdgeEvidence,
+  type EventRuntime,
+  flowDiagram,
+  type FlowStepData,
+  runtimeByEvent,
+  serviceNeighbourhood,
+  type StepLanes,
+} from './diagram';
+
+export {
+  type Design,
+  designChanges,
+  designDiagram,
+  type DesignRelation,
+  type DesignInput,
+  type DesignResource,
+  designSchema,
+  DESIGNS_DIR,
+  type DesignState,
+  type DesignStatus,
+  readDesigns,
+  type ReadDesignsResult,
+  resolveDesign,
+} from './designs';

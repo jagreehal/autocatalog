@@ -179,6 +179,49 @@ different ones fail the build, naming both, until `--docs-schema` picks one.
   declares. Event and service pages list the flows they are a step in, and
   `/flows` lists them all.
 
+  A flow's map opens grouped the way its frontmatter says: `lanes: team` groups
+  it by owning team as boxes, and `lanes: { by: system, style: lanes }` stacks
+  each system in a lane. `by` is `domain`, `system`, `team` or `domain-system`.
+  A step the catalog places in the wrong lane, or does not place at all, says
+  where it sits with `lane: { team: Storefront }` (any of `domain`, `system`,
+  `team`); the step's own lane wins over the catalog's.
+
+- `/designs/<repository>/<id>/` draws architecture a repository proposes in
+  `designs/<id>.md`, before anyone builds it. The frontmatter holds resources
+  and relations in the vocabulary of EventCatalog Studio's model, so the same
+  design opens there:
+
+  ```yaml
+  ---
+  title: Refunds
+  status: proposed
+  resources:
+    - { id: payments, type: domain, name: Payments }
+    - { id: refunds, type: system, name: Refunds, parent: payments }
+    - { ref: service/PaymentService, parent: payments }
+    - { ref: event/payments/payment.captured }
+    - { id: RefundService, type: service, parent: refunds }
+    - { id: refund.issued, type: event, name: Refund issued }
+  relations:
+    - { from: RefundService, to: payment.captured, kind: receives }
+    - { from: RefundService, to: refund.issued, kind: sends }
+  notes:
+    - { text: Who approves a refund over £500?, resource: RefundService }
+  ---
+  ```
+
+  A resource names a catalog resource with `ref:` (written as `about:` writes
+  one), or gives an `id` and `type`; one written by name is the catalog's when
+  the catalog has a resource of that kind and name. Relation kinds are `sends`,
+  `receives` (both from the service to the message), `routes-through`, `reads`,
+  `writes` and `connects`. The page says what the design adds ("1 new service,
+  1 new event and 2 new relations"), draws what is new in outline, and offers
+  three levels: L3 everything, L2 the services and stores with each message
+  between them as one edge, L1 the domains and systems. Once the code ships, the
+  page shows those parts as in the catalog. `ac docs check` fails a design that does
+  not hold together (a `ref` that resolves to nothing, a relation or `parent`
+  naming no resource), and `/designs` lists them all.
+
 - `/data/<repository>/<model>/` is one table or collection: where its
   definition was read, who owns it, its fields (type, required, primary key,
   unique, default, database name, enum values, the model a key column points

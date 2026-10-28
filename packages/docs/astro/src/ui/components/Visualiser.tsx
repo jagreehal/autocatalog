@@ -4,6 +4,7 @@ import type { DslGraph } from '@eventcatalog/visualiser';
 import { type CSSProperties, type KeyboardEvent, useEffect, useRef, useState } from 'react';
 import { ToggleGroup, ToggleGroupItem } from '#ui/components/ui/toggle-group.tsx';
 import {
+  asGroupCard,
   edgesForFrame,
   edgeWeight,
   liveFrame,
@@ -11,6 +12,7 @@ import {
   type EdgeEvidence,
   type LiveFeed,
   type FlowStepData,
+  type VisualiserGraph,
 } from '#ui/lib/visualiser.ts';
 
 // The visualiser's legend counts and colours nodes by collection name, which
@@ -42,7 +44,13 @@ interface Props {
   live?: LiveFeed | undefined;
   /** A flow's steps by node id: their titles for the walkthrough, and their lanes. */
   steps?: Record<string, FlowStepData> | undefined;
+  /** How a flow's map is grouped when it opens. */
+  lanes?: VisualiserGraph['lanes'];
+  levels?: VisualiserGraph['levels'];
+  proposed?: VisualiserGraph['proposed'];
 }
+
+type Laid = Awaited<ReturnType<typeof layoutGraph>>;
 
 const MODES = ['static', 'replay', 'live'] as const;
 
@@ -100,7 +108,18 @@ const KEY: Array<[EdgeEvidence['state'], string]> = [
   ['undocumented', 'Ran, not in the catalog'],
 ];
 
-export default function Visualiser({ id, label, graph, hrefs, evidence, live, steps }: Props) {
+export default function Visualiser({
+  id,
+  label,
+  graph,
+  hrefs,
+  evidence,
+  live,
+  steps,
+  lanes,
+  levels,
+  proposed,
+}: Props) {
   const root = useRef<HTMLDivElement>(null);
 
   const [mode, setMode] = useState<Mode>('static');
@@ -109,9 +128,59 @@ export default function Visualiser({ id, label, graph, hrefs, evidence, live, st
 
   const [laid, setLaid] = useState<Awaited<ReturnType<typeof layoutGraph>>>();
 
+  const [levelsLaid, setLevelsLaid] = useState<{ 1?: Laid; 2?: Laid }>({});
+
+  // The simpler levels, laid out once each, for the visualiser's level picker.
+  useEffect(() => {
+    if (!levels) return;
+
+    let current = true;
+
+    const mark = (laid: Laid, graph: NonNullable<typeof levels>[1]): Laid => {
+      const sources = new Map(graph?.nodes.map((node) => [node.id, node]));
+
+      return {
+        ...laid,
+        nodes: laid.nodes.map((node) => {
+          const card = asGroupCard(node, sources.get(node.id));
+
+          return proposed?.includes(node.id) ? { ...card, className: 'ac-node-proposed' } : card;
+        }),
+      };
+    };
+
+    void Promise.all(
+      ([1, 2] as const).map(async (level) => {
+        const graph = levels[level];
+
+        return [level, graph && mark(await layoutGraph(graph.nodes, graph.edges), graph)] as const;
+      }),
+    ).then((entries) => {
+      if (current) setLevelsLaid(Object.fromEntries(entries.filter(([, laid]) => laid)));
+    });
+
+    return () => {
+      current = false;
+    };
+  }, [levels, proposed]);
+
+  // The visualiser reads its grouping style from the address alone, so a
+  // flow's default style goes there, unless the reader's own choice already has.
+  useEffect(() => {
+    const url = new URL(window.location.href);
+
+    if (!lanes || url.searchParams.has('group')) return;
+
+    url.searchParams.set('group', lanes.by);
+    url.searchParams.set('groupStyle', lanes.style);
+    window.history.replaceState(window.history.state, '', url);
+  }, [lanes]);
+
   // EventCatalog's own ELK layout, left to right; the map zooms to fit a narrow box.
   useEffect(() => {
     let current = true;
+
+    const sources = new Map(graph.nodes.map((node) => [node.id, node]));
 
     const labels = new Map(graph.nodes.map((node) => [node.id, node.label]));
 
@@ -122,9 +191,16 @@ export default function Visualiser({ id, label, graph, hrefs, evidence, live, st
         // A node that opens a page says so to assistive technology: a link,
         // named for its resource, opened by Enter as well as a click.
         nodes: nodes.map((node) => ({
-          ...node,
-          ...(steps?.[node.id] && { data: { ...node.data, ...steps[node.id] } }),
-          type: COLLECTIONS.get(node.type ?? '') ?? node.type,
+          // A domain or system a design relates to is drawn as its card.
+          ...asGroupCard(
+            {
+              ...node,
+              ...(steps?.[node.id] && { data: { ...node.data, ...steps[node.id] } }),
+              type: COLLECTIONS.get(node.type ?? '') ?? node.type,
+            },
+            sources.get(node.id),
+          ),
+          ...(proposed?.includes(node.id) && { className: 'ac-node-proposed' }),
           ...(hrefs[node.id] && { ariaRole: 'link' as const, ariaLabel: labels.get(node.id) }),
         })),
         // What the snapshot says of an edge is drawn on it: weight for volume,
@@ -148,7 +224,7 @@ export default function Visualiser({ id, label, graph, hrefs, evidence, live, st
     return () => {
       current = false;
     };
-  }, [graph, hrefs, evidence, steps]);
+  }, [graph, hrefs, evidence, steps, proposed]);
 
   // A process, drawn step by step: the visualiser's walkthrough follows it.
   const isFlow = graph.edges.some((edge) => edge.type === 'flow-step');
@@ -279,6 +355,11 @@ export default function Visualiser({ id, label, graph, hrefs, evidence, live, st
           mode="full"
           zoomOnScroll={false}
           showFlowWalkthrough={isFlow}
+          {...(lanes && { swimlanes: lanes.by })}
+          {...(levelsLaid[1] && {
+            overviewGraph: { ...levelsLaid[1], label: 'domains and systems' },
+          })}
+          {...(levelsLaid[2] && { hiddenMessagesGraph: levelsLaid[2] })}
           // As EventCatalog's own pages do outside message flows: no envelope
           // looping along every edge.
           disableMessageAnimation

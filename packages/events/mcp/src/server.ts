@@ -1,3 +1,9 @@
+import fs from 'node:fs/promises';
+import {
+  registerAppResource,
+  registerAppTool,
+  RESOURCE_MIME_TYPE,
+} from '@modelcontextprotocol/ext-apps/server';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { jsonObjectSchema } from 'autocatalog-core';
 import { z } from 'zod';
@@ -16,6 +22,11 @@ import {
   checkChange,
   investigationBundle,
 } from './tools.js';
+import { designSchema } from 'autocatalog-docs-core';
+import { catalogMap, describeMap, draftMap } from './map.js';
+
+/** The view a host draws `show_map` in: built beside the server as one HTML file. */
+const MAP_VIEW = 'ui://autocatalog/map.html';
 
 const asText = <T>(data: T) => ({
   content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }],
@@ -255,6 +266,64 @@ export function createServer(catalog: CatalogSnapshot): McpServer {
         return asError(e);
       }
     },
+  );
+
+  registerAppTool(
+    server,
+    'show_map',
+    {
+      title: 'Show a map of the catalog',
+      description:
+        'Draw the catalog, or the part around one resource, as an interactive diagram in the conversation, with runtime evidence on each edge where a snapshot covers it. focus is a reference as `about:` writes one: "service/PaymentService", "event/payments/payment.captured", "domain/payments", "flow/<id>" for a flow under flows/, or "design/<id>" for a design under designs/. Omit it for the whole catalog. ' +
+        'To sketch architecture that does not exist yet, pass design instead: { title, summary?, status?: draft|proposed, resources: [{ id, type: domain|system|service|agent|event|command|query|channel|actor|external-system|container|team, name?, summary?, parent? } or { ref: "service/PaymentService" } for one the catalog has], relations: [{ from, to, kind: sends|receives|routes-through|reads|writes|connects, label? }] (sends and receives go from the service to the message), notes?: [{ text, resource? }] }. Parts the catalog does not have are drawn as new. ' +
+        'The text result lists every edge, so you can explain the map; for a design it also gives the file to save as designs/<id>.md to propose it.',
+      annotations: { readOnlyHint: true, openWorldHint: false },
+      inputSchema: {
+        focus: z.string().min(1).optional(),
+        design: designSchema.optional(),
+      },
+      _meta: { ui: { resourceUri: MAP_VIEW } },
+    },
+    async ({ focus, design }) => {
+      // Every answer names why the agents are missing, so a reader can tell them
+      // apart from agents the catalog does not have.
+      const missing = catalog.mapGraphFailure
+        ? `\n\nThe agent catalog is not on this map: ${catalog.mapGraphFailure}`
+        : '';
+
+      try {
+        const map = design ? draftMap(catalog, design) : catalogMap(catalog, focus);
+
+        // JSON is YAML, so the design as given is frontmatter a reader can commit.
+        const save = design
+          ? `\n\nTo propose it, save as designs/<id>.md:\n---\n${JSON.stringify(design, null, 2)}\n---\n`
+          : '';
+
+        return {
+          content: [{ type: 'text' as const, text: describeMap(map) + save + missing }],
+          structuredContent: { ...map },
+        };
+      } catch (e) {
+        return asError(new Error(`${e instanceof Error ? e.message : String(e)}${missing}`));
+      }
+    },
+  );
+
+  registerAppResource(
+    server,
+    'Catalog map',
+    MAP_VIEW,
+    { description: 'The catalog as a diagram' },
+    async () => ({
+      contents: [
+        {
+          uri: MAP_VIEW,
+          mimeType: RESOURCE_MIME_TYPE,
+          // From src in tests and dist when built, the view sits in dist.
+          text: await fs.readFile(new URL('../dist/map.html', import.meta.url), 'utf8'),
+        },
+      ],
+    }),
   );
 
   return server;
