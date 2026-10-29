@@ -45,6 +45,12 @@ bounded time window for the confirmed service, then inspect representative trace
 and logs. Discover event attributes and metric names from actual telemetry rather
 than assuming a universal `event.name` tag or inventing a metric.
 
+When the bundle's evidence lists `consumerOutcomes`, start there: a consumer's
+`failed`, `retried`, `deadLettered` and `replayed` counts, and its
+`deadLetterReasons`, say which consumer is failing and why. Tell a transient
+cause (a provider was down) from a poison message (one that will never
+succeed) before suggesting a replay.
+
 Distinguish unsupported signals, failed queries, expired references and empty
 results. If autotel is unavailable, report the catalog and snapshot findings with
 the runtime verification still unresolved.

@@ -38,10 +38,36 @@ export interface RuntimeEvidenceSource {
   count: number;
 }
 
+/** A dead-letter queue one consumer declares for the event. */
+export interface DeadLetterView {
+  consumer: string;
+  queue: string;
+  maxAttempts?: number | undefined;
+}
+
+/** What happened to the deliveries one consumer received in the snapshot. */
+export interface ConsumerOutcomeView {
+  consumer: string;
+  count: number;
+  failed?: number | undefined;
+  retried?: number | undefined;
+  deadLettered?: number | undefined;
+  replayed?: number | undefined;
+  deadLetterReasons?:
+    | Array<{
+        reason: string;
+        category?: string | undefined;
+        queue?: string | undefined;
+        count: number;
+      }>
+    | undefined;
+}
+
 interface RuntimeEvidenceBase {
   /** `domain/id`, named in the prompt offered to a coding agent. */
   ref: string;
   caveat: string;
+  deadLetters: DeadLetterView[];
 }
 
 export interface RuntimeEvidenceSnapshot extends RuntimeEvidenceBase {
@@ -55,6 +81,7 @@ export interface RuntimeEvidenceSnapshot extends RuntimeEvidenceBase {
   neverObserved: string[];
   consumerEvidence: 'reported' | 'observed' | 'unknown';
   sources: RuntimeEvidenceSource[];
+  consumerOutcomes: ConsumerOutcomeView[];
   sampleTraceIds: string[];
 }
 
@@ -70,6 +97,98 @@ export interface RuntimeEvidenceProps {
 }
 
 const number = (value: number) => value.toLocaleString('en-GB');
+
+const counted = (count: number, one: string, many = `${one}s`) =>
+  `${number(count)} ${count === 1 ? one : many}`;
+
+/** "6 deliveries: 4 failed, 2 retried, 1 dead-lettered." */
+function outcomeLine(outcome: ConsumerOutcomeView): string {
+  const parts = [
+    outcome.failed && `${number(outcome.failed)} failed`,
+    outcome.retried && `${number(outcome.retried)} retried`,
+    outcome.deadLettered && `${number(outcome.deadLettered)} dead-lettered`,
+    outcome.replayed && `${number(outcome.replayed)} replayed`,
+  ].filter(Boolean);
+
+  return `${counted(outcome.count, 'delivery', 'deliveries')}: ${parts.join(', ')}.`;
+}
+
+/** Each consumer's outcomes summed across every channel it receives on. */
+function outcomesByConsumer(outcomes: ConsumerOutcomeView[]): Map<string, ConsumerOutcomeView> {
+  const totals = new Map<string, ConsumerOutcomeView>();
+
+  for (const outcome of outcomes) {
+    const total = totals.get(outcome.consumer);
+
+    const sum = (field: 'failed' | 'retried' | 'deadLettered' | 'replayed') =>
+      (total?.[field] ?? 0) + (outcome[field] ?? 0);
+
+    totals.set(
+      outcome.consumer,
+      total
+        ? {
+            consumer: outcome.consumer,
+            count: total.count + outcome.count,
+            failed: sum('failed'),
+            retried: sum('retried'),
+            deadLettered: sum('deadLettered'),
+            replayed: sum('replayed'),
+            deadLetterReasons: mergeReasons([
+              ...(total.deadLetterReasons ?? []),
+              ...(outcome.deadLetterReasons ?? []),
+            ]),
+          }
+        : outcome,
+    );
+  }
+
+  return totals;
+}
+
+type DeadLetterReasonView = NonNullable<ConsumerOutcomeView['deadLetterReasons']>[number];
+
+/** One entry per reason, category and queue, its counts summed, most frequent first. */
+function mergeReasons(reasons: DeadLetterReasonView[]): DeadLetterReasonView[] {
+  const merged = new Map<string, DeadLetterReasonView>();
+
+  for (const reason of reasons) {
+    const key = JSON.stringify([reason.reason, reason.category ?? '', reason.queue ?? '']);
+    const existing = merged.get(key);
+
+    merged.set(key, existing ? { ...existing, count: existing.count + reason.count } : reason);
+  }
+
+  return [...merged.values()].sort((a, b) => b.count - a.count);
+}
+
+/** "Dead letters go to ledger-dlq after 3 attempts." */
+const deadLetterLine = ({ queue, maxAttempts }: DeadLetterView) =>
+  `Dead letters go to ${queue}${maxAttempts ? ` after ${counted(maxAttempts, 'attempt')}` : ''}.`;
+
+function DeadLetters({ deadLetters }: { deadLetters: DeadLetterView[] }) {
+  return (
+    <section className="flex flex-col gap-3" aria-labelledby="runtime-dead-letters">
+      <h3 className="m-0 text-sm font-medium" id="runtime-dead-letters">
+        Dead-letter queues
+      </h3>
+      <ul className="m-0 flex list-none flex-col gap-2 p-0">
+        {deadLetters.map((entry) => (
+          <li key={entry.consumer}>
+            <Item variant="outline" size="sm">
+              <ItemMedia>
+                <IconTile name="service" />
+              </ItemMedia>
+              <ItemContent>
+                <ItemTitle>{entry.consumer}</ItemTitle>
+                <ItemDescription>{deadLetterLine(entry)}</ItemDescription>
+              </ItemContent>
+            </Item>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
 
 const dateTime = new Intl.DateTimeFormat('en-GB', {
   day: 'numeric',
@@ -128,19 +247,24 @@ export function RuntimeEvidence({ evidence }: RuntimeEvidenceProps) {
           {evidence.status === 'snapshot' ? (
             <SnapshotDetails evidence={evidence} />
           ) : (
-            <div className="flex border border-dashed">
-              <Empty>
-                <EmptyHeader>
-                  <EmptyMedia variant="icon">
-                    <ActivityIcon aria-hidden="true" />
-                  </EmptyMedia>
-                  <EmptyTitle>No evidence attached</EmptyTitle>
-                  <EmptyDescription>
-                    Run <code>ac scan --snapshot &lt;file&gt;</code> with an autotel architecture
-                    snapshot to record what this event did at runtime.
-                  </EmptyDescription>
-                </EmptyHeader>
-              </Empty>
+            <div className="flex flex-col gap-6">
+              <div className="flex border border-dashed">
+                <Empty>
+                  <EmptyHeader>
+                    <EmptyMedia variant="icon">
+                      <ActivityIcon aria-hidden="true" />
+                    </EmptyMedia>
+                    <EmptyTitle>No evidence attached</EmptyTitle>
+                    <EmptyDescription>
+                      Run <code>ac scan --snapshot &lt;file&gt;</code> with an autotel architecture
+                      snapshot to record what this event did at runtime.
+                    </EmptyDescription>
+                  </EmptyHeader>
+                </Empty>
+              </div>
+              {evidence.deadLetters.length > 0 && (
+                <DeadLetters deadLetters={evidence.deadLetters} />
+              )}
             </div>
           )}
         </CardContent>
@@ -161,6 +285,8 @@ export function RuntimeEvidence({ evidence }: RuntimeEvidenceProps) {
 interface ConsumerRow {
   name: string;
   status: string;
+  /** What happened to its deliveries, and where it puts those it gives up on. */
+  outcome?: string | undefined;
 }
 
 /** Every consumer either side knows of, and what each side says about it. */
@@ -180,11 +306,29 @@ function consumerRows(evidence: RuntimeEvidenceSnapshot): ConsumerRow[] {
     status: `${seenAs.charAt(0).toUpperCase()}${seenAs.slice(1)}, not declared`,
   }));
 
-  return [...declared, ...additional];
+  const outcomes = outcomesByConsumer(evidence.consumerOutcomes);
+  const queues = new Map(evidence.deadLetters.map((entry) => [entry.consumer, entry]));
+
+  return [...declared, ...additional].map((row) => {
+    const outcome = outcomes.get(row.name);
+    const queue = queues.get(row.name);
+
+    const lines = [outcome && outcomeLine(outcome), queue && deadLetterLine(queue)].filter(Boolean);
+
+    return lines.length > 0 ? { ...row, outcome: lines.join(' ') } : row;
+  });
 }
 
 function SnapshotDetails({ evidence }: { evidence: RuntimeEvidenceSnapshot }) {
   const consumers = consumerRows(evidence);
+
+  // A queue declared in another repository, for a consumer neither list names.
+  const listed = new Set(consumers.map((consumer) => consumer.name));
+  const unlisted = evidence.deadLetters.filter((entry) => !listed.has(entry.consumer));
+
+  const reasons = [...outcomesByConsumer(evidence.consumerOutcomes).values()].flatMap((outcome) =>
+    (outcome.deadLetterReasons ?? []).map((reason) => ({ ...reason, consumer: outcome.consumer })),
+  );
 
   return (
     <div className="flex flex-col gap-6">
@@ -217,6 +361,7 @@ function SnapshotDetails({ evidence }: { evidence: RuntimeEvidenceSnapshot }) {
                   <ItemContent>
                     <ItemTitle>{consumer.name}</ItemTitle>
                     <ItemDescription>{consumer.status}</ItemDescription>
+                    {consumer.outcome && <ItemDescription>{consumer.outcome}</ItemDescription>}
                   </ItemContent>
                 </Item>
               </li>
@@ -229,8 +374,52 @@ function SnapshotDetails({ evidence }: { evidence: RuntimeEvidenceSnapshot }) {
         )}
       </section>
 
-      {(evidence.sources.length > 0 || evidence.sampleTraceIds.length > 0) && (
+      {unlisted.length > 0 && <DeadLetters deadLetters={unlisted} />}
+
+      {(evidence.sources.length > 0 ||
+        evidence.sampleTraceIds.length > 0 ||
+        reasons.length > 0) && (
         <Accordion allowsMultipleExpanded>
+          {reasons.length > 0 && (
+            <AccordionItem id="dead-letter-reasons">
+              <AccordionTrigger>Why deliveries were dead-lettered</AccordionTrigger>
+              <AccordionContent>
+                <ul className="m-0 flex list-none flex-col gap-2 p-0">
+                  {reasons.map((reason) => (
+                    <li
+                      key={JSON.stringify([
+                        reason.consumer,
+                        reason.reason,
+                        reason.category ?? '',
+                        reason.queue ?? '',
+                      ])}
+                    >
+                      <Item variant="outline" size="xs">
+                        <ItemContent>
+                          <ItemTitle>{reason.reason}</ItemTitle>
+                          <ItemDescription>
+                            {reason.consumer}
+                            {reason.category && `, ${reason.category}`}
+                            {reason.queue && (
+                              <>
+                                {' '}
+                                to <code className="font-mono">{reason.queue}</code>
+                              </>
+                            )}
+                          </ItemDescription>
+                        </ItemContent>
+                        <ItemActions>
+                          <span className="text-xs text-muted-foreground tabular-nums">
+                            {counted(reason.count, 'time')}
+                          </span>
+                        </ItemActions>
+                      </Item>
+                    </li>
+                  ))}
+                </ul>
+              </AccordionContent>
+            </AccordionItem>
+          )}
           {evidence.sources.length > 0 && (
             <AccordionItem id="sources">
               <AccordionTrigger>Producer and channel observations</AccordionTrigger>

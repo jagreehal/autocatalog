@@ -67,7 +67,7 @@ describe('resolveDocsLayout', () => {
     const layout = resolveDocsLayout(root);
     // An Astro content collection globs the pattern itself and only asks for
     // the id, so both sides must come from here.
-    expect(layout.pattern).toBe('payments-service/docs/**/*.md');
+    expect(layout.pattern).toBe('payments-service/docs/**/*.{md,mdx}');
     expect(layout.idFor('payments-service/docs/ops/replay.md')).toBe(readDocs(root)[0]!.id);
     expect(layout.repoFor('payments-service/docs/ops/replay.md')).toBe('payments-service');
   });
@@ -76,8 +76,9 @@ describe('resolveDocsLayout', () => {
     await write('docs/runbook.md', doc('Runbook'));
 
     const layout = resolveDocsLayout(root, { repo: 'payments-service' });
-    expect(layout.pattern).toBe('docs/**/*.md');
+    expect(layout.pattern).toBe('docs/**/*.{md,mdx}');
     expect(layout.idFor('docs/runbook.md')).toBe('payments-service/runbook');
+    expect(layout.idFor('docs/overview.mdx')).toBe('payments-service/overview');
   });
 
   it('finds the docs of packages inside a monorepo, named for their folder', async () => {
@@ -107,7 +108,7 @@ describe('a root given an identity of its own', () => {
     const layout = resolveDocsLayout(root, { repo: 'platform', repository: 'orders' });
 
     expect(layout.roots.map(({ name }) => name)).toEqual(['platform']);
-    expect(layout.pattern).toBe('docs/**/*.md');
+    expect(layout.pattern).toBe('docs/**/*.{md,mdx}');
   });
 });
 

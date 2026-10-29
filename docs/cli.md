@@ -127,6 +127,12 @@ picks the file, YAML unless it ends in `.json`. A structured CloudEvent is
 described as what consumers receive, its envelope with the event as `data`,
 and `ac from-asyncapi` unwraps it again. Invalid examples are left out;
 see [cross-domain delivery](/docs/cross-domain-delivery#6-build-in-parallel).
+`--commands <dir>` adds the command manifests under a folder: each command is
+a message its senders send and its handler receives, and one with
+`outcome.replyTo` carries an AsyncAPI `reply` naming the queue the handler
+answers on, with the result's schema as the reply message. It exits with an
+error when it cannot read the whole folder. `ac from-asyncapi` imports the
+events and leaves commands and replies out.
 
 **`ac scan --snapshot <file>`** joins a runtime architecture snapshot onto the
 catalog. Events the snapshot saw gain an `observed` block — count, first and
@@ -166,6 +172,8 @@ serves instead of building. `--eventcatalog` builds EventCatalog into the site
 and embeds its diagrams. `--docs-schema` names the docs frontmatter contract to
 enforce; without it the site uses the root's, else an enrolled repository's.
 `--docs-conventions` names the conventions file, found the same way.
+`--pages` adds a folder of your own pages and API routes, laid out as
+`src/pages/` is.
 `--live-url` gives the maps' Live mode a server-sent events feed to follow, and
 `--live-event` the SSE event name its frames use.
 See [the company site](/docs/site).
@@ -186,7 +194,9 @@ of them take an optional root and default to the current directory.
 **`ac docs check`** — validates frontmatter against the contract, plus links
 between repositories and documents that were deleted while something still links
 to them. An ADR, runbook or incident is also checked against its kind's schema,
-and its `supersedes` and `supersededBy` ids must resolve. `--conventions` names
+and its `supersedes` and `supersededBy` ids must resolve. Flows, designs,
+glossaries, entities, data products, teams and users are checked too.
+`--conventions` names
 the conventions file when the default lookup should not choose it.
 
 **`ac docs manifest`** — publishes `contracts/docs-manifest.json`, the

@@ -1,6 +1,13 @@
 import { createMarkdownProcessor } from '@astrojs/markdown-remark';
 import type { ResourceRef } from 'autocatalog-core';
-import { flowDiagram, type Flow, type FlowStep } from 'autocatalog-docs-core';
+import type { WorkflowStepObservation } from 'autocatalog-core';
+import {
+  flowDiagram,
+  flowStepRuns,
+  flowWorkflow,
+  type Flow,
+  type FlowStep,
+} from 'autocatalog-docs-core';
 import type { DocsCatalog } from './catalog';
 import { remarkMermaid } from './mermaid';
 import type { ResourceLinksProps } from './ui/components/ResourceLinks';
@@ -61,7 +68,22 @@ export async function flowPageProps(
 
   const titles = new Map(flow.steps.map((step) => [step.id, step.title]));
 
+  const { found } = flowWorkflow(flow, catalog.workflows);
+  const ran = found && flowStepRuns(flow, found.workflow);
+
   return {
+    runtime: found && {
+      workflow: found.workflow.name,
+      repository: found.repository,
+      summary: runsLine(found.workflow.runs, [
+        [found.workflow.completed, 'completed'],
+        [found.workflow.failed, 'failed'],
+        [found.workflow.compensated, 'compensated'],
+        [found.workflow.compensationFailed, 'failed to compensate'],
+      ]),
+      unnamed: ran?.unnamed ?? [],
+      sampleTraceIds: found.workflow.sampleTraceIds ?? [],
+    },
     repository: flow.repository,
     file: flow.file,
     visualiser,
@@ -74,10 +96,34 @@ export async function flowPageProps(
       summary: step.summary,
       href: visualiser.hrefs[step.id],
       next: step.next.map((next) => ({ title: titles.get(next.id) ?? next.id, label: next.label })),
+      compensatedBy:
+        step.compensatedBy && (titles.get(step.compensatedBy.id) ?? step.compensatedBy.id),
+      runtime: stepLine(ran?.steps.get(step.id)),
     })),
     narrativeHtml: flow.body ? await renderNarrative(flow.body) : null,
   };
 }
+
+const times = (count: number) =>
+  `${count.toLocaleString('en-GB')} ${count === 1 ? 'time' : 'times'}`;
+
+/** "Ran 12 times: 10 completed, 2 compensated." */
+function runsLine(runs: number, outcomes: Array<[number | undefined, string]>): string {
+  const parts = outcomes.flatMap(([count, label]) =>
+    count ? [`${count.toLocaleString('en-GB')} ${label}`] : [],
+  );
+
+  return `Ran ${times(runs)}${parts.length ? `: ${parts.join(', ')}` : ''}.`;
+}
+
+const stepLine = (ran: WorkflowStepObservation | undefined) =>
+  ran &&
+  runsLine(ran.count, [
+    [ran.failed, 'failed'],
+    [ran.skipped, 'skipped'],
+    [ran.compensated, 'compensated'],
+    [ran.compensationFailed, 'failed to compensate'],
+  ]);
 
 export function flowsPageProps(flows: Flow[], base: string): FlowsPageProps {
   return {

@@ -1,0 +1,20 @@
+---
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import { docsCatalog } from '../catalog';
+import { entitiesPageProps } from '../model';
+import { EntitiesPage } from '../ui/pages/EntitiesPage';
+
+const catalog = await docsCatalog();
+
+const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+---
+
+<StarlightPage
+  frontmatter={{
+    title: 'Entities',
+    description: 'The things each domain talks about, from the entities/ each repository keeps.',
+    tableOfContents: false,
+  }}
+>
+  <EntitiesPage {...entitiesPageProps(catalog.model, base)} />
+</StarlightPage>

@@ -1,0 +1,12 @@
+---
+import { docsCatalog } from '../catalog';
+import { mdxOwner } from '../mdx';
+
+interface Props {
+  name: string;
+}
+
+const owner = mdxOwner(await docsCatalog(), Astro.props.name);
+---
+
+{owner.href ? <a href={owner.href}>{owner.name}</a> : <span>{owner.name}</span>}

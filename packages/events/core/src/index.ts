@@ -7,6 +7,7 @@ export {
   durationSeconds,
   eventFrontmatter,
   type Classification,
+  type ConsumerOutcome,
   type EventFrontmatter,
   type ProvenanceValue,
 } from './schema';
@@ -116,6 +117,8 @@ export {
   type ArchitectureSnapshot,
   type SnapshotObservation,
   type SnapshotMergeResult,
+  type WorkflowObservation,
+  type WorkflowStepObservation,
 } from './snapshot';
 
 export { toLlmInput, catalogSnapshotToLlmText } from './projection';

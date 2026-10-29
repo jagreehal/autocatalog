@@ -2,6 +2,7 @@ import path from 'node:path';
 import { resourceKey } from 'autocatalog-core';
 import {
   catalogDiagram,
+  dataProductDiagram,
   type Design,
   type DesignInput,
   designChanges,
@@ -16,6 +17,7 @@ import {
   serviceNeighbourhood,
   type Diagram,
 } from 'autocatalog-docs-core';
+import { domainModel } from './model.js';
 import type { CatalogSnapshot } from './tools.js';
 
 /** What `show_map` hands its view: the diagram, and what it is a map of. */
@@ -118,6 +120,25 @@ export function catalogMap(catalog: CatalogSnapshot, focus?: string): CatalogMap
     const { resources: _, ...diagram } = flowDiagram(flow, graph);
 
     return { title: flow.title, focus, ...diagram };
+  }
+
+  if (focus?.startsWith('data-product/')) {
+    const id = focus.slice('data-product/'.length);
+
+    const { dataProducts, failures } = domainModel(catalog);
+
+    const product = dataProducts.find((candidate) => candidate.id === id);
+
+    if (!product) {
+      const failure = failures.find((line) => line.includes(`/data-products/${id}.md:`));
+
+      throw new Error(
+        failure ??
+          `No data product '${id}' under data-products/. Data products here: ${dataProducts.map((p) => p.id).join(', ') || 'none'}`,
+      );
+    }
+
+    return { title: product.name, focus, ...dataProductDiagram(product, graph) };
   }
 
   let only: Set<string> | undefined;

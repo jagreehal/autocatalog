@@ -26,6 +26,7 @@ export type DiagramNodeType =
   | 'data'
   | 'actor'
   | 'external-system'
+  | 'data-product'
   | 'step';
 
 export type DiagramEdgeType =
@@ -225,6 +226,7 @@ export const DIAGRAM_NODE_TYPES = new Map<string, DiagramNodeType>([
   ['tool', 'agentTool'],
   ['domain', 'domain'],
   ['channel', 'channel'],
+  ['queue', 'channel'],
   ['table', 'data'],
   ['collection', 'data'],
 ]);
@@ -238,6 +240,7 @@ const EDGES = new Map<string, { type: DiagramEdgeType; label: string; reverse?: 
   ['consumes', { type: 'subscribes', label: 'subscribed by' }],
   ['sends', { type: 'sends', label: 'sends' }],
   ['handles', { type: 'receives', label: 'handled by', reverse: true }],
+  ['repliesTo', { type: 'sends', label: 'replies on' }],
   ['reads', { type: 'reads-from', label: 'reads from' }],
   ['writes', { type: 'writes-to', label: 'writes to' }],
 ]);
@@ -553,6 +556,19 @@ export function flowDiagram(
       ...(next.label && { label: next.label }),
     })),
   );
+
+  // A compensation runs only when a later step fails, so its edge says so.
+  for (const step of flow.steps) {
+    if (!step.compensatedBy) continue;
+
+    edges.push({
+      id: `${step.id}->${step.compensatedBy.id}:compensation`,
+      source: step.id,
+      target: step.compensatedBy.id,
+      type: 'flow-step',
+      label: step.compensatedBy.label ?? 'undone by',
+    });
+  }
 
   return { nodes, edges, steps, resources, ...(flow.lanes && { lanes: flow.lanes }) };
 }

@@ -65,7 +65,7 @@ function based(url: string, prefix: string): boolean {
 
 /** `/<id>#anchor` for a relative link to a document in the same `docs/`, else undefined. */
 function documentUrl(url: string, from: string, layout: DocsLayout): string | undefined {
-  const match = /^([^/#?:][^#?:]*\.md)(#.*)?$/.exec(url);
+  const match = /^([^/#?:][^#?:]*\.mdx?)(#.*)?$/.exec(url);
 
   if (!match) return undefined;
   const target = path.resolve(path.dirname(from), decodeURIComponent(match[1]!));

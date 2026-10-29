@@ -80,13 +80,24 @@ format: pipe it to whatever already posts to your chat tool.
 | Format changed                    | suspicious | semantic change without a structural one |
 | Field meaning no longer declared  | suspicious | readers lose the assumption they read by |
 | Schema changed, version unchanged | suspicious | version discipline is the whole point    |
+| A second service publishes event  | suspicious | an event is a fact from one boundary     |
 | New optional field / widened enum | additive   | safe                                     |
 | New delivery promise              | additive   | nobody relied on it yet                  |
 | Maximum lateness shortened        | additive   | the longer window still holds            |
 | New event                         | additive   | safe                                     |
+| New event not in the past tense   | info       | an event says what happened              |
+| New command named as an event     | info       | a command asks for work                  |
 
 `--fail-on suspicious` tightens the gate; `--fail-on never` turns it into a
 report (useful while adopting).
+
+The last three keep events and commands apart. An event records something that
+happened in one boundary, so one service publishes it and any number consume
+it, and its name is in the past tense: `order.placed`. A command asks one
+handler to do work, so its name is a verb: `PlaceOrder`. A command with no
+handler, or two, is breaking (see [commands](/docs/brownfield-resources#commands-and-outcomes)).
+The naming checks read the words of the id and the name, so they only inform,
+and they look only at events and commands the change adds.
 
 Nested fields are compared too — a type change on `payment.amount` or
 `items[].sku` is reported at that path, with the same severity rules. A removed
@@ -166,11 +177,16 @@ consumes in its own repository, in `autocatalog.consumes.json` at the root:
     {
       "service": "LedgerService",
       "event": "payments/payment.completed",
-      "fields": ["amount", "currency"]
+      "fields": ["amount", "currency"],
+      "deadLetter": { "queue": "ledger-dlq", "maxAttempts": 3 }
     }
   ]
 }
 ```
+
+`deadLetter` says where the service puts a delivery it gives up on, and after
+how many attempts. The event's page shows it beside what the runtime saw the
+consumer do (see [runtime evidence](/docs/runtime-evidence#delivery-outcomes)).
 
 `ac site` joins every repository's declarations into the company graph it
 publishes at `/catalog.json`. A declaration naming an event no repository
@@ -276,6 +292,8 @@ it. A consumer already declared is named once, as declared.
 | Field observed, not in the schema       | suspicious | the same, one field at a time; names the field and the event, lands on the contract          |
 | Producer or channel the event omits     | suspicious | something sends the event, or sends it somewhere, that its page does not say                 |
 | Producer or channel, none declared      | info       | the event names none; declare what the runtime saw                                           |
+| Two producers seen publishing an event  | suspicious | an event is a fact from one boundary, so one service publishes it                            |
+| Consumer dead-lettered deliveries       | info       | names the consumer, how many, and why; a test may do it on purpose                           |
 | Event documented, never seen            | info       | one test run or traffic window is not proof the event is gone                                |
 
 The two breaking findings are payloads the contract says cannot happen, so they

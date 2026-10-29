@@ -37,6 +37,49 @@ describe('renderLlmsTxt', () => {
     expect(text).toContain(`[llms-full.txt](${base}/llms-full.txt)`);
   });
 
+  it('gives each glossary term its meaning, and links entities and data products', () => {
+    const authored = { repository: 'payments-service', body: '' };
+
+    const text = renderLlmsTxt({
+      title: 'Acme',
+      description: 'Everything Acme publishes.',
+      base,
+      items: [],
+      model: {
+        glossaries: [
+          {
+            ...authored,
+            id: 'payments',
+            file: 'glossary/payments.md',
+            domain: 'payments',
+            terms: [{ id: 'capture', name: 'Capture', summary: 'Taking authorised money.' }],
+          },
+        ],
+        entities: [
+          {
+            ...authored,
+            id: 'payment',
+            file: 'entities/payment.md',
+            name: 'Payment',
+            domains: [],
+            services: [],
+            aggregateRoot: true,
+            properties: [],
+            carriedBy: [],
+          },
+        ],
+        dataProducts: [],
+        people: [],
+      },
+    });
+
+    expect(text).toContain('## Glossary\n\n- Capture (payments): Taking authorised money.');
+    expect(text).toContain(
+      `## Entities\n\n- [Payment](${base}/entities/payments-service/payment/)`,
+    );
+    expect(text).not.toContain('## Data products');
+  });
+
   it("says a decision's kind, state and date beside its owner", () => {
     const text = renderLlmsTxt({
       title: 'Acme',

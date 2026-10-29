@@ -36,6 +36,8 @@ export interface RunSiteOptions {
   docsSchema?: string;
   /** The document kinds to publish, found like the contract when left out. */
   docsConventions?: string;
+  /** A folder of the site's own pages and API routes. */
+  pages?: string;
   /** A server-sent events feed the maps' Live mode follows, and the SSE event name its frames use. */
   liveUrl?: string;
   liveEvent?: string;
@@ -134,6 +136,14 @@ export async function runSite(opts: RunSiteOptions): Promise<number> {
     return 1;
   }
 
+  const pages = opts.pages && path.resolve(opts.pages);
+
+  if (pages && !(await fs.stat(pages).catch(() => null))?.isDirectory()) {
+    console.error(kleur.red(`--pages: no folder at ${opts.pages}`));
+
+    return 1;
+  }
+
   if (opts.eventcatalog && opts.dev) {
     console.error(kleur.red('--eventcatalog draws diagrams at build time; leave out --dev.'));
 
@@ -194,6 +204,7 @@ export async function runSite(opts: RunSiteOptions): Promise<number> {
           ...(opts.title && { AUTOCATALOG_DOCS_TITLE: opts.title }),
           ...(docsSchema && { AUTOCATALOG_DOCS_SCHEMA: docsSchema }),
           ...(docsConventions && { AUTOCATALOG_DOCS_CONVENTIONS: docsConventions }),
+          ...(pages && { AUTOCATALOG_DOCS_PAGES: pages }),
           ...(eventcatalog && { AUTOCATALOG_EVENTCATALOG: eventcatalog.embedsFile }),
           ...(opts.liveUrl && { AUTOCATALOG_DOCS_LIVE_URL: opts.liveUrl }),
           ...(opts.liveEvent && { AUTOCATALOG_DOCS_LIVE_EVENT: opts.liveEvent }),

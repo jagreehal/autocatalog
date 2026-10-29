@@ -23,6 +23,7 @@
     "./styles/*": "./src/styles/*",
     "./ui/*": "./src/ui/*",
     "./icons": "./src/icons.ts",
+    "./mdx": "./src/mdx/index.ts",
     "./site/*": "./site/*",
     "./route-middleware": "./src/route-middleware.ts"
   },

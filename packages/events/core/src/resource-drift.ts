@@ -17,6 +17,7 @@ import {
   type ResourceRef,
 } from './resource-graph';
 import { validateCommands } from './command-resources';
+import { readsAsPastTense } from './naming';
 import { jsonSchemaAjv, jsonSchemaDialect } from './json-schema-dialect';
 import { z } from 'zod';
 import { jsonValueSchema } from './json';
@@ -265,6 +266,21 @@ export function driftResources(
       affectedServices: [],
       compatibility: [],
     });
+
+  for (const [key, command] of after) {
+    if (command.ref.kind !== 'command' || before.has(key)) continue;
+
+    if (readsAsPastTense(command.ref.id, command.title))
+      findings.push({
+        resource: command.ref,
+        code: 'command_named_as_event',
+        severity: 'info',
+        message: `${command.ref.id} reads as something that happened. Name a command for the work it asks for, such as PlaceOrder; a fact is an event`,
+        affectedServices: [],
+        compatibility: [],
+      });
+  }
+
   const previousEdges = new Set(baseline.relationships.map(relationshipKey));
 
   for (const edge of current.relationships) {

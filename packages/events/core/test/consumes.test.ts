@@ -105,6 +105,29 @@ describe('createConsumerResourceGraph', () => {
     expect(graph.resources.map((r) => r.ref)).toEqual([{ kind: 'service', id: 'LedgerService' }]);
   });
 
+  it('carries the dead-letter queue a service declares onto its edge', async () => {
+    await fs.writeFile(
+      path.join(root, CONSUMES_FILE),
+      JSON.stringify({
+        consumes: [
+          {
+            service: 'LedgerService',
+            event: 'payments/payment.completed',
+            deadLetter: { queue: 'ledger-dlq', maxAttempts: 3 },
+          },
+        ],
+      }),
+    );
+
+    const graph = createConsumerResourceGraph(await readConsumerDeclarations(root), {
+      events: [event('payments', 'payments', 'payment.completed')],
+    });
+
+    expect(graph.relationships[0]?.attributes).toEqual({
+      deadLetter: { queue: 'ledger-dlq', maxAttempts: 3 },
+    });
+  });
+
   it('keeps every field when one service declares the same event twice', () => {
     const declared = (fields?: string[]) => ({
       service: 'Ledger',

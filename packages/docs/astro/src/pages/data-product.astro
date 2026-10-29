@@ -1,0 +1,40 @@
+---
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import type { InferGetStaticPropsType } from 'astro';
+import { docsCatalog } from '../catalog';
+import { dataProductPageProps } from '../model';
+import { eventPages, servicePages } from '../page-models';
+import { DataProductPage } from '../ui/pages/DataProductPage';
+
+export async function getStaticPaths() {
+  const catalog = await docsCatalog();
+
+  return catalog.model.dataProducts.map((product) => ({
+    params: { repository: product.repository, id: product.id },
+    props: { product },
+  }));
+}
+
+type Props = InferGetStaticPropsType<typeof getStaticPaths>;
+
+const { product } = Astro.props;
+
+const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+
+const catalog = await docsCatalog();
+
+const page = await dataProductPageProps(product, catalog, base, {
+  servicePages: servicePages(catalog),
+  eventPages: eventPages(catalog),
+});
+---
+
+<StarlightPage
+  frontmatter={{
+    title: product.name,
+    description: product.summary ?? `A data product ${product.repository} publishes in ${product.file}.`,
+    tableOfContents: false,
+  }}
+>
+  <DataProductPage client:load {...page} />
+</StarlightPage>

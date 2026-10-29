@@ -1,8 +1,11 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import {
+  normaliseEventId,
   parseFrontmatter,
   resourceKey,
+  type WorkflowObservation,
+  type WorkflowStepObservation,
   type CatalogRelationship,
   type CatalogResource,
   type ResourceRef,
@@ -29,6 +32,8 @@ export interface FlowStep {
   next: Array<{ id: string; label?: string | undefined }>;
   /** The lanes the author puts it in, over what the catalog says. */
   lane?: StepLane | undefined;
+  /** The step that undoes this one when a later step fails, such as a refund for a charge. */
+  compensatedBy?: { id: string; label?: string | undefined } | undefined;
 }
 
 /** What a flow's steps can be grouped by, as EventCatalog's visualiser names them. */
@@ -55,6 +60,8 @@ export interface Flow {
   steps: FlowStep[];
   /** How its map is grouped when it opens: by what, and as lanes or boxes. */
   lanes?: { by: FlowGroupBy; style: 'lanes' | 'boxes' } | undefined;
+  /** The workflow that runs it, as autotel names it, when that is not its id or title. */
+  workflow?: string | undefined;
 }
 
 const text = z.string().trim().min(1);
@@ -90,6 +97,7 @@ const stepSchema = z
       .optional(),
     next_step: target.optional(),
     next_steps: z.array(target).optional(),
+    compensated_by: target.optional(),
     lane: z
       .object({ domain: text.optional(), system: text.optional(), team: text.optional() })
       .strict()
@@ -111,6 +119,7 @@ const flowSchema = z
     title: text,
     summary: text.optional(),
     lanes: lanesSchema.optional(),
+    workflow: text.optional(),
     steps: z.array(stepSchema).min(1),
   })
   .strict();
@@ -187,7 +196,12 @@ export function readFlows(
         result.flows.push(flow);
 
         // The walkthrough starts at the first step nothing leads to.
-        const targets = new Set(flow.steps.flatMap((step) => step.next.map(({ id }) => id)));
+        const targets = new Set(
+          flow.steps.flatMap((step) => [
+            ...step.next.map(({ id }) => id),
+            ...(step.compensatedBy ? [step.compensatedBy.id] : []),
+          ]),
+        );
 
         if (flow.steps.every((step) => targets.has(step.id))) {
           result.warnings.push(
@@ -248,7 +262,67 @@ function readFlow(
     body: content.trim(),
     steps,
     lanes: parsed.data.lanes,
+    workflow: parsed.data.workflow,
   };
+}
+
+/** A workflow's runs from one repository's runtime snapshot. */
+export interface WorkflowRuns {
+  repository: string;
+  workflow: WorkflowObservation;
+}
+
+const sameName = (a: string, b: string) => normaliseEventId(a) === normaliseEventId(b);
+
+/**
+ * The runs of the workflow that carries out a flow: the one its `workflow:`
+ * names, or failing that one named as the flow is. The flow's own repository
+ * wins when two record the same name; with neither, two is one too many to
+ * guess between.
+ */
+export interface FlowWorkflow {
+  found?: WorkflowRuns;
+  /** The repositories that each record a workflow it could be, when more than one does. */
+  ambiguous: string[];
+}
+
+export function flowWorkflow(flow: Flow, runs: WorkflowRuns[]): FlowWorkflow {
+  const names = flow.workflow ? [flow.workflow] : [flow.id, flow.title];
+
+  const named = runs.filter((run) => names.some((name) => sameName(name, run.workflow.name)));
+  const own = named.filter((run) => run.repository === flow.repository);
+  const pick = own.length > 0 ? own : named;
+
+  return pick.length === 1
+    ? { found: pick[0]!, ambiguous: [] }
+    : { ambiguous: pick.map((run) => run.repository).sort() };
+}
+
+/**
+ * Each flow step's runs, matched to the workflow step of the same id or title,
+ * and the workflow steps no flow step names.
+ */
+export interface FlowStepRuns {
+  /** By flow step id. */
+  steps: Map<string, WorkflowStepObservation>;
+  /** Workflow steps no flow step names. */
+  unnamed: string[];
+}
+
+export function flowStepRuns(flow: Flow, workflow: WorkflowObservation): FlowStepRuns {
+  const steps = new Map<string, WorkflowStepObservation>();
+  const unnamed: string[] = [];
+
+  for (const ran of workflow.steps) {
+    const step = flow.steps.find(
+      (candidate) => sameName(candidate.id, ran.name) || sameName(candidate.title, ran.name),
+    );
+
+    if (step) steps.set(step.id, ran);
+    else unnamed.push(ran.name);
+  }
+
+  return { steps, unnamed };
 }
 
 function resolveStep(
@@ -273,7 +347,19 @@ function resolveStep(
     if (!ids.has(id)) throw new Error(`step '${step.id}' leads to '${id}', which is not a step`);
   }
 
-  const base = { id: step.id, summary: step.summary, next, lane: step.lane };
+  const compensatedBy = step.compensated_by;
+
+  if (compensatedBy && !ids.has(compensatedBy.id)) {
+    throw new Error(
+      `step '${step.id}' is compensated by '${compensatedBy.id}', which is not a step`,
+    );
+  }
+
+  if (compensatedBy?.id === step.id) {
+    throw new Error(`step '${step.id}' cannot compensate itself`);
+  }
+
+  const base = { id: step.id, summary: step.summary, next, lane: step.lane, compensatedBy };
 
   if (step.event ?? step.service ?? step.agent) {
     const kind = step.event ? 'event' : step.service ? 'service' : 'agent';

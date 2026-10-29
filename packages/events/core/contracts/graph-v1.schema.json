@@ -90,7 +90,7 @@
       "additionalProperties": false,
       "properties": {
         "type": {
-          "description": "Open, so an adapter may add a type. Current types: produces, consumes, publishes, defines, reads, writes, sends, handles, calls, references (a data model → a model it holds a key of), relatesTo (Document → Document), describes (Document → any other resource), usesModel, usesTool, governedBy, belongsTo, orchestrates, evaluates.",
+          "description": "Open, so an adapter may add a type. Current types: produces, consumes, publishes, defines, reads, writes, sends, handles, repliesTo (Command → the queue its handler replies on), calls, references (a data model → a model it holds a key of), relatesTo (Document → Document), describes (Document → any other resource), usesModel, usesTool, governedBy, belongsTo, orchestrates, evaluates.",
           "type": "string",
           "minLength": 1
         },

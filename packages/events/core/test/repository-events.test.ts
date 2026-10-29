@@ -231,6 +231,16 @@ describe('a monorepo', () => {
     ]);
   });
 
+  it('publishes a handbook that holds only a domain model', async () => {
+    await write('handbook/glossary/payments.md', '---\ndictionary: []\n---\n');
+    await write('handbook/teams/payments.md', '---\nname: Payments\n---\n');
+
+    expect(findCatalogRoots(repo).map(({ name }) => name)).toContain('handbook');
+    expect(findCatalogRoots(path.join(repo, 'handbook')).map(({ name }) => name)).toEqual([
+      'handbook',
+    ]);
+  });
+
   it('finds the same packages when the monorepo is the root', () => {
     expect(findCatalogRoots(path.join(repo, 'platform')).map(({ name }) => name)).toEqual([
       'platform',

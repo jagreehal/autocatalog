@@ -80,3 +80,16 @@ export const Default: Story = {};
 export const NoContact: Story = { args: { contact: undefined } };
 
 export const OwnsNothingYet: Story = { args: { contact: undefined, sections: [] } };
+
+export const WithProfile: Story = {
+  args: {
+    profile: {
+      kind: 'team',
+      summary: 'Takes the money, refunds it, and reconciles it with the card networks.',
+      email: 'payments@example.com',
+      slack: 'https://example.slack.com/archives/C0PAYMENTS',
+      members: [{ name: 'Ada Byron', role: 'Staff engineer' }, { name: 'Grace Hopper' }],
+      memberOf: [],
+    },
+  },
+};

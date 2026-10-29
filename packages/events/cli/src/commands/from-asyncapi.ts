@@ -368,6 +368,27 @@ function eventSchema(doc: AsyncApiDocument, payload: JsonValue, meta?: AdapterEv
   return envelope.success ? envelope.data.properties.data : payload;
 }
 
+const messageKind = z
+  .object({
+    'x-eventcatalog-message-type': z.string().optional(),
+    'x-autocatalog': z.object({ kind: z.string().optional() }).optional(),
+  })
+  .catch({});
+
+/**
+ * A command, query or reply, as `ac to-asyncapi` or EventCatalog marks one.
+ * The import writes events, so these stay out of it without counting as
+ * skipped: the event catalog is complete without them.
+ */
+function notAnEvent(doc: AsyncApiDocument, raw: JsonValue): boolean {
+  const marked = messageKind.parse(deref(doc, raw));
+
+  return (
+    ['command', 'query'].includes(marked['x-eventcatalog-message-type'] ?? '') ||
+    ['command', 'reply'].includes(marked['x-autocatalog']?.kind ?? '')
+  );
+}
+
 function fromV2(doc: AsyncApiDocument, skipped: string[]): ImportedMessage[] {
   const app = String(doc.info?.title ?? 'Application').replace(/\s+/g, '');
   const out = new Map<string, ImportedMessage>();
@@ -398,6 +419,8 @@ function fromV2(doc: AsyncApiDocument, skipped: string[]): ImportedMessage[] {
         let entry: ImportedMessage;
 
         try {
+          if (notAnEvent(doc, jsonValueSchema.parse(msgRaw))) continue;
+
           const msg = message.parse(deref(doc, msgRaw));
           const { meta, version } = messageMeta(jsonValueSchema.parse(deref(doc, msgRaw)));
           const id = messageId(msg, channelName);
@@ -513,6 +536,8 @@ function fromV3(doc: AsyncApiDocument, skipped: string[]): ImportedMessage[] {
       let entry: ImportedMessage;
 
       try {
+        if (notAnEvent(doc, jsonValueSchema.parse(raw))) continue;
+
         const { meta, version } = messageMeta(jsonValueSchema.parse(deref(doc, raw)));
         const id = messageId(msg, channel.channelName);
 

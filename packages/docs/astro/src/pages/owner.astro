@@ -4,6 +4,7 @@ import type { InferGetStaticPropsType } from 'astro';
 import { docsCatalog } from '../catalog';
 import { ownerPageProps } from '../page-models';
 import { graphOwners } from '../owners';
+import { ownerProfile } from '../model';
 import { OwnerPage } from '../ui/pages/OwnerPage';
 
 export async function getStaticPaths() {
@@ -16,6 +17,8 @@ type Props = InferGetStaticPropsType<typeof getStaticPaths>;
 
 const { owner } = Astro.props;
 
+const profile = ownerProfile(owner, (await docsCatalog()).model.people);
+
 ---
 
 <StarlightPage
@@ -25,5 +28,5 @@ const { owner } = Astro.props;
     tableOfContents: false,
   }}
 >
-  <OwnerPage {...ownerPageProps(owner)} />
+  <OwnerPage {...ownerPageProps(owner)} profile={profile} />
 </StarlightPage>

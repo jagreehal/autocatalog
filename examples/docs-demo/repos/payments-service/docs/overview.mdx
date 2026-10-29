@@ -1,0 +1,21 @@
+---
+title: How payments work
+owner: Payments
+tier: standard
+summary: The payments service on one page, drawn from the catalog.
+about:
+  - service/PaymentService
+---
+
+<Owner name="Payments" /> runs the payments service. It takes a card payment in two steps:
+authorisation, then <Term id="capture" />. Each capture becomes a `payment.captured` event.
+
+<Map focus="service/PaymentService" />
+
+## What a capture says
+
+<Schema event="event/payments/payment.captured" />
+
+Finance rebuilds its figures from these events every night: see
+
+<Map focus="data-product/daily-revenue" />

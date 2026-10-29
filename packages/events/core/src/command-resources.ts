@@ -44,6 +44,8 @@ export const commandManifest = z.object({
       type: z.enum(['completion', 'result', 'event']),
       schema: z.string().optional(),
       event: z.string().optional(),
+      /** The queue the handler replies on, for a sender that waits for the outcome. */
+      replyTo: z.string().min(1).optional(),
     })
     .optional(),
   transport: z
@@ -218,6 +220,25 @@ export async function scanCommandResources(
           provenance: 'declared',
           needsReview: false,
         });
+      const replyTo = manifest.outcome?.replyTo;
+
+      if (replyTo) {
+        const queue: ResourceRef<'queue'> = {
+          kind: 'queue',
+          namespace: ref.namespace,
+          id: replyTo,
+        };
+
+        graph.resources.push(architectureResource(queue));
+        graph.relationships.push({
+          type: 'repliesTo',
+          from: ref,
+          to: queue,
+          provenance: 'declared',
+          needsReview: false,
+        });
+      }
+
       fragments.push(graph);
     } catch (error) {
       // A read error already names its file.

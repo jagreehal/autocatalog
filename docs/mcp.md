@@ -1,7 +1,7 @@
 ---
 title: MCP for coding agents
 owner: Maintainers
-summary: Thirteen tools that let an AI coding agent query the catalog, ask what a change breaks, and draw the architecture in the conversation.
+summary: Fourteen tools that let an AI coding agent query the catalog, ask what a change breaks, and draw the architecture in the conversation.
 tags:
   - agents
   - reference
@@ -48,7 +48,14 @@ status to stderr, and speaks over stdio. No network access is involved.
 | `check_change`             | What a proposed schema breaks, classified, and who it breaks          |
 | `catalog_status`           | Catalog revision, working-tree freshness and review state             |
 | `get_investigation_bundle` | Impact, compatibility and a handoff to autotel-mcp                    |
-| `show_map`                 | The catalog, a flow or a design as a diagram in the conversation      |
+| `define`                   | What a word means here: glossary terms and the entities named for it  |
+| `show_map`                 | The catalog, a flow, a design or a data product as a diagram          |
+
+`define` reads the glossary and entities the checkout keeps. Ask it before
+naming a field or an event, and the agent uses the word the domain already
+uses: `define capture` returns the payments glossary's meaning, and
+`define payment` returns the Payment entity with its properties and the events
+that carry `paymentId`.
 
 In practice an agent asks things like "what fields does `payment.completed`
 require?", "which events carry `customerId`?", or "which services consume
@@ -69,6 +76,8 @@ resource:
 - `flow/<id>` draws a flow under `flows/`, grouped as its frontmatter says.
 - `design/<id>` draws a design under `designs/` at three levels, with what the
   catalog does not have yet drawn in outline.
+- `data-product/<id>` draws a data product under `data-products/` between its
+  inputs and outputs.
 
 Leave out `focus` to draw the whole catalog. To sketch architecture you have
 not built, the agent passes `design` instead: the resources, relations and

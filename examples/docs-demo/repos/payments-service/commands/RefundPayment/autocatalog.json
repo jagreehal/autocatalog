@@ -1,0 +1,12 @@
+{
+  "kind": "command",
+  "id": "RefundPayment",
+  "version": "1.0.0",
+  "name": "Refund payment",
+  "summary": "Give a customer their money back when an order cannot ship.",
+  "domain": "payments",
+  "senders": ["OrderService"],
+  "handler": "PaymentService",
+  "transport": [{ "address": "payments.refund", "protocols": ["sqs"] }],
+  "outcome": { "type": "result", "schema": "./reply.json", "replyTo": "payments.refund-replies" }
+}

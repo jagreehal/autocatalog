@@ -11,6 +11,9 @@ import { autocatalogDocsRoutes } from './routes';
 
 export { rehypeDocsBase } from './links';
 
+/** The catalog every page is built from, for a site's own pages and API routes. */
+export { docsCatalog, type DocsCatalog } from './catalog';
+
 import { buildDocsCatalog } from './catalog';
 import { graphOwners } from './owners';
 import { retirementsPageProps } from './retirements';
@@ -18,6 +21,7 @@ import { catalogSidebar, docsSidebar } from './sidebar';
 import { eventCatalogEmbeds } from './eventcatalog';
 import { reactRendererIntegration, siteHasReact } from './react-integration';
 import { MERMAID_SCRIPT, remarkMermaid } from './mermaid';
+import { mdxComponents } from './mdx';
 
 export interface AutocatalogDocsOptions {
   /**
@@ -53,6 +57,11 @@ export interface AutocatalogDocsOptions {
    * `contracts/autocatalog.conventions.json` the way it finds the contract.
    */
   conventions?: string;
+  /**
+   * A folder of the site's own pages and API routes, laid out as `src/pages/`
+   * is. For a site `ac site` builds, which has no `src/pages/` to put them in.
+   */
+  pages?: string;
   /** One sentence describing what is aggregated here, used on / and llms.txt. */
   description?: string;
   /**
@@ -105,6 +114,9 @@ export default function autocatalogDocs(opts: AutocatalogDocsOptions = {}): Star
 
           if (opts.live.event) process.env.AUTOCATALOG_DOCS_LIVE_EVENT ??= opts.live.event;
         }
+
+        if (opts.pages)
+          process.env.AUTOCATALOG_DOCS_PAGES ??= path.resolve(projectRoot, opts.pages);
 
         if (opts.schema) {
           process.env.AUTOCATALOG_DOCS_SCHEMA ??= path.resolve(projectRoot, opts.schema);
@@ -170,6 +182,15 @@ export default function autocatalogDocs(opts: AutocatalogDocsOptions = {}): Star
                 ...(catalog.apis.length > 0 ? [{ label: 'APIs', link: '/apis' }] : []),
                 ...(catalog.flows.length > 0 ? [{ label: 'Flows', link: '/flows' }] : []),
                 ...(catalog.designs.length > 0 ? [{ label: 'Designs', link: '/designs' }] : []),
+                ...(catalog.model.glossaries.length > 0
+                  ? [{ label: 'Glossary', link: '/glossary' }]
+                  : []),
+                ...(catalog.model.entities.length > 0
+                  ? [{ label: 'Entities', link: '/entities' }]
+                  : []),
+                ...(catalog.model.dataProducts.length > 0
+                  ? [{ label: 'Data products', link: '/data-products' }]
+                  : []),
                 ...(catalog.specifications.length > 0
                   ? [{ label: 'Specifications', link: '/specs' }]
                   : []),
@@ -208,7 +229,9 @@ export default function autocatalogDocs(opts: AutocatalogDocsOptions = {}): Star
           },
         });
 
-        addIntegration(autocatalogDocsRoutes(effective.root));
+        addIntegration(
+          autocatalogDocsRoutes(effective.root, process.env.AUTOCATALOG_DOCS_PAGES || undefined),
+        );
 
         // Joins the site's own Markdown processor, the way Starlight adds its
         // asides. Another processor leaves the fence as a highlighted code block.
@@ -220,6 +243,16 @@ export default function autocatalogDocs(opts: AutocatalogDocsOptions = {}): Star
 
               if (processor && isUnifiedProcessor(processor))
                 processor.options.remarkPlugins.push(remarkMermaid);
+            },
+          },
+        });
+
+        // `.mdx` documents use the built-in components without importing them.
+        addIntegration({
+          name: 'autocatalog-docs-mdx',
+          hooks: {
+            'astro:config:setup': ({ updateConfig: updateAstroConfig }) => {
+              updateAstroConfig({ vite: { plugins: [mdxComponents()] } });
             },
           },
         });

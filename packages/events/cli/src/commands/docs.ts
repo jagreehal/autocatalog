@@ -23,9 +23,14 @@ import {
   DOCS_SCHEMA_PATH,
   DocsManifestError,
   readDesigns,
+  readDomainModel,
   readFlows,
   syncFrontmatterContract,
 } from 'autocatalog-docs-core';
+
+/** `, 2 entities`, or nothing for none. */
+const counted = (n: number, one: string, many: string) =>
+  n > 0 ? `, ${n} ${n === 1 ? one : many}` : '';
 
 /**
  * A path as a reader wants to see it: relative when that is genuinely shorter,
@@ -106,7 +111,10 @@ export async function runDocsCheck(opts: DocsCommandOptions): Promise<number> {
   // The same for a design: one that does not hold together is left off the site.
   const designs = readDesigns(checkouts, { resources, relationships: [] }, { deferMissing: true });
 
-  const failures = [...result.failures, ...flows.failures, ...designs.failures];
+  // Glossaries, entities, data products, teams and users, held to the same bar.
+  const model = readDomainModel(checkouts, { resources }, { deferMissing: true });
+
+  const failures = [...result.failures, ...flows.failures, ...designs.failures, ...model.failures];
 
   // Which rules were applied is the first question a failure raises, so it is
   // reported on both paths — a reader fixing a failing check needs the contract
@@ -128,6 +136,8 @@ export async function runDocsCheck(opts: DocsCommandOptions): Promise<number> {
   }
 
   if (!opts.quiet) {
+    for (const warning of model.warnings) console.warn(`${kleur.yellow('!')} ${warning}`);
+
     const scope = result.checkedCrossRepoLinks
       ? 'schema + links'
       : 'schema only, no published index yet';
@@ -135,6 +145,9 @@ export async function runDocsCheck(opts: DocsCommandOptions): Promise<number> {
     const flowCount = [
       flows.flows.length > 0 ? `, ${flows.flows.length} flow(s)` : '',
       designs.designs.length > 0 ? `, ${designs.designs.length} design(s)` : '',
+      counted(model.glossaries.length, 'glossary', 'glossaries'),
+      counted(model.entities.length, 'entity', 'entities'),
+      counted(model.dataProducts.length, 'data product', 'data products'),
     ].join('');
 
     console.log(

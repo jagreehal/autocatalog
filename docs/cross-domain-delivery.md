@@ -42,7 +42,11 @@ checkout (payments) reads table finance/eligibility, which finance owns
 ## 3. Choose the interaction
 
 Events, commands (one handler, an expected outcome), webhooks, endpoints and
-queues are all catalogued. Choosing between them stays with the teams.
+queues are all catalogued. Choosing between them stays with the teams, and the
+gate keeps each one what it says it is: an event two services publish is
+suspicious, and a new event that does not read as something that happened, or
+a command that does, is noted. A command whose sender waits for the result
+names the queue the handler replies on with `outcome.replyTo`.
 Direct database access across domains is the one choice that is enforced: see
 [another team's datastore](/docs/drift-ci#another-teams-datastore). A deliberate
 exception, such as a migration, is reviewed with `ac resources promote`.
@@ -110,6 +114,12 @@ narrowed by the fields each consumer says it reads. See
 [drift gating](/docs/drift-ci). Consumer-driven pact suites are a different
 tool, and complement this rather than replace it.
 
+Each side tests against the contract, not against the other side. The
+producer's tests show it publishes what it declares: the snapshot they write
+is checked by `ac drift --snapshot`. The consumer's tests feed it the event's
+examples, edge cases included, and check it handles them. Neither needs the
+other running, or a broker.
+
 ## 8. Preserve ownership
 
 Reading or writing another team's datastore is enforced (step 2). Copying
@@ -121,8 +131,14 @@ than none.
 
 Three of the questions have an answer the contract can hold and CI can check:
 duplicates (`guarantee` and `idempotencyKey`), order (`orderingKey`) and
-lateness (`maxLateness`). Retries, an unavailable provider, stale data and
-whether to fail open or closed are runtime design, and stay with the team.
+lateness (`maxLateness`). A consumer declares where it puts a delivery it gives
+up on with `deadLetter` in `autocatalog.consumes.json`, and the snapshot from
+its tests says how many deliveries failed, were retried or were dead-lettered,
+and why ([delivery outcomes](/docs/runtime-evidence#delivery-outcomes)). A
+process that has to undo earlier steps when a later one fails names the step
+that undoes each one with `compensated_by` in its
+[flow](/docs/site). Stale data and whether to fail open or closed are runtime
+design, and stay with the team.
 
 ## 10. Make it observable
 

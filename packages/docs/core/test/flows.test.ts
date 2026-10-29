@@ -3,7 +3,8 @@ import os from 'node:os';
 import path from 'node:path';
 import type { CatalogRelationship, CatalogResource } from 'autocatalog-core';
 import { afterEach, beforeEach, expect, it } from 'vitest';
-import { readFlows } from '../src/flows';
+import { flowDiagram } from '../src/diagram';
+import { flowStepRuns, flowWorkflow, readFlows } from '../src/flows';
 
 let root: string;
 
@@ -284,4 +285,95 @@ it('says when no step starts the flow, since its walkthrough could not begin', a
   expect(result.warnings).toContain(
     'orders/flows/loop.md: every step has one leading to it, so its walkthrough has nowhere to start',
   );
+});
+
+it('reads the step that undoes another, and draws it as its own edge', async () => {
+  await write(
+    'orders/flows/charge.md',
+    `---
+title: Charge
+steps:
+  - id: reserve
+    title: Reserve stock
+    next_step: charge
+    compensated_by: { id: release, label: payment declined }
+  - id: charge
+    title: Charge the card
+  - id: release
+    title: Release stock
+---
+`,
+  );
+  await write(
+    'orders/flows/broken.md',
+    '---\ntitle: Broken\nsteps:\n  - id: a\n    compensated_by: a\n---\n',
+  );
+
+  const result = readFlows(repositories(), catalog);
+  const charge = result.flows.find((each) => each.id === 'charge')!;
+
+  expect(result.failures).toEqual(["orders/flows/broken.md: step 'a' cannot compensate itself"]);
+  expect(charge.steps[0]?.compensatedBy).toEqual({ id: 'release', label: 'payment declined' });
+  expect(result.warnings).toEqual([]);
+  expect(flowDiagram(charge, { spec: 'autocatalog/graph-v1', ...catalog }).edges).toEqual([
+    { id: 'reserve->charge', source: 'reserve', target: 'charge', type: 'flow-step' },
+    {
+      id: 'reserve->release:compensation',
+      source: 'reserve',
+      target: 'release',
+      type: 'flow-step',
+      label: 'payment declined',
+    },
+  ]);
+});
+
+it('finds the saga that runs a flow, and the runs of each step', async () => {
+  await write(
+    'orders/flows/fulfil-order.md',
+    `---
+title: Fulfil order
+steps:
+  - id: reserve
+    title: Reserve stock
+    next_step: ship
+  - id: ship
+    title: Ship order
+---
+`,
+  );
+
+  const [fulfil] = readFlows(repositories(), catalog).flows;
+
+  const workflow = {
+    name: 'FulfilOrder',
+    runs: 2,
+    firstSeen: '',
+    lastSeen: '',
+    compensated: 1,
+    steps: [
+      { name: 'ReserveStock', count: 2, compensated: 1 },
+      { name: 'ShipOrder', count: 2, failed: 1 },
+      { name: 'NotifyCustomer', count: 1 },
+    ],
+  };
+
+  const runs = [
+    { repository: 'orders', workflow },
+    { repository: 'other', workflow },
+  ];
+
+  // Its own repository's runs win over another's of the same name.
+  expect(flowWorkflow(fulfil!, runs).found?.repository).toBe('orders');
+  expect(flowWorkflow(fulfil!, runs.slice(1)).found?.repository).toBe('other');
+  expect(flowWorkflow({ ...fulfil!, repository: 'third' }, runs).ambiguous).toEqual([
+    'orders',
+    'other',
+  ]);
+  expect(flowWorkflow({ ...fulfil!, workflow: 'Elsewhere' }, runs).found).toBeUndefined();
+
+  const { steps, unnamed } = flowStepRuns(fulfil!, workflow);
+
+  expect([...steps.keys()]).toEqual(['reserve', 'ship']);
+  expect(steps.get('ship')?.failed).toBe(1);
+  expect(unnamed).toEqual(['NotifyCustomer']);
 });

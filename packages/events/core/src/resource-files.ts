@@ -43,7 +43,7 @@ export async function resourceFiles(
     const entries = await fs.readdir(directory, { withFileTypes: true }).catch(() => undefined);
 
     if (!entries) {
-      report(`${path.relative(root, directory)}: directory could not be read`);
+      report(`${path.relative(root, directory) || root}: directory could not be read`);
 
       return;
     }

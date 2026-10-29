@@ -1,0 +1,16 @@
+---
+import { docsCatalog } from '../catalog';
+import { mdxTerm } from '../mdx';
+
+interface Props {
+  id: string;
+  /** Needed only when two domains define the term. */
+  domain?: string;
+}
+
+const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+
+const term = mdxTerm(await docsCatalog(), base, Astro.props.id, Astro.props.domain);
+---
+
+<a href={term.href} title={term.summary}><slot>{term.name}</slot></a>

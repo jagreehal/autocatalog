@@ -6,6 +6,7 @@ import {
   buildServices,
   datastoreOwnership,
   correlationPath,
+  deadLetterOf,
   describeFieldConflict,
   durationSeconds,
   EXAMPLE_CASE_MEANING,
@@ -17,6 +18,7 @@ import {
   type EventFrontmatter,
   type LoadedExample,
   type ResourceGraph,
+  type ResourceRef,
 } from 'autocatalog-core';
 import { z } from 'zod';
 import { sourceUrl } from 'autocatalog-docs-core';
@@ -45,6 +47,7 @@ import { docKindIcon, documentsByKind, kindCounts, kindHref, kindNoun } from './
 import { explorerModel } from './ui/components/catalog-explorer-model';
 import type { EventCatalogDiagramProps } from './ui/components/EventCatalogDiagram';
 import type { DeliveryView } from './ui/components/DeliveryFacts';
+import type { DeadLetterView } from './ui/components/RuntimeEvidence';
 import type { ExampleView } from './ui/components/Examples';
 import { runtimeEvidenceView } from './runtime-evidence-view';
 import type {
@@ -421,7 +424,8 @@ export function domainPageProps(
 }
 
 /** The events with a page: every current event a repository publishes. */
-export const eventPages = (catalog: DocsCatalog) => new Set(catalog.events.map(eventPath));
+export const eventPages = (catalog: Pick<DocsCatalog, 'events'>) =>
+  new Set(catalog.events.map(eventPath));
 
 /** What every map drawn from the catalog shows of runtime: snapshot evidence, and the live feed. */
 const mapEvidence = (catalog: DocsCatalog) => ({
@@ -430,7 +434,7 @@ const mapEvidence = (catalog: DocsCatalog) => ({
 });
 
 /** The services with a page: every one an event names as producer or consumer. */
-export const servicePages = (catalog: DocsCatalog) =>
+export const servicePages = (catalog: Pick<DocsCatalog, 'events'>) =>
   new Set(buildServices(catalog.events.map(({ event }) => event)).keys());
 
 /** EventCatalog's drawing of one resource, or undefined when `ac site --eventcatalog` made none. */
@@ -659,6 +663,21 @@ export function exampleViews(examples: LoadedExample[]): ExampleView[] {
     });
 }
 
+/** The dead-letter queues consumers declare for one event, in `autocatalog.consumes.json`. */
+function deadLetters(graph: ResourceGraph, event: ResourceRef): DeadLetterView[] {
+  return graph.relationships.flatMap((edge) => {
+    const queue = deadLetterOf(edge);
+
+    const about =
+      edge.type === 'consumes' &&
+      edge.from.kind === event.kind &&
+      edge.from.namespace === event.namespace &&
+      edge.from.id === event.id;
+
+    return about && queue ? [{ consumer: edge.to.id, ...queue }] : [];
+  });
+}
+
 export async function eventPageProps(
   catalog: DocsCatalog,
   entry: CatalogEvent,
@@ -771,7 +790,15 @@ export async function eventPageProps(
     visualiser: flowGraph(flow, seen && { event: fm.id, seen, live: docsSiteConfig().live }),
     schema: schemaTree(event.schema),
     schemaHref: `${base}${eventPath(entry)}schema.json`,
-    evidence: runtimeEvidenceView(eventRuntimeEvidence(fm), `${fm.domain}/${fm.id}`),
+    evidence: runtimeEvidenceView(
+      eventRuntimeEvidence(fm),
+      `${fm.domain}/${fm.id}`,
+      deadLetters(catalog.graph, {
+        kind: 'event',
+        namespace: `${repository}/${fm.domain}`,
+        id: fm.id,
+      }),
+    ),
     examples: exampleViews(event.examples),
     versions: versionLinks(versions, entry, base),
     changesHtml: await versionChangesHtml(versions, entry),

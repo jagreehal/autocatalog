@@ -23,6 +23,8 @@ Changes are classified and each is attributed to the services that consume the e
 
 Read the named consumers. That list is the whole point of running this, and it is what a schema differ alone cannot tell you.
 
+Drift also keeps events and commands apart. An event a second service starts publishing is `suspicious`: an event is a fact from one boundary, so split it into one event per publisher, or make it a command one service handles. A new event that does not read as past tense (`order.place`), or a new command that does (`OrderPlaced`), is `info`: rename it, or say why the name fits.
+
 ### Consumers in other repositories
 
 The event's manifest lists the consumers its own repository knows. Teams in other repositories declare theirs in `autocatalog.consumes.json`, and the company site publishes them at `/catalog.json`. Read them too:

@@ -8,7 +8,12 @@ import { scanCatalog } from './scan-catalog';
 import { hasMessageContracts, messageContractDiscoveryAdapter } from './scan-message-contract';
 import { loadCatalogSnapshot, type LoadedEvent } from './load';
 import { DEFAULT_SCAN_EXCLUDE, isRealFileInside } from './utils';
-import { applySnapshot, readSnapshot } from './snapshot';
+import {
+  applySnapshot,
+  readSnapshot,
+  type ArchitectureSnapshot,
+  type WorkflowObservation,
+} from './snapshot';
 import { RESOURCE_GRAPH_FILE } from './resource-store';
 import { CONSUMES_FILE } from './consumes';
 
@@ -17,8 +22,19 @@ const execFileAsync = promisify(execFile);
 /** The conventional roots a repository publishes under; any one enrols it. */
 const CONTRACTS = 'contracts';
 
+/** A domain model's folders and designs: a handbook may publish only these. */
+const MODEL_ROOTS = ['glossary', 'entities', 'data-products', 'teams', 'users', 'designs'];
+
 // A repository that only consumes other teams' events still publishes that fact.
-const PUBLISHED_ROOTS = ['docs', 'events', 'agents', 'flows', CONTRACTS, CONSUMES_FILE];
+const PUBLISHED_ROOTS = [
+  'docs',
+  'events',
+  'agents',
+  'flows',
+  ...MODEL_ROOTS,
+  CONTRACTS,
+  CONSUMES_FILE,
+];
 
 /** Where scanning looks for CODEOWNERS, read at each commit with the contracts. */
 const CODEOWNERS = ['CODEOWNERS', '.github/CODEOWNERS', 'docs/CODEOWNERS'];
@@ -104,7 +120,7 @@ function hasResourceGraph(dir: string): boolean {
 }
 
 /** Roots that make the directory holding them one repository, never a folder of them. */
-const SINGLE_ROOTS = ['docs', 'events', 'agents', 'flows'];
+const SINGLE_ROOTS = ['docs', 'events', 'agents', 'flows', ...MODEL_ROOTS];
 
 /** What a repository's own root carries and a folder of checkouts does not. */
 const REPOSITORY_MARKERS = ['.git', 'package.json'];
@@ -274,6 +290,8 @@ export interface LoadRepositoryEventsOptions {
   onWarning?: (message: string) => void;
   /** Told that the repository's runtime snapshot was read, whatever it matched. */
   onSnapshot?: () => void;
+  /** Handed the workflow runs the repository's runtime snapshot recorded. */
+  onWorkflows?: (workflows: WorkflowObservation[]) => void;
   /** How far above the repository to look for CODEOWNERS: its monorepo's root. */
   ownersWithin?: string;
   /** Directories the whole-repository scan skips: packages that publish for themselves. */
@@ -323,7 +341,29 @@ async function applyRuntimeSnapshot(
   const file = path.join(repositoryRoot, RUNTIME_SNAPSHOT);
   const current = events.filter((event) => !event.folder.isVersioned);
 
-  if (current.length === 0 || !isRealFileInside(repositoryRoot, file)) return;
+  if (!isRealFileInside(repositoryRoot, file)) return;
+
+  const notApplied = (reason: string) =>
+    options.onWarning?.(
+      `${RUNTIME_SNAPSHOT} was not applied, so no runtime evidence is shown — ${reason}`,
+    );
+
+  let snapshot: ArchitectureSnapshot;
+
+  try {
+    snapshot = await readSnapshot(file);
+  } catch (error) {
+    notApplied(error instanceof Error ? error.message : String(error));
+
+    return;
+  }
+
+  // A saga's runs belong to its flow, which a repository with no events can declare.
+  const workflows = Object.values(snapshot.workflows ?? {});
+
+  if (workflows.length > 0) options.onWorkflows?.(workflows);
+
+  if (current.length === 0) return;
 
   // The snapshot joins scanner output; a loaded event is that output, published.
   const joined = current.map((event) => ({
@@ -332,11 +372,9 @@ async function applyRuntimeSnapshot(
   }));
 
   try {
-    applySnapshot(joined, await readSnapshot(file));
+    applySnapshot(joined, snapshot);
   } catch (error) {
-    options.onWarning?.(
-      `${RUNTIME_SNAPSHOT} was not applied, so no runtime evidence is shown — ${error instanceof Error ? error.message : String(error)}`,
-    );
+    notApplied(error instanceof Error ? error.message : String(error));
 
     return;
   }

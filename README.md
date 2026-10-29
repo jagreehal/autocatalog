@@ -163,10 +163,10 @@ and change nothing in their code.
 
 The site, the pull request check and your coding agent all read one model of
 your architecture, built from the code. `autocatalog-mcp` gives AI coding agents
-13 tools over that model. An agent can look up an event's schema and examples,
+14 tools over that model. An agent can look up an event's schema and examples,
 find which events carry a field, check whether a change breaks a consumer
-before it writes the code, and draw the catalog, a flow or a new design as a
-diagram in Claude or ChatGPT.
+before it writes the code, look up what a word means in the domain, and draw
+the catalog, a flow or a new design as a diagram in Claude or ChatGPT.
 
 ```json
 {

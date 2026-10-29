@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises';
 import { z } from 'zod';
 import type { AdapterEvent } from './adapter-event';
-import { observationSource } from './schema';
+import { consumerOutcome, observationSource, type ConsumerOutcome } from './schema';
 
 /**
  * A runtime architecture snapshot: what the running system was actually seen
@@ -28,6 +28,8 @@ export interface SnapshotObservation {
   fieldPaths?: string[];
   sampleTraceIds?: string[];
   sources?: z.infer<typeof observationSource>[];
+  /** Each consumer seen receiving the event, with what happened to its deliveries. */
+  observedConsumers?: ConsumerOutcome[];
   fieldStats?: Record<string, FieldStats>;
   consumerEvidence?: 'reported' | 'observed' | 'unknown';
 }
@@ -38,11 +40,40 @@ export interface FieldStats {
   sampleValues?: Array<string | number | boolean | null>;
 }
 
+/** How the runs of one step of a workflow ended. */
+export interface WorkflowStepObservation {
+  name: string;
+  count: number;
+  failed?: number | undefined;
+  skipped?: number | undefined;
+  compensated?: number | undefined;
+  compensationFailed?: number | undefined;
+}
+
+/**
+ * A saga or workflow as it ran: how many runs, how each ended, and each step,
+ * in the order the steps run.
+ */
+export interface WorkflowObservation {
+  name: string;
+  runs: number;
+  firstSeen: string;
+  lastSeen: string;
+  completed?: number | undefined;
+  failed?: number | undefined;
+  compensated?: number | undefined;
+  compensationFailed?: number | undefined;
+  steps: WorkflowStepObservation[];
+  sampleTraceIds?: string[] | undefined;
+}
+
 export interface ArchitectureSnapshot {
   spec: string;
   generatedAt: string;
   service: string;
   events: Record<string, SnapshotObservation>;
+  /** Workflow runs, by workflow name, when the snapshot recorded any. */
+  workflows?: Record<string, WorkflowObservation> | undefined;
 }
 
 const jsonObject = z.looseObject({});
@@ -58,6 +89,7 @@ const snapshotObservation = z.looseObject({
   fieldPaths: z.array(z.string()).optional(),
   sampleTraceIds: z.array(z.string().min(1).max(128)).max(10).optional(),
   sources: z.array(observationSource).optional(),
+  observedConsumers: z.array(consumerOutcome).optional(),
   // Sample values may contain sensitive payloads. Drift reads them in memory to
   // check enums and integers; nothing copies them into the catalog.
   fieldStats: z
@@ -74,6 +106,32 @@ const snapshotObservation = z.looseObject({
     .optional(),
   consumerEvidence: z.enum(['reported', 'observed', 'unknown']).optional(),
 }) satisfies z.ZodType<SnapshotObservation>;
+
+const count = z.number().int().nonnegative().optional();
+
+const workflowObservation = z.object({
+  name: z.string().min(1).max(200),
+  runs: z.number().int().nonnegative(),
+  firstSeen: z.string(),
+  lastSeen: z.string(),
+  completed: count,
+  failed: count,
+  compensated: count,
+  compensationFailed: count,
+  steps: z
+    .array(
+      z.object({
+        name: z.string().min(1).max(200),
+        count: z.number().int().nonnegative(),
+        failed: count,
+        skipped: count,
+        compensated: count,
+        compensationFailed: count,
+      }),
+    )
+    .max(100),
+  sampleTraceIds: z.array(z.string().min(1).max(128)).max(10).optional(),
+}) satisfies z.ZodType<WorkflowObservation>;
 
 const snapshotSpec = z.string().startsWith(SNAPSHOT_SPEC_PREFIX);
 
@@ -134,11 +192,23 @@ export async function readSnapshot(filePath: string): Promise<ArchitectureSnapsh
     );
   }
 
+  const workflows = z
+    .record(z.string(), workflowObservation)
+    .optional()
+    .safeParse(root.data.workflows);
+
+  if (!workflows.success) {
+    throw new Error(
+      `Snapshot has a malformed workflow observation: ${filePath} (${workflows.error.message})`,
+    );
+  }
+
   return {
     spec: spec.data,
     generatedAt: optionalText.parse(root.data.generatedAt),
     service: optionalText.parse(root.data.service),
     events: events.data,
+    ...(workflows.data && { workflows: workflows.data }),
   };
 }
 
@@ -348,6 +418,10 @@ export function applySnapshot(
       ]),
     ].sort();
 
+    const outcomes = (observation.observedConsumers ?? []).filter(
+      (entry) => entry.failed || entry.retried || entry.deadLettered || entry.replayed,
+    );
+
     event.observed = {
       count: observation.observedCount ?? 0,
       firstSeen: observation.firstSeen ?? '',
@@ -359,6 +433,7 @@ export function applySnapshot(
       consumerEvidence: observation.consumerEvidence ?? 'reported',
       sampleTraceIds: observation.sampleTraceIds,
       sources: observation.sources,
+      ...(outcomes.length > 0 && { consumerOutcomes: outcomes }),
       fieldPaths: observation.fieldPaths,
       fieldTypes: observation.fieldStats
         ? Object.fromEntries(

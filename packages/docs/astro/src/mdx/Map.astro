@@ -1,0 +1,23 @@
+---
+import { docsCatalog } from '../catalog';
+import { mdxMap } from '../mdx';
+import { Graph } from '../ui/components/Graph';
+
+interface Props {
+  /** As `about:` writes it, or `flow/<id>`, `domain/<name>`, `data-product/<id>`; the whole catalog without one. */
+  focus?: string;
+  /** What a screen reader calls the map. */
+  label?: string;
+  height?: '20rem' | '30rem';
+}
+
+const { focus, label, height } = Astro.props;
+
+const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+
+const visualiser = await mdxMap(await docsCatalog(), base, focus);
+
+const id = `map-${(focus ?? 'catalog').replace(/[^\w-]+/g, '-')}`;
+---
+
+<Graph client:load id={id} label={label ?? focus ?? 'Catalog'} visualiser={visualiser} height={height} />

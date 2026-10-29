@@ -177,6 +177,7 @@ export type CatalogRelationshipType =
   | 'publishes'
   | 'references'
   | 'relatesTo'
+  | 'repliesTo'
   | 'usesModel'
   | 'usesTool';
 

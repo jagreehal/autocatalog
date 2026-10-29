@@ -1,5 +1,11 @@
 /** @jsxImportSource react */
-import { Card, CardContent, CardHeader, CardTitle } from '#ui/components/ui/card.tsx';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '#ui/components/ui/card.tsx';
 import {
   Item,
   ItemContent,
@@ -20,6 +26,21 @@ export interface FlowPageStep {
   href?: string | undefined;
   /** The steps it leads to, by title, with the branch each one is. */
   next: Array<{ title: string; label?: string | undefined }>;
+  /** The step that undoes this one when a later step fails. */
+  compensatedBy?: string | undefined;
+  /** How its runs ended, when a runtime snapshot recorded the workflow. */
+  runtime?: string | undefined;
+}
+
+/** The workflow that carries out the flow, as a runtime snapshot recorded it. */
+export interface FlowRuntime {
+  workflow: string;
+  repository: string;
+  /** "Ran 12 times: 10 completed, 2 compensated." */
+  summary: string;
+  /** Steps the workflow ran that no flow step names. */
+  unnamed: string[];
+  sampleTraceIds: string[];
 }
 
 export interface FlowPageProps {
@@ -28,6 +49,7 @@ export interface FlowPageProps {
   file: string;
   visualiser: VisualiserGraph;
   steps: FlowPageStep[];
+  runtime?: FlowRuntime | undefined;
   /** The Markdown below the frontmatter, rendered to HTML. */
   narrativeHtml?: string | null | undefined;
 }
@@ -64,6 +86,12 @@ function StepList({ steps }: { steps: FlowPageStep[] }) {
                       .join(', or ')}.`}
                 </ItemDescription>
               )}
+              {step.runtime && <ItemDescription>{step.runtime}</ItemDescription>}
+              {step.compensatedBy && (
+                <ItemDescription>
+                  If a later step fails, {step.compensatedBy} undoes it.
+                </ItemDescription>
+              )}
             </ItemContent>
           </Item>
         </li>
@@ -73,7 +101,55 @@ function StepList({ steps }: { steps: FlowPageStep[] }) {
 }
 
 /** A business process: the map, grouped by domain or team on request, then each step in order. */
-export function FlowPage({ repository, file, visualiser, steps, narrativeHtml }: FlowPageProps) {
+function RuntimeCard({ runtime }: { runtime: FlowRuntime }) {
+  return (
+    <div className="not-content">
+      <Card id="runtime">
+        <CardHeader>
+          <CardTitle role="heading" aria-level={2}>
+            At runtime
+          </CardTitle>
+          <CardDescription>
+            The {runtime.workflow} workflow, from the {runtime.repository} repository’s snapshot
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col gap-3 text-sm">
+            <p className="m-0">{runtime.summary}</p>
+            {runtime.unnamed.length > 0 && (
+              <p className="m-0">
+                It also ran {runtime.unnamed.join(', ')}, which no step here names.
+              </p>
+            )}
+            {runtime.sampleTraceIds.length > 0 && (
+              <div className="flex flex-col gap-1">
+                <span className="text-muted-foreground">
+                  Trace IDs, runs that did not complete first
+                </span>
+                <ul className="m-0 flex list-none flex-col gap-1 p-0">
+                  {runtime.sampleTraceIds.map((traceId) => (
+                    <li key={traceId}>
+                      <code className="font-mono text-xs break-all">{traceId}</code>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+export function FlowPage({
+  repository,
+  file,
+  visualiser,
+  steps,
+  runtime,
+  narrativeHtml,
+}: FlowPageProps) {
   return (
     <div className="flex flex-col gap-8" data-wide>
       <p className="not-content m-0 max-w-prose">
@@ -100,6 +176,8 @@ export function FlowPage({ repository, file, visualiser, steps, narrativeHtml }:
           </CardContent>
         </Card>
       </div>
+
+      {runtime && <RuntimeCard runtime={runtime} />}
 
       {narrativeHtml && <div dangerouslySetInnerHTML={{ __html: narrativeHtml }} />}
     </div>

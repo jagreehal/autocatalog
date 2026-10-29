@@ -463,4 +463,19 @@ describe('access to another team’s datastore', () => {
       ).map((finding) => finding.severity),
     ).toEqual(['suspicious']);
   });
+
+  it('notes a new command named as something that happened', () => {
+    const current = emptyResourceGraph();
+
+    for (const id of ['PlaceOrder', 'OrderPlaced'])
+      current.resources.push(
+        architectureResource({ kind: 'command', namespace: 'orders', id }, {}),
+      );
+
+    expect(
+      driftResources(emptyResourceGraph(), current)
+        .filter((finding) => finding.code === 'command_named_as_event')
+        .map((finding) => [finding.resource.id, finding.severity]),
+    ).toEqual([['OrderPlaced', 'info']]);
+  });
 });
