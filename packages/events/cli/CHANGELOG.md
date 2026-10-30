@@ -1,5 +1,13 @@
 # autocatalog-cli
 
+## 0.6.1
+
+### Patch Changes
+
+- Updated dependencies [1ff9943]
+  - autocatalog-docs-core@0.5.0
+  - autocatalog-docs-astro@0.7.0
+
 ## 0.6.0
 
 ### Minor Changes

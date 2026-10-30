@@ -1,6 +1,6 @@
 {
   "name": "autocatalog-agents-mcp",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "description": "MCP server that answers questions about an agent catalog over stdio.",
   "license": "MIT",
   "repository": {

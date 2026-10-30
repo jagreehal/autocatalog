@@ -1,5 +1,12 @@
 # autocatalog-agents-cli
 
+## 0.2.5
+
+### Patch Changes
+
+- Updated dependencies [1ff9943]
+  - autocatalog-agents-mcp@0.2.5
+
 ## 0.2.4
 
 ### Patch Changes
