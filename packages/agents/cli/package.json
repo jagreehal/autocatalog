@@ -1,6 +1,6 @@
 {
   "name": "autocatalog-agents-cli",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "description": "The ac-agents CLI: validate, impact, cost, audit, runtime drift, discovery, MCP, and llms.txt.",
   "license": "MIT",
   "repository": {
