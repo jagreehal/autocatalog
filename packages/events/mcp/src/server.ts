@@ -30,7 +30,7 @@ import { define } from './model.js';
 const MAP_VIEW = 'ui://autocatalog/map.html';
 
 const asText = <T>(data: T) => ({
-  content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }],
+  content: [{ type: 'text' as const, text: JSON.stringify(data) }],
 });
 
 const asError = (cause: unknown) => ({

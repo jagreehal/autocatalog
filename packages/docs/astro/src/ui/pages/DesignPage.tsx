@@ -1,5 +1,6 @@
 /** @jsxImportSource react */
 import { Badge } from '#ui/components/ui/badge.tsx';
+import { LinkButton } from '#ui/components/ui/button.tsx';
 import { Card, CardContent, CardHeader, CardTitle } from '#ui/components/ui/card.tsx';
 import {
   Table,
@@ -9,7 +10,9 @@ import {
   TableHeader,
   TableRow,
 } from '#ui/components/ui/table.tsx';
+import { useEffect } from 'react';
 import { Graph } from '../components/Graph';
+import { DESIGN_CHANGED } from '../lib/canvas-model';
 import type { VisualiserGraph } from '../lib/visualiser';
 
 export interface DesignPageProps {
@@ -19,7 +22,7 @@ export interface DesignPageProps {
   status: 'draft' | 'proposed' | 'accepted' | 'rejected';
   /** What it adds to the catalog, in a line. */
   changes: string;
-  visualiser: VisualiserGraph;
+  visualiser?: VisualiserGraph | undefined;
   resources: Array<{
     id: string;
     name: string;
@@ -30,9 +33,22 @@ export interface DesignPageProps {
   }>;
   relations: Array<{ from: string; to: string; kind: string; state: 'catalog' | 'new' }>;
   notes: Array<{ text: string; on?: string | undefined }>;
+  /** What a reader should know first, most severe first. */
+  hotspots?: Array<{
+    title: string;
+    severity: 'critical' | 'warning' | 'info';
+    description?: string | undefined;
+    on?: string | undefined;
+  }>;
   /** The Markdown below the frontmatter, rendered to HTML. */
   narrativeHtml?: string | null | undefined;
+  /** Where `ac site` dev edits it on a canvas; absent on a built site. */
+  editHref?: string | undefined;
+  /** Its file on disk under `ac site` dev, so the page reloads when it changes; absent on a built site. */
+  watchFile?: string | undefined;
 }
+
+const SEVERITY = { critical: 'destructive', warning: 'outline', info: 'secondary' } as const;
 
 const State = ({ state }: { state: 'catalog' | 'new' }) =>
   state === 'new' ? (
@@ -89,8 +105,26 @@ export function DesignPage({
   resources,
   relations,
   notes,
+  hotspots = [],
   narrativeHtml,
+  editHref,
+  watchFile,
 }: DesignPageProps) {
+  // Under `ac site` dev, the page follows its file as the canvas, an agent or an editor writes it.
+  useEffect(() => {
+    const hot = import.meta.hot;
+
+    if (!hot || !watchFile) return;
+
+    const onChanged = ({ file }: { file: string }) => {
+      if (file === watchFile) window.location.reload();
+    };
+
+    hot.on(DESIGN_CHANGED, onChanged);
+
+    return () => hot.off(DESIGN_CHANGED, onChanged);
+  }, [watchFile]);
+
   return (
     <div className="flex flex-col gap-8" data-wide>
       <div className="not-content flex flex-wrap items-center gap-3">
@@ -98,6 +132,11 @@ export function DesignPage({
         <p className="m-0 max-w-prose">
           {changes}. Declared in <code>{file}</code> in the {repository} repository.
         </p>
+        {editHref && (
+          <LinkButton variant="outline" size="sm" href={editHref}>
+            Edit on canvas
+          </LinkButton>
+        )}
       </div>
 
       <Graph
@@ -109,6 +148,32 @@ export function DesignPage({
       />
 
       <div className="not-content flex flex-col gap-4">
+        {hotspots.length > 0 && (
+          <Card id="hotspots">
+            <CardHeader>
+              <CardTitle role="heading" aria-level={2}>
+                Hotspots
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ul className="m-0 flex list-none flex-col gap-3 p-0">
+                {hotspots.map((hotspot) => (
+                  <li key={`${hotspot.on ?? ''}${hotspot.title}`} className="flex flex-col gap-1">
+                    <p className="m-0 flex flex-wrap items-center gap-2">
+                      <Badge variant={SEVERITY[hotspot.severity]}>{hotspot.severity}</Badge>
+                      <span className="font-medium">{hotspot.title}</span>
+                      {hotspot.on && <span className="text-muted-foreground">on {hotspot.on}</span>}
+                    </p>
+                    {hotspot.description && (
+                      <p className="m-0 text-muted-foreground">{hotspot.description}</p>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+        )}
+
         <Card id="resources">
           <CardHeader>
             <CardTitle role="heading" aria-level={2}>

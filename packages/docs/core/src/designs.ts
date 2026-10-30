@@ -31,6 +31,8 @@ const RESOURCE_TYPES = [
   'external-system',
   'container',
   'team',
+  'view',
+  'entity',
 ] as const;
 
 const RELATION_KINDS = [
@@ -85,8 +87,18 @@ export interface Design {
   body: string;
   resources: DesignResource[];
   relations: DesignRelation[];
-  notes: Array<{ text: string; resource?: string | undefined }>;
+  notes: DesignNote[];
+  /** What a reader should know first: risks, single points of failure, open questions. */
+  hotspots: DesignHotspot[];
+  /** Where the canvas put each resource, by level; absent until the design is edited on one. */
+  layout?: DesignLayout | undefined;
 }
+
+export type DesignNote = z.output<typeof noteSchema>;
+
+export type DesignHotspot = z.output<typeof hotspotSchema>;
+
+export type DesignLayout = z.output<typeof layoutSchema>;
 
 const text = z.string().trim().min(1);
 
@@ -107,12 +119,55 @@ const resourceSchema = z
     message: 'a resource names the catalog resource it is (`ref`), or gives an `id` and `type`',
   });
 
+// Studio's sticky notes and text: where one sits and how it looks are kept, so
+// the canvas opens as it was left.
+export const noteSchema = z
+  .object({
+    text,
+    resource: id.optional(),
+    x: z.number().optional(),
+    y: z.number().optional(),
+    width: z.number().optional(),
+    color: z.enum(['yellow', 'blue', 'green', 'pink', 'purple', 'gray']).optional(),
+    kind: z.enum(['sticky', 'text']).optional(),
+    fontSize: z.number().optional(),
+    level: z.enum(['overview', 'services', 'messages']).optional(),
+  })
+  .strict();
+
+const hotspotSchema = z
+  .object({
+    title: text,
+    severity: z.enum(['critical', 'warning', 'info']).default('warning'),
+    description: text.optional(),
+    resource: id.optional(),
+  })
+  .strict();
+
+const place = z
+  .object({
+    x: z.number(),
+    y: z.number(),
+    width: z.number().optional(),
+    height: z.number().optional(),
+  })
+  .strict();
+
+export const layoutSchema = z
+  .object({
+    overview: z.record(z.string(), place).optional(),
+    services: z.record(z.string(), place).optional(),
+    messages: z.record(z.string(), place).optional(),
+  })
+  .strict();
+
 export const designSchema = z
   .object({
     title: text,
     summary: text.optional(),
     status: z.enum(['draft', 'proposed', 'accepted', 'rejected']).default('draft'),
-    resources: z.array(resourceSchema).min(1),
+    // Empty while it is being started: `ac site` dev's New design writes one with none.
+    resources: z.array(resourceSchema).default([]),
     relations: z
       .array(
         z
@@ -120,7 +175,9 @@ export const designSchema = z
           .strict(),
       )
       .default([]),
-    notes: z.array(z.object({ text, resource: id.optional() }).strict()).default([]),
+    notes: z.array(noteSchema).default([]),
+    hotspots: z.array(hotspotSchema).default([]),
+    layout: layoutSchema.optional(),
   })
   .strict();
 
@@ -290,6 +347,14 @@ export function resolveDesign(
     }
   }
 
+  for (const hotspot of authored.hotspots) {
+    if (hotspot.resource && !ids.has(hotspot.resource)) {
+      throw new Error(
+        `hotspot '${hotspot.title}' is on '${hotspot.resource}', which is not a resource`,
+      );
+    }
+  }
+
   return {
     ...where,
     body: where.body ?? '',
@@ -299,6 +364,8 @@ export function resolveDesign(
     resources,
     relations,
     notes: authored.notes,
+    hotspots: authored.hotspots,
+    layout: authored.layout,
   };
 }
 
@@ -401,6 +468,8 @@ const NODE_TYPES: Record<DesignResource['type'], DiagramNodeType> = {
   'external-system': 'external-system',
   container: 'data',
   team: 'actor',
+  view: 'actor',
+  entity: 'data',
 };
 
 const EDGE_TYPES: Record<DesignRelation['kind'], DiagramEdgeType> = {

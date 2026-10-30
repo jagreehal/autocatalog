@@ -89,11 +89,15 @@ export const edgeWeight = (evidence: EdgeEvidence): number =>
 
 /**
  * A level 1 domain or system as the card the visualiser draws one as, which
- * edges connect to; its layout node is a container, which they do not.
+ * edges connect to; its layout node is a container, which they do not. The
+ * card opens its page itself (the visualiser shows no node card for one), so
+ * it is clickable only when `href` gives it a page: {@link groupCardHref}
+ * turns the path it asks for into that page.
  */
 export function asGroupCard<N extends { id: string; type?: string | undefined; data: object }>(
   node: N,
   source: Pick<DiagramNode, 'label' | 'metadata'> | undefined,
+  href?: string,
 ): N {
   const group = source?.metadata.group;
 
@@ -101,7 +105,20 @@ export function asGroupCard<N extends { id: string; type?: string | undefined; d
 
   const card = { id: node.id, name: source!.label, summary: source!.metadata.summary };
 
+  const navigable = href !== undefined;
+
   return group === 'domain'
-    ? { ...node, type: 'context-domain', data: { domain: card, mode: 'full', navigable: false } }
-    : { ...node, type: 'system', data: { system: card, mode: 'full', navigable: false } };
+    ? { ...node, type: 'context-domain', data: { domain: card, mode: 'full', navigable } }
+    : { ...node, type: 'system', data: { system: card, mode: 'full', navigable } };
+}
+
+/**
+ * The visualiser's own URLs for a path it builds: a group card asks for
+ * EventCatalog's `/visualiser/{domains|systems}/<id>/<version>`, which is the
+ * card's page here. Any other path is left as it is.
+ */
+export function groupCardHref(path: string, hrefs: Record<string, string>): string {
+  const id = /^\/visualiser\/(?:domains|systems)\/(.+)\/[^/]*$/.exec(path)?.[1];
+
+  return (id !== undefined && hrefs[id]) || path;
 }

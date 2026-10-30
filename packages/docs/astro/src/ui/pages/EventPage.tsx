@@ -42,7 +42,6 @@ export interface EventPageProps {
   examples: ExampleView[];
   /** Newest first. */
   versions: EventVersionsProps['versions'];
-  changesHtml?: string | null | undefined;
   documents: ResourceLinksProps['links'];
   /** Decisions, runbooks and incidents about it: one card per kind that has any. */
   records?: ResourceLinksProps[] | undefined;
@@ -71,7 +70,6 @@ export function EventPage({
   evidence,
   examples,
   versions,
-  changesHtml,
   documents,
   records = [],
   facts,
@@ -186,7 +184,7 @@ export function EventPage({
               href={schemaHref}
               note="schema.json is the contract a consumer validates against."
             />
-            {versions.length > 1 && <EventVersions versions={versions} changesHtml={changesHtml} />}
+            {versions.length > 1 && <EventVersions versions={versions} />}
             {details}
           </div>
 

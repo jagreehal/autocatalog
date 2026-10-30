@@ -2,6 +2,7 @@
 import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
 import type { InferGetStaticPropsType } from 'astro';
 import { docsCatalog } from '../catalog';
+import { editableDesign } from '../design-editor';
 import { designPageProps } from '../designs';
 import { eventPages, servicePages } from '../page-models';
 import { DesignPage } from '../ui/pages/DesignPage';
@@ -36,5 +37,10 @@ const page = await designPageProps(design, catalog, base, {
     tableOfContents: false,
   }}
 >
-  <DesignPage client:load {...page} />
+  <DesignPage
+    client:load
+    {...page}
+    editHref={import.meta.env.DEV ? `${base}designs/${design.repository}/${design.id}/edit/` : undefined}
+    watchFile={import.meta.env.DEV ? editableDesign(catalog, design.repository, design.id)?.file : undefined}
+  />
 </StarlightPage>

@@ -3,13 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { eventFrontmatter } from 'autocatalog-core';
 import type { CatalogEvent } from '../src/catalog';
-import {
-  eventVersions,
-  versionChanges,
-  versionChangesHtml,
-  versionLinks,
-  versionPath,
-} from '../src/event-versions';
+import { eventVersions, versionChanges, versionLinks, versionPath } from '../src/event-versions';
 import { EventVersions } from '../src/ui/components/EventVersions';
 
 // payment.completed with its versioned/ history: V1 and 1.0.0-beta behind the
@@ -85,16 +79,15 @@ describe('each version says what changed since the one before it', () => {
 });
 
 describe('EventVersions states', () => {
-  const render = (active: CatalogEvent, changesHtml?: string | null) =>
+  const render = async (active: CatalogEvent) =>
     renderToStaticMarkup(
       createElement(EventVersions, {
-        versions: versionLinks(eventVersions(catalog, active), active, '/'),
-        changesHtml,
+        versions: await versionLinks(eventVersions(catalog, active), active, '/'),
       }),
     );
 
-  it('links every version, marks the current one and the one being read', () => {
-    const html = render(beta);
+  it('links every version, marks the current one and the one being read', async () => {
+    const html = await render(beta);
 
     expect(html).toContain('href="/events/payments/payment/payment.completed/"');
     expect(html).toContain('href="/events/payments/payment/payment.completed/v/V0/"');
@@ -105,19 +98,19 @@ describe('EventVersions states', () => {
     expect(html).toMatch(/>V0</);
   });
 
-  it('renders what changed since the version before, as the changelog prints it', async () => {
-    const versions = eventVersions(catalog, beta);
+  it('carries what changed since the version before for every version, as the changelog prints it', async () => {
+    const links = await versionLinks(eventVersions(catalog, first), first, '/');
 
-    const html = render(beta, await versionChangesHtml(versions, beta));
-
-    expect(html).toContain('data-changes=""');
-    expect(html).toContain('V0 → 1.0.0-beta');
+    // Newest first: the current version against the beta, the beta against V0, V0 has nothing before it.
+    expect(links.map(({ changesHtml }) => changesHtml !== null)).toEqual([true, true, false]);
+    expect(links[0]!.changesHtml).toContain('1.0.0-beta → 1.0.0');
+    expect(links[1]!.changesHtml).toContain('V0 → 1.0.0-beta');
   });
 
-  it('has no changes to render for the oldest version', async () => {
-    const versions = eventVersions(catalog, first);
+  it("renders each version's changes, whichever version is being read", async () => {
+    const html = await render(first);
 
-    expect(await versionChangesHtml(versions, first)).toBeNull();
-    expect(render(first, null)).not.toContain('data-changes');
+    expect(html.match(/data-changes=""/g)).toHaveLength(2);
+    expect(html).toContain('V0 → 1.0.0-beta');
   });
 });

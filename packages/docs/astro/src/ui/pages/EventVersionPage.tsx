@@ -16,7 +16,6 @@ export interface EventVersionPageProps {
   schemaHref: string;
   examples: ExampleView[];
   versions: EventVersionsProps['versions'];
-  changesHtml?: string | null | undefined;
 }
 
 export function EventVersionPage({
@@ -26,7 +25,6 @@ export function EventVersionPage({
   schemaHref,
   examples,
   versions,
-  changesHtml,
 }: EventVersionPageProps) {
   return (
     <div className="not-content flex flex-col gap-8" data-wide>
@@ -53,7 +51,7 @@ export function EventVersionPage({
 
         <div className="flex flex-col gap-6">
           <Examples examples={examples} />
-          <EventVersions versions={versions} changesHtml={changesHtml} />
+          <EventVersions versions={versions} />
         </div>
       </div>
     </div>

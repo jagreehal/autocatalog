@@ -1,7 +1,7 @@
 /** @jsxImportSource react */
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { EventVersionPage } from './EventVersionPage';
-import { changesHtml, examples, schema, versions } from './fixtures';
+import { examples, schema, versions } from './fixtures';
 
 const meta = {
   title: 'Pages/EventVersionPage',
@@ -14,7 +14,6 @@ const meta = {
     schemaHref: '/events/payments/payments/payment.completed/v/1.0.0/schema.json',
     examples,
     versions: versions.map((entry) => ({ ...entry, active: entry.label === 'v1.0.0' })),
-    changesHtml: null,
   },
 } satisfies Meta<typeof EventVersionPage>;
 
@@ -23,8 +22,6 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {};
-
-export const WithChanges: Story = { args: { changesHtml } };
 
 /** No current version to point back to, and no examples. */
 export const Orphaned: Story = { args: { current: undefined, examples: [] } };

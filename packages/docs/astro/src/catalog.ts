@@ -62,6 +62,7 @@ import {
   type WorkflowRuns,
 } from 'autocatalog-docs-core';
 import { repositoryApis, type CatalogApi } from './apis';
+import { designsChangedAt } from './dev-signals';
 import { repositorySpecifications, type CatalogSpecification } from './specifications';
 import { publishedKinds, RESERVED_SEGMENTS } from './kinds';
 import { catalogModels, modelPath, type CatalogModel } from './data-models';
@@ -103,6 +104,8 @@ export interface DocsCatalog {
   flows: Flow[];
   /** The architecture each repository proposes under designs/, each with a page. */
   designs: Design[];
+  /** Where each repository in the graph is on disk, by name: where `ac site` dev saves a design. */
+  repositoryRoots: Record<string, string>;
   /** Each domain's glossary, and the entities, data products, teams and users repositories describe. */
   model: DomainModel;
   manifest: DocsManifest;
@@ -520,6 +523,7 @@ export async function buildDocsCatalog(
     specifications,
     flows: flows.flows,
     designs: designs.designs,
+    repositoryRoots: Object.fromEntries(enrolled.map(({ repository, dir }) => [repository, dir])),
     model,
     models: models.map((model) => ({
       ...model,
@@ -737,8 +741,14 @@ function documentsManifest(root: string, options: BuildDocsCatalogOptions): Docs
 
 let cached: Promise<DocsCatalog> | undefined;
 
+let cachedAt = 0;
+
 export function docsCatalog(): Promise<DocsCatalog> {
+  // `ac site` dev: a design changed on disk since this catalog was read.
+  if (designsChangedAt() > cachedAt) cached = undefined;
+
   if (!cached) {
+    cachedAt = Date.now();
     const { root, repo, repository, schemaPath, conventionsPath } = docsSiteConfig();
     cached = buildDocsCatalog(root, { repo, repository, schemaPath, conventionsPath });
   }

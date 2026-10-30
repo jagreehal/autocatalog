@@ -181,7 +181,10 @@ export default function autocatalogDocs(opts: AutocatalogDocsOptions = {}): Star
                   : []),
                 ...(catalog.apis.length > 0 ? [{ label: 'APIs', link: '/apis' }] : []),
                 ...(catalog.flows.length > 0 ? [{ label: 'Flows', link: '/flows' }] : []),
-                ...(catalog.designs.length > 0 ? [{ label: 'Designs', link: '/designs' }] : []),
+                // `ac site` dev starts designs there, so it is listed before there are any.
+                ...(catalog.designs.length > 0 || command === 'dev'
+                  ? [{ label: 'Designs', link: '/designs' }]
+                  : []),
                 ...(catalog.model.glossaries.length > 0
                   ? [{ label: 'Glossary', link: '/glossary' }]
                   : []),

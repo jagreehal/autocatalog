@@ -5,6 +5,7 @@ import { type CSSProperties, type KeyboardEvent, useEffect, useRef, useState } f
 import { ToggleGroup, ToggleGroupItem } from '#ui/components/ui/toggle-group.tsx';
 import {
   asGroupCard,
+  groupCardHref,
   edgesForFrame,
   edgeWeight,
   liveFrame,
@@ -142,7 +143,7 @@ export default function Visualiser({
       return {
         ...laid,
         nodes: laid.nodes.map((node) => {
-          const card = asGroupCard(node, sources.get(node.id));
+          const card = asGroupCard(node, sources.get(node.id), hrefs[node.id]);
 
           return proposed?.includes(node.id) ? { ...card, className: 'ac-node-proposed' } : card;
         }),
@@ -162,7 +163,7 @@ export default function Visualiser({
     return () => {
       current = false;
     };
-  }, [levels, proposed]);
+  }, [levels, proposed, hrefs]);
 
   // The visualiser reads its grouping style from the address alone, so a
   // flow's default style goes there, unless the reader's own choice already has.
@@ -199,6 +200,7 @@ export default function Visualiser({
               type: COLLECTIONS.get(node.type ?? '') ?? node.type,
             },
             sources.get(node.id),
+            hrefs[node.id],
           ),
           ...(proposed?.includes(node.id) && { className: 'ac-node-proposed' }),
           ...(hrefs[node.id] && { ariaRole: 'link' as const, ariaLabel: labels.get(node.id) }),
@@ -363,7 +365,12 @@ export default function Visualiser({
           // As EventCatalog's own pages do outside message flows: no envelope
           // looping along every edge.
           disableMessageAnimation
-          onNodeClick={(node) => open(node.id)}
+          // A click shows the node's card, whose primary action opens its page; a flow
+          // has no card, so a click on a step opens its page as before.
+          getNodeDiagramUrl={(node) => hrefs[node.id]}
+          // A domain or system card opens its page by the path it builds.
+          onBuildUrl={(path) => groupCardHref(path, hrefs)}
+          {...(isFlow && { onNodeClick: (node: { id: string }) => open(node.id) })}
         />
       )}
     </div>
