@@ -77,6 +77,34 @@ export const observationSource = z.object({
   lastSeen: z.string(),
 });
 
+/**
+ * What one consumer did with the deliveries it received in the snapshot's
+ * window: how many failed, were retried, went to a dead-letter queue or came
+ * back from one, and why they were dead-lettered.
+ */
+export const consumerOutcome = z.object({
+  consumer: z.string(),
+  channel: z.string().optional(),
+  count: z.number().int().nonnegative(),
+  failed: z.number().int().nonnegative().optional(),
+  retried: z.number().int().nonnegative().optional(),
+  deadLettered: z.number().int().nonnegative().optional(),
+  replayed: z.number().int().nonnegative().optional(),
+  deadLetterReasons: z
+    .array(
+      z.object({
+        reason: z.string().max(200),
+        category: z.string().optional(),
+        queue: z.string().optional(),
+        count: z.number().int().nonnegative(),
+      }),
+    )
+    .max(10)
+    .optional(),
+});
+
+export type ConsumerOutcome = z.infer<typeof consumerOutcome>;
+
 const observed = z.object({
   /** Times the event was seen during the observed window. */
   count: z.number().int().nonnegative(),
@@ -89,6 +117,8 @@ const observed = z.object({
   /** Bounded references for fetching details from a telemetry backend. */
   sampleTraceIds: z.array(z.string().min(1).max(128)).max(10).optional(),
   sources: z.array(observationSource).optional(),
+  /** Consumers whose deliveries failed, retried or went to a dead-letter queue. */
+  consumerOutcomes: z.array(consumerOutcome).optional(),
   fieldPaths: z.array(z.string()).optional(),
   fieldTypes: z.record(z.string(), z.array(z.string())).optional(),
   /** Preserve the declaration before snapshot enrichment adds consumers. */

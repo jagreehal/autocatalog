@@ -62,9 +62,17 @@ join EventCatalog Federation as a source
 - a catalog map of every service, event, command and datastore
 - API reference pages for each committed OpenAPI spec, and a page for any
   other specification (WSDL, XML Schema, GraphQL, AsyncAPI)
-- business process flows that cross repositories, grouped by domain or team
-- a schema index, a field index and owner pages
-- your teams' Markdown docs, with Mermaid diagrams, owner and last-changed date
+- business process flows that cross repositories, grouped by domain, system or
+  team, and designs for architecture nobody has built yet
+- each domain's glossary, its entities with the events that carry them, and the
+  data products teams publish
+- a schema index, a field index, and owner pages with each team's profile
+- your teams' Markdown and MDX docs, with Mermaid diagrams, owner and
+  last-changed date, and components that draw maps, schemas, terms and owners
+  from the catalog
+- document kinds you define, such as ADRs or postmortems, each with its own
+  frontmatter contract and index page
+- your own pages and API routes beside the catalog's
 - `llms.txt`, `llms-full.txt`, and a Markdown copy of every document, event and
   service page, for agents
 
@@ -92,17 +100,10 @@ team's data.
 
 ## Where EventCatalog goes further
 
-**Breadth of resource types.** Flows, entities, users, ubiquitous language and
-data products are first-class in EventCatalog. Autocatalog keeps to
-events, commands, services, domains, datastores and docs.
-
-**Authoring.** Rich MDX components, custom pages and API routes, and a resource
-model you shape yourself suit a catalog that people write.
-
 **A product around it.** EventCatalog offers authentication, an assistant, and
 commercial support.
 
-If those matter more to you than deriving the catalog from code, EventCatalog is
+If that matters more to you than deriving the catalog from code, EventCatalog is
 the better fit.
 
 ## Run them together

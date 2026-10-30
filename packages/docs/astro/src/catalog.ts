@@ -35,6 +35,7 @@ import {
   loadCodeowners,
   readOptionalResourceJson,
   resolveResourceOwnership,
+  scanCommandResources,
   scanModelResources,
   type CatalogRelationship,
   type JsonValue,
@@ -52,9 +53,13 @@ import {
   type DocKind,
   type DocsManifest,
   type Design,
+  type DomainModel,
   type Flow,
   readDesigns,
+  readDomainModel,
+  flowWorkflow,
   readFlows,
+  type WorkflowRuns,
 } from 'autocatalog-docs-core';
 import { repositoryApis, type CatalogApi } from './apis';
 import { repositorySpecifications, type CatalogSpecification } from './specifications';
@@ -98,6 +103,8 @@ export interface DocsCatalog {
   flows: Flow[];
   /** The architecture each repository proposes under designs/, each with a page. */
   designs: Design[];
+  /** Each domain's glossary, and the entities, data products, teams and users repositories describe. */
+  model: DomainModel;
   manifest: DocsManifest;
   /** The document kinds with at least one document, each with an index page. */
   kinds: DocKind[];
@@ -107,6 +114,8 @@ export interface DocsCatalog {
   failures: RepositoryFailure[];
   /** Repositories whose runtime snapshot was read, whatever it matched. */
   snapshots: string[];
+  /** The workflow runs each repository's runtime snapshot recorded. */
+  workflows: WorkflowRuns[];
   /**
    * What the build must say out loud: each quarantine, and each `about:` target
    * left out. Returned rather than printed, because one build compiles the
@@ -241,6 +250,7 @@ export async function buildDocsCatalog(
   // event another publishes and the edge lands on that exact Event resource.
   const graphEvents: GraphEvent[] = [];
   const snapshots: string[] = [];
+  const workflows: WorkflowRuns[] = [];
 
   for (const { name, repositoryRoot, nested } of repositories) {
     try {
@@ -271,6 +281,8 @@ export async function buildDocsCatalog(
         history: true,
         onWarning: (message) => notes.push(`${name}: ${message}`),
         onSnapshot: () => snapshots.push(name),
+        onWorkflows: (runs) =>
+          workflows.push(...runs.map((workflow) => ({ repository: name, workflow }))),
       });
       assertPathSegment(repositoryRoot, 'repository', name);
       loaded.forEach(assertRouteSegments);
@@ -428,6 +440,21 @@ export async function buildDocsCatalog(
 
   const designs = readDesigns(enrolled, composed);
 
+  const schemas = new Map(
+    events.map(({ repository, event }) => [
+      `${repository}/${event.frontmatter.domain}/${event.frontmatter.id}`,
+      event.schema,
+    ]),
+  );
+
+  const {
+    failures: modelFailures,
+    warnings: modelWarnings,
+    ...model
+  } = readDomainModel(enrolled, composed, {
+    schemaOf: (event) => schemas.get(`${event.ref.namespace}/${event.ref.id}`),
+  });
+
   failures.sort((a, b) =>
     `${a.repository}/${a.source}`.localeCompare(`${b.repository}/${b.source}`),
   );
@@ -439,7 +466,18 @@ export async function buildDocsCatalog(
     ...about.failures.map((failure) => `${failure}, so it is missing from the graph`),
     ...flows.failures.map((failure) => `${failure}, so it is left out`),
     ...designs.failures.map((failure) => `${failure}, so it is left out`),
+    ...modelFailures.map((failure) => `${failure}, so it is left out`),
     ...flows.warnings,
+    ...flows.flows.flatMap((flow) => {
+      const { ambiguous } = flowWorkflow(flow, workflows);
+
+      return ambiguous.length > 1
+        ? [
+            `${flow.repository}/${flow.file}: ${ambiguous.join(' and ')} each record a workflow it could be, so its runs are not shown; name one with workflow:`,
+          ]
+        : [];
+    }),
+    ...modelWarnings,
     ...failures.map((failure) =>
       failure.source === 'name'
         ? `${failure.repository} is missing from the graph — ${failure.message}`
@@ -482,6 +520,7 @@ export async function buildDocsCatalog(
     specifications,
     flows: flows.flows,
     designs: designs.designs,
+    model,
     models: models.map((model) => ({
       ...model,
       resource: { ...model.resource, url: modelPath(model) },
@@ -492,6 +531,7 @@ export async function buildDocsCatalog(
     summary: summarizeResourceGraph(graph),
     failures,
     snapshots,
+    workflows,
     warnings,
   };
 }
@@ -511,9 +551,9 @@ async function scannedModels(
 ): Promise<ResourceGraph | undefined> {
   const { graph, errors } = await modelScan(path.resolve(repositoryRoot), ownersWithin, nested);
 
-  for (const error of errors) notes.push(`${repository}: data models were not scanned: ${error}`);
+  for (const error of errors) notes.push(`${repository}: ${error}`);
 
-  return graph.resources.some(({ ref }) => ref.kind === 'table' || ref.kind === 'collection')
+  return graph.resources.some(({ ref }) => ['table', 'collection', 'command'].includes(ref.kind))
     ? graph
     : undefined;
 }
@@ -550,13 +590,21 @@ function modelScan(root: string, ownersWithin: string, nested: string[]): ModelS
       database: config.database,
     });
 
-    const owned = resolveResourceOwnership(graph, {
+    const commands = await scanCommandResources({ root, exclude: nested });
+
+    const owned = resolveResourceOwnership(mergeArchitectureGraphs(graph, commands.graph), {
       ...config.ownership,
       claims: [],
       codeowners: await loadCodeowners(root, ownersWithin),
     });
 
-    return { graph: owned.graph, errors };
+    return {
+      graph: owned.graph,
+      errors: [
+        ...errors.map((error) => `data models were not scanned: ${error}`),
+        ...commands.errors.map((error) => `commands were not scanned: ${error}`),
+      ],
+    };
   })();
 
   modelScans.set(key, scan);

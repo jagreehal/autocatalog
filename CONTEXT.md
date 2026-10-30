@@ -26,7 +26,7 @@ Defines the terms this project uses. Consistent language across docs, code, and 
 
 **Discovery Candidate** — One indivisible discovery claim: an `AdapterEvent` and the finding/evidence that produced it. Candidates are resolved deterministically by provenance, confidence, and stable source ordering. A duplicate id emits an explicit conflict record.
 
-**Runtime evidence** — A shared read model over saved event observations. Keeps declared consumers, snapshot participants and attribution strength separate; retains bounded trace references, producer/channel counts and field types, with unknown coverage. MCP investigation bundles hand these references to autotel-mcp after backend capability and scope checks; event pages render the same projection.
+**Runtime evidence** — A shared read model over saved event observations. Keeps declared consumers, snapshot participants and attribution strength separate; retains bounded trace references, producer/channel counts, field types and each consumer's delivery outcomes (failed, retried, dead-lettered, replayed, and why), with unknown coverage. MCP investigation bundles hand these references to autotel-mcp after backend capability and scope checks; event pages render the same projection.
 
 **Catalog projection** — The shared derived read model built from one Catalog snapshot. It owns current events, qualified event lookup, domains, services, architecture graph, and search records so Astro and MCP do not independently reinterpret the same catalog.
 
@@ -36,7 +36,7 @@ Defines the terms this project uses. Consistent language across docs, code, and 
 
 **Datastore resource** — A Collection or Table with a logical datastore/database namespace, optionally carrying a model-derived JSON Schema. Service → datastore `reads` and `writes` relationships expose access and reader impact. Complete document observations can be validated; projections and patches cannot establish document validity.
 
-**Command** — A versioned request contract with Service → Command `sends` and `handles` relationships, exactly one logical handler and an expected completion, result or event outcome. Queue resources describe transports without assuming message semantics.
+**Command** — A versioned request contract with Service → Command `sends` and `handles` relationships, exactly one logical handler and an expected completion, result or event outcome. A sender that waits for the outcome names the queue the handler replies on (`outcome.replyTo`), a Command → Queue `repliesTo` relationship. Queue resources describe transports without assuming message semantics.
 
 **Architecture evidence** — Observations from OTLP spans attached to resources and relationships, including counts, times and sample trace ids. Observed relationships remain reviewable; promotion declares an edge while retaining its evidence. `.autocatalog/resources.json` stores the repository's graph independently of event declarations; it is written only when there are resources, and copied into the catalog artifact as `resources.json` for directory-mode drift. Re-importing one OTLP export counts its spans once. `.autocatalog/config.json` holds the scan identities (service, datastore, database, environment) every rescan applies. On the site, a repository's graph may add evidence to another repository's resources but never redefine or own them; a contradiction quarantines that repository's graph.
 
@@ -56,9 +56,19 @@ Defines the terms this project uses. Consistent language across docs, code, and 
 
 **MDX** — Markdown with embedded components. `index.mdx` is optional and used for free form documentation or narrative override. It is not the canonical source of event metadata.
 
-**Flow** — A business process a repository declares in `flows/<id>.md`: steps that each name an Event, Service or Agent (resolved as `about:` is, across repositories) or someone outside the catalog, and the labelled branches between them. Declared, never inferred: events joining two services do not make a process. The site checks each hop against producer and consumer declarations and warns where the catalog does not back it, without changing either. Lanes come from each step's domain, its service's system and its owning team; the flow's `lanes:` picks how its map opens, and a step's `lane:` overrides what the catalog says.
+**Flow** — A business process a repository declares in `flows/<id>.md`: steps that each name an Event, Service or Agent (resolved as `about:` is, across repositories) or someone outside the catalog, and the labelled branches between them. Declared, never inferred: events joining two services do not make a process. The site checks each hop against producer and consumer declarations and warns where the catalog does not back it, without changing either. Lanes come from each step's domain, its service's system and its owning team; the flow's `lanes:` picks how its map opens, and a step's `lane:` overrides what the catalog says. A step's `compensated_by` names the step that undoes it when a later step fails. The saga that carries a flow out (the workflow named as the flow, or by its `workflow:`) shows its recorded runs on the flow's page, step by step.
 
 **Design** — Architecture a repository proposes in `designs/<id>.md` before it is built: resources and the relations between them, in the vocabulary of EventCatalog Studio's model, with a `status` (draft, proposed, accepted, rejected). Each resource either names a catalog resource (`ref:`) or is matched to one by kind and name, so the site marks every part and relation as in the catalog or new. Drawn at three levels: everything, then services and stores with their messages bridged, then domains and systems. Reviewed as a pull request, never stored in a database.
+
+**Glossary** — A domain's ubiquitous language in `glossary/<domain>.md`: terms with an id, name and meaning, in EventCatalog's `dictionary:` shape. One term has one definition per domain, across every repository.
+
+**Entity** — A thing a domain talks about, in `entities/<id>.md`: its properties (written out, or read from a JSON Schema in the repository), an identifier, the services that hold it and the entities it references. The site lists the events whose schema carries the identifier, by field name. One repository defines each entity id.
+
+**Data product** — Data a team publishes for others, in `data-products/<id>.md`: inputs and outputs named as `about:` names resources, or `data-product/<id>`, each output with an optional contract file. One repository defines each data product id.
+
+**Directory** — `teams/<id>.md` and `users/<id>.md`: contact details, role and membership that the owner pages show beside what an owner owns. Matched to an owner by id or name; each team or user is described once, in one repository.
+
+**MDX components** — `<Map>`, `<Schema>`, `<Term>` and `<Owner>`, usable in any `.mdx` document without an import. Each draws from the catalog at build time and fails the build when it names nothing.
 
 **Diagram projection** — `autocatalog-docs-core`'s read model of what a map draws: the catalog around a resource, a flow's steps and lanes, a design's levels, and the runtime evidence on each edge. The site adds page links; the MCP App draws it as it is.
 
@@ -76,7 +86,7 @@ Defines the terms this project uses. Consistent language across docs, code, and 
 
 **autocatalog-adapter-zod** — Converts Zod schemas to JSON Schema `AdapterEvent`s. Provides `defineEvent()` for metadata in schema. Handles two input shapes: Compact (`{name, description, schema, example}`) and Explicit (`{id, version, name, summary, schema, ...}`). Writes via core `writeEventFolder`.
 
-**autocatalog-mcp** — MCP server over stdio. Uses the strict catalog snapshot and projection from core. Thirteen tools, including impact, compatibility, a runtime investigation handoff to autotel-mcp, and `show_map`, an MCP App that draws the catalog, a flow or a design in the conversation from the same diagram projection the site draws. Ships compiled stdio and server entry points.
+**autocatalog-mcp** — MCP server over stdio. Uses the strict catalog snapshot and projection from core. Fourteen tools, including impact, compatibility, `define` for the glossary and entities, a runtime investigation handoff to autotel-mcp, and `show_map`, an MCP App that draws the catalog, a flow, a design or a data product in the conversation from the same diagram projection the site draws. Ships compiled stdio and server entry points.
 
 **autocatalog-py** — Python Pydantic extractor. Discovers event models via decorator (`@autocatalog_event`), inner class (`Autocatalog`), `json_schema_extra` in `model_config`, or a marker export (`AUTOCATALOG_EVENTS = [...]`). Mirrors the TS IR as a Pydantic model. Calls `model.model_json_schema()` for schema generation.
 

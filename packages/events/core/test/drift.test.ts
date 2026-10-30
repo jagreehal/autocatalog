@@ -247,6 +247,53 @@ describe('driftCatalogs', () => {
     expect(report.findings.find((f) => f.kind === 'event_added')?.severity).toBe('additive');
   });
 
+  it('flags an event two services publish, and notes one not named in the past tense', async () => {
+    await writeEvent(
+      currDir,
+      'orders',
+      'OrderPlaced',
+      { ...paymentManifest, id: 'order.placed', domain: 'orders', producers: ['Web', 'Pos'] },
+      paymentSchema,
+    );
+    await writeEvent(
+      currDir,
+      'orders',
+      'PlaceOrder',
+      { ...paymentManifest, id: 'order.place', name: 'Place order', domain: 'orders' },
+      paymentSchema,
+    );
+
+    const report = await driftCatalogs(baseDir, currDir);
+
+    expect(
+      report.findings
+        .filter((f) => ['event_multiple_producers', 'event_not_past_tense'].includes(f.kind))
+        .map((f) => [f.eventId, f.kind, f.severity]),
+    ).toEqual([
+      ['order.placed', 'event_multiple_producers', 'suspicious'],
+      ['order.place', 'event_not_past_tense', 'info'],
+    ]);
+  });
+
+  it('flags a second publisher added to an existing event', async () => {
+    const placed = { ...paymentManifest, producers: ['PaymentService'] };
+
+    await writeEvent(baseDir, 'payments', 'PaymentCompleted', placed, paymentSchema);
+    await writeEvent(
+      currDir,
+      'payments',
+      'PaymentCompleted',
+      { ...placed, producers: ['PaymentService', 'RefundService'] },
+      paymentSchema,
+    );
+
+    const report = await driftCatalogs(baseDir, currDir);
+
+    expect(report.findings.find((f) => f.kind === 'event_multiple_producers')?.message).toContain(
+      '`PaymentService`, `RefundService` all publish this event',
+    );
+  });
+
   it('treats a narrowed enum as breaking and a widened one as additive', async () => {
     const withEnum = {
       type: 'object',
@@ -894,6 +941,42 @@ describe('runtime drift against a snapshot', () => {
   const kinds = (report: DriftReport) =>
     report.findings.map((f) => `${f.severity} ${f.kind} ${f.eventId} ${f.subject ?? ''}`.trim());
 
+  it('flags two publishers the runtime saw, and notes what a consumer dead-lettered', async () => {
+    await both({ ...paymentManifest, producers: ['PaymentService'] }, paymentSchema);
+
+    const report = await driftCatalogs(baseDir, currDir, {
+      snapshot: only({
+        'payment.completed': {
+          sources: [
+            { producer: 'PaymentService', count: 2, ...seenAt },
+            { producer: 'RefundService', count: 1, ...seenAt },
+          ],
+          observedConsumers: [
+            {
+              consumer: 'LedgerService',
+              count: 3,
+              failed: 2,
+              deadLettered: 1,
+              deadLetterReasons: [{ reason: 'ledger locked', count: 1 }],
+            },
+          ],
+        },
+        'payment.refunded': {},
+      }),
+    });
+
+    const [publishers, deadLettered] = report.findings.filter((f) =>
+      ['event_multiple_producers', 'consumer_dead_lettered'].includes(f.kind),
+    );
+
+    expect(publishers).toMatchObject({ severity: 'suspicious' });
+    expect(publishers!.message).toContain('saw PaymentService, RefundService all publish it');
+    expect(deadLettered).toMatchObject({ severity: 'info', subject: 'LedgerService' });
+    expect(deadLettered!.message).toContain(
+      'LedgerService dead-lettered 1 of 3 deliveries (snapshot of 2026-01-02T00:00:00Z): `ledger locked` (1)',
+    );
+  });
+
   it('matches a track() name to the catalog id by its normalised name', async () => {
     const report = await driftCatalogs(baseDir, currDir, {
       snapshot: only({ PaymentCompleted: {}, payment_refunded: {} }),
@@ -1049,12 +1132,13 @@ describe('runtime drift against a snapshot', () => {
     });
 
     expect(kinds(report)).toEqual([
+      `suspicious event_multiple_producers payment.completed PaymentService, LegacyBilling, ${UNSAFE_CONSUMER}`,
       'suspicious producer_unexpected payment.completed LegacyBilling',
       'suspicious producer_unexpected payment.completed ![x](https://evil/pixel)',
       'suspicious channel_unexpected payment.completed payments.legacy',
     ]);
-    expect(report.findings[0]!.message).toContain('does not list (PaymentService)');
-    expect(report.findings[1]!.message).toContain(UNSAFE_CONSUMER);
+    expect(report.findings[1]!.message).toContain('does not list (PaymentService)');
+    expect(report.findings[2]!.message).toContain(UNSAFE_CONSUMER);
     expect(renderDriftMarkdown(report)).not.toContain('evil');
   });
 

@@ -20,6 +20,9 @@ steps:
         label: Payment authorised
       - id: declined
         label: Card declined
+    compensated_by:
+      id: refund
+      label: Order cannot ship
   - id: declined
     title: Ask for another card
     summary: The storefront shows the decline and keeps the basket.
@@ -51,8 +54,12 @@ steps:
     externalSystem:
       name: Carrier
       summary: Collects the parcel from the warehouse.
+  - id: refund
+    title: Refund the payment
+    summary: Gives the money back when the warehouse cannot fulfil the order.
 ---
 
 An order is placed only once its payment is authorised, so a declined card
 never reaches shipping. The ledger books captured money on its own; nothing
-in dispatch waits for it.
+in dispatch waits for it. If the warehouse cannot fulfil the order, the
+payment is refunded.

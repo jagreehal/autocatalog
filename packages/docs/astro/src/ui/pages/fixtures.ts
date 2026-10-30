@@ -106,6 +106,8 @@ export const evidence: RuntimeEvidenceView = {
   neverObserved: ['AuditService'],
   consumerEvidence: 'observed',
   sources: [{ producer: 'PaymentService', channel: 'payments.completed', count: 18342 }],
+  consumerOutcomes: [],
+  deadLetters: [],
   sampleTraceIds: ['4bf92f3577b34da6a3ce929d0e0e4736'],
 };
 
@@ -113,6 +115,7 @@ export const noEvidence: RuntimeEvidenceView = {
   status: 'no-evidence',
   ref: 'payments/payment.completed',
   caveat: 'No runtime evidence is attached. This does not mean the event has no traffic.',
+  deadLetters: [],
 };
 
 export const versions: EventVersionsProps['versions'] = [

@@ -217,6 +217,188 @@ describe('catalogToAsyncApi', () => {
   });
 });
 
+describe('commands', () => {
+  it('refuses a commands folder it could not read', async () => {
+    await catalog();
+
+    const out = path.join(tmp, 'asyncapi.json');
+    const missing = path.join(tmp, 'no-such-folder');
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    expect(
+      await runToAsyncApi({ root: path.join(tmp, 'events'), commands: missing, out, quiet: true }),
+    ).toBe(1);
+    expect(error.mock.calls.flat().join('\n')).toContain(`${missing}: directory could not be read`);
+    await expect(fs.access(out)).rejects.toThrow();
+    error.mockRestore();
+  });
+
+  it('writes a command with the queue its handler replies on, and leaves it out of an import', async () => {
+    const folder = path.join(tmp, 'repo', 'commands', 'ReserveStock');
+
+    await fs.mkdir(folder, { recursive: true });
+    await fs.writeFile(
+      path.join(folder, 'autocatalog.json'),
+      JSON.stringify({
+        id: 'ReserveStock',
+        version: '1.0.0',
+        name: 'Reserve stock',
+        summary: 'Hold stock for an order',
+        domain: 'inventory',
+        senders: ['checkout'],
+        handler: 'inventory',
+        transport: [{ address: 'stock.reserve' }],
+        outcome: { type: 'result', schema: './reply.json', replyTo: 'stock.replies' },
+      }),
+    );
+    await fs.writeFile(
+      path.join(folder, 'schema.json'),
+      JSON.stringify({ type: 'object', properties: { orderId: { type: 'string' } } }),
+    );
+    await fs.writeFile(
+      path.join(folder, 'reply.json'),
+      JSON.stringify({ type: 'object', properties: { reserved: { type: 'boolean' } } }),
+    );
+    await catalog();
+
+    const out = path.join(tmp, 'asyncapi.json');
+
+    await runToAsyncApi({
+      root: path.join(tmp, 'events'),
+      commands: path.join(tmp, 'repo'),
+      out,
+      service: 'checkout',
+      quiet: true,
+    });
+
+    const doc = JSON.parse(await fs.readFile(out, 'utf8'));
+
+    const validate = new Ajv({
+      strict: false,
+      allErrors: true,
+      meta: false,
+      validateSchema: false,
+    }).compile(specs.schemas['3.0.0']);
+
+    expect(validate(doc) ? [] : validate.errors).toEqual([]);
+    const command = doc.components.messages.command_inventory_ReserveStock_1_0_0;
+
+    expect(command['x-eventcatalog-message-type']).toBe('command');
+    expect(doc.operations.send_stock_reserve_command_inventory_ReserveStock_1_0_0.reply).toEqual({
+      channel: { $ref: '#/channels/stock_replies' },
+      messages: [
+        { $ref: '#/channels/stock_replies/messages/command_inventory_ReserveStock_1_0_0_reply' },
+      ],
+    });
+
+    const imported = path.join(tmp, 'imported');
+
+    expect(await runFromAsyncApi({ file: out, out: imported, quiet: true, strict: true })).toBe(0);
+    expect((await loadCatalog(imported)).map((e) => e.frontmatter.id)).toEqual(['order.placed']);
+  });
+});
+
+describe('commands beside events', () => {
+  it('keeps a command apart from an event of the same name, and each version apart', async () => {
+    await event(
+      'orders/OrderPlaced',
+      { id: 'place', version: '1.0.0', name: 'Place', summary: 's', domain: 'orders' },
+      { type: 'object' },
+    );
+
+    const command = (version: string) => ({
+      ref: { kind: 'command' as const, namespace: 'orders', id: 'place', version },
+      title: 'Place',
+      tags: [],
+      provenance: { default: 'declared' as const, fields: {} },
+      needsReview: false,
+      attributes: {},
+    });
+
+    const doc = catalogToAsyncApi(await loadCatalog(path.join(tmp, 'events')), {
+      title: 't',
+      version: '1',
+      commands: {
+        spec: 'autocatalog/graph-v1',
+        resources: [command('1.0.0'), command('2.0.0')],
+        relationships: [],
+      },
+    });
+
+    expect(
+      Object.values(doc.components.messages).map((m) => [
+        m['x-eventcatalog-message-type'],
+        m['x-eventcatalog-message-version'],
+      ]),
+    ).toEqual([
+      ['event', '1.0.0'],
+      ['command', '1.0.0'],
+      ['command', '2.0.0'],
+    ]);
+  });
+});
+
+describe('importing a document with commands', () => {
+  it('skips a message whose reference does not resolve, and imports the rest', async () => {
+    const file = path.join(tmp, 'asyncapi.json');
+
+    await fs.writeFile(
+      file,
+      JSON.stringify({
+        asyncapi: '3.0.0',
+        info: { title: 'Shop', version: '1' },
+        channels: {
+          orders: {
+            address: 'orders',
+            messages: {
+              placed: { name: 'order.placed', payload: { type: 'object' } },
+              broken: { $ref: '#/components/messages/missing' },
+            },
+          },
+        },
+        operations: {
+          send: { action: 'send', channel: { $ref: '#/channels/orders' } },
+        },
+      }),
+    );
+
+    const out = path.join(tmp, 'imported');
+
+    expect(await runFromAsyncApi({ file, out, quiet: true })).toBe(0);
+    expect((await loadCatalog(out)).map((e) => e.frontmatter.id)).toEqual(['order.placed']);
+  });
+  it('does the same in an AsyncAPI 2 document, for a missing and a circular reference', async () => {
+    const file = path.join(tmp, 'asyncapi-2.json');
+
+    await fs.writeFile(
+      file,
+      JSON.stringify({
+        asyncapi: '2.6.0',
+        info: { title: 'Shop', version: '1' },
+        channels: {
+          orders: {
+            subscribe: {
+              message: {
+                oneOf: [
+                  { name: 'order.placed', payload: { type: 'object' } },
+                  { $ref: '#/components/messages/missing' },
+                  { $ref: '#/components/messages/loop' },
+                ],
+              },
+            },
+          },
+        },
+        components: { messages: { loop: { $ref: '#/components/messages/loop' } } },
+      }),
+    );
+
+    const out = path.join(tmp, 'imported-2');
+
+    expect(await runFromAsyncApi({ file, out, quiet: true })).toBe(0);
+    expect((await loadCatalog(out)).map((e) => e.frontmatter.id)).toEqual(['order.placed']);
+  });
+});
+
 describe('catalogToAsyncApi keys', () => {
   it('keeps events and channels apart when their names only differ in punctuation', async () => {
     for (const [folder, id, address] of [

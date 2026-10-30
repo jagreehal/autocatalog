@@ -25,6 +25,7 @@ export const GET: APIRoute = async ({ site }) => {
         summary: entry.event.frontmatter.summary,
         owner: entry.event.frontmatter.owner?.team,
       })),
+      model: catalog.model,
     }),
     { headers: { 'content-type': 'text/plain; charset=utf-8' } },
   );

@@ -35,7 +35,7 @@ export {
   type KindRow,
 } from './KindIndexPage';
 
-export { OwnerPage, type OwnedResource, type OwnerPageProps } from './OwnerPage';
+export { OwnerPage, type OwnedResource, type OwnerPageProps, type OwnerProfile } from './OwnerPage';
 
 export { OwnersPage, type OwnersPageProps } from './OwnersPage';
 
@@ -56,3 +56,13 @@ export { FlowsPage, type FlowsPageProps } from './FlowsPage';
 export { DesignPage, type DesignPageProps } from './DesignPage';
 
 export { DesignsPage, type DesignsPageProps } from './DesignsPage';
+
+export { GlossaryPage, type GlossaryPageProps } from './GlossaryPage';
+
+export { EntitiesPage, type EntitiesPageProps } from './EntitiesPage';
+
+export { EntityPage, type EntityPageProps } from './EntityPage';
+
+export { DataProductsPage, type DataProductsPageProps } from './DataProductsPage';
+
+export { DataProductPage, type DataProductPageProps } from './DataProductPage';

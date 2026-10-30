@@ -5,6 +5,7 @@ import type { AstroIntegration } from 'astro';
 import { DOCS_MANIFEST_PATH } from 'autocatalog-docs-core';
 import { eventCatalogEmbeds } from './eventcatalog';
 import { brokenLinks, formatBrokenLinks } from './link-check';
+import { ownPageImports, ownPageRoutes } from './own-pages';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
@@ -15,7 +16,7 @@ const here = path.dirname(fileURLToPath(import.meta.url));
  * markdown twin that exists only when someone remembers to wire it is not a
  * promise agents can rely on.
  */
-export function autocatalogDocsRoutes(root: string): AstroIntegration {
+export function autocatalogDocsRoutes(root: string, ownPages?: string): AstroIntegration {
   let base = '/';
 
   return {
@@ -26,17 +27,20 @@ export function autocatalogDocsRoutes(root: string): AstroIntegration {
           vite: {
             // The documents usually live above this project, and Vite's dev
             // server refuses to serve outside its inferred workspace root.
-            server: { fs: { allow: [root, fileURLToPath(config.root)] } },
+            server: {
+              fs: { allow: [root, fileURLToPath(config.root), ...(ownPages ? [ownPages] : [])] },
+            },
           },
         });
 
         // A site that wrote its own front door keeps it: injecting ours as
         // well is a route collision, and Astro will make that a hard error.
-        const ownPages = path.join(fileURLToPath(config.srcDir), 'pages');
-
-        const hasOwnHome =
-          fs.existsSync(ownPages) &&
-          fs.readdirSync(ownPages).some((entry) => /^index\.(astro|md|mdx|html)$/.test(entry));
+        const hasOwnHome = [ownPages, path.join(fileURLToPath(config.srcDir), 'pages')].some(
+          (dir) =>
+            dir !== undefined &&
+            fs.existsSync(dir) &&
+            fs.readdirSync(dir).some((entry) => /^index\.(astro|md|mdx|html)$/.test(entry)),
+        );
 
         // Starlight has no page at / until some repository publishes
         // docs/index.md, which no single team should have to own.
@@ -77,6 +81,11 @@ export function autocatalogDocsRoutes(root: string): AstroIntegration {
           ['/flows/[repository]/[id]', path.join(here, 'pages/flow.astro')],
           ['/designs', path.join(here, 'pages/designs.astro')],
           ['/designs/[repository]/[id]', path.join(here, 'pages/design.astro')],
+          ['/glossary', path.join(here, 'pages/glossary.astro')],
+          ['/entities', path.join(here, 'pages/entities.astro')],
+          ['/entities/[repository]/[id]', path.join(here, 'pages/entity.astro')],
+          ['/data-products', path.join(here, 'pages/data-products.astro')],
+          ['/data-products/[repository]/[id]', path.join(here, 'pages/data-product.astro')],
           ['/specs', path.join(here, 'pages/specs.astro')],
           ['/specs/[repository]/[name]', path.join(here, 'pages/spec.astro')],
           ['/specs/[repository]/[name]/[file]', path.join(here, 'pages/spec-file.ts')],
@@ -98,6 +107,14 @@ export function autocatalogDocsRoutes(root: string): AstroIntegration {
         // Only when `ac site --eventcatalog` built the diagrams it shows.
         if (eventCatalogEmbeds()) {
           pages.push(['/architecture', path.join(here, 'pages/architecture.astro')]);
+        }
+
+        // The site's own pages and API routes, beside the catalog's.
+        if (ownPages) {
+          pages.push(...ownPageRoutes(ownPages, new Set(pages.map(([pattern]) => pattern))));
+          updateConfig({
+            vite: { plugins: [ownPageImports(ownPages, fileURLToPath(config.root))] },
+          });
         }
 
         for (const [pattern, entrypoint] of pages) {

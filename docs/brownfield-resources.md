@@ -124,7 +124,7 @@ Declare a command in `commands/generate-statement/autocatalog.json`, with a payl
 }
 ```
 
-Alternatively, embed that declaration under `x-autocatalog` in a `schema.json` file. A command has exactly one logical handler, even when that handler has multiple worker instances. Missing or competing handlers are breaking findings. An outcome may be `completion`, `result` with a schema file, or `event` with an event identity. Outcome/result changes affect senders; input schema changes affect handlers. Declared commands are separate from event discovery.
+Alternatively, embed that declaration under `x-autocatalog` in a `schema.json` file. A command has exactly one logical handler, even when that handler has multiple worker instances. Missing or competing handlers are breaking findings. An outcome may be `completion`, `result` with a schema file, or `event` with an event identity. A sender that waits for the outcome over a queue names it with `outcome.replyTo`, as in `{ "type": "result", "schema": "./reply.json", "replyTo": "statement-replies" }`, and the map draws the command replying on that queue. Outcome/result changes affect senders; input schema changes affect handlers. Declared commands are separate from event discovery.
 
 ## Import existing ownership
 

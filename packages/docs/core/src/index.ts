@@ -85,10 +85,13 @@ export {
   FLOWS_DIR,
   type FlowStep,
   type FlowStepKind,
+  flowStepRuns,
+  flowWorkflow,
   readFlows,
   type ReadFlowsOptions,
   type ReadFlowsResult,
   type StepLane,
+  type WorkflowRuns,
 } from './flows';
 
 export {
@@ -127,3 +130,24 @@ export {
   type ReadDesignsResult,
   resolveDesign,
 } from './designs';
+
+export {
+  type Authored,
+  dataProductDiagram,
+  type DataProduct,
+  type DataProductPort,
+  type DomainModel,
+  type Entity,
+  entityDiagram,
+  entityReferences,
+  type EntityProperty,
+  type Glossary,
+  lookupTerm,
+  MODEL_DIRS,
+  type Person,
+  portName,
+  readDomainModel,
+  type ReadDomainModelOptions,
+  type ReadDomainModelResult,
+  type Term,
+} from './model';

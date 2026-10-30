@@ -64,7 +64,7 @@ test.describe('The company documentation index', () => {
     await page.goto('/');
 
     then('the index reports what it aggregated');
-    await expect(page.getByText('8 documents from 6 repositories')).toBeVisible();
+    await expect(page.getByText('9 documents from 6 repositories')).toBeVisible();
 
     when('a repository section is read');
     then('its documents are listed under its own name');
@@ -176,7 +176,7 @@ test.describe('The company documentation index', () => {
       expect.arrayContaining(['agent', 'document', 'event', 'model', 'repository', 'service']),
     );
     expect(graph.relationships.map((relationship) => relationship.type)).toEqual(
-      expect.arrayContaining(['defines', 'publishes', 'produces', 'usesModel']),
+      expect.arrayContaining(['defines', 'publishes', 'produces', 'usesModel', 'repliesTo']),
     );
 
     when('a document from that repository is opened');
@@ -284,6 +284,13 @@ test.describe('The company documentation index', () => {
     const participants = page.getByText(/Consumed by/);
     await expect(participants.getByRole('link', { name: 'ShippingService' })).toBeVisible();
     await expect(participants.getByRole('link', { name: 'acme/orders' })).toBeVisible();
+
+    then(
+      'the runtime card says what happened to its deliveries, and where it puts those it gives up on',
+    );
+    await expect(page.locator('#runtime')).toContainText(
+      '4 deliveries: 3 failed, 2 retried, 1 dead-lettered. Dead letters go to shipping-dlq after 5 attempts.',
+    );
   });
 
   test('a specification the catalog has no model for is published as written', async ({
@@ -329,15 +336,27 @@ test.describe('The company documentation index', () => {
     );
     await expect(steps).toContainText('Then Payment captured (Card accepted)');
 
+    then('a step names the one that undoes it if a later step fails');
+    await expect(steps).toContainText('If a later step fails, Refund the payment undoes it.');
+
     then("the map opens in lanes by domain, as the flow's frontmatter says");
     const map = page.getByRole('region', { name: 'Flow' });
     await expect(map.getByText('payments', { exact: true })).toBeVisible();
     await expect(map.getByText('orders', { exact: true })).toBeVisible();
     await expect(page).toHaveURL(/group=domain&groupStyle=lanes/);
 
+    then('the saga that runs it shows how its runs went, step by step');
+    await expect(page.locator('#runtime')).toContainText(
+      'Ran 4 times: 3 completed, 1 compensated.',
+    );
+    await expect(steps).toContainText('Ran 4 times: 1 failed.');
+    await expect(page.locator('#runtime')).toContainText(
+      'It also ran NotifyCustomer, which no step here names.',
+    );
+
     when('the reader walks through the flow from the start');
-    // Nine steps, beside the lanes they sit in.
-    await expect(map.locator('.react-flow__node:not(.react-flow__node-swimlane)')).toHaveCount(9);
+    // Ten steps, beside the lanes they sit in.
+    await expect(map.locator('.react-flow__node:not(.react-flow__node-swimlane)')).toHaveCount(10);
     // Pressed again until the walkthrough has hydrated and listens.
     await expect(async () => {
       await map.getByTitle('Start walking through the flow').click();
@@ -356,6 +375,54 @@ test.describe('The company documentation index', () => {
     await expect(
       page.locator('#flows').getByRole('link', { name: /Order to dispatch/ }),
     ).toBeVisible();
+  });
+
+  test('an MDX document draws from the catalog without importing anything', async ({
+    page,
+  }, testInfo) => {
+    story.init(testInfo, { tags: ['docs', 'mdx'] });
+
+    given('docs/overview.mdx using <Owner>, <Term>, <Map> and <Schema>');
+    await page.goto('/payments-service/overview');
+
+    then('the term links to its definition in the glossary');
+    await expect(page.getByRole('link', { name: 'Capture', exact: true })).toHaveAttribute(
+      'href',
+      '/glossary/#payments-capture',
+    );
+
+    then('the map and the schema come from the catalog');
+    await expect(page.locator('.react-flow').first()).toBeVisible();
+    await expect(page.getByText('paymentId').first()).toBeVisible();
+
+    when('the reader follows the term');
+    await page.getByRole('link', { name: 'Capture', exact: true }).click();
+
+    then('the glossary defines it, under its domain');
+    await expect(page.locator('#payments-capture')).toContainText(
+      'Taking money a card issuer has already authorised.',
+    );
+  });
+
+  test('an entity says which events carry its identifier', async ({ page }, testInfo) => {
+    story.init(testInfo, { tags: ['docs', 'entities'] });
+
+    given('entities/payment.md, with its properties read from a JSON Schema');
+    await page.goto('/entities/payments-service/payment/');
+
+    then('its properties are the schema’s');
+    await expect(page.locator('#properties')).toContainText('In the currency');
+
+    then('the events whose schema has paymentId are listed');
+    await expect(
+      page.locator('#events').getByRole('link', { name: 'Payment captured' }),
+    ).toBeVisible();
+
+    when('the owning team is opened');
+    await page.goto('/owners/payments/');
+
+    then('the directory’s profile is on its page');
+    await expect(page.locator('#profile')).toContainText('Grace Hopper (Engineering manager)');
   });
 
   test('an agent finds the markdown and the contract without guessing', async ({

@@ -24,6 +24,7 @@ import {
 } from './tools.js';
 import { designSchema } from 'autocatalog-docs-core';
 import { catalogMap, describeMap, draftMap } from './map.js';
+import { define } from './model.js';
 
 /** The view a host draws `show_map` in: built beside the server as one HTML file. */
 const MAP_VIEW = 'ui://autocatalog/map.html';
@@ -268,13 +269,31 @@ export function createServer(catalog: CatalogSnapshot): McpServer {
     },
   );
 
+  server.registerTool(
+    'define',
+    {
+      title: 'What a word means in this domain',
+      description:
+        'Look up a word in the ubiquitous language this checkout keeps: the glossary terms under glossary/<domain>.md that match it, and the entities under entities/ named for it, with their properties, identifier and the events whose schema carries that identifier. Use it before naming a field, an event or a service, so the name means what the domain already means by it.',
+      annotations: { readOnlyHint: true, openWorldHint: false },
+      inputSchema: { query: z.string().min(1) },
+    },
+    async ({ query }) => {
+      try {
+        return asText(define(catalog, query));
+      } catch (e) {
+        return asError(e);
+      }
+    },
+  );
+
   registerAppTool(
     server,
     'show_map',
     {
       title: 'Show a map of the catalog',
       description:
-        'Draw the catalog, or the part around one resource, as an interactive diagram in the conversation, with runtime evidence on each edge where a snapshot covers it. focus is a reference as `about:` writes one: "service/PaymentService", "event/payments/payment.captured", "domain/payments", "flow/<id>" for a flow under flows/, or "design/<id>" for a design under designs/. Omit it for the whole catalog. ' +
+        'Draw the catalog, or the part around one resource, as an interactive diagram in the conversation, with runtime evidence on each edge where a snapshot covers it. focus is a reference as `about:` writes one: "service/PaymentService", "event/payments/payment.captured", "domain/payments", "flow/<id>" for a flow under flows/, "design/<id>" for a design under designs/, or "data-product/<id>" for a data product under data-products/. Omit it for the whole catalog. ' +
         'To sketch architecture that does not exist yet, pass design instead: { title, summary?, status?: draft|proposed, resources: [{ id, type: domain|system|service|agent|event|command|query|channel|actor|external-system|container|team, name?, summary?, parent? } or { ref: "service/PaymentService" } for one the catalog has], relations: [{ from, to, kind: sends|receives|routes-through|reads|writes|connects, label? }] (sends and receives go from the service to the message), notes?: [{ text, resource? }] }. Parts the catalog does not have are drawn as new. ' +
         'The text result lists every edge, so you can explain the map; for a design it also gives the file to save as designs/<id>.md to propose it.',
       annotations: { readOnlyHint: true, openWorldHint: false },

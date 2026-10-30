@@ -315,3 +315,51 @@ it('keeps an agent that consumes a service’s event on the map focused on that 
       .sort(),
   ).toEqual(['PaymentService', 'Refund agent', 'payment.captured']);
 });
+
+it('defines a word from the glossary and entities, and maps a data product', async () => {
+  await event('payment.captured', ['PaymentService'], [], {});
+  await write(
+    'events/payments/payment.captured/schema.json',
+    '{"type":"object","properties":{"paymentId":{"type":"string"}}}',
+  );
+  await write(
+    'glossary/payments.md',
+    '---\ndictionary:\n  - { id: capture, name: Capture, summary: Taking authorised money. }\n---\n',
+  );
+  await write(
+    'entities/payment.md',
+    '---\nname: Payment\nidentifier: paymentId\nproperties:\n  - { name: paymentId, type: string }\n---\n',
+  );
+  await write(
+    'data-products/revenue.md',
+    '---\nname: Revenue\ninputs: [event/payments/payment.captured]\n---\n',
+  );
+
+  const catalog = await loadCatalog(path.join(root, 'events'));
+
+  const server = createServer(catalog);
+
+  const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+
+  const client = new Client({ name: 'test', version: '1.0.0' });
+
+  await Promise.all([server.connect(serverTransport), client.connect(clientTransport)]);
+
+  const capture = await client.callTool({ name: 'define', arguments: { query: 'capture' } });
+
+  expect(JSON.stringify(capture.content)).toContain('Taking authorised money.');
+
+  const payment = await client.callTool({ name: 'define', arguments: { query: 'payment' } });
+
+  expect(JSON.stringify(payment.content)).toContain('payment.captured');
+
+  const unknown = await client.callTool({ name: 'define', arguments: { query: 'ledger' } });
+
+  expect(unknown.isError).toBe(true);
+  expect(JSON.stringify(unknown.content)).toContain('Defined: Capture, Payment');
+
+  expect(catalogMap(catalog, 'data-product/revenue').nodes.map((node) => node.label)).toEqual([
+    'Revenue',
+    'payment.captured',
+  ]);
+});

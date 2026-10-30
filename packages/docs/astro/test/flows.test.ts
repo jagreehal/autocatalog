@@ -3,7 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, expect, it } from 'vitest';
 import { buildDocsCatalog } from '../src/catalog';
-import { flowRecords, flowVisualiser } from '../src/flows';
+import { flowPageProps, flowRecords, flowVisualiser } from '../src/flows';
 
 let root: string;
 
@@ -152,4 +152,48 @@ it('opens a flow grouped as its frontmatter says, with a step’s own lane over 
     domain: { id: 'payments', name: 'payments' },
     team: { id: 'Finance', name: 'Finance' },
   });
+});
+
+it('shows how the saga that runs a flow went, from the snapshot of the repository that runs it', async () => {
+  await event('payments-service', 'payments', 'payment.captured', 'PaymentService');
+  await write(
+    'payments-service/.autotel/snapshot.json',
+    JSON.stringify({
+      spec: 'autotel-architecture/v0.1.0',
+      generatedAt: '2026-10-28T00:00:00Z',
+      service: 'payments',
+      events: {},
+      workflows: {
+        Checkout: {
+          name: 'Checkout',
+          runs: 3,
+          firstSeen: '',
+          lastSeen: '',
+          completed: 2,
+          compensated: 1,
+          steps: [
+            { name: 'pay', count: 3, compensated: 1 },
+            { name: 'FraudCheck', count: 3, failed: 1 },
+          ],
+          sampleTraceIds: ['abc123'],
+        },
+      },
+    }),
+  );
+  await write('handbook/flows/checkout.md', flow);
+
+  const catalog = await buildDocsCatalog(root, { includeDates: false });
+  const props = await flowPageProps(catalog.flows[0]!, catalog, '/', {});
+
+  expect(props.runtime).toEqual({
+    workflow: 'Checkout',
+    repository: 'payments-service',
+    summary: 'Ran 3 times: 2 completed, 1 compensated.',
+    unnamed: ['FraudCheck'],
+    sampleTraceIds: ['abc123'],
+  });
+  expect(props.steps.find((step) => step.id === 'pay')?.runtime).toBe(
+    'Ran 3 times: 1 compensated.',
+  );
+  expect(props.steps.find((step) => step.id === 'customer')?.runtime).toBeUndefined();
 });

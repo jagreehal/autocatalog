@@ -25,6 +25,7 @@ export function eventRuntimeEvidence(event: EventFrontmatter) {
     consumerEvidence: observation.consumerEvidence ?? 'unknown',
     observedProducers: observation.producers,
     sources: observation.sources ?? [],
+    consumerOutcomes: observation.consumerOutcomes ?? [],
     sampleTraceIds: [...new Set(observation.sampleTraceIds ?? [])].slice(0, 3),
     fieldPaths: observation.fieldPaths ?? [],
     fieldTypes: observation.fieldTypes ?? {},

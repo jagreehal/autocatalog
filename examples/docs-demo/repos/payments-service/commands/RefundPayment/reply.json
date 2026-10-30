@@ -1,0 +1,5 @@
+{
+  "type": "object",
+  "required": ["refunded"],
+  "properties": { "refunded": { "type": "boolean" }, "refundId": { "type": "string" } }
+}

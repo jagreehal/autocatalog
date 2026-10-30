@@ -1,0 +1,20 @@
+---
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import { docsCatalog } from '../catalog';
+import { dataProductsPageProps } from '../model';
+import { DataProductsPage } from '../ui/pages/DataProductsPage';
+
+const catalog = await docsCatalog();
+
+const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+---
+
+<StarlightPage
+  frontmatter={{
+    title: 'Data products',
+    description: 'The data each team publishes for others, from the data-products/ each repository keeps.',
+    tableOfContents: false,
+  }}
+>
+  <DataProductsPage {...dataProductsPageProps(catalog.model, base)} />
+</StarlightPage>

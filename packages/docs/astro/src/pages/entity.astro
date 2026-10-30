@@ -1,0 +1,40 @@
+---
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import type { InferGetStaticPropsType } from 'astro';
+import { docsCatalog } from '../catalog';
+import { entityPageProps } from '../model';
+import { eventPages, servicePages } from '../page-models';
+import { EntityPage } from '../ui/pages/EntityPage';
+
+export async function getStaticPaths() {
+  const catalog = await docsCatalog();
+
+  return catalog.model.entities.map((entity) => ({
+    params: { repository: entity.repository, id: entity.id },
+    props: { entity },
+  }));
+}
+
+type Props = InferGetStaticPropsType<typeof getStaticPaths>;
+
+const { entity } = Astro.props;
+
+const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+
+const catalog = await docsCatalog();
+
+const page = await entityPageProps(entity, catalog, base, {
+  servicePages: servicePages(catalog),
+  eventPages: eventPages(catalog),
+});
+---
+
+<StarlightPage
+  frontmatter={{
+    title: entity.name,
+    description: entity.summary ?? `An entity ${entity.repository} describes in ${entity.file}.`,
+    tableOfContents: false,
+  }}
+>
+  <EntityPage {...page} />
+</StarlightPage>

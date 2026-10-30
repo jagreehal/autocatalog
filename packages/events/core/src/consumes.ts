@@ -45,12 +45,21 @@ export const UNSAFE_CONSUMER = 'a consumer whose name is not safe to print';
 /** A rejected name as it can be shown: escaped, so the report stays one line. */
 export const shownName = (name: string): string => JSON.stringify(name).slice(1, -1);
 
+const deadLetter = z.strictObject({
+  queue: z.string().regex(SAFE_NAME, 'use letters, digits, spaces and . _ : / -'),
+  maxAttempts: z.number().int().positive().optional(),
+});
+
+export type DeadLetterDeclaration = z.infer<typeof deadLetter>;
+
 const consumerDeclaration = z.strictObject({
   service: z.string().regex(SAFE_NAME, 'use letters, digits, spaces and . _ : / -'),
   // `domain/id`, as the site and AI agents name an event.
   event: z.string().regex(EVENT_NAME, 'name the event as domain/id'),
   /** Payload paths the service reads, such as `amount` or `items[].sku`. */
   fields: z.array(z.string().regex(FIELD_PATH, 'a payload path such as items[].sku')).optional(),
+  /** Where the service puts a delivery it gives up on, and after how many attempts. */
+  deadLetter: deadLetter.optional(),
 });
 
 const consumesFile = z.strictObject({ consumes: z.array(consumerDeclaration) });
@@ -139,7 +148,12 @@ export function createConsumerResourceGraph(
       provenance: 'declared',
       needsReview: false,
       source: { type: 'code', file: CONSUMES_FILE },
-      ...(declaration.fields && { attributes: { fields: [...declaration.fields] } }),
+      ...((declaration.fields || declaration.deadLetter) && {
+        attributes: {
+          ...(declaration.fields && { fields: [...declaration.fields] }),
+          ...(declaration.deadLetter && { deadLetter: { ...declaration.deadLetter } }),
+        },
+      }),
     };
 
     const key = relationshipKey(relationship);
@@ -189,11 +203,21 @@ function withFields(earlier: CatalogRelationship, later: CatalogRelationship): C
   const before = declaredFields(earlier);
   const after = declaredFields(later);
   const { attributes: _attributes, ...edge } = earlier;
+  const queue = deadLetterOf(later) ?? deadLetterOf(earlier);
 
-  return before && after
-    ? { ...edge, attributes: { fields: [...new Set([...before, ...after])] } }
-    : edge;
+  const attributes = {
+    ...(before && after && { fields: [...new Set([...before, ...after])] }),
+    ...(queue && { deadLetter: queue }),
+  };
+
+  return Object.keys(attributes).length > 0 ? { ...edge, attributes } : edge;
 }
+
+const edgeDeadLetter = z.object({ deadLetter: deadLetter.optional() }).catch({});
+
+/** The dead-letter queue a consumer declared on its edge, if it declared one. */
+export const deadLetterOf = (edge: CatalogRelationship): DeadLetterDeclaration | undefined =>
+  edgeDeadLetter.parse(edge.attributes).deadLetter;
 
 /**
  * A repository's declarations joined to the graph the site has composed so
@@ -226,11 +250,16 @@ export function mergeConsumerGraph(graph: ResourceGraph, fragment: ResourceGraph
       // reads it, a retirement does, since only the consumer knows what it reads.
       const own = declaredFields(edge);
       const before = ownFields.parse(existing.attributes).consumerFields ?? [];
+      const queue = deadLetterOf(edge);
 
-      if (own) {
+      if (own || queue) {
         relationships.set(key, {
           ...existing,
-          attributes: { ...existing.attributes, consumerFields: [...new Set([...before, ...own])] },
+          attributes: {
+            ...existing.attributes,
+            ...(own && { consumerFields: [...new Set([...before, ...own])] }),
+            ...(queue && { deadLetter: queue }),
+          },
         });
       }
     }

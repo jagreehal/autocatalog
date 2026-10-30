@@ -9,6 +9,7 @@ import { loadCatalog, type LoadedEvent } from './load';
 import { durationSeconds } from './schema';
 import { matchSnapshot, suggestRenames, type ArchitectureSnapshot } from './snapshot';
 import { isSafeName, UNSAFE_CONSUMER } from './consumes';
+import { readsAsPastTense } from './naming';
 import { schemaPointer, sourceLines } from './source-lines';
 import type { ResourceRef } from './resource-graph';
 
@@ -33,6 +34,10 @@ export interface DriftFinding {
     | 'document_schema_unavailable'
     | 'event_removed'
     | 'event_added'
+    | 'event_multiple_producers'
+    | 'event_not_past_tense'
+    | 'consumer_dead_lettered'
+    | 'command_named_as_event'
     | 'operation_removed'
     | 'operation_added'
     | 'field_removed'
@@ -617,6 +622,8 @@ function architectureChanges(
     ),
   ];
 
+  if (missing(now.producers, was.producers).length > 0) findings.push(...publishers(curr));
+
   const ownerBefore = was.owner?.team;
   const ownerAfter = now.owner?.team;
 
@@ -627,6 +634,28 @@ function architectureChanges(
   }
 
   return findings;
+}
+
+/**
+ * An event is a fact one boundary records, so one service publishes it. Two
+ * publishers usually means two facts sharing a name, or a command in disguise.
+ */
+function publishers(event: LoadedEvent): DriftFinding[] {
+  const producers = [...new Set(event.frontmatter.producers)].sort();
+
+  if (producers.length < 2) return [];
+
+  return [
+    {
+      domain: event.frontmatter.domain,
+      eventId: event.frontmatter.id,
+      severity: 'suspicious',
+      kind: 'event_multiple_producers',
+      message: `${producers.map((name) => `\`${name}\``).join(', ')} all publish this event. An event records what happened in one boundary: give each its own event, or make it a command one service handles`,
+      consumers: [],
+      source: sourceOf(event),
+    },
+  ];
 }
 
 const DELIVERY_PROMISES = [
@@ -898,6 +927,19 @@ export async function driftCatalogs(
         consumers: [],
         source: sourceOf(curr),
       });
+
+      findings.push(...publishers(curr));
+
+      if (!readsAsPastTense(curr.frontmatter.id, curr.frontmatter.name))
+        findings.push({
+          domain: curr.frontmatter.domain,
+          eventId: curr.frontmatter.id,
+          severity: 'info',
+          kind: 'event_not_past_tense',
+          message: `\`${curr.frontmatter.id}\` does not read as something that happened. Name an event in the past tense, such as \`order.placed\`; a request for work is a command`,
+          consumers: [],
+          source: sourceOf(curr),
+        });
     }
   }
 
@@ -1140,9 +1182,46 @@ export function runtimeDrift(
               ),
       );
 
+    // One event, one boundary: the runtime seeing two publishers is the same
+    // smell as declaring two.
+    const publishers =
+      producers.length > 1
+        ? [
+            finding(
+              event,
+              'suspicious',
+              'event_multiple_producers',
+              `the runtime saw ${producers.map(safe).join(', ')} all publish it${window}. An event records what happened in one boundary: give each its own event, or make it a command one service handles`,
+              producers.map(safe).join(', '),
+            ),
+          ]
+        : [];
+
+    // What a test run dead-lettered is worth reading in the pull request, and
+    // a test may do it on purpose, so it informs.
+    const deadLettered = (observation.observedConsumers ?? []).flatMap((outcome) => {
+      if (!outcome.deadLettered) return [];
+
+      const reasons = (outcome.deadLetterReasons ?? [])
+        .map((reason) => `${code(reason.reason)} (${reason.count})`)
+        .join(', ');
+
+      return [
+        finding(
+          event,
+          'info',
+          'consumer_dead_lettered',
+          `${safe(outcome.consumer)} dead-lettered ${outcome.deadLettered} of ${outcome.count} deliveries${window}${reasons ? `: ${reasons}` : ''}`,
+          outcome.consumer,
+        ),
+      ];
+    });
+
     return [
       ...fields,
       ...values,
+      ...publishers,
+      ...deadLettered,
       ...unexpected('producer_unexpected', producers, event.frontmatter.producers, {
         one: 'saw it produced by',
         list: 'producer',

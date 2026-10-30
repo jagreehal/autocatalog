@@ -164,6 +164,20 @@ different ones fail the build, naming both, until `--docs-schema` picks one.
   ---
   ```
 
+  A step that a later failure has to undo names the step that undoes it:
+  `compensated_by: { id: refund, label: Order cannot ship }`. The map draws it as
+  its own edge, and the step list says "If a later step fails, Refund the payment
+  undoes it."
+
+  When a saga carries out the flow, the page shows how its runs went, from the
+  runtime snapshot of whichever repository runs it ([workflow
+  runs](/docs/runtime-evidence#workflow-runs)): "Ran 4 times: 3 completed, 1
+  compensated.", each step's runs beside it, and any step the workflow ran that
+  the flow does not name. The workflow is the one named as the flow is, by id
+  or title; `workflow: FulfilOrder` names another. When two repositories record
+  a workflow of that name, the flow's own repository wins, and with neither the
+  build says so rather than guess.
+
   An `externalSystem` step takes a `name`, `summary` and `url`, and a `custom`
   step a `title`, `summary` and `url`. A flow can name
   another repository's resources. One whose step names nothing in the catalog
@@ -222,6 +236,80 @@ different ones fail the build, naming both, until `--docs-schema` picks one.
   not hold together (a `ref` that resolves to nothing, a relation or `parent`
   naming no resource), and `/designs` lists them all.
 
+- `/glossary/` holds each domain's ubiquitous language. A repository defines a
+  domain's terms in `glossary/<domain>.md`, in EventCatalog's `dictionary:`
+  shape:
+
+  ```yaml
+  ---
+  dictionary:
+    - id: capture
+      name: Capture
+      summary: Taking money a card issuer has already authorised.
+      description: A capture can be for less than the authorised amount, never more.
+  ---
+  ```
+
+  Each term has an anchor, `/glossary/#payments-capture`, so a document can link
+  to it, and `llms.txt` lists every term with its meaning. `ac docs check` fails
+  a term defined twice in one domain, including across two repositories, and
+  warns of a glossary for a domain no event or service names.
+
+- `/entities/<repository>/<id>/` describes a thing the domain talks about, from
+  `entities/<id>.md`. The frontmatter takes EventCatalog's fields: `name`,
+  `summary`, `domains`, `services`, `aggregateRoot`, `identifier` and
+  `properties`. Point `schema:` at a JSON Schema in the repository and the page
+  reads the properties from it instead:
+
+  ```yaml
+  ---
+  name: Payment
+  aggregateRoot: true
+  identifier: paymentId
+  schema: contracts/payment.schema.json
+  domains: [payments]
+  services: [PaymentService]
+  ---
+  ```
+
+  The page lists the properties, links the services that hold the entity, and
+  lists the events whose schema carries the identifier, which the site finds by
+  field name. A property with `references: <entity id>` joins two entities, and
+  the page draws them as an entity-relationship diagram. `/entities` draws every
+  entity that way. `ac docs check` fails an identifier that is not a property, a
+  service the catalog lacks, a schema outside the repository, and an entity id
+  another repository already defines.
+
+- `/data-products/<repository>/<id>/` maps a data product from
+  `data-products/<id>.md`: what feeds it on the left, what it publishes on the
+  right, and the contract each output keeps. Inputs and outputs name resources
+  as `about:` writes them, or another data product as `data-product/<id>`:
+
+  ```yaml
+  ---
+  name: Daily revenue
+  domain: payments
+  inputs: [event/payments/payment.captured]
+  outputs:
+    - { ref: service/LedgerService, contract: contracts/daily-revenue.schema.json }
+  ---
+  ```
+
+  `ac docs check` fails a reference that resolves to nothing, with the nearest
+  match, and a contract file that is not there. One repository defines each
+  data product id, and the site leaves out a second file that claims it.
+
+- Owner pages show what the directory says of a team or person:
+  `teams/<id>.md` (`name`, `summary`, `email`, `slackDirectMessageUrl`,
+  `msTeamsDirectMessageUrl`, `members`) and `users/<id>.md` (`name`, `role`,
+  `avatarUrl` and the same contact fields). A file matches an owner when its id
+  or name is the owner as CODEOWNERS or frontmatter writes it, so
+  `teams/payments.md` describes `@acme/payments`. Keep the directory in one
+  repository, such as the handbook: `ac docs check` fails a team or user
+  described twice, and warns of a member with no `users/` file. Any of
+  `glossary/`, `entities/`, `data-products/`, `teams/`, `users/` or `designs/`
+  enrols a repository on its own, so a handbook can hold the directory alone.
+
 - `/data/<repository>/<model>/` is one table or collection: where its
   definition was read, who owns it, its fields (type, required, primary key,
   unique, default, database name, enum values, the model a key column points
@@ -259,6 +347,61 @@ different ones fail the build, naming both, until `--docs-schema` picks one.
 - `/contracts/docs-manifest.json` lists every document and who links to it.
   Point `ac docs check --manifest` at it and each repository's CI catches a link
   to a missing document, or a rename that would orphan a link from elsewhere.
+
+## Write in MDX
+
+A document can be `.mdx` as well as `.md`. Four components draw from the
+catalog, and you use them without importing anything:
+
+```mdx
+<Owner name="Payments" /> takes a card payment in two steps: authorisation, then
+<Term id="capture" />.
+
+<Map focus="service/PaymentService" />
+
+<Schema event="event/payments/payment.captured" />
+```
+
+- `<Map focus="…">` draws the map around a resource written as `about:` writes
+  it, or `flow/<id>`, `domain/<name>` or `data-product/<id>`. Leave out `focus`
+  for the whole catalog.
+- `<Schema event="event/<domain>/<id>">` shows the event's schema, linked to its
+  page.
+- `<Term id="…">` links a glossary term and shows its meaning on hover. Add
+  `domain` when two domains define it.
+- `<Owner name="…">` links the owner's page.
+
+A focus, event or term that names nothing fails the build, with the nearest
+match. Import a component of your own as MDX always allows, and your import
+wins over one of the built-in names.
+
+## Your own pages and API routes
+
+A site you run as your own Astro project already takes pages and API routes in
+`src/pages/`. For the site `ac site` builds, keep them in a folder laid out the
+same way:
+
+```bash
+ac site --pages ./site-pages
+```
+
+`site-pages/team.astro` publishes `/team/`, and `site-pages/api/glossary.json.ts`
+publishes `/api/glossary.json`. An `index.astro` replaces the home page. Files
+and folders that start with `_` are left out, so a layout can sit beside the
+pages. A page at a path the catalog publishes fails the build with the file to
+rename. In your own project, pass the folder as `autocatalogDocs({ pages })`.
+
+Pages import from the site's dependencies. `docsCatalog()` hands a page the
+catalog every page is built from:
+
+```ts
+// site-pages/api/glossary.json.ts
+import { docsCatalog } from 'autocatalog-docs-astro';
+
+export async function GET() {
+  return Response.json((await docsCatalog()).model.glossaries);
+}
+```
 
 ## For agents
 

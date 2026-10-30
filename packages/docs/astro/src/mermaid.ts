@@ -3,6 +3,8 @@ interface Node {
   type: string;
   lang?: string | null;
   value?: string;
+  name?: string;
+  attributes?: Array<{ type: 'mdxJsxAttribute'; name: string; value: string }>;
   children?: Node[];
 }
 
@@ -16,22 +18,32 @@ interface Node {
  * the body as authored, so they keep the fence.
  */
 export function remarkMermaid() {
-  return (tree: Node) => {
-    walk(tree);
+  return (tree: Node, file?: { path?: string }) => {
+    walk(tree, file?.path?.endsWith('.mdx') === true);
   };
 }
 
-function walk(node: Node): void {
+function walk(node: Node, mdx: boolean): void {
   for (const [i, child] of (node.children ?? []).entries()) {
     if (child.type === 'code' && child.lang === 'mermaid') {
       // Raw HTML, because a text node would lose each line's indentation,
-      // which some diagrams (a mindmap) are drawn from.
-      node.children![i] = {
-        type: 'html',
-        value: `<pre class="mermaid not-content">${escape(child.value ?? '')}</pre>`,
-      };
+      // which some diagrams (a mindmap) are drawn from. MDX has no raw HTML,
+      // and its JSX keeps a text child exactly as written.
+      node.children![i] = mdx
+        ? {
+            type: 'mdxJsxFlowElement',
+            name: 'pre',
+            attributes: [
+              { type: 'mdxJsxAttribute', name: 'className', value: 'mermaid not-content' },
+            ],
+            children: [{ type: 'text', value: child.value ?? '' }],
+          }
+        : {
+            type: 'html',
+            value: `<pre class="mermaid not-content">${escape(child.value ?? '')}</pre>`,
+          };
     } else {
-      walk(child);
+      walk(child, mdx);
     }
   }
 }

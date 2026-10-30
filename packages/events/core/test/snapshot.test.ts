@@ -4,7 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { applySnapshot, readSnapshot, type AdapterEvent } from '../src/index';
-import { suggestRenames } from '../src/snapshot';
+import { suggestRenames, type WorkflowObservation } from '../src/snapshot';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
@@ -140,6 +140,92 @@ describe('applySnapshot', () => {
 
     expect(payment.provenance?.fields?.consumers).toBeUndefined();
     expect(payment.observed?.consumers).toEqual(['LedgerService', 'FraudService']);
+  });
+});
+
+describe('workflow runs', () => {
+  let dir: string;
+
+  beforeEach(async () => {
+    dir = await fs.mkdtemp(path.join(os.tmpdir(), 'ac-snap-'));
+  });
+  afterEach(async () => {
+    await fs.rm(dir, { recursive: true, force: true });
+  });
+
+  const write = async (workflows: Record<string, Partial<WorkflowObservation>>) => {
+    const file = path.join(dir, 'snapshot.json');
+
+    await fs.writeFile(
+      file,
+      JSON.stringify({ spec: 'autotel-architecture/v0.1.0', events: {}, workflows }),
+    );
+
+    return file;
+  };
+
+  it('reads how each saga ran, step by step', async () => {
+    const fulfil = {
+      name: 'FulfilOrder',
+      runs: 2,
+      firstSeen: '',
+      lastSeen: '',
+      completed: 1,
+      compensated: 1,
+      steps: [
+        { name: 'ReserveStock', count: 2, compensated: 1 },
+        { name: 'ShipOrder', count: 2, failed: 1 },
+      ],
+    };
+
+    expect((await readSnapshot(await write({ FulfilOrder: fulfil }))).workflows).toEqual({
+      FulfilOrder: fulfil,
+    });
+  });
+
+  it('refuses a workflow it cannot read, rather than showing it as never run', async () => {
+    await expect(
+      readSnapshot(await write({ FulfilOrder: { name: 'FulfilOrder' } })),
+    ).rejects.toThrow(/malformed workflow observation/);
+  });
+});
+
+describe('consumer outcomes', () => {
+  it('keeps what happened to the deliveries a consumer failed, retried or dead-lettered', () => {
+    const placed = event('order.placed', ['PaymentService', 'EmailService']);
+
+    applySnapshot([placed], {
+      spec: 'autotel-architecture/v0.1.0',
+      generatedAt: '',
+      service: 'orders',
+      events: {
+        'order.placed': {
+          name: 'order.placed',
+          observedCount: 6,
+          firstSeen: '',
+          lastSeen: '',
+          consumers: ['PaymentService', 'EmailService'],
+          observedConsumers: [
+            {
+              consumer: 'PaymentService',
+              channel: 'orders',
+              count: 6,
+              failed: 4,
+              retried: 2,
+              deadLettered: 1,
+              deadLetterReasons: [
+                { reason: 'payment provider unavailable', category: 'transient', count: 1 },
+              ],
+            },
+            { consumer: 'EmailService', channel: 'orders', count: 6 },
+          ],
+        },
+      },
+    });
+
+    expect(placed.observed?.consumerOutcomes).toEqual([
+      expect.objectContaining({ consumer: 'PaymentService', failed: 4, deadLettered: 1 }),
+    ]);
   });
 });
 

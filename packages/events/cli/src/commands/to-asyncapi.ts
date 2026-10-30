@@ -3,15 +3,22 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import kleur from 'kleur';
 import { stringify as stringifyYaml } from 'yaml';
+import { z } from 'zod';
 import {
   cloudEventEnvelopeSchema,
   correlationPath,
   exampleCaseSummary,
   isJsonObject,
+  isArchitectureCatalogResource,
+  jsonObjectSchema,
   loadCatalog,
+  resourceKey,
   rewriteObjectRefs,
   rewriteRefs,
+  scanCommandResources,
+  type CatalogResource,
   type JsonObject,
+  type ResourceGraph,
   type JsonValue,
   type LoadedEvent,
 } from 'autocatalog-core';
@@ -31,8 +38,8 @@ export interface AsyncApiMessage {
   correlationId?: { location: string };
   examples?: AsyncApiExample[];
   /** EventCatalog's generator reads these, so its import keeps the type and version. */
-  'x-eventcatalog-message-type': 'event';
-  'x-eventcatalog-message-version': string;
+  'x-eventcatalog-message-type'?: 'event' | 'command';
+  'x-eventcatalog-message-version'?: string;
   /** What AsyncAPI has no field for, which ac from-asyncapi reads back. */
   'x-autocatalog': JsonObject;
 }
@@ -51,7 +58,13 @@ export interface AsyncApiDocument {
   >;
   operations: Record<
     string,
-    { action: 'send' | 'receive'; channel: { $ref: string }; messages: { $ref: string }[] }
+    {
+      action: 'send' | 'receive';
+      channel: { $ref: string };
+      messages: { $ref: string }[];
+      /** Where the handler replies, for a sender that waits for the outcome. */
+      reply?: { channel: { $ref: string }; messages?: { $ref: string }[] };
+    }
   >;
   components: { messages: Record<string, AsyncApiMessage>; schemas?: Record<string, JsonValue> };
 }
@@ -61,6 +74,8 @@ export interface CatalogToAsyncApiOptions {
   version: string;
   /** One service's view: what it sends and receives. Without it, every event is sent. */
   service?: string | undefined;
+  /** Commands from `scanCommandResources`, written beside the events. */
+  commands?: ResourceGraph | undefined;
 }
 
 /**
@@ -282,15 +297,148 @@ export function catalogToAsyncApi(
     }
   }
 
+  if (options.commands) {
+    const keys = { message: messageKeyOf, channel: channelKeyOf, operation: operationKeyOf };
+
+    writeCommands(doc, options.commands, options.service, keys, schemas);
+  }
+
   if (Object.keys(schemas.entries).length) doc.components.schemas = schemas.entries;
 
   return doc;
+}
+
+const commandAttributes = z
+  .object({
+    schema: jsonObjectSchema.optional(),
+    transport: z.array(z.object({ address: z.string() })).default([]),
+    outcome: z
+      .object({ type: z.string(), replyTo: z.string().optional() })
+      .nullable()
+      .default(null),
+    outcomeSchema: jsonObjectSchema.nullable().default(null),
+  })
+  .catch({ transport: [], outcome: null, outcomeSchema: null });
+
+type Keys = Record<'message' | 'channel' | 'operation', (...parts: string[]) => string>;
+
+/**
+ * Each command as a message its senders send and its handler receives, on the
+ * queue its transport names. A command with `outcome.replyTo` carries an
+ * AsyncAPI `reply`: the queue the handler answers on, with the result's
+ * schema as the reply message when the outcome has one.
+ */
+function writeCommands(
+  doc: AsyncApiDocument,
+  graph: ResourceGraph,
+  service: string | undefined,
+  keys: Keys,
+  schemas: SchemaComponents,
+): void {
+  const commands = graph.resources
+    .filter(
+      (resource): resource is CatalogResource =>
+        isArchitectureCatalogResource(resource) && resource.ref.kind === 'command',
+    )
+    .sort((a, b) => (resourceKey(a.ref) < resourceKey(b.ref) ? -1 : 1));
+
+  for (const command of commands) {
+    const { ref } = command;
+    const domain = ref.namespace ?? 'default';
+
+    const edges = (type: 'sends' | 'handles') =>
+      graph.relationships.flatMap((edge) =>
+        edge.type === type && resourceKey(edge.to) === resourceKey(ref) ? [edge.from.id] : [],
+      );
+
+    const senders = edges('sends');
+    const handler = edges('handles')[0];
+    const sends = !service || senders.includes(service);
+    const receives = Boolean(service && handler === service);
+
+    if (!sends && !receives) continue;
+
+    const attributes = commandAttributes.parse(command.attributes);
+    // Its own kind and version in the key, so neither an event of the same
+    // name nor another version of the command shares its message.
+    const version = ref.version ?? '1.0.0';
+    const messageKey = keys.message('command', domain, ref.id, version);
+
+    doc.components.messages[messageKey] = {
+      name: ref.id,
+      title: command.title,
+      summary: command.summary ?? command.title,
+      contentType: 'application/json',
+      payload: liftDefinitions(attributes.schema ?? { type: 'object' }, messageKey, schemas),
+      'x-eventcatalog-message-type': 'command',
+      'x-eventcatalog-message-version': version,
+      'x-autocatalog': {
+        kind: 'command',
+        id: ref.id,
+        version: version,
+        domain,
+        ...(senders.length && { senders }),
+        ...(handler && { handler }),
+        ...(attributes.outcome && { outcome: { ...attributes.outcome } }),
+      },
+    };
+
+    const replyTo = attributes.outcome?.replyTo;
+    let reply: NonNullable<AsyncApiDocument['operations'][string]['reply']> | undefined;
+
+    if (replyTo) {
+      const channelKey = keys.channel(replyTo);
+      const channel = (doc.channels[channelKey] ??= { address: replyTo, messages: {} });
+
+      reply = { channel: { $ref: `#/channels/${channelKey}` } };
+
+      if (attributes.outcomeSchema) {
+        const replyKey = keys.message('command', domain, ref.id, version, 'reply');
+
+        doc.components.messages[replyKey] = {
+          name: `${ref.id}.reply`,
+          title: `${command.title} reply`,
+          summary: `What ${command.title} answers with.`,
+          contentType: 'application/json',
+          payload: liftDefinitions(attributes.outcomeSchema, replyKey, schemas),
+          'x-autocatalog': { kind: 'reply', command: ref.id, domain },
+        };
+        channel.messages[replyKey] = { $ref: `#/components/messages/${replyKey}` };
+        reply.messages = [{ $ref: `#/channels/${channelKey}/messages/${replyKey}` }];
+      }
+    }
+
+    for (const address of attributes.transport.length
+      ? attributes.transport.map((transport) => transport.address)
+      : [ref.id]) {
+      const channelKey = keys.channel(address);
+      const channel = (doc.channels[channelKey] ??= { address, messages: {} });
+
+      channel.messages[messageKey] = { $ref: `#/components/messages/${messageKey}` };
+
+      const actions: Array<'send' | 'receive'> = [];
+
+      if (sends) actions.push('send');
+
+      if (receives) actions.push('receive');
+
+      for (const action of actions)
+        doc.operations[keys.operation(action, channelKey, messageKey)] = {
+          action,
+          channel: { $ref: `#/channels/${channelKey}` },
+          messages: [{ $ref: `#/channels/${channelKey}/messages/${messageKey}` }],
+          ...(reply && { reply }),
+        };
+    }
+  }
 }
 
 export interface RunToAsyncApiOptions {
   root: string;
   out: string;
   service?: string | undefined;
+  /** A folder whose command manifests join the document. */
+  commands?: string | undefined;
   title?: string | undefined;
   version?: string | undefined;
   quiet?: boolean;
@@ -307,10 +455,28 @@ export async function runToAsyncApi(opts: RunToAsyncApiOptions): Promise<number>
     return 1;
   }
 
+  let commands: ResourceGraph | undefined;
+
+  if (opts.commands) {
+    const scanned = await scanCommandResources({ root: path.resolve(opts.commands) });
+
+    // The document publishes every command in the folder, so it needs the whole folder read.
+    const problems = [...scanned.errors, ...scanned.skipped];
+
+    if (problems.length) {
+      for (const problem of problems) console.error(kleur.red(`✗ ${problem}`));
+
+      return 1;
+    }
+
+    commands = scanned.graph;
+  }
+
   let doc: AsyncApiDocument;
 
   try {
     doc = catalogToAsyncApi(events, {
+      commands,
       title: opts.title ?? (opts.service ? `${opts.service} events` : 'Event catalog'),
       version: opts.version ?? '1.0.0',
       service: opts.service,

@@ -353,6 +353,7 @@ export function buildProgram(): Command {
     .option('-r, --root <dir>', 'events root', './events')
     .option('-o, --out <file>', 'output file; .json for JSON, otherwise YAML', 'asyncapi.yaml')
     .option('-s, --service <name>', "one service's view: what it sends and receives")
+    .option('--commands <dir>', 'a folder whose command manifests join the document')
     .option('--title <title>', 'document title')
     .option('--doc-version <version>', 'document version', '1.0.0')
     .option('-q, --quiet', 'suppress non-error output', false)
@@ -361,6 +362,7 @@ export function buildProgram(): Command {
         root: string;
         out: string;
         service?: string;
+        commands?: string;
         title?: string;
         docVersion: string;
         quiet: boolean;
@@ -371,6 +373,7 @@ export function buildProgram(): Command {
             root: opts.root,
             out: opts.out,
             service: opts.service,
+            commands: opts.commands,
             title: opts.title,
             version: opts.docVersion,
             quiet: opts.quiet,
@@ -627,6 +630,10 @@ export function buildProgram(): Command {
       '--docs-conventions <file>',
       'document kinds to publish (defaults to <root>/contracts/autocatalog.conventions.json, then the one an enrolled repository publishes)',
     )
+    .option(
+      '--pages <dir>',
+      'your own pages and API routes, laid out as src/pages/ is (.astro, .md, .mdx, endpoint .ts)',
+    )
     .option('--live-url <url>', "a server-sent events feed the maps' Live mode follows")
     .option('--live-event <name>', 'the SSE event name its frames arrive under (default: message)')
     .action(
@@ -645,6 +652,7 @@ export function buildProgram(): Command {
           eventcatalog: boolean;
           docsSchema?: string;
           docsConventions?: string;
+          pages?: string;
           liveUrl?: string;
           liveEvent?: string;
         },

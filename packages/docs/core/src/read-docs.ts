@@ -19,7 +19,7 @@ import {
  * A path cannot.
  */
 export interface Doc {
-  /** `<repo>/<path without docs/ and without .md>` */
+  /** `<repo>/<path without docs/ and without .md or .mdx>` */
   id: string;
   /** Publishing repository that owns the file. */
   repo: string;
@@ -97,13 +97,13 @@ export function resolveDocsLayout(root: string, options: ReadDocsOptions = {}): 
   return {
     root: absolute,
     roots,
-    pattern: `${dirs.length > 1 ? `{${dirs.join(',')}}` : (dirs[0] ?? 'docs')}/**/*.md`,
+    pattern: `${dirs.length > 1 ? `{${dirs.join(',')}}` : (dirs[0] ?? 'docs')}/**/*.{md,mdx}`,
     rootFor,
     repoFor,
     idFor(file: string): string {
       const rest = file.slice(docsDir(rootFor(file)!).length);
 
-      return `${repoFor(file)}/${rest.replace(/\.md$/, '')}`;
+      return `${repoFor(file)}/${rest.replace(/\.mdx?$/, '')}`;
     },
   };
 }

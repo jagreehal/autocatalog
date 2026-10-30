@@ -22,6 +22,8 @@ const meta = {
       neverObserved: ['NotificationService'],
       consumerEvidence: 'observed',
       sources: [{ producer: 'PaymentService', channel: 'payments.completed', count: 18342 }],
+      consumerOutcomes: [],
+      deadLetters: [],
       sampleTraceIds: ['4bf92f3577b34da6a3ce929d0e0e4736', '00f067aa0ba902b7'],
     },
   },
@@ -39,6 +41,35 @@ export const NoEvidence: Story = {
       status: 'no-evidence',
       ref: 'payments/payment.completed',
       caveat: 'No runtime evidence is attached. This does not mean the event has no traffic.',
+      deadLetters: [{ consumer: 'LedgerService', queue: 'ledger-dlq', maxAttempts: 3 }],
+    },
+  },
+};
+
+/** A consumer that retried, gave up and dead-lettered, with the reason it recorded. */
+export const DeadLetters: Story = {
+  args: {
+    evidence: {
+      ...meta.args.evidence,
+      consumerOutcomes: [
+        {
+          consumer: 'LedgerService',
+          count: 6,
+          failed: 4,
+          retried: 2,
+          deadLettered: 1,
+          replayed: 1,
+          deadLetterReasons: [
+            {
+              reason: 'payment provider unavailable',
+              category: 'transient',
+              queue: 'ledger-dlq',
+              count: 1,
+            },
+          ],
+        },
+      ],
+      deadLetters: [{ consumer: 'LedgerService', queue: 'ledger-dlq', maxAttempts: 3 }],
     },
   },
 };

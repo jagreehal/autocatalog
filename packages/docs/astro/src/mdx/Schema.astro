@@ -1,0 +1,29 @@
+---
+import { Card, CardAction, CardContent, CardHeader, CardTitle } from '#ui/components/ui/card.tsx';
+import { docsCatalog } from '../catalog';
+import { mdxSchema } from '../mdx';
+import { SchemaTree } from '../ui/components/SchemaTree';
+
+interface Props {
+  /** `event/<domain>/<id>`, as `about:` writes it. */
+  event: string;
+}
+
+const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+
+const schema = mdxSchema(await docsCatalog(), base, Astro.props.event);
+---
+
+<div class="not-content">
+  <Card>
+    <CardHeader>
+      <CardTitle>{schema.title}</CardTitle>
+      <CardAction>
+        <a href={schema.href} class="text-sm underline underline-offset-4">Event page</a>
+      </CardAction>
+    </CardHeader>
+    <CardContent>
+      <SchemaTree client:load nodes={schema.nodes} />
+    </CardContent>
+  </Card>
+</div>

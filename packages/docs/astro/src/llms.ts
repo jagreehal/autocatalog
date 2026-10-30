@@ -1,3 +1,5 @@
+import type { DomainModel } from 'autocatalog-docs-core';
+import { dataProductPath, entityPath } from './model';
 import { twinPath } from './twins';
 import { groupByRepo, type DocListItem } from './view';
 
@@ -9,6 +11,8 @@ export interface LlmsTxtInput {
   items: DocListItem[];
   /** Current events, each linked to its Markdown twin. */
   events?: Array<{ path: string; name: string; summary: string; owner?: string }>;
+  /** The domain model: each term with its meaning, and the entities and data products with their pages. */
+  model?: DomainModel;
 }
 
 /**
@@ -26,6 +30,7 @@ export function renderLlmsTxt({
   base,
   items,
   events = [],
+  model,
 }: LlmsTxtInput): string {
   const lines = [
     `# ${title}`,
@@ -60,6 +65,39 @@ export function renderLlmsTxt({
       const owner = event.owner ? `; owned by ${event.owner}` : '';
       const summary = event.summary.replace(/\.$/, '');
       lines.push(`- [${event.name}](${base}/${twinPath(event.path)}): ${summary}${owner}`);
+    }
+
+    lines.push('');
+  }
+
+  // The words themselves, not links: an agent naming a field needs the meaning.
+  if (model && model.glossaries.length > 0) {
+    lines.push('## Glossary', '');
+
+    for (const glossary of model.glossaries) {
+      for (const term of glossary.terms) {
+        lines.push(`- ${term.name} (${glossary.domain})${term.summary ? `: ${term.summary}` : ''}`);
+      }
+    }
+
+    lines.push('');
+  }
+
+  for (const [heading, resources] of [
+    ['Entities', model?.entities.map((entity) => [entity, entityPath(entity)] as const) ?? []],
+    [
+      'Data products',
+      model?.dataProducts.map((product) => [product, dataProductPath(product)] as const) ?? [],
+    ],
+  ] as const) {
+    if (resources.length === 0) continue;
+
+    lines.push(`## ${heading}`, '');
+
+    for (const [resource, page] of resources) {
+      lines.push(
+        `- [${resource.name}](${base}/${page})${resource.summary ? `: ${resource.summary}` : ''}`,
+      );
     }
 
     lines.push('');

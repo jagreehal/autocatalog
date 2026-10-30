@@ -1,5 +1,10 @@
 {
   "consumes": [
-    { "service": "ShippingService", "event": "orders/order.placed", "fields": ["orderId"] }
+    {
+      "service": "ShippingService",
+      "event": "orders/order.placed",
+      "fields": ["orderId"],
+      "deadLetter": { "queue": "shipping-dlq", "maxAttempts": 5 }
+    }
   ]
 }

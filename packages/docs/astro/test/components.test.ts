@@ -490,6 +490,109 @@ describe('RuntimeEvidence states', () => {
     expect(html).not.toContain('<script>alert(1)</script>');
     expect(html).toContain('&lt;script&gt;');
   });
+
+  it('says what happened to a consumer’s deliveries, and where it dead-letters them', async () => {
+    const observed = {
+      count: 6,
+      firstSeen: '2026-10-10T11:00:00Z',
+      lastSeen: '2026-10-10T11:59:00Z',
+      consumers: ['LedgerService'],
+      producers: ['PaymentService'],
+      consumerEvidence: 'observed' as const,
+      snapshot: { spec: 'autotel-architecture/v0.1.0', generatedAt: '2026-10-10T12:00:00Z' },
+      consumerOutcomes: [
+        {
+          consumer: 'LedgerService',
+          count: 6,
+          failed: 4,
+          retried: 2,
+          deadLettered: 1,
+          deadLetterReasons: [{ reason: 'ledger locked', category: 'transient', count: 1 }],
+        },
+      ],
+    };
+
+    const queues = [{ consumer: 'LedgerService', queue: 'ledger-dlq', maxAttempts: 3 }];
+
+    const html = render(RuntimeEvidence, {
+      evidence: runtimeEvidenceView(
+        eventRuntimeEvidence({ ...event, observed }),
+        'payments/payment.completed',
+        queues,
+      ),
+    });
+
+    expect(html).toContain(
+      '6 deliveries: 4 failed, 2 retried, 1 dead-lettered. Dead letters go to ledger-dlq after 3 attempts.',
+    );
+    expect(html).toContain('Why deliveries were dead-lettered');
+
+    // A queue for a consumer neither list names still shows beside the snapshot.
+    expect(
+      render(RuntimeEvidence, {
+        evidence: runtimeEvidenceView(
+          eventRuntimeEvidence({ ...event, observed }),
+          'payments/payment.completed',
+          [{ consumer: 'AuditService', queue: 'audit-dlq' }],
+        ),
+      }),
+    ).toContain('Dead letters go to audit-dlq.');
+
+    // With no snapshot, the declared queue still shows.
+    expect(
+      render(RuntimeEvidence, {
+        evidence: runtimeEvidenceView(
+          eventRuntimeEvidence(event),
+          'payments/payment.completed',
+          queues,
+        ),
+      }),
+    ).toContain('Dead letters go to ledger-dlq after 3 attempts.');
+  });
+
+  it('sums a consumer’s outcomes across the channels it receives on', async () => {
+    const reason = { reason: 'ledger locked', queue: 'ledger-dlq', count: 1 };
+
+    const observed = {
+      count: 9,
+      firstSeen: '2026-10-10T11:00:00Z',
+      lastSeen: '2026-10-10T11:59:00Z',
+      consumers: ['LedgerService'],
+      producers: ['PaymentService'],
+      consumerEvidence: 'observed' as const,
+      snapshot: { spec: 'autotel-architecture/v0.1.0', generatedAt: '2026-10-10T12:00:00Z' },
+      consumerOutcomes: [
+        {
+          consumer: 'LedgerService',
+          channel: 'payments',
+          count: 6,
+          failed: 4,
+          deadLettered: 1,
+          deadLetterReasons: [reason],
+        },
+        {
+          consumer: 'LedgerService',
+          channel: 'payments.replay',
+          count: 3,
+          retried: 1,
+          deadLettered: 1,
+          deadLetterReasons: [reason],
+        },
+      ],
+    };
+
+    const html = render(RuntimeEvidence, {
+      evidence: runtimeEvidenceView(
+        eventRuntimeEvidence({ ...event, observed }),
+        'payments/payment.completed',
+        [],
+      ),
+    });
+
+    expect(html).toContain('9 deliveries: 4 failed, 1 retried, 2 dead-lettered.');
+    expect(html.match(/ledger locked/g)).toHaveLength(1);
+    expect(html).toContain('2 times');
+  });
 });
 
 describe('Evidence states', () => {

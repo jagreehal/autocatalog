@@ -60,11 +60,24 @@ Name what each one applies to in `about:` (`service/<name>`, `event/<domain>/<id
 
 ### Business processes
 
-A process that crosses services, such as checkout to dispatch, goes in `flows/<id>.md` beside `docs/`, in the repository that owns the process. Its frontmatter lists `title` and `steps`. Each step has an `id`, names one thing (`event: <domain>/<id>`, `service:`, `agent:`, `actor: { name }`, `externalSystem: { name, url }` or `custom: { title }`), and leads on with `next_step` or `next_steps`, each with an optional `label` for the branch. The Markdown body explains the process. `lanes: team` (or `{ by: domain|system|team, style: lanes|boxes }`) sets how its map opens, and a step's `lane: { team: … }` puts it in a lane the catalog does not.
+A process that crosses services, such as checkout to dispatch, goes in `flows/<id>.md` beside `docs/`, in the repository that owns the process. Its frontmatter lists `title` and `steps`. Each step has an `id`, names one thing (`event: <domain>/<id>`, `service:`, `agent:`, `actor: { name }`, `externalSystem: { name, url }` or `custom: { title }`), and leads on with `next_step` or `next_steps`, each with an optional `label` for the branch. `compensated_by` names the step that undoes it when a later step fails, such as a refund for a charge. A flow's page shows the runs of the saga named as the flow is; `workflow: <name>` names another. The Markdown body explains the process. `lanes: team` (or `{ by: domain|system|team, style: lanes|boxes }`) sets how its map opens, and a step's `lane: { team: … }` puts it in a lane the catalog does not.
 
 Put architecture you have not built yet in `designs/<id>.md`: `title`, `status` (draft, proposed, accepted, rejected), `resources` (each `{ ref: service/PaymentService }` for one the catalog has, or `{ id, type, name?, summary?, parent? }`), `relations` (`{ from, to, kind: sends|receives|routes-through|reads|writes|connects }`, with `sends` and `receives` going from the service to the message) and `notes`. The site marks the parts the catalog lacks as new. An agent with the MCP server can draw a draft first with `show_map({ design })` and save the frontmatter it returns.
 
 Write the steps from the code and the event declarations. A hop you write that no producer or consumer declaration backs shows as a warning on the site; fix the declaration or the flow, whichever is wrong.
+
+### The domain model
+
+These sit beside `docs/`, in the repository that owns the domain, and `ac docs check` checks each one.
+
+- **Glossary**: `glossary/<domain>.md` with `dictionary: [{ id, name, summary?, description? }]`. Add a term when the code, an event or a document uses a word with a meaning specific to the domain. One term has one definition per domain.
+- **Entity**: `entities/<id>.md` with `name`, `summary`, `domains`, `services`, `aggregateRoot`, `identifier`, and either `properties` (`{ name, type, required?, description?, references?: <entity id> }`) or `schema:` pointing at a JSON Schema in the repository. Prefer `schema:` when one exists, so the entity cannot drift from it. One repository defines each entity id.
+- **Data product**: `data-products/<id>.md` with `name`, `domain`, `inputs` and `outputs`, each named as `about:` names a resource or as `data-product/<id>`; an output may carry `contract: <file>`. One repository defines each data product id.
+- **Teams and users**: `teams/<id>.md` (`name`, `summary`, `email`, `slackDirectMessageUrl`, `members`) and `users/<id>.md` (`name`, `role`, `email`). Write them in one repository, usually the handbook, and name the file after the owner as CODEOWNERS writes it. A repository with only these folders still joins the site.
+
+### MDX
+
+Write `docs/<path>.mdx` when the document should show live catalog facts. `<Map focus="service/PaymentService" />`, `<Schema event="event/payments/payment.captured" />`, `<Term id="capture" />` and `<Owner name="Payments" />` need no import. A reference that names nothing fails the build, so check each against `ac docs check` and the catalog before writing it.
 
 ### Specifications
 

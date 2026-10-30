@@ -6,6 +6,45 @@ import { scanCommandResources, validateCommands } from '../src/command-resources
 import { discoverJsonSchemas } from '../src/scan-json-schema';
 
 describe('command contracts', () => {
+  it('draws the queue a command replies on', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'ac-commands-'));
+    const folder = path.join(root, 'commands', 'ReserveStock');
+
+    try {
+      await fs.mkdir(folder, { recursive: true });
+      await fs.writeFile(
+        path.join(folder, 'autocatalog.json'),
+        JSON.stringify({
+          id: 'ReserveStock',
+          version: '1.0.0',
+          name: 'Reserve stock',
+          summary: 'Hold stock for an order',
+          domain: 'inventory',
+          senders: ['orders'],
+          handler: 'inventory',
+          outcome: { type: 'result', schema: './reply.json', replyTo: 'stock-replies' },
+        }),
+      );
+      await fs.writeFile(path.join(folder, 'schema.json'), '{"type":"object"}');
+      await fs.writeFile(path.join(folder, 'reply.json'), '{"type":"object"}');
+
+      const { errors, graph } = await scanCommandResources({ root });
+      const queue = { kind: 'queue', namespace: 'inventory', id: 'stock-replies' };
+
+      expect(errors).toEqual([]);
+      expect(graph.resources.map((resource) => resource.ref)).toContainEqual(queue);
+      expect(graph.relationships).toContainEqual(
+        expect.objectContaining({
+          type: 'repliesTo',
+          from: { kind: 'command', namespace: 'inventory', id: 'ReserveStock', version: '1.0.0' },
+          to: queue,
+        }),
+      );
+    } finally {
+      await fs.rm(root, { recursive: true, force: true });
+    }
+  });
+
   it('discovers a queued command with one logical handler and an expected outcome', async () => {
     const root = await fs.mkdtemp(path.join(os.tmpdir(), 'ac-commands-'));
     const folder = path.join(root, 'commands', 'ledger', 'GenerateStatement');

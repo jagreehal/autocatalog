@@ -1,0 +1,58 @@
+{
+  "spec": "autotel-architecture/v0.1.0",
+  "generatedAt": "2026-10-28T09:00:00.000Z",
+  "service": "OrderService",
+  "consumersMeasured": true,
+  "events": {
+    "order.placed": {
+      "name": "order.placed",
+      "observedCount": 4,
+      "firstSeen": "2026-10-28T08:59:58.000Z",
+      "lastSeen": "2026-10-28T08:59:59.000Z",
+      "fieldPaths": ["customerId", "orderId", "total"],
+      "sampleTraceIds": ["4bf92f3577b34da6a3ce929d0e0e4736"],
+      "producer": "OrderService",
+      "channel": "orders.placed",
+      "consumers": ["ShippingService"],
+      "consumerEvidence": "observed",
+      "observedConsumers": [
+        {
+          "consumer": "ShippingService",
+          "channel": "orders.placed",
+          "count": 4,
+          "firstSeen": "2026-10-28T08:59:58.000Z",
+          "lastSeen": "2026-10-28T08:59:59.000Z",
+          "failed": 3,
+          "retried": 2,
+          "deadLettered": 1,
+          "deadLetterReasons": [
+            {
+              "reason": "warehouse API unavailable",
+              "category": "transient",
+              "queue": "shipping-dlq",
+              "count": 1
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "workflows": {
+    "OrderToDispatch": {
+      "name": "OrderToDispatch",
+      "runs": 4,
+      "firstSeen": "2026-10-28T08:59:58.000Z",
+      "lastSeen": "2026-10-28T08:59:59.000Z",
+      "completed": 3,
+      "compensated": 1,
+      "steps": [
+        { "name": "TakePayment", "count": 4, "compensated": 1 },
+        { "name": "place", "count": 4 },
+        { "name": "ship", "count": 4, "failed": 1 },
+        { "name": "refund", "count": 1 },
+        { "name": "NotifyCustomer", "count": 3 }
+      ],
+      "sampleTraceIds": ["00f067aa0ba902b7a3ce929d0e0e4736"]
+    }
+  }
+}
