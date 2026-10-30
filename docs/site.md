@@ -236,6 +236,36 @@ different ones fail the build, naming both, until `--docs-schema` picks one.
   not hold together (a `ref` that resolves to nothing, a relation or `parent`
   naming no resource), and `/designs` lists them all.
 
+  `hotspots:` flag what a reader should know first, each a `title`, a
+  `severity` (`critical`, `warning` or `info`), an optional `description` and
+  the `resource` it is on; the page lists them before the resources.
+
+  Under `ac site` dev, a design page has **Edit on canvas**. It opens the design
+  on EventCatalog Studio's canvas: drag resources in from the palette, connect
+  them, add sticky notes and hotspots. Beside the canvas, the design is checked
+  against the catalog as it changes: what it adds, and each catalog resource a
+  new relation touches, with its owner and who depends on it today, which is who
+  the pull request needs to hear from. Save (⌘S) writes `designs/<id>.md` with
+  one line per resource and relation, and keeps where things sit on the canvas
+  under `layout:`, so commit it and the change goes to review like code. A built
+  site has no editor and writes nothing.
+
+  On the canvas, what the catalog does not have yet has a dashed outline. When
+  the repository has a runtime snapshot, each relation between a catalog service
+  and a catalog event is drawn as the maps draw evidence (solid and thicker the
+  more it ran, dashed when declared and never seen, the inferred colour when it
+  ran though nobody declared it), and the panel names who ran on a drawn event
+  that the design leaves off.
+
+  `/designs` has **New design** under `ac site` dev: a title and the repository
+  it goes in, and it opens on an empty canvas as `designs/<title>.md`.
+
+  When the file changes on disk (an agent writing it through its own tools, an
+  editor, a pull), the open canvas takes it in place; when the canvas has
+  unsaved changes of its own, it asks first. A file written so that it does not
+  hold is named with why (a `ref` that resolves to nothing, with the reference
+  it probably meant), and the canvas keeps what it had.
+
 - `/glossary/` holds each domain's ubiquitous language. A repository defines a
   domain's terms in `glossary/<domain>.md`, in EventCatalog's `dictionary:`
   shape:

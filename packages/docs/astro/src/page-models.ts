@@ -31,7 +31,7 @@ import { docsSiteConfig } from './config';
 import { eventCatalogEmbeds } from './eventcatalog';
 import { architectureHref } from './eventcatalog-path';
 import { eventPath, eventsForService, fieldCarriers } from './event-path';
-import { eventVersions, versionChangesHtml, versionLinks, versionPath } from './event-versions';
+import { eventVersions, versionLinks, versionPath } from './event-versions';
 import {
   byKind,
   graphOwners,
@@ -800,8 +800,7 @@ export async function eventPageProps(
       }),
     ),
     examples: exampleViews(event.examples),
-    versions: versionLinks(versions, entry, base),
-    changesHtml: await versionChangesHtml(versions, entry),
+    versions: await versionLinks(versions, entry, base),
     documents,
     records,
     facts,
@@ -831,7 +830,6 @@ export async function eventVersionPageProps(
     schema: schemaTree(event.schema),
     schemaHref: `${base}${versionPath(entry)}schema.json`,
     examples: exampleViews(event.examples),
-    versions: versionLinks(versions, entry, base),
-    changesHtml: await versionChangesHtml(versions, entry),
+    versions: await versionLinks(versions, entry, base),
   };
 }

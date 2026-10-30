@@ -22,9 +22,26 @@ export const Default: Story = {};
 
 export const WithChanges: Story = {
   args: {
-    changesHtml:
-      // As `ac changelog` prints it, rendered to HTML.
-      '<h3>payments/payment.completed: 1.1.0 → 2.0.0</h3><ul><li>✖ BREAKING: field <code>legacyId</code> (string) was removed</li><li>✖ BREAKING: field <code>currency</code> is now required — payloads that omit it become invalid</li><li>+ additive: new field <code>capturedAt</code> (string)</li></ul>',
+    versions: [
+      {
+        href: '/events/payment.completed',
+        label: 'v2.0.0',
+        current: true,
+        active: true,
+        // As `ac changelog` prints it, rendered to HTML.
+        changesHtml:
+          '<h3>payments/payment.completed: 1.1.0 → 2.0.0</h3><ul><li>✖ BREAKING: field <code>legacyId</code> (string) was removed</li><li>✖ BREAKING: field <code>currency</code> is now required — payloads that omit it become invalid</li><li>+ additive: new field <code>capturedAt</code> (string)</li></ul>',
+      },
+      {
+        href: '/events/payment.completed/1.1.0',
+        label: 'v1.1.0',
+        current: false,
+        active: false,
+        changesHtml:
+          '<h3>payments/payment.completed: 1.0.0 → 1.1.0</h3><ul><li>+ additive: new field <code>currency</code> (string)</li></ul>',
+      },
+      { href: '/events/payment.completed/1.0.0', label: 'v1.0.0', current: false, active: false },
+    ],
   },
 };
 

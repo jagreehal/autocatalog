@@ -1,0 +1,40 @@
+---
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import { docsCatalog } from '../catalog';
+import { editableDesign, openDesign } from '../design-editor';
+import { designPath } from '../designs';
+import { DesignStudio } from '../ui/pages/DesignStudio';
+
+// Served by `ac site` dev only (see routes.ts), read from the file as it is now.
+export const prerender = false;
+
+const catalog = await docsCatalog();
+
+const editable = editableDesign(catalog, Astro.params.repository ?? '', Astro.params.id ?? '');
+
+if (!editable) return Astro.rewrite('/404');
+
+const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+
+const { design } = editable;
+---
+
+<StarlightPage
+  frontmatter={{
+    title: `Edit ${design.title}`,
+    description: `Change ${design.file} on a canvas, checked against the catalog as you go.`,
+    tableOfContents: false,
+    pagefind: false,
+  }}
+  hasSidebar={false}
+>
+  <DesignStudio
+    client:only="react"
+    title={design.title}
+    file={`${design.repository}/${design.file}`}
+    designHref={`${base}${designPath(design)}`}
+    checkUrl={`${base}${designPath(design)}edit.json`}
+    watchFile={editable.file}
+    {...openDesign(catalog, editable)}
+  />
+</StarlightPage>

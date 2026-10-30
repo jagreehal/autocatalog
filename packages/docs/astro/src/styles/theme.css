@@ -105,6 +105,13 @@
   --sl-content-width: 76rem;
 }
 
+/* The design editor's canvas takes all the width there is. The page has no
+ * sidebar, and Starlight sizes those with an unlayered rule this layer would
+ * otherwise lose to. */
+:root:has([data-canvas]) {
+  --sl-content-width: 100% !important;
+}
+
 /* Type: compact UI text, prose at a readable measure, tight bold headings. */
 body {
   background: var(--ac-bg);

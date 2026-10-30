@@ -3,7 +3,9 @@ import { describe, expect, it } from 'vitest';
 import type { z } from 'zod';
 import type { CatalogEvent } from '../src/catalog';
 import {
+  asGroupCard,
   edgeWeight,
+  groupCardHref,
   edgesForFrame,
   liveFrame,
   normaliseEventId,
@@ -497,5 +499,29 @@ describe('runtime evidence on the map', () => {
   it('normalises event names as the core does', () => {
     expect(normaliseEventId('order.placed')).toBe(normaliseEventId('OrderPlaced'));
     expect(normaliseEventId('order_placed-v 2')).toBe('orderplacedv2');
+  });
+});
+
+describe('domain and system cards', () => {
+  const node = { id: 'domain:payments/core', type: 'domain-group', data: {} };
+  const source = { label: 'Payments', metadata: { group: 'domain' as const } };
+
+  it('open their page when there is one, and are not clickable when there is none', () => {
+    expect(asGroupCard(node, source, '/domains/payments/').data).toMatchObject({
+      navigable: true,
+    });
+    expect(asGroupCard(node, source).data).toMatchObject({ navigable: false });
+  });
+
+  it("turn the visualiser's diagram path into the card's page, whatever its id holds", () => {
+    const hrefs = { 'domain:payments/core': '/domains/payments/' };
+
+    expect(groupCardHref('/visualiser/domains/domain:payments/core/undefined', hrefs)).toBe(
+      '/domains/payments/',
+    );
+    expect(groupCardHref('/visualiser/systems/unknown/1.0.0', hrefs)).toBe(
+      '/visualiser/systems/unknown/1.0.0',
+    );
+    expect(groupCardHref('/docs/events/x/1', hrefs)).toBe('/docs/events/x/1');
   });
 });

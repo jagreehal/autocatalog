@@ -6,6 +6,8 @@ import type { DesignPageProps, DesignsPageProps } from './ui/pages';
 import { pageOf, type CatalogGraphOptions } from './visualiser';
 
 /** Where a design's page lives on the site, relative to its base. */
+const RANK = { critical: 0, warning: 1, info: 2 } as const;
+
 export const designPath = (design: Design) => `designs/${design.repository}/${design.id}/`;
 
 export async function designPageProps(
@@ -36,12 +38,16 @@ export async function designPageProps(
     file: design.file,
     status: design.status,
     changes: designChanges(design),
-    visualiser: {
-      graph: { nodes, edges, options: { legend: true, search: nodes.length > 6 } },
-      hrefs,
-      levels,
-      proposed,
-    },
+    // A design just started has nothing to draw yet.
+    visualiser:
+      nodes.length > 0
+        ? {
+            graph: { nodes, edges, options: { legend: true, search: nodes.length > 6 } },
+            hrefs,
+            levels,
+            proposed,
+          }
+        : undefined,
     resources: design.resources.map((part) => ({
       id: part.id,
       name: part.name,
@@ -60,6 +66,14 @@ export async function designPageProps(
       text: note.text,
       on: note.resource && names.get(note.resource),
     })),
+    hotspots: design.hotspots
+      .map((hotspot) => ({
+        title: hotspot.title,
+        severity: hotspot.severity,
+        description: hotspot.description,
+        on: hotspot.resource && names.get(hotspot.resource),
+      }))
+      .sort((a, b) => RANK[a.severity] - RANK[b.severity]),
     narrativeHtml: design.body ? await renderNarrative(design.body) : null,
   };
 }

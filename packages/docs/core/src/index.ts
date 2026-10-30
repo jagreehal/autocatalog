@@ -132,6 +132,19 @@ export {
 } from './designs';
 
 export {
+  type DesignEvidence,
+  designEvidence,
+  type DesignImpact,
+  type DesignReview,
+  fileIds,
+  designFromModel,
+  designModel,
+  designReview,
+  type StudioModel,
+  studioModelSchema,
+} from './design-model';
+
+export {
   type Authored,
   dataProductDiagram,
   type DataProduct,

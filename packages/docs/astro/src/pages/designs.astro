@@ -3,6 +3,7 @@ import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
 import { docsCatalog } from '../catalog';
 import { designsPageProps } from '../designs';
 import { DesignsPage } from '../ui/pages/DesignsPage';
+import { NewDesign } from '../ui/pages/NewDesign';
 
 const catalog = await docsCatalog();
 
@@ -16,5 +17,14 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
     tableOfContents: false,
   }}
 >
+  {
+    import.meta.env.DEV && (
+      <NewDesign
+        client:load
+        repositories={Object.keys(catalog.repositoryRoots).sort()}
+        startUrl={`${base}designs/new.json`}
+      />
+    )
+  }
   <DesignsPage {...designsPageProps(catalog.designs, base)} />
 </StarlightPage>

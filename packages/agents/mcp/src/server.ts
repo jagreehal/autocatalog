@@ -18,7 +18,7 @@ const RefSchema = z
   .regex(/^[a-z]+\/[a-zA-Z0-9_-]+$/, 'expected <kind>/<id>');
 
 const asText = <T>(data: T) => ({
-  content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }],
+  content: [{ type: 'text' as const, text: JSON.stringify(data) }],
 });
 
 const asError = (cause: unknown) => ({

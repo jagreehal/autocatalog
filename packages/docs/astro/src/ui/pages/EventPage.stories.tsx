@@ -2,7 +2,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { EventPage } from './EventPage';
 import {
-  changesHtml,
   evidence,
   eventFlow,
   examples,
@@ -35,7 +34,6 @@ const meta = {
     evidence,
     examples,
     versions,
-    changesHtml,
     documents: [{ href: '/payments/runbook', title: 'Payments runbook', label: 'payments' }],
     facts: [
       ['Id', 'payment.completed'],
@@ -104,7 +102,6 @@ export const Bare: Story = {
     evidence: noEvidence,
     examples: [],
     versions: versions.slice(0, 1),
-    changesHtml: null,
     documents: [],
     facts: [
       ['Id', 'payment.completed'],

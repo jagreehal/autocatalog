@@ -59,40 +59,33 @@ export function versionChanges(versions: CatalogEvent[], entry: CatalogEvent): s
   });
 }
 
-/**
- * Every version as the Versions card lists it: newest first, each linked to its
- * own page, with the one being read marked.
- */
-export function versionLinks(
-  versions: CatalogEvent[],
-  active: CatalogEvent,
-  base: string,
-): EventVersionsProps['versions'] {
-  return versions.map((entry) => ({
-    href: `${base}${versionPath(entry)}`,
-    label: versionLabel(entry.event.frontmatter.version),
-    current: !entry.event.folder.isVersioned,
-    active: entry.event === active.event,
-  }));
-}
-
 // A changelog has no code blocks, so no highlighter is loaded for it.
 let changelogProcessor: ReturnType<typeof createMarkdownProcessor> | undefined;
 
 /**
- * {@link versionChanges} rendered to HTML, null for the oldest version. It is
- * `ac changelog`'s Markdown, so the site and the CLI cannot describe the same
- * change two ways.
+ * Every version as the Versions card lists it: newest first, each linked to its
+ * own page and carrying what changed since the one before, with the one being
+ * read marked.
  */
-export async function versionChangesHtml(
+export async function versionLinks(
   versions: CatalogEvent[],
   active: CatalogEvent,
-): Promise<string | null> {
-  const changes = versionChanges(versions, active);
-
-  if (!changes) return null;
-
+  base: string,
+): Promise<EventVersionsProps['versions']> {
   changelogProcessor ??= createMarkdownProcessor({ syntaxHighlight: false });
+  const processor = await changelogProcessor;
 
-  return (await (await changelogProcessor).render(changes)).code;
+  return Promise.all(
+    versions.map(async (entry) => {
+      const changes = versionChanges(versions, entry);
+
+      return {
+        href: `${base}${versionPath(entry)}`,
+        label: versionLabel(entry.event.frontmatter.version),
+        current: !entry.event.folder.isVersioned,
+        active: entry.event === active.event,
+        changesHtml: changes ? (await processor.render(changes)).code : null,
+      };
+    }),
+  );
 }

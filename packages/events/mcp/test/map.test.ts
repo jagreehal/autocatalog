@@ -178,7 +178,7 @@ relations:
 
   const refused = await client.callTool({
     name: 'show_map',
-    arguments: { design: { title: 'Empty', resources: [] } },
+    arguments: { design: { title: 'Untyped', resources: [{ id: 'RefundService' }] } },
   });
 
   expect(refused.isError).toBe(true);

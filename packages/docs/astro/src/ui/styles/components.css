@@ -92,6 +92,26 @@
   stroke-width: 6 !important;
 }
 /* A design's proposed parts: drawn in outline, as not built yet. */
+/* The design editor's canvas, marked by DesignStudio: what is new, and what a snapshot saw. */
+[data-canvas] [data-ac-proposed] {
+  outline: 2px dashed var(--color-inferred);
+  outline-offset: 4px;
+  border-radius: 0.5rem;
+}
+[data-canvas] [data-ac-evidence] .react-flow__edge-path {
+  stroke-width: calc(var(--ac-edge-weight, 1.5) * 1px) !important;
+}
+[data-canvas] [data-ac-evidence='observed'] .react-flow__edge-path {
+  stroke: var(--color-extracted) !important;
+}
+[data-canvas] [data-ac-evidence='unseen'] .react-flow__edge-path {
+  stroke: var(--muted-foreground) !important;
+  stroke-dasharray: 5 4;
+  opacity: 0.7;
+}
+[data-canvas] [data-ac-evidence='undocumented'] .react-flow__edge-path {
+  stroke: var(--color-inferred) !important;
+}
 [data-graph] .react-flow__node.ac-node-proposed {
   outline: 2px dashed var(--color-inferred);
   outline-offset: 4px;

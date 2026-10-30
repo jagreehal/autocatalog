@@ -124,6 +124,8 @@ export const versions: EventVersionsProps['versions'] = [
     label: 'v2.0.0',
     current: true,
     active: true,
+    changesHtml:
+      '<h3>Changes since v1.0.0</h3><ul><li>Added <code>currency</code> (required)</li></ul>',
   },
   {
     href: '/events/payments/payments/payment.completed/v/1.0.0/',
@@ -132,6 +134,3 @@ export const versions: EventVersionsProps['versions'] = [
     active: false,
   },
 ];
-
-export const changesHtml =
-  '<h3>Changes since v1.0.0</h3><ul><li>Added <code>currency</code> (required)</li></ul>';

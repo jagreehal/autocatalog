@@ -16,3 +16,6 @@ tools/oxlint/anti-slop/
 
 # Agent worktrees and local tool state, never part of the repository.
 .claude/
+
+# Studio canvas copied from EventCatalog, kept byte-identical to upstream.
+packages/docs/astro/src/ui/vendor/

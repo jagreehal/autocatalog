@@ -3,9 +3,17 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { AstroIntegration } from 'astro';
 import { DOCS_MANIFEST_PATH } from 'autocatalog-docs-core';
+import { z } from 'zod';
+import { DESIGN_CHANGED } from './ui/lib/canvas-model';
+import { markDesignsChanged, savedBy } from './dev-signals';
 import { eventCatalogEmbeds } from './eventcatalog';
 import { brokenLinks, formatBrokenLinks } from './link-check';
 import { ownPageImports, ownPageRoutes } from './own-pages';
+
+const fullReload = z.object({ type: z.literal('full-reload') });
+
+// A design file in a repository: `<repository>/designs/<id>.md`.
+const DESIGN_FILE = /[\\/]designs[\\/][^\\/]+\.md$/;
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
@@ -22,7 +30,7 @@ export function autocatalogDocsRoutes(root: string, ownPages?: string): AstroInt
   return {
     name: 'autocatalog-docs-routes',
     hooks: {
-      'astro:config:setup': ({ config, injectRoute, updateConfig }) => {
+      'astro:config:setup': ({ command, config, injectRoute, updateConfig }) => {
         updateConfig({
           vite: {
             // The documents usually live above this project, and Vite's dev
@@ -104,6 +112,16 @@ export function autocatalogDocsRoutes(root: string, ownPages?: string): AstroInt
           ['/[...slug].md', path.join(here, 'pages/[...slug].md.ts')],
         ];
 
+        // `ac site` dev edits a design on a canvas and saves its file; a built
+        // site is read only, so these are never part of one.
+        if (command === 'dev') {
+          pages.push(
+            ['/designs/[repository]/[id]/edit', path.join(here, 'pages/design-edit.astro')],
+            ['/designs/[repository]/[id]/edit.json', path.join(here, 'pages/design-edit.json.ts')],
+            ['/designs/new.json', path.join(here, 'pages/design-new.json.ts')],
+          );
+        }
+
         // Only when `ac site --eventcatalog` built the diagrams it shows.
         if (eventCatalogEmbeds()) {
           pages.push(['/architecture', path.join(here, 'pages/architecture.astro')]);
@@ -119,6 +137,59 @@ export function autocatalogDocsRoutes(root: string, ownPages?: string): AstroInt
 
         for (const [pattern, entrypoint] of pages) {
           injectRoute({ pattern, entrypoint });
+        }
+      },
+      // The dev server reloads every page when a file under the catalog changes.
+      // A design changing is told to the pages instead (`autocatalog:design-changed`):
+      // the editor takes the file onto its canvas without losing its undo history,
+      // the design's page reloads, and the editor's own save changes nothing on screen.
+      'astro:server:setup': ({ server }) => {
+        let designChangedAt = 0;
+
+        const settling = new Map<string, ReturnType<typeof setTimeout>>();
+
+        // Told once the file has settled: a writer that empties it first fires a change mid-write.
+        const onDesign = (file: string) => {
+          if (!DESIGN_FILE.test(file)) return;
+
+          designChangedAt = Date.now();
+          markDesignsChanged();
+          clearTimeout(settling.get(file));
+
+          settling.set(
+            file,
+            setTimeout(() => {
+              settling.delete(file);
+              markDesignsChanged();
+
+              // Every page on the file is told; the tab whose save it is already shows it.
+              const by = savedBy(file);
+
+              server.hot.send({
+                type: 'custom',
+                event: DESIGN_CHANGED,
+                data: { file, ...(by && { by }) },
+              });
+            }, 150),
+          );
+        };
+
+        server.watcher.on('change', onDesign);
+        server.watcher.on('add', onDesign);
+        server.watcher.on('unlink', onDesign);
+
+        // Vite's reload names no file, so a reload within 1.5s of a design change is skipped;
+        // the pages on that design follow it through the event above.
+        for (const channel of new Set([server.ws, server.hot, server.environments.client.hot])) {
+          const send = channel.send.bind(channel);
+
+          // SAFETY: the same function, passing every call it does not skip to the original.
+          channel.send = ((...args: Parameters<typeof send>) => {
+            if (fullReload.safeParse(args[0]).success && Date.now() - designChangedAt < 1500)
+              return;
+
+            send(...args);
+          }) as typeof channel.send;
         }
       },
       'astro:config:done': ({ config }) => {
