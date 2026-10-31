@@ -183,6 +183,27 @@ describe('CatalogExplorer states', () => {
   });
 });
 
+describe('explorerModel search text', () => {
+  it('matches an event by its qualified id, as abbreviated wiki links search for it', () => {
+    const graph: ResourceGraph = {
+      spec: AUTOCATALOG_GRAPH_SPEC,
+      resources: [
+        {
+          ref: { kind: 'event', namespace: 'payments', id: 'payment.completed' },
+          title: 'Payment completed',
+          tags: [],
+          provenance: { default: 'inferred', fields: {} },
+          needsReview: false,
+          attributes: { domain: 'payments', status: 'active', schema: 'schema.json', examples: 0 },
+        },
+      ],
+      relationships: [],
+    };
+
+    expect(explorerModel(graph).rows[0]?.searchText).toContain('payments/payment.completed');
+  });
+});
+
 describe('SourceLinks states', () => {
   it('links the source and its editor', async () => {
     const html = render(SourceLinks, {

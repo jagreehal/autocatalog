@@ -26,7 +26,14 @@ import {
   type DriftReport,
   type FieldSummary,
   type JsonObject,
+  readCompanyIndex,
+  taskContext,
+  type CompanyIndexOptions,
+  type TaskContext,
+  type TaskContextOptions,
 } from 'autocatalog-core';
+import { glossaryGraph } from 'autocatalog-docs-core';
+import { domainModel } from './model.js';
 import {
   createAgentsResourceGraph,
   hasAgentCatalog,
@@ -278,6 +285,77 @@ export function getLlmText(catalog: CatalogSnapshot, ref?: string) {
 
   return {
     text: catalogToLlmText(catalog.events.map(toLlmInput)),
+  };
+}
+
+/**
+ * What an agent should read next: status, llms-shaped text, and the site paths
+ * that serve the same material (`/llms.txt`, markdown twins, catalog.json).
+ */
+export function askArchitecture(catalog: CatalogSnapshot, query?: string) {
+  const status = catalogStatus(catalog);
+
+  const matches = query
+    ? searchEvents(catalog, query).slice(0, 8)
+    : listEvents(catalog).slice(0, 8);
+
+  return {
+    status,
+    site: {
+      llmsTxt: '/llms.txt',
+      llmsFull: '/llms-full.txt',
+      catalogJson: '/catalog.json',
+    },
+    matches: matches.map((event) => ({
+      ref: `${event.domain}/${event.id}`,
+      name: event.name,
+      summary: event.summary,
+      needsReview: event.needsReview,
+      llmText: `Pass ref "${event.domain}/${event.id}" to get_llm_text for the full markdown.`,
+    })),
+    text: query ? undefined : getLlmText(catalog).text,
+    hint: 'Fetch /llms.txt on the site for the same index; use get_llm_text for one event.',
+  };
+}
+
+/** Where `task_context` reads the company graph: the site's `/catalog.json`, as a URL or a file. */
+export interface CompanySite extends CompanyIndexOptions {
+  index: string;
+}
+
+/**
+ * The connected context for a task. With the company site it covers every
+ * repository's services, decisions and runbooks; without it, only this
+ * repository's catalog, and the gaps say so.
+ */
+export async function taskContextFor(
+  catalog: CatalogSnapshot,
+  task: string,
+  site?: CompanySite,
+  options: TaskContextOptions = {},
+): Promise<TaskContext & { catalog: { source: string; publishedAt?: string } }> {
+  if (!site) {
+    const context = taskContext(
+      composeResourceGraphs(catalog.mapGraph, glossaryGraph(domainModel(catalog).glossaries)),
+      task,
+      options,
+    );
+
+    return {
+      ...context,
+      gaps: [
+        ...context.gaps,
+        "Only this repository's catalog was searched: start the server with --site <url> for the company's decisions, runbooks and other teams' services.",
+      ],
+      catalog: { source: catalog.repoRoot },
+    };
+  }
+
+  const { graph, publishedAt } = await readCompanyIndex(site.index, site);
+
+  return {
+    ...taskContext(graph, task, options),
+    catalog: { source: site.index, ...(publishedAt && { publishedAt: publishedAt.toISOString() }) },
   };
 }
 

@@ -128,6 +128,11 @@ it('finds the directory’s profile for an owner however CODEOWNERS spells it', 
     memberOf: ['Payments'],
   });
   expect(ownerProfile(owner('ledger'), people)).toBeUndefined();
+  // An org/team handle with no directory file still gets a GitHub avatar.
+  expect(ownerProfile(owner('acme/ledger'), [])).toMatchObject({
+    kind: 'team',
+    avatarUrl: 'https://github.com/acme.png',
+  });
 });
 
 it('refuses a map of a service the catalog does not have, with the nearest match', async () => {

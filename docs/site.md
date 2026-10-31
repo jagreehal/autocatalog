@@ -49,6 +49,11 @@ Set the flags once in `package.json` and reuse them for the dev server:
 }
 ```
 
+The default favicon is the three provenance marks (declared, extracted,
+inferred). Replace it by putting your own `favicon.svg` in the site's `public/`
+folder, or set `AUTOCATALOG_SITE_FAVICON` (and Starlight's `favicon`) to another
+path under `public/`.
+
 The command prints how many repositories it cloned and whether it had a token.
 Private repositories need `GITHUB_TOKEN` or `GH_TOKEN`. The command sends the
 token as a request header, so it never lands in a clone's `.git/config`.
@@ -277,11 +282,18 @@ different ones fail the build, naming both, until `--docs-schema` picks one.
       name: Capture
       summary: Taking money a card issuer has already authorised.
       description: A capture can be for less than the authorised amount, never more.
+      aliases: [charge, take payment]
+      about: [service/PaymentService, event/payments/payment.captured]
   ---
   ```
 
-  Each term has an anchor, `/glossary/#payments-capture`, so a document can link
-  to it, and `llms.txt` lists every term with its meaning. `ac docs check` fails
+  `aliases` are the other words teams use for the term, and `about` names what
+  implements it, in the form a document's `about:` takes. The glossary shows
+  both, and `/catalog.json` carries each term as a `term` resource that
+  `describes` those services and events, so an agent asking about "charging a
+  card" gets from the word to the code. Each term has an anchor,
+  `/glossary/#payments-capture`, so a document can link to it, and `llms.txt`
+  lists every term with its meaning, aliases and implementations. `ac docs check` fails
   a term defined twice in one domain, including across two repositories, and
   warns of a glossary for a domain no event or service names.
 
@@ -374,6 +386,20 @@ different ones fail the build, naming both, until `--docs-schema` picks one.
   supersedes or was superseded by.
 - Service and event pages list the decisions, runbooks and incidents that name
   them in `about:`, one card per kind, beside their other documents.
+- `/channels` lists each queue and topic: the ones runtime evidence saw, with
+  their messaging system, and the channels designs draw. `/systems` lists the
+  systems and external systems designs name. Each has its own page.
+- On an event's schema tree, each field lists the other events that carry the
+  same path and the consumers that read it.
+- A draft, deprecated or superseded resource shows a banner above its body,
+  and a deprecated one says since when. The home page counts what needs
+  review, events with no producer or consumer, and resources with no owner;
+  each count opens the Catalog filtered to them.
+- Pin a page with the star beside its title. Pins sit at the top of the
+  sidebar, in this browser only. Drag the sidebar's edge to resize it, or
+  collapse it.
+- Add `?embed=1` to any page to hide the header, sidebar and footer, for a
+  frame in another tool.
 - `/contracts/docs-manifest.json` lists every document and who links to it.
   Point `ac docs check --manifest` at it and each repository's CI catches a link
   to a missing document, or a rename that would orphan a link from elsewhere.
@@ -400,6 +426,12 @@ catalog, and you use them without importing anything:
 - `<Term id="…">` links a glossary term and shows its meaning on hover. Add
   `domain` when two domains define it.
 - `<Owner name="…">` links the owner's page.
+
+In `.md` and `.mdx` alike, `[[kind|id]]` links a catalog page:
+`[[service|PaymentService]]`, `[[event|payments/payment.captured]]`,
+`[[domain|payments]]`, `[[owner|…]]`, `[[channel|…]]`, `[[system|…]]`,
+`[[doc|…]]`, `[[flow|…]]` or `[[design|…]]`. An event written as
+`domain/id` opens the Catalog searching for it.
 
 A focus, event or term that names nothing fails the build, with the nearest
 match. Import a component of your own as MDX always allows, and your import

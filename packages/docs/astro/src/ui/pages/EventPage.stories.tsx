@@ -24,7 +24,7 @@ const meta = {
       confidence: 0.9,
       needsReview: false,
     },
-    deprecation: null,
+    banners: [],
     narrativeHtml:
       '<p>Emitted once the acquirer confirms capture. <strong>Not</strong> on authorisation.</p>',
     flow: eventFlow,
@@ -66,12 +66,28 @@ type Story = StoryObj<typeof meta>;
 export const Default: Story = {};
 
 export const Deprecated: Story = {
-  args: { deprecation: 'Since 2.0.0. Use payment.captured. Consumers should migrate by Q1.' },
+  args: {
+    banners: [
+      {
+        tone: 'warn',
+        title: 'Deprecated',
+        body: 'Since 2.0.0. Use payment.captured. Consumers should migrate by Q1.',
+      },
+    ],
+  },
 };
 
 /** Still being written: published to read, flagged before anyone depends on it. */
 export const Draft: Story = {
-  args: { draft: true },
+  args: {
+    banners: [
+      {
+        tone: 'quiet',
+        title: 'Draft',
+        body: 'This contract may still change. Agree it with the owner before depending on it.',
+      },
+    ],
+  },
 };
 
 export const InlineDiagram: Story = {

@@ -11,6 +11,16 @@ nowhere in the schema you are about to change.
 
 Ask first. The answer takes one call and changes what you write.
 
+## Before a task that spans systems
+
+For a task described in words ("add partial refunds"), call `task_context` first:
+
+```json
+{ "task": "add partial refunds" }
+```
+
+It returns the services, contracts, decision records, runbooks and owners the task touches, how each relationship is known (`declared`, `in code`, `observed`, `reported`, `inferred`) and `gaps`. Cite the items you rely on, and say the gaps in your answer. When `omitted` is present, call again with a higher `limit` before treating a list as complete.
+
 ## 1. Ask who this reaches
 
 With the autocatalog MCP server connected, call `assess_impact`:

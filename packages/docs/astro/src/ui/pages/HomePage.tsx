@@ -25,6 +25,8 @@ import {
   TableRow,
 } from '#ui/components/ui/table.tsx';
 import type { IconName } from '../../icons';
+import type { AttentionSnapshot } from '../../attention';
+import { hasAttention } from '../../attention';
 import { docHref } from '../lib/docs';
 import { DocList, type DocListItem } from '../components/DocList';
 import { SectionHeading } from '../components/SectionHeading';
@@ -48,13 +50,15 @@ export interface HomePageProps {
   repos: Array<[string, DocListItem[]]>;
   /** Tags in name order; empty when no document is tagged. */
   tags: Array<[string, DocListItem[]]>;
+  /** Dark spots: review work, quarantine, orphans. */
+  attention?: AttentionSnapshot | undefined;
 }
 
 const plural = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
 
 const documents = (count: number) => plural(count, 'document', 'documents');
 
-export function HomePage({ stats, explore, repos, tags }: HomePageProps) {
+export function HomePage({ stats, explore, repos, tags, attention }: HomePageProps) {
   const total = repos.reduce((sum, [, docs]) => sum + docs.length, 0);
 
   // Built as one string: adjacent expressions in the template lose the whitespace
@@ -63,6 +67,8 @@ export function HomePage({ stats, explore, repos, tags }: HomePageProps) {
 
   return (
     <div className="not-content flex flex-col gap-10" data-wide>
+      {attention && hasAttention(attention) && <Attention attention={attention} />}
+
       {stats.some((stat) => stat.value > 0) && <Holds stats={stats} />}
 
       <section className="flex flex-col gap-4" aria-labelledby="home-explore">
@@ -167,6 +173,59 @@ export function HomePage({ stats, explore, repos, tags }: HomePageProps) {
         </section>
       )}
     </div>
+  );
+}
+
+/** Dark spots: review work, quarantine, missing producers/consumers/owners. */
+function Attention({ attention }: { attention: AttentionSnapshot }) {
+  const items = [
+    attention.needsReview > 0 && {
+      label: `${attention.needsReview} need review`,
+      href: attention.needsReviewHref,
+    },
+    attention.failures.length > 0 && {
+      label: `${attention.failures.length} quarantined`,
+      href: attention.catalogHref,
+    },
+    attention.orphanProducers > 0 && {
+      label: `${attention.orphanProducers} with no producer`,
+      href: attention.catalogHref,
+    },
+    attention.orphanConsumers > 0 && {
+      label: `${attention.orphanConsumers} with no consumer`,
+      href: attention.catalogHref,
+    },
+    attention.unowned > 0 && {
+      label: `${attention.unowned} unowned`,
+      href: attention.ownersHref,
+    },
+  ].filter((item): item is { label: string; href: string } => Boolean(item));
+
+  return (
+    <section className="flex flex-col gap-2" aria-labelledby="home-attention" data-attention="">
+      <SectionHeading id="home-attention">Needs attention</SectionHeading>
+      <ul className="m-0 flex list-none flex-wrap gap-3 p-0 text-sm">
+        {items.map((item) => (
+          <li key={item.label}>
+            <a
+              href={item.href}
+              className="text-foreground underline decoration-border underline-offset-4 hover:decoration-foreground"
+            >
+              {item.label}
+            </a>
+          </li>
+        ))}
+      </ul>
+      {attention.failures.length > 0 && (
+        <ul className="m-0 list-none p-0 text-xs text-muted-foreground">
+          {attention.failures.slice(0, 5).map((failure) => (
+            <li key={failure.repository}>
+              {failure.repository}: {failure.message}
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }
 

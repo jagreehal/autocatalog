@@ -1,6 +1,4 @@
 /** @jsxImportSource react */
-import { PencilLineIcon, TriangleAlertIcon } from 'lucide-react';
-import { Alert, AlertDescription, AlertTitle } from '#ui/components/ui/alert.tsx';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '#ui/components/ui/card.tsx';
 import { Item } from '#ui/components/ui/item.tsx';
 import type { PropNode } from '../lib/schema-tree';
@@ -18,18 +16,18 @@ import { ResourceLinks, type ResourceLinksProps } from '../components/ResourceLi
 import { RuntimeEvidence, type RuntimeEvidenceView } from '../components/RuntimeEvidence';
 import { SchemaSection } from '../components/SchemaTree';
 import { SourceLinks } from '../components/SourceLinks';
+import { StatusBanners } from '../components/StatusBanners';
 import { DeliveryFacts, type DeliveryView } from '../components/DeliveryFacts';
 import { TransportFacts, type TransportEntry } from '../components/TransportFacts';
+import type { StatusBanner } from '../../resource-status';
 
 export interface EventPageProps {
   /** Who owns the event; `href` is their page, when the graph knows the team. */
   owner?: { team: string; href?: string | undefined } | undefined;
   /** Where the event was read from, and how sure the catalog is. */
   provenance: EvidenceView;
-  /** What the deprecation notice says; absent for an event that is not deprecated. */
-  deprecation?: string | null | undefined;
-  /** A contract still being written: published to read and discuss with its owner. */
-  draft?: boolean | undefined;
+  /** Draft / deprecated / review / newer-version banners. */
+  banners?: StatusBanner[] | undefined;
   /** The team's own index.mdx, rendered to HTML. */
   narrativeHtml?: string | null | undefined;
   /** One hop of the message flow around the event. */
@@ -60,8 +58,7 @@ export interface EventPageProps {
 export function EventPage({
   owner,
   provenance,
-  deprecation,
-  draft,
+  banners = [],
   narrativeHtml,
   flow,
   visualiser,
@@ -141,28 +138,7 @@ export function EventPage({
       <div className="flex flex-col gap-4">
         <Evidence {...provenance} />
         <FlowSentence owner={owner} flow={flow} />
-
-        {deprecation && (
-          <div className="not-content">
-            <Alert>
-              <TriangleAlertIcon />
-              <AlertTitle>Deprecated</AlertTitle>
-              <AlertDescription>{deprecation}</AlertDescription>
-            </Alert>
-          </div>
-        )}
-
-        {draft && (
-          <div className="not-content">
-            <Alert>
-              <PencilLineIcon />
-              <AlertTitle>Draft</AlertTitle>
-              <AlertDescription>
-                This contract may still change. Agree it with the owner before depending on it.
-              </AlertDescription>
-            </Alert>
-          </div>
-        )}
+        <StatusBanners banners={banners} />
 
         {narrativeHtml && <div dangerouslySetInnerHTML={{ __html: narrativeHtml }} />}
       </div>

@@ -41,11 +41,16 @@ export function CatalogExplorer({ model }: CatalogExplorerProps) {
   const search = useRef<HTMLInputElement>(null);
 
   // `?kind=service` opens the explorer on one kind, which is how the rail's
-  // Services entry lands here.
+  // Services entry lands here; `?q=` and `?review=1` arrive from wiki links and
+  // the homepage's review count.
   useEffect(() => {
-    const initialKind = new URLSearchParams(location.search).get('kind');
+    const params = new URLSearchParams(location.search);
+    const initialKind = params.get('kind');
 
     if (initialKind && model.kinds.includes(initialKind)) setKind(initialKind);
+    setQuery(params.get('q') ?? '');
+
+    if (params.get('review') === '1') setReviewOnly(true);
   }, [model.kinds]);
 
   const needle = query.trim().toLocaleLowerCase();

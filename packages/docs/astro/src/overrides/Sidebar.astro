@@ -1,0 +1,10 @@
+---
+import Default from '@astrojs/starlight/components/Sidebar.astro';
+import { FavoritesRail } from '../ui/overrides/Favorites';
+
+// Pins live in this browser's storage, so they render as an island above the
+// navigation Starlight builds on the server.
+---
+
+<FavoritesRail client:load />
+<Default />

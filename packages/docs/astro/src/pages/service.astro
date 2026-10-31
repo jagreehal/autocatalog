@@ -4,7 +4,7 @@ import type { InferGetStaticPropsType } from 'astro';
 import { buildServices } from 'autocatalog-core';
 import { docsCatalog } from '../catalog';
 import { serviceFacts, servicePageProps } from '../page-models';
-import { setResourceContext } from '../shell';
+import { setResourceContext, withMarkdownCopy } from '../shell';
 import { twinPath } from '../twins';
 import { ServicePage } from '../ui/pages/ServicePage';
 
@@ -38,12 +38,9 @@ setResourceContext(Astro.locals, {
   kind: 'service',
   name: service.name,
   key: `service:${service.name}`,
-  actions: [
-    ...(facts.repository
+  actions: withMarkdownCopy(markdownHref, (facts.repository
       ? [{ label: 'Repository', href: facts.repository, icon: 'repository' as const }]
-      : []),
-    { label: 'View as Markdown', href: markdownHref, icon: 'doc' },
-  ],
+      : [])),
   pills: [],
 });
 

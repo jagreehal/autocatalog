@@ -212,6 +212,24 @@ function Prop({ node, open, visible, onToggle }: PropProps) {
     </>
   );
 
+  const lineage = node.lineage && (
+    <p className="m-0 text-xs text-muted-foreground" data-field-lineage={node.path}>
+      {node.lineage.conflict ? (
+        <span data-conflict="">{node.lineage.conflict}</span>
+      ) : (
+        <>
+          {node.lineage.carriers} {node.lineage.carriers === 1 ? 'event' : 'events'}
+          {node.lineage.consumers.length > 0 && (
+            <>
+              {' · '}
+              consumed by {node.lineage.consumers.join(', ')}
+            </>
+          )}
+        </>
+      )}
+    </p>
+  );
+
   const details = (
     <>
       {node.description && <p className="m-0 text-xs text-muted-foreground">{node.description}</p>}
@@ -224,6 +242,7 @@ function Prop({ node, open, visible, onToggle }: PropProps) {
           ))}
         </ul>
       )}
+      {lineage}
     </>
   );
 
@@ -243,7 +262,7 @@ function Prop({ node, open, visible, onToggle }: PropProps) {
             {heading}
           </div>
           <CollapsibleContent>
-            {(node.description || node.facts.length > 0) && (
+            {(node.description || node.facts.length > 0 || node.lineage) && (
               <div className="flex flex-col gap-1 pr-2.5 pb-1.5 pl-7">{details}</div>
             )}
             {/* The rail runs down from the chevron, so a child sits under its parent's name. */}

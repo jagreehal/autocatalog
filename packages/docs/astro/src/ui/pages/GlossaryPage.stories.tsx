@@ -19,8 +19,16 @@ const meta = {
             name: 'Capture',
             summary: 'Taking money a card issuer has already authorised.',
             description: 'A capture can be for less than the authorised amount, never more.',
+            aliases: ['settlement'],
+            about: [
+              { name: 'PaymentService', href: '/services/PaymentService/' },
+              {
+                name: 'Payment captured',
+                href: '/events/payments-service/payments/payment.captured/',
+              },
+            ],
           },
-          { anchor: 'payments-refund', name: 'Refund' },
+          { anchor: 'payments-refund', name: 'Refund', aliases: [], about: [] },
         ],
       },
     ],

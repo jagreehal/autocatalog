@@ -55,6 +55,34 @@ function loaded(
 }
 
 describe('resource graph', () => {
+  it('keeps a declared consumer declared, and says how strongly a snapshot named the rest', () => {
+    const event = loaded('order.placed', 'orders', { consumers: ['Billing', 'Analytics'] });
+
+    event.frontmatter = {
+      ...event.frontmatter,
+      provenance: { default: 'extracted', fields: { consumers: 'observed' } },
+      observed: {
+        count: 3,
+        firstSeen: '2026-10-01T00:00:00Z',
+        lastSeen: '2026-10-02T00:00:00Z',
+        consumers: ['Analytics'],
+        producers: [],
+        declaredConsumers: ['Billing'],
+        consumerEvidence: 'reported',
+        snapshot: { spec: 'autocatalog/snapshot-v1', generatedAt: '2026-10-02T00:00:00Z' },
+      },
+    };
+
+    const edges = createEventResourceGraph([event]).relationships.filter(
+      (edge) => edge.type === 'consumes',
+    );
+
+    expect(edges.map((edge) => [edge.to.id, edge.provenance, edge.attributes])).toEqual([
+      ['Analytics', 'observed', { attribution: 'reported' }],
+      ['Billing', 'extracted', undefined],
+    ]);
+  });
+
   it('compiles deterministic resources and relationships regardless of event order', () => {
     const first = loaded('payment.completed', 'payments', {
       producers: ['Payments'],

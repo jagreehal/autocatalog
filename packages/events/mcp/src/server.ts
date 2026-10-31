@@ -16,11 +16,14 @@ import {
   searchEvents,
   findEventsBy,
   getLlmText,
+  askArchitecture,
   searchFieldsInCatalog,
   assessImpact,
   catalogStatus,
   checkChange,
   investigationBundle,
+  taskContextFor,
+  type CompanySite,
 } from './tools.js';
 import { designSchema } from 'autocatalog-docs-core';
 import { catalogMap, describeMap, draftMap } from './map.js';
@@ -40,8 +43,35 @@ const asError = (cause: unknown) => ({
   ],
 });
 
-export function createServer(catalog: CatalogSnapshot): McpServer {
+export function createServer(catalog: CatalogSnapshot, site?: CompanySite): McpServer {
   const server = new McpServer({ name: 'autocatalog', version: '0.0.1' });
+
+  server.registerTool(
+    'task_context',
+    {
+      title: 'Context for a task',
+      description:
+        'Call this before planning a change or answering how something works. Describe the task in the words the team uses ("add partial refunds", "how does KYC work"): glossary terms and their aliases lead to what implements them. Returns the vocabulary it matched, the services, contracts, decision records, runbooks and owners connected to it, how each relationship is known (declared, observed in traces, or inferred), and gaps: what the catalog could not establish. Cite the items you rely on, and say the gaps out loud instead of filling them in.',
+      inputSchema: {
+        task: z.string().min(1),
+        limit: z
+          .number()
+          .int()
+          .positive()
+          .optional()
+          .describe(
+            'Most items per list (default 12). When the answer has `omitted`, call again with a higher limit.',
+          ),
+      },
+    },
+    async ({ task, limit }) => {
+      try {
+        return asText(await taskContextFor(catalog, task, site, limit ? { limit } : {}));
+      } catch (e) {
+        return asError(e);
+      }
+    },
+  );
 
   server.registerTool(
     'list_events',
@@ -159,6 +189,23 @@ export function createServer(catalog: CatalogSnapshot): McpServer {
     async ({ ref }) => {
       try {
         return asText(getLlmText(catalog, ref));
+      } catch (e) {
+        return asError(e);
+      }
+    },
+  );
+
+  server.registerTool(
+    'ask_architecture',
+    {
+      title: 'Ask the architecture',
+      description:
+        'Answer from the catalog and point at the same material the site serves: /llms.txt, markdown twins, and /catalog.json. Optional query narrows the matches.',
+      inputSchema: { query: z.string().optional() },
+    },
+    async ({ query }) => {
+      try {
+        return asText(askArchitecture(catalog, query));
       } catch (e) {
         return asError(e);
       }

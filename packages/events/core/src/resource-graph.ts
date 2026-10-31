@@ -91,6 +91,12 @@ export interface DocumentResourceAttributes {
 
 export type RepositoryResourceAttributes = Record<string, never>;
 
+/** A glossary term: a domain's word for something, and the other words teams use for it. */
+export interface TermResourceAttributes {
+  domain: string;
+  aliases: string[];
+}
+
 export type AgentSystemResourceKind =
   'agent' | 'domain' | 'eval' | 'model' | 'policy' | 'tool' | 'workflow';
 
@@ -107,6 +113,8 @@ export type RepositoryCatalogResource = TypedCatalogResource<
   RepositoryResourceAttributes
 >;
 
+export type TermCatalogResource = TypedCatalogResource<'term', TermResourceAttributes>;
+
 export type AgentSystemCatalogResource = TypedCatalogResource<
   AgentSystemResourceKind,
   AgentSystemResourceAttributes
@@ -118,7 +126,8 @@ export type CatalogResource =
   | DocumentCatalogResource
   | EventCatalogResource
   | RepositoryCatalogResource
-  | ServiceCatalogResource;
+  | ServiceCatalogResource
+  | TermCatalogResource;
 
 export function isEventCatalogResource(
   resource: CatalogResource,
@@ -468,15 +477,27 @@ export function createEventResourceGraph(
     to: ResourceRef,
     event: LoadedEvent,
     field: 'producers' | 'consumers',
+    participant: string,
   ) => {
+    const { observed } = event.frontmatter;
+    // A snapshot that adds consumers marks the whole field observed. A consumer
+    // the team declared keeps the event's own provenance, and one the snapshot
+    // added says how strongly it was attributed: a subscriber reporting
+    // metadata is not a delivery anyone saw.
+    const declared = field === 'consumers' && observed?.declaredConsumers?.includes(participant);
+
+    const attributed =
+      field === 'consumers' && !declared && observed?.consumers.includes(participant);
+
     const relationship: CatalogRelationship = {
       type,
       from,
       to,
-      provenance: fieldProvenance(event, field),
+      provenance: declared ? event.frontmatter.provenance.default : fieldProvenance(event, field),
       confidence: event.frontmatter.confidence,
       needsReview: event.frontmatter.needsReview,
       source: sourceOf(event),
+      ...(attributed && { attributes: { attribution: observed?.consumerEvidence ?? 'reported' } }),
     };
 
     relationships.set(relationshipKey(relationship), relationship);
@@ -535,12 +556,12 @@ export function createEventResourceGraph(
 
     for (const producer of [...new Set(fm.producers)].sort()) {
       observeService(producer, event);
-      addRelationship('produces', serviceRef(producer), ref, event, 'producers');
+      addRelationship('produces', serviceRef(producer), ref, event, 'producers', producer);
     }
 
     for (const consumer of [...new Set(fm.consumers)].sort()) {
       observeService(consumer, event);
-      addRelationship('consumes', ref, serviceRef(consumer), event, 'consumers');
+      addRelationship('consumes', ref, serviceRef(consumer), event, 'consumers', consumer);
     }
   }
 

@@ -33,12 +33,14 @@ describe('PageTitleChrome states', () => {
     expect(html).toContain('data-copy-status');
   });
 
-  it('renders no key, pills or actions for a bare page', () => {
+  it('still offers Copy page as Markdown on a bare page, with no key or pills', () => {
     const html = render(PageTitleChrome, { pills: [], actions: [] });
 
     expect(html).not.toContain('<code');
     expect(html).not.toContain('data-slot="badge"');
-    expect(html).not.toContain('aria-label="Page actions"');
+    expect(html).toContain('aria-label="Page actions"');
+    expect(html).toContain('data-copy-markdown');
+    expect(html).toContain('Copy page as Markdown');
     expect(html).not.toContain('data-pagefind-filter');
   });
 

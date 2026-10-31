@@ -25,6 +25,7 @@
     "./icons": "./src/icons.ts",
     "./mdx": "./src/mdx/index.ts",
     "./site/*": "./site/*",
+    "./favicon.svg": "./site/public/favicon.svg",
     "./route-middleware": "./src/route-middleware.ts"
   },
   "imports": {

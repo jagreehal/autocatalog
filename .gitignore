@@ -42,3 +42,6 @@ packages/events/core/test/fixtures/bad-*-tmp/
 
 # Local agent settings.
 .claude/
+
+# playwright-cli session output
+.playwright-cli/

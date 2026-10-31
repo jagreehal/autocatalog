@@ -76,7 +76,15 @@ export function renderLlmsTxt({
 
     for (const glossary of model.glossaries) {
       for (const term of glossary.terms) {
-        lines.push(`- ${term.name} (${glossary.domain})${term.summary ? `: ${term.summary}` : ''}`);
+        const aliases = term.aliases?.length ? `, also ${term.aliases.join(', ')}` : '';
+
+        const about = term.refs.length
+          ? ` Implemented by ${term.refs.map((ref) => `${ref.kind}/${ref.id}`).join(', ')}.`
+          : '';
+
+        lines.push(
+          `- ${term.name} (${glossary.domain}${aliases})${term.summary ? `: ${term.summary}` : ''}${about}`,
+        );
       }
     }
 

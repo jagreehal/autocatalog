@@ -1,0 +1,48 @@
+---
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import type { InferGetStaticPropsType } from 'astro';
+import { docsCatalog } from '../catalog';
+import { systemPageProps } from '../page-models';
+import { buildSystems } from '../systems';
+import { setResourceContext } from '../shell';
+import { SystemPage } from '../ui/pages/SystemPage';
+
+export async function getStaticPaths() {
+  const catalog = await docsCatalog();
+  const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+
+  return buildSystems(catalog.designs, base).map((system) => ({
+    params: { id: system.id },
+    props: { id: system.id },
+  }));
+}
+
+type Props = InferGetStaticPropsType<typeof getStaticPaths>;
+
+const { id } = Astro.props;
+
+const catalog = await docsCatalog();
+
+const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+
+const page = systemPageProps(catalog, id, base);
+
+if (!page) throw new Error(`system not found: ${id}`);
+
+setResourceContext(Astro.locals, {
+  kind: 'domain',
+  name: page.system.name,
+  key: `system:${page.system.id}`,
+  pills: [{ text: page.system.external ? 'external' : 'system', tone: 'quiet' }],
+});
+---
+
+<StarlightPage
+  frontmatter={{
+    title: page.system.name,
+    description: page.system.summary ?? page.system.designTitle,
+    tableOfContents: false,
+  }}
+>
+  <SystemPage {...page} />
+</StarlightPage>

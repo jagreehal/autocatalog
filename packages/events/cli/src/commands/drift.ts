@@ -489,6 +489,14 @@ export async function runDrift(opts: RunDriftOptions): Promise<number> {
           console.log(
             `${color(f.severity.padEnd(10))} ${driftEventLabel(f)}: ${f.message}${impact}${advice}`,
           );
+
+          if (f.rehearsal) {
+            console.log(
+              kleur.dim(
+                `${' '.repeat(11)}rehearsal: ${JSON.stringify(f.rehearsal.payload)} passes the proposed schema; the current contract rejects it (${f.rehearsal.failure})`,
+              ),
+            );
+          }
         }
 
         console.log(

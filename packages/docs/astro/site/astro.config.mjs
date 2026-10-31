@@ -22,6 +22,9 @@ export default defineConfig({
   integrations: [
     starlight({
       title: env.AUTOCATALOG_DOCS_TITLE || 'Catalog',
+      // Default lives in site/public/favicon.svg. Set AUTOCATALOG_SITE_FAVICON
+      // (and put that file under public/) to replace it.
+      favicon: env.AUTOCATALOG_SITE_FAVICON || '/favicon.svg',
       plugins: [autocatalogDocs()],
     }),
   ],

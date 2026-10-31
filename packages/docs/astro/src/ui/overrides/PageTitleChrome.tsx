@@ -4,9 +4,10 @@ import { Badge } from '#ui/components/ui/badge.tsx';
 import { Button, LinkButton } from '#ui/components/ui/button.tsx';
 import { ButtonGroup } from '#ui/components/ui/button-group.tsx';
 import { Separator } from '#ui/components/ui/separator.tsx';
-import type { PageAction, PillTone } from '../../shell';
+import { COPY_MARKDOWN_LABEL, type PageAction, type PillTone } from '../../shell';
 import { Icon } from '../components/Icon';
 import { statusVariant } from '../lib/status';
+import { FavoriteToggle } from './Favorites';
 
 export interface PageTitleChromeProps {
   /** `doc`, or the resource kind; drives Search's Kind tabs. */
@@ -17,6 +18,8 @@ export interface PageTitleChromeProps {
   catalogKey?: string;
   /** A call to action level with the title, such as "Explore catalog". */
   primary?: { label: string; href: string };
+  /** The page's title, as a pin in the sidebar names it. */
+  title?: string;
   /** The sentence that says what the page is for. */
   summary?: string;
   /** States worth flagging beside the key: a version, deprecated. */
@@ -41,6 +44,37 @@ const PILL_VARIANT = { warn: 'destructive', quiet: 'secondary', plain: 'outline'
 
 /** How long "Copied" stays on the button before it says what it does again. */
 const RESET_MS = 1600;
+
+/**
+ * Markdown for a page that has no twin: the title, key, summary and the article
+ * body as plain paragraphs, enough for an agent to quote without the chrome.
+ */
+export function pageAsMarkdown(root: ParentNode = document): string {
+  const title =
+    root.querySelector('[data-page-title] h1')?.textContent?.trim() ||
+    root.querySelector('h1')?.textContent?.trim() ||
+    'Untitled';
+
+  const key = root.querySelector('[data-page-title] code')?.textContent?.trim();
+  const summary = root.querySelector('[data-page-title] p')?.textContent?.trim();
+
+  const body =
+    root.querySelector('main .sl-markdown-content') ??
+    root.querySelector('main [data-catalog-explorer]') ??
+    root.querySelector('main');
+
+  const lines = [`# ${title}`, ''];
+
+  if (key) lines.push(`\`${key}\``, '');
+
+  if (summary) lines.push(summary, '');
+
+  const text = body?.textContent?.replace(/\n{3,}/g, '\n\n').trim();
+
+  if (text && text !== title && text !== summary) lines.push(text, '');
+
+  return lines.join('\n');
+}
 
 /** Copies what `href` serves, and says so on the button and to a screen reader. */
 function CopyAction({
@@ -83,6 +117,58 @@ function CopyAction({
   );
 }
 
+/** Copies a twin when the page has one, else the page itself as Markdown. */
+function CopyMarkdownButton({
+  href,
+  onStatus,
+}: {
+  href?: string;
+  onStatus: (message: string) => void;
+}) {
+  const [message, setMessage] = useState<string | null>(null);
+  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  useEffect(() => () => clearTimeout(timer.current), []);
+
+  const copy = async () => {
+    let result = 'Copied';
+
+    try {
+      const text = href
+        ? await (async () => {
+            const response = await fetch(href);
+
+            if (!response.ok) throw new Error(String(response.status));
+
+            return response.text();
+          })()
+        : pageAsMarkdown();
+
+      await navigator.clipboard.writeText(text);
+    } catch {
+      result = 'Copy failed';
+    }
+
+    setMessage(result);
+    onStatus(result);
+    clearTimeout(timer.current);
+    timer.current = setTimeout(() => setMessage(null), RESET_MS);
+  };
+
+  return (
+    <Button
+      variant="outline"
+      size="sm"
+      data-copy-markdown=""
+      {...(href ? { 'data-copy-from': href } : {})}
+      onPress={copy}
+    >
+      <Icon name="copy" />
+      <span data-label="">{message ?? COPY_MARKDOWN_LABEL}</span>
+    </Button>
+  );
+}
+
 /**
  * The head of every page: its title, then what the catalog calls it (its key,
  * which already says what kind of thing it is), the sentence that says what it
@@ -93,6 +179,7 @@ export function PageTitleChrome({
   kindLabel,
   catalogKey,
   primary,
+  title,
   summary,
   pills,
   status,
@@ -101,6 +188,10 @@ export function PageTitleChrome({
   children,
 }: PageTitleChromeProps) {
   const [announcement, setAnnouncement] = useState('');
+
+  const hasMarkdownCopy = actions.some(
+    (action) => action.copy && action.label === COPY_MARKDOWN_LABEL,
+  );
 
   return (
     <div className="mt-5 flex flex-col gap-4" data-page-title>
@@ -167,29 +258,36 @@ export function PageTitleChrome({
           ))}
         </dl>
       )}
-      {actions.length > 0 && (
-        <ButtonGroup aria-label="Page actions" data-pagefind-ignore="">
-          {actions.map((action) =>
-            action.copy ? (
-              <CopyAction
-                key={`${action.href}|${action.label}`}
-                action={action}
-                onStatus={setAnnouncement}
-              />
-            ) : (
-              <LinkButton
-                key={`${action.href}|${action.label}`}
-                variant="outline"
-                size="sm"
-                href={action.href}
-              >
-                <Icon name={action.icon} />
-                {action.label}
-              </LinkButton>
-            ),
-          )}
-        </ButtonGroup>
-      )}
+      <ButtonGroup aria-label="Page actions" data-pagefind-ignore="">
+        {actions.map((action) =>
+          action.copy && action.label === COPY_MARKDOWN_LABEL ? (
+            <CopyMarkdownButton
+              key={`${action.href}|${action.label}`}
+              href={action.href}
+              onStatus={setAnnouncement}
+            />
+          ) : action.copy ? (
+            <CopyAction
+              key={`${action.href}|${action.label}`}
+              action={action}
+              onStatus={setAnnouncement}
+            />
+          ) : (
+            <LinkButton
+              key={`${action.href}|${action.label}`}
+              variant="outline"
+              size="sm"
+              href={action.href}
+            >
+              <Icon name={action.icon} />
+              {action.label}
+            </LinkButton>
+          ),
+        )}
+        {/* Pages with no Markdown twin still get a copy of the page itself. */}
+        {!hasMarkdownCopy && <CopyMarkdownButton onStatus={setAnnouncement} />}
+        <FavoriteToggle catalogKey={catalogKey} label={title} />
+      </ButtonGroup>
       <Separator className="mt-1" />
       {/* A screen reader hears the result of a copy, not only a changed label. */}
       <span className="sr-only" role="status" aria-live="polite" data-copy-status="">

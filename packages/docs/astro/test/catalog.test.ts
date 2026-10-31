@@ -759,6 +759,20 @@ describe('documents about a resource', () => {
     ).toEqual(['event/payments/payment.captured', 'service/PaymentService']);
   });
 
+  it('lists documents, not the glossary terms that name the same resource', async () => {
+    await writeEvent();
+    await write(
+      'acme-handbook/glossary/payments.md',
+      '---\ndictionary:\n  - id: capture\n    name: Capture\n    about: [event/payments/payment.captured]\n---\n',
+    );
+
+    const catalog = await buildDocsCatalog(root, { includeDates: false });
+    const event = { kind: 'event', namespace: 'payments-service/payments', id: 'payment.captured' };
+
+    expect(catalog.summary.relationshipsByType).toMatchObject({ describes: 1 });
+    expect(documentsAbout(catalog.graph, event)).toEqual([]);
+  });
+
   it('leaves out a target that does not resolve, and says so during the build', async () => {
     await writeEvent();
     await write(

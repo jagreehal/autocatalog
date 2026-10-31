@@ -1,8 +1,11 @@
 /** @jsxImportSource react */
 import '@eventcatalog/visualiser/styles-core.css';
 import { cn } from 'cn';
+import { Maximize2Icon, Minimize2Icon } from 'lucide-react';
 import type { VisualiserGraph } from '#ui/lib/visualiser.ts';
 import { lazy, Suspense, useEffect, useRef, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
+import { Button } from '#ui/components/ui/button.tsx';
 
 // React Flow, dagre and mermaid come to a quarter of a megabyte gzipped, so
 // the map's code loads only as it nears the viewport, never with the page.
@@ -30,9 +33,15 @@ export function Graph({ id, label, visualiser, height = '20rem', fallback }: Gra
   const box = useRef<HTMLDivElement>(null);
 
   const [near, setNear] = useState(false);
+  const [fullscreen, setFullscreen] = useState(false);
+  const [portal, setPortal] = useState<HTMLElement | null>(null);
 
   useEffect(() => {
-    if (!visualiser || !box.current) return;
+    setPortal(document.body);
+  }, []);
+
+  useEffect(() => {
+    if (!visualiser || !box.current || fullscreen) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -47,7 +56,23 @@ export function Graph({ id, label, visualiser, height = '20rem', fallback }: Gra
     observer.observe(box.current);
 
     return () => observer.disconnect();
-  }, [visualiser]);
+  }, [visualiser, fullscreen]);
+
+  useEffect(() => {
+    if (!fullscreen) return;
+
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setFullscreen(false);
+    };
+
+    document.documentElement.dataset.graphFullscreen = '';
+    window.addEventListener('keydown', onKey);
+
+    return () => {
+      delete document.documentElement.dataset.graphFullscreen;
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [fullscreen]);
 
   if (!visualiser) {
     return (
@@ -67,30 +92,61 @@ export function Graph({ id, label, visualiser, height = '20rem', fallback }: Gra
     </div>
   );
 
+  const map = (open: boolean) => (
+    <div className={cn('relative h-full', !open && 'noscript:hidden')}>
+      <Button
+        variant="outline"
+        size="icon-sm"
+        className="absolute top-2 right-2 z-10"
+        aria-label={open ? 'Exit full screen' : 'Open map full screen'}
+        aria-pressed={open}
+        data-graph-fullscreen-toggle=""
+        onPress={() => setFullscreen((value) => !value)}
+      >
+        {open ? <Minimize2Icon /> : <Maximize2Icon />}
+      </Button>
+      {near || open ? (
+        <Suspense fallback={placeholder}>
+          <Visualiser
+            id={open ? `${id}-fullscreen` : id}
+            label={label}
+            graph={visualiser.graph}
+            hrefs={visualiser.hrefs}
+            evidence={visualiser.evidence}
+            live={visualiser.live}
+            steps={visualiser.steps}
+            lanes={visualiser.lanes}
+            levels={visualiser.levels}
+            proposed={visualiser.proposed}
+          />
+        </Suspense>
+      ) : (
+        placeholder
+      )}
+    </div>
+  );
+
   return (
-    <div ref={box} className="not-content" data-graph>
-      {/* Without JavaScript the empty box steps aside for the static picture. */}
+    <div ref={box} className="not-content" data-graph="">
+      {/* In place: keeps the page height while fullscreen is portalled to body. */}
       <div className={cn('noscript:hidden', heights[height])}>
-        {near ? (
-          <Suspense fallback={placeholder}>
-            <Visualiser
-              id={id}
-              label={label}
-              graph={visualiser.graph}
-              hrefs={visualiser.hrefs}
-              evidence={visualiser.evidence}
-              live={visualiser.live}
-              steps={visualiser.steps}
-              lanes={visualiser.lanes}
-              levels={visualiser.levels}
-              proposed={visualiser.proposed}
-            />
-          </Suspense>
-        ) : (
-          placeholder
-        )}
+        {fullscreen ? placeholder : map(false)}
       </div>
       <noscript>{fallback}</noscript>
+      {fullscreen &&
+        portal &&
+        createPortal(
+          <div
+            data-graph=""
+            data-graph-fullscreen=""
+            role="dialog"
+            aria-modal="true"
+            aria-label={label}
+          >
+            {map(true)}
+          </div>,
+          portal,
+        )}
     </div>
   );
 }

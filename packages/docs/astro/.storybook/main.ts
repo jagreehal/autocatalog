@@ -2,6 +2,7 @@ import type { StorybookConfig } from '@storybook/react-vite';
 import { fileURLToPath } from 'node:url';
 import tailwindcss from '@tailwindcss/vite';
 import { microlighterGrammars } from '../src/index';
+import { cjsShimAliases } from '../src/react-integration';
 
 const config: StorybookConfig = {
   stories: ['../src/ui/**/*.stories.@(ts|tsx)'],
@@ -12,6 +13,7 @@ const config: StorybookConfig = {
   },
   async viteFinal(config) {
     const { mergeConfig } = await import('vite');
+    const shims = cjsShimAliases();
 
     return mergeConfig(config, {
       plugins: [tailwindcss()],
@@ -23,9 +25,10 @@ const config: StorybookConfig = {
         'import.meta.env.BASE_URL': JSON.stringify('/'),
       },
       resolve: {
-        alias: {
-          '@ui': fileURLToPath(new URL('../src/ui', import.meta.url)),
-        },
+        alias: [
+          { find: '@ui', replacement: fileURLToPath(new URL('../src/ui', import.meta.url)) },
+          ...shims,
+        ],
       },
     });
   },

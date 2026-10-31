@@ -10,6 +10,7 @@ import { durationSeconds } from './schema';
 import { matchSnapshot, suggestRenames, type ArchitectureSnapshot } from './snapshot';
 import { isSafeName, UNSAFE_CONSUMER } from './consumes';
 import { readsAsPastTense } from './naming';
+import { rehearser, type Rehearsal } from './rehearse';
 import { schemaPointer, sourceLines } from './source-lines';
 import type { ResourceRef } from './resource-graph';
 
@@ -114,6 +115,8 @@ export interface DriftFinding {
   /** Where the contract is defined, when the scanner traced it back to code. */
   source?: { file: string; line?: number };
   diff?: DiffResult;
+  /** A payload the change allows that the current contract rejects, for a breaking or suspicious finding. */
+  rehearsal?: Rehearsal;
 }
 
 export interface DriftReport {
@@ -358,7 +361,21 @@ export function assessEventChange(input: {
     };
   });
 
-  return foldRenames(findings);
+  const folded = foldRenames(findings);
+  const risky = folded.some((f) => f.severity === 'breaking' || f.severity === 'suspicious');
+  const [before, after] = [previous, proposed].map((schema) => jsonObjectSchema.safeParse(schema));
+
+  const rehearse =
+    risky && before?.success && after?.success ? rehearser(before.data, after.data) : undefined;
+
+  return folded.map((finding) => {
+    const reaches = finding.severity === 'breaking' || finding.severity === 'suspicious';
+
+    if (!reaches || !finding.diff || !rehearse) return finding;
+    const rehearsal = rehearse(finding.diff, finding.rename?.from);
+
+    return rehearsal ? { ...finding, rehearsal } : finding;
+  });
 }
 
 /** `items[].sku` → `items[]`; a top-level field's parent is the root, `''`. */
@@ -1422,6 +1439,11 @@ const markOf = (f: DriftFinding): string =>
 
 const adviceOf = (f: DriftFinding): string => (f.advice ? `. ${f.advice}` : '');
 
+const rehearsalOf = (f: DriftFinding): string =>
+  f.rehearsal
+    ? `. Rehearsal: ${JSON.stringify(f.rehearsal.payload)} passes the proposed schema; the current contract rejects it (${f.rehearsal.failure})`
+    : '';
+
 /** Which consumers said they read the field, which never said, and which it spares. */
 function usageNote(f: DriftFinding): string {
   if (!f.usage) return '';
@@ -1466,6 +1488,19 @@ export function renderDriftMarkdown(report: DriftReport): string {
     for (const f of sorted) {
       const impact = f.consumers.length > 0 ? ` — breaks consumers: ${f.consumers.join(', ')}` : '';
       lines.push(`- ${markOf(f)}: ${f.message}${impact}${usageNote(f)}${adviceOf(f)}`);
+
+      if (f.rehearsal) {
+        lines.push(
+          `  - Rehearsal: the proposed schema accepts this payload; the current contract rejects it (\`${f.rehearsal.failure}\`)`,
+          '',
+          '    ```json',
+          ...JSON.stringify(f.rehearsal.payload, null, 2)
+            .split('\n')
+            .map((line) => `    ${line}`),
+          '    ```',
+          '',
+        );
+      }
     }
 
     lines.push('');
@@ -1515,7 +1550,7 @@ export function renderDriftGitHub(report: DriftReport): string {
       // diff without reading as the reason the job went red.
       const level = f.acknowledged ? 'warning' : ANNOTATION_LEVEL[f.severity];
 
-      return `::${level} ${props.join(',')}::${escapeData(f.message + impact + usageNote(f) + adviceOf(f))}`;
+      return `::${level} ${props.join(',')}::${escapeData(f.message + impact + usageNote(f) + adviceOf(f) + rehearsalOf(f))}`;
     })
     .join('\n');
 }

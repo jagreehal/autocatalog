@@ -30,7 +30,10 @@ export function documentsAbout(graph: ResourceGraph, target: ResourceRef): Resou
   const byKey = new Map(graph.resources.map((resource) => [resourceKey(resource.ref), resource]));
 
   return graph.relationships
-    .filter(({ type, to }) => type === 'describes' && sameResource(to, target))
+    .filter(
+      ({ type, from, to }) =>
+        type === 'describes' && from.kind === 'document' && sameResource(to, target),
+    )
     .flatMap(({ from }) => {
       const doc = byKey.get(resourceKey(from));
 

@@ -20,6 +20,11 @@ import {
   type ResourceGraph,
   type ResourceRef,
 } from 'autocatalog-core';
+import { attentionSnapshot } from './attention';
+import { buildChannels } from './channels';
+import { fieldsByPath, withFieldLineage } from './field-lineage';
+import { statusBanners } from './resource-status';
+import { buildSystems } from './systems';
 import { z } from 'zod';
 import { sourceUrl } from 'autocatalog-docs-core';
 import { documentsAbout } from './about';
@@ -240,6 +245,28 @@ export function homePageProps(
           },
         ]
       : []),
+    ...(buildChannels(catalog.graph, catalog.designs, base).length > 0
+      ? [
+          {
+            title: 'Channels',
+            text: 'Topics and queues observed at runtime, and channels drawn in designs.',
+            href: `${base}channels/`,
+            icon: 'channel' as const,
+            kind: 'channel',
+          },
+        ]
+      : []),
+    ...(buildSystems(catalog.designs, base).length > 0
+      ? [
+          {
+            title: 'Systems',
+            text: 'Systems and external systems named in designs.',
+            href: `${base}systems/`,
+            icon: 'architecture' as const,
+            kind: 'system',
+          },
+        ]
+      : []),
     {
       title: 'For agents',
       text: 'llms.txt, a Markdown twin of every document, and the graph as JSON.',
@@ -249,7 +276,37 @@ export function homePageProps(
     },
   ];
 
-  return { stats, explore, repos: groupByRepo(items), tags: groupByTag(items) };
+  const attention = attentionSnapshot(catalog, base);
+
+  return {
+    stats,
+    explore,
+    repos: groupByRepo(items),
+    tags: groupByTag(items),
+    attention,
+  };
+}
+
+export function channelsPageProps(catalog: DocsCatalog, base: string) {
+  return { channels: buildChannels(catalog.graph, catalog.designs, base) };
+}
+
+export function channelPageProps(catalog: DocsCatalog, id: string, base: string) {
+  const channel = buildChannels(catalog.graph, catalog.designs, base).find(
+    (entry) => entry.id === id,
+  );
+
+  return channel ? { channel } : null;
+}
+
+export function systemsPageProps(catalog: DocsCatalog, base: string) {
+  return { systems: buildSystems(catalog.designs, base) };
+}
+
+export function systemPageProps(catalog: DocsCatalog, id: string, base: string) {
+  const system = buildSystems(catalog.designs, base).find((entry) => entry.id === id);
+
+  return system ? { system } : null;
 }
 
 export function catalogPageProps(catalog: DocsCatalog, base: string): CatalogPageProps {
@@ -772,6 +829,14 @@ export async function eventPageProps(
         : 'This event is deprecated.'
       : null;
 
+  const fieldIndex = indexFields(catalog.events.map(({ event: other }) => other));
+
+  const schema = withFieldLineage(
+    schemaTree(event.schema),
+    fieldsByPath(fieldIndex),
+    (field) => describeFieldConflict(field) ?? undefined,
+  );
+
   return {
     owner: fm.owner && {
       team: owner?.name ?? fm.owner.team,
@@ -783,12 +848,15 @@ export async function eventPageProps(
       confidence: fm.confidence ?? null,
       needsReview: fm.needsReview,
     },
-    deprecation,
-    draft: fm.status === 'draft',
+    banners: statusBanners({
+      status: fm.status,
+      deprecation,
+      needsReview: fm.needsReview,
+    }),
     narrativeHtml,
     flow,
     visualiser: flowGraph(flow, seen && { event: fm.id, seen, live: docsSiteConfig().live }),
-    schema: schemaTree(event.schema),
+    schema,
     schemaHref: `${base}${eventPath(entry)}schema.json`,
     evidence: runtimeEvidenceView(
       eventRuntimeEvidence(fm),
@@ -820,6 +888,8 @@ export async function eventVersionPageProps(
   const { event } = entry;
 
   const current = versions.find(({ event: other }) => !other.folder.isVersioned);
+  const links = await versionLinks(versions, entry, base);
+  const active = links.find((version) => version.active);
 
   return {
     version: event.frontmatter.version,
@@ -827,9 +897,18 @@ export async function eventVersionPageProps(
       href: `${base}${versionPath(current)}`,
       version: current.event.frontmatter.version,
     },
+    changesHtml: active?.changesHtml ?? null,
+    banners: current
+      ? statusBanners({
+          newer: {
+            version: current.event.frontmatter.version,
+            href: `${base}${versionPath(current)}`,
+          },
+        })
+      : [],
     schema: schemaTree(event.schema),
     schemaHref: `${base}${versionPath(entry)}schema.json`,
     examples: exampleViews(event.examples),
-    versions: await versionLinks(versions, entry, base),
+    versions: links,
   };
 }

@@ -11,6 +11,24 @@ const require = createRequire(import.meta.url);
 const ui = fileURLToPath(new URL('./ui', import.meta.url));
 
 /**
+ * Points React Aria's CommonJS `use-sync-external-store/shim` import at an
+ * ESM entry that re-exports React 19's hook.
+ */
+export function cjsShimAliases(
+  from: string = path.dirname(fileURLToPath(import.meta.url)),
+): { find: RegExp; replacement: string }[] {
+  const shim = path.join(from, 'use-sync-external-store-shim.ts');
+
+  // Exact match: a string find is a prefix and would rewrite `…/shim/index.js` too.
+  return [
+    {
+      find: /^use-sync-external-store\/shim(?:\/index\.js)?$/,
+      replacement: shim,
+    },
+  ];
+}
+
+/**
  * Lets the site render this plugin's React pages without installing React
  * itself. Astro imports an integration's renderer from the site's root, where
  * a site that never installed React (or whose package manager does not hoist
@@ -27,11 +45,19 @@ export function reactRendererIntegration(): AstroIntegration {
           replacement: require.resolve(`@astrojs/react/${entry}`),
         }));
 
+        const shims = cjsShimAliases();
+
         updateConfig({
           vite: {
-            resolve: { alias: renderer },
+            resolve: { alias: [...renderer, ...shims] },
             server: {
-              fs: { allow: [ui, ...renderer.map((entry) => nodeModulesOf(entry.replacement))] },
+              fs: {
+                allow: [
+                  ui,
+                  ...renderer.map((entry) => nodeModulesOf(entry.replacement)),
+                  ...shims.map((entry) => path.dirname(entry.replacement)),
+                ],
+              },
             },
           },
         });

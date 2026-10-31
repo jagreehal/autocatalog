@@ -4,7 +4,8 @@ import type { InferGetStaticPropsType } from 'astro';
 import { docsCatalog, eventParticipants } from '../catalog';
 import { eventPageProps } from '../page-models';
 import { eventPath } from '../event-path';
-import { setResourceContext, versionLabel } from '../shell';
+import { statusPills } from '../resource-status';
+import { setResourceContext, withMarkdownCopy } from '../shell';
 import { twinPath } from '../twins';
 import { EventPage } from '../ui/pages/EventPage';
 
@@ -40,16 +41,16 @@ setResourceContext(Astro.locals, {
   kind: 'event',
   name: fm.name,
   key: `event:${fm.domain}/${fm.id}`,
-  actions: [
+  actions: withMarkdownCopy(markdownHref, [
     { label: 'Copy schema', href: page.schemaHref, icon: 'copy', copy: true },
     { label: 'View schema.json', href: page.schemaHref, icon: 'braces' },
-    { label: 'View as Markdown', href: markdownHref, icon: 'doc' },
-  ],
+  ]),
   pills: [
-    { text: versionLabel(fm.version) },
-    ...(fm.status === 'active'
-      ? []
-      : [{ text: fm.status, tone: fm.status === 'draft' ? ('quiet' as const) : ('warn' as const) }]),
+    ...statusPills({
+      status: fm.status,
+      version: fm.version,
+      needsReview: fm.needsReview,
+    }),
     ...(fm.classification ? [{ text: fm.classification }] : []),
     // The labels a team gave the event. Shown in the theme's colours rather
     // than the ones written beside them, so every badge reads the same way.
