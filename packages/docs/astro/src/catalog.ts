@@ -56,6 +56,7 @@ import {
   type DomainModel,
   type Flow,
   readDesigns,
+  glossaryGraph,
   readDomainModel,
   flowWorkflow,
   readFlows,
@@ -66,6 +67,7 @@ import { designsChangedAt } from './dev-signals';
 import { repositorySpecifications, type CatalogSpecification } from './specifications';
 import { publishedKinds, RESERVED_SEGMENTS } from './kinds';
 import { catalogModels, modelPath, type CatalogModel } from './data-models';
+import { termAnchor } from './model';
 import { docsSiteConfig } from './config';
 import type { ShellLink } from './shell';
 import { catalogHref } from './view';
@@ -457,6 +459,13 @@ export async function buildDocsCatalog(
   } = readDomainModel(enrolled, composed, {
     schemaOf: (event) => schemas.get(`${event.ref.namespace}/${event.ref.id}`),
   });
+
+  // The words teams use, joined to what implements them: how an agent gets from
+  // "customer onboarding" to the services and events behind it.
+  composed = mergeArchitectureGraphs(
+    composed,
+    glossaryGraph(model.glossaries, (domain, term) => `/glossary/#${termAnchor(domain, term)}`),
+  );
 
   failures.sort((a, b) =>
     `${a.repository}/${a.source}`.localeCompare(`${b.repository}/${b.source}`),

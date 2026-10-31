@@ -177,7 +177,18 @@ function onSide(side: Side, finding: DriftFinding): DriftFinding {
         ? 'breaking'
         : 'additive';
 
-  return { ...finding, severity, compatibility, message: `${side}: ${finding.message}` };
+  // A rehearsal is a payload a reader of the old schema rejects. That reader is
+  // the client for a response; a request's reader is the server, the other way round.
+  const { rehearsal, ...rest } = finding;
+  const kept = side === 'response' && severity === 'breaking' ? rehearsal : undefined;
+
+  return {
+    ...rest,
+    ...(kept && { rehearsal: kept }),
+    severity,
+    compatibility,
+    message: `${side}: ${finding.message}`,
+  };
 }
 
 /**

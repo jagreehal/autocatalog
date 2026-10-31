@@ -4,7 +4,7 @@ import type { InferGetStaticPropsType } from 'astro';
 import { docsCatalog } from '../catalog';
 import { docsSiteConfig } from '../config';
 import { dataModelPageProps, modelDescription, modelPath, modelTitle } from '../data-models';
-import { setPageHeader } from '../shell';
+import { setPageHeader, withMarkdownCopy } from '../shell';
 import { twinPath } from '../twins';
 import { DataModelPage } from '../ui/pages/DataModelPage';
 
@@ -33,14 +33,12 @@ const page = dataModelPageProps(catalog.graph, model, catalog.models, catalog.ev
 const markdownHref = `${base}${twinPath(modelPath(model))}`;
 
 setPageHeader(Astro.locals, {
-  actions: [
+  actions: withMarkdownCopy(markdownHref, [
     ...(page.sourceHref
       ? [{ label: 'Source', href: page.sourceHref, icon: 'repository' as const }]
       : []),
-    { label: 'View as Markdown', href: markdownHref, icon: 'doc' },
-  ],
-});
----
+  ]),
+});---
 
 <StarlightPage
   frontmatter={{

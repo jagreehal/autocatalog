@@ -3,7 +3,13 @@ import Default from '@astrojs/starlight/components/PageTitle.astro';
 import { z } from 'astro/zod';
 import { docsCatalog } from '../catalog';
 import { kindHeader } from '../kinds';
-import { type PageAction, pageHeader, resourceContext } from '../shell';
+import {
+  COPY_MARKDOWN_LABEL,
+  type PageAction,
+  pageHeader,
+  resourceContext,
+  withMarkdownCopy,
+} from '../shell';
 import { PageTitleChrome } from '../ui/overrides/PageTitleChrome';
 import { docHref } from '../view';
 
@@ -40,15 +46,18 @@ const data = z
   .looseObject({ description: z.string().optional(), summary: z.string().optional() })
   .parse(entry.data);
 
-// Every document has a Markdown twin; a resource page lists its own.
-const actions: PageAction[] =
-  header?.actions ??
-  (isDoc
-    ? [
-        { label: 'Copy page as Markdown', href: docHref(`${id}.md`), icon: 'copy', copy: true },
-        { label: 'View as Markdown', href: docHref(`${id}.md`), icon: 'doc' },
-      ]
-    : []);
+// Every document has a Markdown twin; a resource page lists its own. Pages that
+// already passed Copy/View through the header keep them; a lone View is raised
+// to the pair every twin-backed page shows.
+const listed = header?.actions ?? [];
+
+const view = listed.find((action) => action.label === 'View as Markdown');
+
+const actions: PageAction[] = isDoc
+  ? withMarkdownCopy(docHref(`${id}.md`), listed)
+  : view && !listed.some((action) => action.label === COPY_MARKDOWN_LABEL)
+    ? withMarkdownCopy(view.href, listed)
+    : listed;
 ---
 
 <PageTitleChrome
@@ -57,6 +66,7 @@ const actions: PageAction[] =
   kindLabel={kindLabel}
   catalogKey={resource?.key ?? (isDoc ? `document:${id}` : undefined)}
   primary={header?.primary}
+  title={entry.data.title}
   summary={data.description ?? data.summary}
   pills={resource?.pills ?? []}
   status={record?.status}

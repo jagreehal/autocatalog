@@ -4,6 +4,8 @@ dictionary:
     name: Capture
     summary: Taking money a card issuer has already authorised.
     description: A capture can be for less than the authorised amount, never more.
+    aliases: [charge, take payment]
+    about: [service/PaymentService, event/payments/payment.captured]
   - id: refund
     name: Refund
     summary: Returning captured money to the card it came from.

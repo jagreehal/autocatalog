@@ -155,6 +155,7 @@ export {
   entityReferences,
   type EntityProperty,
   type Glossary,
+  glossaryGraph,
   lookupTerm,
   MODEL_DIRS,
   type Person,

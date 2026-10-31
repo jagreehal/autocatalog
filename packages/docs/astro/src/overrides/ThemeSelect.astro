@@ -1,9 +1,10 @@
 ---
+import { SidebarControls } from '../ui/overrides/SidebarControls';
 import { ThemeSelect } from '../ui/overrides/ThemeSelect';
 
-// One button in place of Starlight's three-way select, in React so it hydrates
-// like the rest of the UI. It is an island here, rather than markup, because it
-// reads and writes localStorage and `data-theme`.
+// Theme stays in the header. Sidebar collapse / resize mount here so they
+// live outside `.sidebar-pane` (collapsed hides that pane).
 ---
 
 <ThemeSelect client:load />
+<SidebarControls client:load />

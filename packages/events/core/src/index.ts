@@ -101,6 +101,25 @@ export {
 
 export { driftOpenApi } from './openapi-drift';
 
+export {
+  type CompanyIndex,
+  type CompanyIndexOptions,
+  publishedLine,
+  readCompanyIndex,
+  readEventSchema,
+} from './company-index';
+
+export { rehearser, type Rehearsal } from './rehearse';
+
+export {
+  taskContext,
+  type ContextEvidence,
+  type ContextItem,
+  type ContextRelationship,
+  type TaskContext,
+  type TaskContextOptions,
+} from './task-context';
+
 export * from './rules';
 
 export * from './retire';
@@ -283,6 +302,8 @@ export {
   type ResourceRef,
   type RepositoryCatalogResource,
   type RepositoryResourceAttributes,
+  type TermCatalogResource,
+  type TermResourceAttributes,
   type ServiceCatalogResource,
   type ServiceResourceAttributes,
   type TypedCatalogResource,

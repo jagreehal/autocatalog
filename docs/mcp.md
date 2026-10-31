@@ -50,12 +50,26 @@ status to stderr, and speaks over stdio. No network access is involved.
 | `get_investigation_bundle` | Impact, compatibility and a handoff to autotel-mcp                    |
 | `define`                   | What a word means here: glossary terms and the entities named for it  |
 | `show_map`                 | The catalog, a flow, a design or a data product as a diagram          |
+| `task_context`             | What to read before a task: matches, owners, decisions, gaps          |
 
 `define` reads the glossary and entities the checkout keeps. Ask it before
 naming a field or an event, and the agent uses the word the domain already
 uses: `define capture` returns the payments glossary's meaning, and
 `define payment` returns the Payment entity with its properties and the events
 that carry `paymentId`.
+
+Call `task_context` with the task in words ("add partial refunds") before
+starting one. It returns the resources the words name, by name or by a
+glossary alias, everything one hop out, the decision records and runbooks
+about them, and their owners. Each relationship says how it is known:
+`declared`, `in code`, `observed` in traces, `reported` by a runtime source
+without a delivery seen, or `inferred`. `gaps` lists what the catalog could not
+establish, such as a resource with no owner or no decision record, and says
+when a list was cut short: `omitted` counts what the `limit` left out. Start
+the server with `--site https://catalog.example.com` and it reads the company
+site's `/catalog.json`, so the bundle covers every repository;
+`--site-token-env CATALOG_TOKEN` sends that variable as a bearer token for a
+private site.
 
 In practice an agent asks things like "what fields does `payment.completed`
 require?", "which events carry `customerId`?", or "which services consume

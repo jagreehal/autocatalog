@@ -52,7 +52,9 @@ describe('renderLlmsTxt', () => {
             id: 'payments',
             file: 'glossary/payments.md',
             domain: 'payments',
-            terms: [{ id: 'capture', name: 'Capture', summary: 'Taking authorised money.' }],
+            terms: [
+              { id: 'capture', name: 'Capture', summary: 'Taking authorised money.', refs: [] },
+            ],
           },
         ],
         entities: [

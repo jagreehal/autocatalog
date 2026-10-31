@@ -446,3 +446,185 @@ starlight-toc a[aria-current='true'] {
   clip-path: inset(50%);
   white-space: nowrap;
 }
+
+/*
+ * Collapsible / resizable left rail. The dragged width is --ac-sidebar-width;
+ * collapsed zeros it and hides the pane. Collapse and the drag handle sit on
+ * the pane's trailing edge (not in the header) so the control stays with the
+ * surface it affects; expand reappears on that same edge when the rail is gone.
+ */
+@media (max-width: 49.999rem) {
+  [data-sidebar-toggle],
+  [data-sidebar-resizer] {
+    display: none !important;
+  }
+}
+
+@media (min-width: 50rem) {
+  :root {
+    --sl-sidebar-width: var(--ac-sidebar-width, 18.75rem);
+  }
+  :root[data-sidebar='collapsed'] {
+    --sl-sidebar-width: 0px;
+  }
+  :root[data-sidebar='collapsed'] .sidebar-pane {
+    visibility: hidden;
+    pointer-events: none;
+  }
+  :root[data-sidebar='collapsed'] [data-sidebar-resizer] {
+    display: none;
+  }
+
+  [data-sidebar-toggle] {
+    position: fixed;
+    z-index: calc(var(--sl-z-index-navbar) - 1);
+    top: calc(var(--sl-nav-height) + 0.5rem);
+    inset-inline-start: calc(var(--sl-sidebar-width) - 1rem);
+    background: var(--sl-color-bg-sidebar, var(--background, #fff));
+    border: 1px solid var(--sl-color-hairline, var(--border, #e5e5e5));
+    box-shadow: 0 1px 2px rgb(0 0 0 / 6%);
+  }
+  :root[data-sidebar='collapsed'] [data-sidebar-toggle] {
+    inset-inline-start: 0.35rem;
+  }
+
+  [data-sidebar-resizer] {
+    position: fixed;
+    z-index: calc(var(--sl-z-index-navbar) - 1);
+    top: var(--sl-nav-height);
+    bottom: 0;
+    inset-inline-start: calc(var(--sl-sidebar-width) - 3px);
+    width: 6px;
+    cursor: col-resize;
+    touch-action: none;
+  }
+  [data-sidebar-resizer]::after {
+    content: '';
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: 2px;
+    width: 2px;
+    background: transparent;
+    transition: background 120ms ease;
+  }
+  [data-sidebar-resizer]:hover::after,
+  body.ac-sidebar-resizing [data-sidebar-resizer]::after {
+    background: var(--ac-accent);
+  }
+  body.ac-sidebar-resizing {
+    cursor: col-resize;
+    user-select: none;
+  }
+  body.ac-sidebar-resizing iframe {
+    pointer-events: none;
+  }
+}
+
+/*
+ * Full-viewport map: portalled to `document.body` so Starlight stacking
+ * contexts (header, sidebar, content transforms) cannot trap it. Opaque layer
+ * above the skiplink (20) and every page chrome.
+ */
+[data-graph-fullscreen],
+[data-graph-fullscreen][data-graph-fullscreen] {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 1rem;
+  width: 100vw;
+  height: 100dvh;
+  background: var(--background, var(--ac-bg, #fff));
+  isolation: isolate;
+}
+/*
+ * Embed mode: hide chrome when the page is framed elsewhere (`?embed=1`).
+ */
+:root[data-embed='1'] header,
+:root[data-embed='1'] .sidebar-pane,
+:root[data-embed='1'] [data-sidebar-toggle],
+:root[data-embed='1'] [data-sidebar-resizer],
+:root[data-embed='1'] [data-favorites-list],
+:root[data-embed='1'] footer,
+:root[data-embed='1'] .right-sidebar {
+  display: none !important;
+}
+:root[data-embed='1'] {
+  --sl-sidebar-width: 0px;
+}
+:root[data-embed='1'] .main-frame,
+:root[data-embed='1'] .main-pane {
+  margin: 0 !important;
+  padding-inline: 1rem !important;
+}
+
+/* Wiki refs: hover card from the native title, marked for style. */
+.ac-wiki-ref {
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+}
+.ac-wiki-ref[data-wiki-ref='service'] {
+  color: var(--sl-color-text-accent, inherit);
+}
+
+[data-favorites-list] {
+  margin-bottom: 0.5rem;
+}
+[data-favorites-label] {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin: 0;
+  padding: 0.2em 0.5rem;
+  font-size: var(--sl-text-base);
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--sl-color-white);
+}
+[data-favorites-list] ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+[data-favorites-list] li {
+  margin-inline-start: 0.5rem;
+  padding-inline-start: 0.5rem;
+  border-inline-start: 1px solid var(--sl-color-hairline-light);
+  overflow-wrap: anywhere;
+}
+[data-favorites-list] a {
+  display: block;
+  padding: 0.3em 0.5rem;
+  border-radius: 0.25rem;
+  font-size: var(--sl-text-sm);
+  line-height: 1.4;
+  color: var(--sl-color-gray-2);
+  text-decoration: none;
+}
+[data-favorites-list] a:hover,
+[data-favorites-list] a:focus {
+  color: var(--sl-color-white);
+}
+[data-favorites-list] a[aria-current='page'] {
+  font-weight: 600;
+  color: var(--sl-color-text-invert);
+  background-color: var(--sl-color-text-accent);
+}
+
+[data-graph-fullscreen] > div {
+  height: 100%;
+  min-height: 0;
+  background: inherit;
+}
+html[data-graph-fullscreen],
+html[data-graph-fullscreen] body {
+  overflow: hidden;
+}
+/* Dim and mute the page under the overlay so nothing bleeds through. */
+html[data-graph-fullscreen] body > :not([data-graph-fullscreen]) {
+  visibility: hidden;
+}
+html[data-graph-fullscreen] body > [data-graph-fullscreen] {
+  visibility: visible;
+}

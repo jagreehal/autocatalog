@@ -21,6 +21,8 @@ Changes are classified and each is attributed to the services that consume the e
 | `suspicious` | Legal but usually unintended — a field that quietly became optional                    |
 | `additive`   | Safe — a new optional field                                                            |
 
+A breaking or suspicious finding can carry a `rehearsal:` payload, one the new schema accepts and the current contract rejects, with the check it fails. Put it in the pull request, or in a consumer's test, to show the break.
+
 Read the named consumers. That list is the whole point of running this, and it is what a schema differ alone cannot tell you.
 
 Drift also keeps events and commands apart. An event a second service starts publishing is `suspicious`: an event is a fact from one boundary, so split it into one event per publisher, or make it a command one service handles. A new event that does not read as past tense (`order.place`), or a new command that does (`OrderPlaced`), is `info`: rename it, or say why the name fits.

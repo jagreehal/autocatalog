@@ -1,0 +1,20 @@
+---
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import { docsCatalog } from '../catalog';
+import { channelsPageProps } from '../page-models';
+import { ChannelsPage } from '../ui/pages/ChannelsPage';
+
+const catalog = await docsCatalog();
+
+const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+---
+
+<StarlightPage
+  frontmatter={{
+    title: 'Channels',
+    description: 'Topics and queues observed at runtime, and channels drawn in designs.',
+    tableOfContents: false,
+  }}
+>
+  <ChannelsPage {...channelsPageProps(catalog, base)} />
+</StarlightPage>

@@ -3,7 +3,13 @@ import os from 'node:os';
 import path from 'node:path';
 import type { CatalogResource } from 'autocatalog-core';
 import { afterEach, beforeEach, expect, it } from 'vitest';
-import { dataProductDiagram, entityDiagram, lookupTerm, readDomainModel } from '../src/model';
+import {
+  dataProductDiagram,
+  entityDiagram,
+  glossaryGraph,
+  lookupTerm,
+  readDomainModel,
+} from '../src/model';
 
 let root: string;
 
@@ -69,6 +75,44 @@ dictionary:
   expect(model.glossaries[0]).toMatchObject({ domain: 'payments', file: 'glossary/payments.md' });
   expect(lookupTerm(model.glossaries, 'capt')).toEqual([
     expect.objectContaining({ id: 'capture', domain: 'payments', repository: 'payments' }),
+  ]);
+});
+
+it('joins a term to what implements it, and turns it into a graph an agent can read', async () => {
+  await write(
+    'payments/glossary/payments.md',
+    `---
+dictionary:
+  - id: capture
+    name: Capture
+    aliases: [settlement]
+    about: [service/PaymentService, event/payments/payment.captured, service/Nowhere]
+---
+`,
+  );
+
+  const model = read();
+
+  expect(model.glossaries[0]?.terms[0]?.refs).toEqual([payments.ref, captured.ref]);
+  expect(model.warnings).toContainEqual(
+    expect.stringMatching(
+      /^payments\/glossary\/payments\.md: term 'capture' about 'service\/Nowhere' does not resolve/,
+    ),
+  );
+
+  const graph = glossaryGraph(model.glossaries, (domain, term) => `/glossary/#${domain}-${term}`);
+
+  expect(graph.resources).toEqual([
+    expect.objectContaining({
+      ref: { kind: 'term', namespace: 'payments/payments', id: 'capture' },
+      title: 'Capture',
+      url: '/glossary/#payments-capture',
+      attributes: { domain: 'payments', aliases: ['settlement'] },
+    }),
+  ]);
+  expect(graph.relationships.map((edge) => [edge.type, edge.to.id])).toEqual([
+    ['describes', 'PaymentService'],
+    ['describes', 'payment.captured'],
   ]);
 });
 

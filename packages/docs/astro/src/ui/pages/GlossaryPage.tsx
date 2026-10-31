@@ -13,6 +13,7 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from '#ui/components/ui/empty.tsx';
+import { Fragment } from 'react';
 import { Icon } from '../components/Icon';
 
 export interface GlossaryPageProps {
@@ -28,6 +29,10 @@ export interface GlossaryPageProps {
       name: string;
       summary?: string | undefined;
       description?: string | undefined;
+      /** Other words teams use for it. */
+      aliases: string[];
+      /** What implements it, from its `about:`. */
+      about: Array<{ name: string; href?: string | undefined }>;
     }>;
   }>;
 }
@@ -89,6 +94,22 @@ export function GlossaryPage({ domains }: GlossaryPageProps) {
                   {term.summary && <dd className="m-0 mt-1">{term.summary}</dd>}
                   {term.description && (
                     <dd className="m-0 mt-1 text-muted-foreground">{term.description}</dd>
+                  )}
+                  {term.aliases.length > 0 && (
+                    <dd className="m-0 mt-1 text-sm text-muted-foreground">
+                      Also called {term.aliases.join(', ')}
+                    </dd>
+                  )}
+                  {term.about.length > 0 && (
+                    <dd className="m-0 mt-1 text-sm">
+                      <span className="text-muted-foreground">Implemented by </span>
+                      {term.about.map((target, index) => (
+                        <Fragment key={`${target.name}-${index}`}>
+                          {index > 0 && ', '}
+                          {target.href ? <a href={target.href}>{target.name}</a> : target.name}
+                        </Fragment>
+                      ))}
+                    </dd>
                   )}
                 </div>
               ))}

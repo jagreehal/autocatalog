@@ -8,18 +8,25 @@ export { createServer } from './server.js';
 function parseArgs(argv: string[]) {
   let root = '.';
   let eventsDir = 'events';
+  // The company site's /catalog.json, and the variable holding its token when it is private.
+  let site: string | undefined;
+  let siteTokenEnv: string | undefined;
 
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === '--root') root = argv[++i] ?? '.';
 
     if (argv[i] === '--events-dir') eventsDir = argv[++i] ?? 'events';
+
+    if (argv[i] === '--site') site = argv[++i];
+
+    if (argv[i] === '--site-token-env') siteTokenEnv = argv[++i];
   }
 
-  return { root, eventsDir };
+  return { root, eventsDir, site, siteTokenEnv };
 }
 
 export async function startMcpServer(argv: string[] = process.argv.slice(2)): Promise<void> {
-  const { root, eventsDir } = parseArgs(argv);
+  const { root, eventsDir, site, siteTokenEnv } = parseArgs(argv);
   const resolved = resolve(root);
   const eventsRoot = resolve(resolved, eventsDir);
 
@@ -30,7 +37,20 @@ export async function startMcpServer(argv: string[] = process.argv.slice(2)): Pr
     `autocatalog mcp: loaded ${catalog.events.length} events from ${eventsRoot}\n`,
   );
 
-  const server = createServer(catalog);
+  const server = createServer(
+    catalog,
+    site
+      ? {
+          // The site's address is enough; its graph is always at /catalog.json.
+          index:
+            /^https?:\/\//i.test(site) && !site.endsWith('.json')
+              ? new URL('catalog.json', site.endsWith('/') ? site : `${site}/`).href
+              : site,
+          ...(siteTokenEnv && { tokenEnv: siteTokenEnv }),
+        }
+      : undefined,
+  );
+
   const transport = new StdioServerTransport();
   await server.connect(transport);
 }

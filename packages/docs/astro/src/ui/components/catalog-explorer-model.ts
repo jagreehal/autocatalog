@@ -67,6 +67,8 @@ function searchText(resource: CatalogResource): string {
     resource.ref.kind,
     resource.ref.namespace,
     resource.ref.id,
+    // `payments/payment.completed`, as an abbreviated wiki link searches for it.
+    resource.ref.namespace && `${resource.ref.namespace}/${resource.ref.id}`,
     resource.title,
     resource.summary,
     resource.owner?.team,

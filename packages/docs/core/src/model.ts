@@ -6,9 +6,12 @@ import {
   isJsonObject,
   isServiceCatalogResource,
   parseFrontmatter,
+  AUTOCATALOG_GRAPH_SPEC,
+  type CatalogRelationship,
   type CatalogResource,
   type JsonObject,
   resourceKey,
+  type ResourceGraph,
   type ResourceRef,
 } from 'autocatalog-core';
 import { z } from 'zod';
@@ -50,9 +53,14 @@ const term = z.object({
   summary: z.string().optional(),
   description: z.string().optional(),
   icon: z.string().optional(),
+  /** Other words teams use for it: `onboarding`, `KYC`, `sign-up`. */
+  aliases: z.array(z.string().min(1)).optional(),
+  /** What implements it, named as a document's `about:` names a resource: `service/PaymentService`. */
+  about: z.array(z.string().min(1)).optional(),
 });
 
-export type Term = z.output<typeof term>;
+/** A term, with what its `about:` resolved to in the composed catalog. */
+export type Term = z.output<typeof term> & { refs: ResourceRef[] };
 
 const glossarySchema = z.object({ dictionary: z.array(term).min(1) });
 
@@ -415,7 +423,21 @@ export function readDomainModel(
     for (const entry of data.dictionary) termOwners.set(`${where.id}/${entry.id}`, at);
 
     unknownDomain(where, where.id);
-    glossaries.push({ ...where, domain: where.id, terms: data.dictionary });
+    glossaries.push({
+      ...where,
+      domain: where.id,
+      terms: data.dictionary.map((entry) => ({
+        ...entry,
+        refs: (entry.about ?? []).flatMap((reference) => {
+          const resolved = resolveAbout(reference, catalog.resources, where.repository);
+
+          if ('ref' in resolved) return [resolved.ref];
+          warnings.push(`${at}: term '${entry.id}' ${resolved.failure}`);
+
+          return [];
+        }),
+      })),
+    });
   }
 
   const services = catalog.resources.filter(isServiceCatalogResource);
@@ -660,7 +682,7 @@ export function portName(port: DataProductPort, catalog: { resources: CatalogRes
   return found?.title ?? port.reference.split('/').at(-1)!;
 }
 
-/** Every term a reader might look up, with the domain that defines it. */
+/** Every term a reader might look up, by id, name or alias, with the domain that defines it. */
 export function lookupTerm(
   glossaries: Glossary[],
   query: string,
@@ -670,10 +692,64 @@ export function lookupTerm(
   return glossaries.flatMap((glossary) =>
     glossary.terms
       .filter(
-        (entry) => entry.id.toLowerCase() === wanted || entry.name.toLowerCase().includes(wanted),
+        (entry) =>
+          entry.id.toLowerCase() === wanted ||
+          entry.name.toLowerCase().includes(wanted) ||
+          (entry.aliases ?? []).some((alias) => alias.toLowerCase() === wanted),
       )
       .map((entry) => ({ ...entry, domain: glossary.domain, repository: glossary.repository })),
   );
+}
+
+/**
+ * Each term as a `term` resource, with a `describes` edge to what implements
+ * it, so an agent reading `/catalog.json` can go from the words a team uses
+ * to the services and events behind them.
+ */
+export function glossaryGraph(
+  glossaries: Glossary[],
+  /** Where a term is defined on the site, when there is one. */
+  urlOf?: (domain: string, term: string) => string,
+): ResourceGraph {
+  const resources: CatalogResource[] = [];
+  const relationships: CatalogRelationship[] = [];
+
+  for (const glossary of glossaries) {
+    for (const entry of glossary.terms) {
+      const ref: ResourceRef<'term'> = {
+        kind: 'term',
+        namespace: `${glossary.repository}/${glossary.domain}`,
+        id: entry.id,
+      };
+
+      const source = { repo: glossary.repository, file: glossary.file };
+
+      resources.push({
+        ref,
+        title: entry.name,
+        ...(entry.summary && { summary: entry.summary }),
+        ...(urlOf && { url: urlOf(glossary.domain, entry.id) }),
+        tags: [],
+        provenance: { default: 'declared', fields: {} },
+        needsReview: false,
+        source,
+        attributes: { domain: glossary.domain, aliases: entry.aliases ?? [] },
+      });
+
+      for (const to of entry.refs) {
+        relationships.push({
+          type: 'describes',
+          from: ref,
+          to,
+          provenance: 'declared',
+          needsReview: false,
+          source,
+        });
+      }
+    }
+  }
+
+  return { spec: AUTOCATALOG_GRAPH_SPEC, resources, relationships };
 }
 
 /** The entity ids an entity's properties reference, nested ones included. */

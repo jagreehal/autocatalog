@@ -88,6 +88,12 @@ format: pipe it to whatever already posts to your chat tool.
 | New event not in the past tense   | info       | an event says what happened              |
 | New command named as an event     | info       | a command asks for work                  |
 
+A breaking or suspicious finding carries a rehearsal when one exists: a
+payload the proposed schema accepts and the current one rejects, with the
+check it fails (`/amount is required`). It fails on that finding's change
+alone, so paste it into a consumer's test to watch the break before you ship.
+The terminal, Markdown and GitHub outputs all print it.
+
 `--fail-on suspicious` tightens the gate; `--fail-on never` turns it into a
 report (useful while adopting).
 

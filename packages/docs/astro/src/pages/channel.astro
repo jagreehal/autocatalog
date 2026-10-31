@@ -1,0 +1,50 @@
+---
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import type { InferGetStaticPropsType } from 'astro';
+import { docsCatalog } from '../catalog';
+import { buildChannels } from '../channels';
+import { channelPageProps } from '../page-models';
+import { setResourceContext } from '../shell';
+import { ChannelPage } from '../ui/pages/ChannelPage';
+
+export async function getStaticPaths() {
+  const catalog = await docsCatalog();
+  const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+
+  return buildChannels(catalog.graph, catalog.designs, base).map((channel) => ({
+    params: { id: channel.id },
+    props: { id: channel.id },
+  }));
+}
+
+type Props = InferGetStaticPropsType<typeof getStaticPaths>;
+
+const { id } = Astro.props;
+
+const catalog = await docsCatalog();
+
+const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+
+const page = channelPageProps(catalog, id, base);
+
+if (!page) throw new Error(`channel not found: ${id}`);
+
+setResourceContext(Astro.locals, {
+  kind: 'service',
+  name: page.channel.id,
+  key: `channel:${page.channel.id}`,
+  pills: [{ text: page.channel.source, tone: 'quiet' }],
+});
+---
+
+<StarlightPage
+  frontmatter={{
+    title: page.channel.id,
+    description: page.channel.system
+      ? `${page.channel.system} channel`
+      : 'Messaging channel',
+    tableOfContents: false,
+  }}
+>
+  <ChannelPage {...page} />
+</StarlightPage>

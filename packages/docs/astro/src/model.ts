@@ -11,6 +11,7 @@ import {
   type Person,
 } from 'autocatalog-docs-core';
 import type { DocsCatalog } from './catalog';
+import { githubDirectoryEnrichment } from './directory';
 import { domainHref } from './domains';
 import { renderNarrative } from './flows';
 import { ownerKey, type Owner } from './owners';
@@ -40,15 +41,16 @@ const domainPages = (catalog: Pick<DocsCatalog, 'events'>) =>
   new Set(catalog.events.map(({ event }) => event.frontmatter.domain));
 
 export function glossaryPageProps(
-  catalog: Pick<DocsCatalog, 'events' | 'model'>,
+  catalog: Pick<DocsCatalog, 'events' | 'graph' | 'model'>,
   base: string,
+  pages: Pages,
 ): GlossaryPageProps {
-  const pages = domainPages(catalog);
+  const domains = domainPages(catalog);
 
   return {
     domains: catalog.model.glossaries.map((glossary) => ({
       domain: glossary.domain,
-      href: pages.has(glossary.domain) ? domainHref(base, glossary.domain) : undefined,
+      href: domains.has(glossary.domain) ? domainHref(base, glossary.domain) : undefined,
       repository: glossary.repository,
       file: glossary.file,
       terms: glossary.terms.map((term) => ({
@@ -56,6 +58,8 @@ export function glossaryPageProps(
         name: term.name,
         summary: term.summary,
         description: term.description,
+        aliases: term.aliases ?? [],
+        about: term.refs.map((ref) => resourceLink(ref, catalog, base, pages)),
       })),
     })),
   };
@@ -225,19 +229,33 @@ export function ownerProfile(owner: Owner, people: Person[]): OwnerProfile | und
     ),
   );
 
-  if (!person) return undefined;
-
   const users = new Map(
     people.flatMap((candidate) =>
       candidate.kind === 'user' ? [[candidate.id, candidate] as const] : [],
     ),
   );
 
+  const handle = owner.name ?? owner.key;
+  const enrichment = githubDirectoryEnrichment(handle);
+
+  if (!person) {
+    // A bare login without a directory file is not a profile; only org/team
+    // handles are rich enough to invent one from GitHub's public URLs.
+    if (!handle.includes('/') || !enrichment) return undefined;
+
+    return {
+      kind: 'team',
+      avatarUrl: enrichment.avatarUrl,
+      members: [],
+      memberOf: [],
+    };
+  }
+
   return {
     kind: person.kind,
     summary: person.summary,
     role: person.role,
-    avatarUrl: person.avatarUrl,
+    avatarUrl: person.avatarUrl ?? enrichment?.avatarUrl,
     email: person.email,
     slack: person.slackDirectMessageUrl,
     teams: person.msTeamsDirectMessageUrl,

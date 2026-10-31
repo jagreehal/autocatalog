@@ -89,6 +89,20 @@ describe('CatalogExplorer behaviour', () => {
     expect(titles()).toHaveLength(3);
   });
 
+  it('opens on the search in ?q= and the review queue in ?review=1', () => {
+    history.replaceState(null, '', '/catalog?q=Ledger');
+    explorer();
+
+    expect(screen.getByRole('searchbox')).toHaveProperty('value', 'Ledger');
+    expect(titles()).toEqual(['LedgerService']);
+
+    cleanup();
+    history.replaceState(null, '', '/catalog?review=1');
+    explorer();
+
+    expect(titles()).toEqual(['Payment completed', 'LedgerService']);
+  });
+
   it('restores a connection target hidden by the current view before following it', () => {
     explorer();
 
@@ -265,6 +279,30 @@ describe('Copy page as Markdown', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Copy page as Markdown' }));
 
     expect(await screen.findByRole('button', { name: 'Copy failed' })).toBeTruthy();
+  });
+
+  it('copies the page itself as Markdown when there is no twin', async () => {
+    const copied: string[] = [];
+
+    vi.stubGlobal('navigator', {
+      clipboard: { writeText: async (text: string) => copied.push(text) },
+    });
+    render(
+      createElement(PageTitleChrome, {
+        pills: [],
+        actions: [],
+        catalogKey: 'service:scoreboard',
+        summary: 'Shows the score.',
+        children: createElement('h1', null, 'scoreboard'),
+      }),
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Copy page as Markdown' }));
+
+    expect(await screen.findByRole('button', { name: 'Copied' })).toBeTruthy();
+    expect(copied[0]).toContain('# scoreboard');
+    expect(copied[0]).toContain('`service:scoreboard`');
+    expect(copied[0]).toContain('Shows the score.');
   });
 });
 

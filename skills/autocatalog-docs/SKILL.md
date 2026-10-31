@@ -70,7 +70,8 @@ Write the steps from the code and the event declarations. A hop you write that n
 
 These sit beside `docs/`, in the repository that owns the domain, and `ac docs check` checks each one.
 
-- **Glossary**: `glossary/<domain>.md` with `dictionary: [{ id, name, summary?, description? }]`. Add a term when the code, an event or a document uses a word with a meaning specific to the domain. One term has one definition per domain.
+- **Glossary**: `glossary/<domain>.md` with `dictionary: [{ id, name, summary?, description?, aliases?, about? }]`. Add a term when the code, an event or a document uses a word with a meaning specific to the domain. One term has one definition per domain. List the other words people use in `aliases` (`[charge, take payment]`) and what implements the term in `about` (`[service/PaymentService, event/payments/payment.captured]`), so an agent asking about either word finds the code.
+- **Links**: write `[[service|PaymentService]]` or `[[event|payments/payment.captured]]` in prose to link a catalog page.
 - **Entity**: `entities/<id>.md` with `name`, `summary`, `domains`, `services`, `aggregateRoot`, `identifier`, and either `properties` (`{ name, type, required?, description?, references?: <entity id> }`) or `schema:` pointing at a JSON Schema in the repository. Prefer `schema:` when one exists, so the entity cannot drift from it. One repository defines each entity id.
 - **Data product**: `data-products/<id>.md` with `name`, `domain`, `inputs` and `outputs`, each named as `about:` names a resource or as `data-product/<id>`; an output may carry `contract: <file>`. One repository defines each data product id.
 - **Teams and users**: `teams/<id>.md` (`name`, `summary`, `email`, `slackDirectMessageUrl`, `members`) and `users/<id>.md` (`name`, `role`, `email`). Write them in one repository, usually the handbook, and name the file after the owner as CODEOWNERS writes it. A repository with only these folders still joins the site.

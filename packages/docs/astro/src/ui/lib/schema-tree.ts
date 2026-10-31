@@ -162,15 +162,30 @@ function childrenOf(s: SchemaNode): Children | null {
 export interface PropNode {
   id: string;
   name: string;
+  /** Dotted path as the field index names it (`items[].sku`). */
+  path: string;
   type: string;
   required: boolean;
   description: string | null;
   facts: string[];
   depth: number;
   children: PropNode[] | null;
+  /** Who carries and consumes this field, when the page joined the field index. */
+  lineage?: {
+    carriers: number;
+    consumers: string[];
+    producers: string[];
+    conflict?: string | undefined;
+  };
 }
 
-function buildChildren(node: SchemaNode, idPrefix: string, depth: number): PropNode[] | null {
+function buildChildren(
+  node: SchemaNode,
+  idPrefix: string,
+  depth: number,
+  pathPrefix: string,
+  underArray: boolean,
+): PropNode[] | null {
   const items = node.type === 'array' && node.items ? schemaNode.parse(node.items) : null;
 
   const own = childrenOf(node) ?? (items ? childrenOf(items) : null);
@@ -178,9 +193,10 @@ function buildChildren(node: SchemaNode, idPrefix: string, depth: number): PropN
   if (!own) return null;
 
   const required = new Set(own.required);
+  const childPrefix = underArray ? (pathPrefix ? `${pathPrefix}[]` : '') : pathPrefix;
 
   return own.entries.map(([key, child], index) =>
-    buildNode(key, child, required.has(key), `${idPrefix}${index}`, depth),
+    buildNode(key, child, required.has(key), `${idPrefix}${index}`, depth, childPrefix),
   );
 }
 
@@ -190,20 +206,25 @@ function buildNode(
   required: boolean,
   id: string,
   depth: number,
+  pathPrefix: string,
 ): PropNode {
+  const path = pathPrefix ? `${pathPrefix}.${name}` : name;
+  const array = node.type === 'array';
+
   return {
     id,
     name,
+    path,
     type: typeOf(node),
     required,
     description: node.description ?? null,
     facts: constraints(node),
     depth,
-    children: buildChildren(node, `${id}.`, depth + 1),
+    children: buildChildren(node, `${id}.`, depth + 1, path, array),
   };
 }
 
 /** A JSON Schema's properties as the tree draws them, nested and numbered. */
 export function schemaTree(schema: JsonValue): PropNode[] {
-  return buildChildren(schemaNode.parse(schema), '', 1) ?? [];
+  return buildChildren(schemaNode.parse(schema), '', 1, '', false) ?? [];
 }

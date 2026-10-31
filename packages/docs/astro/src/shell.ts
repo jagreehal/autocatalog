@@ -27,6 +27,25 @@ export interface PageAction {
   copy?: boolean;
 }
 
+/** The label every page uses for its Markdown twin on the clipboard. */
+export const COPY_MARKDOWN_LABEL = 'Copy page as Markdown';
+
+/**
+ * Appends `Copy page as Markdown` beside `View as Markdown` after the page's
+ * other actions, so the two Markdown entry points stay next to each other.
+ */
+export function withMarkdownCopy(markdownHref: string, actions: PageAction[] = []): PageAction[] {
+  const rest = actions.filter(
+    (action) => action.label !== COPY_MARKDOWN_LABEL && action.label !== 'View as Markdown',
+  );
+
+  return [
+    ...rest,
+    { label: COPY_MARKDOWN_LABEL, href: markdownHref, icon: 'copy', copy: true },
+    { label: 'View as Markdown', href: markdownHref, icon: 'doc' },
+  ];
+}
+
 /** What the title block shows above and below the page's title. */
 export interface PageHeader {
   actions?: PageAction[];

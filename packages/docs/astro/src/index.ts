@@ -20,8 +20,11 @@ import { retirementsPageProps } from './retirements';
 import { catalogSidebar, docsSidebar } from './sidebar';
 import { eventCatalogEmbeds } from './eventcatalog';
 import { reactRendererIntegration, siteHasReact } from './react-integration';
+import { EMBED_SCRIPT } from './embed';
 import { MERMAID_SCRIPT, remarkMermaid } from './mermaid';
+import { remarkWikiRefs } from './wiki-refs';
 import { mdxComponents } from './mdx';
+import { DEFAULT_FAVICON } from './favicon';
 
 export interface AutocatalogDocsOptions {
   /**
@@ -70,6 +73,12 @@ export interface AutocatalogDocsOptions {
    * `event` is the SSE event name frames arrive under; `message` by default.
    */
   live?: { url: string; event?: string };
+  /**
+   * Favicon path under the site's `public/` directory. Defaults to
+   * `/favicon.svg` (shipped with `ac site`). A Starlight `favicon` already set
+   * on the site wins over this.
+   */
+  favicon?: string;
 }
 
 /**
@@ -160,7 +169,16 @@ export default function autocatalogDocs(opts: AutocatalogDocsOptions = {}): Star
         for (const warning of catalog.warnings) logger.warn(warning);
 
         const eventsSidebar = catalogSidebar(catalog.events);
+
+        // A plugin `favicon` fills Starlight when the site did not set one.
+        // `ac site` ships `public/favicon.svg` and reads AUTOCATALOG_SITE_FAVICON.
+        const favicon =
+          opts.favicon && (config.favicon ?? DEFAULT_FAVICON) === DEFAULT_FAVICON
+            ? opts.favicon
+            : undefined;
+
         updateConfig({
+          ...(favicon && { favicon }),
           // A sidebar the site was configured with would have to be edited every
           // time a team writes a document. This one is what is on disk.
           sidebar: [
@@ -213,6 +231,7 @@ export default function autocatalogDocs(opts: AutocatalogDocsOptions = {}): Star
           // Draws ```mermaid fences, on the pages that have one.
           head: [
             ...(config.head ?? []),
+            { tag: 'script', content: EMBED_SCRIPT },
             { tag: 'script', attrs: { type: 'module' }, content: MERMAID_SCRIPT },
           ],
           components: {
@@ -222,8 +241,10 @@ export default function autocatalogDocs(opts: AutocatalogDocsOptions = {}): Star
             // The title names a resource by its key in the catalog and says
             // where its definition was read.
             PageTitle: 'autocatalog-docs-astro/overrides/PageTitle.astro',
-            // A sun-and-moon button rather than a three-way select; it follows
-            // the system until pressed.
+            // Pinned pages, as the first group of the navigation.
+            Sidebar: 'autocatalog-docs-astro/overrides/Sidebar.astro',
+            // Sun-and-moon theme control, plus sidebar collapse/resize mounts
+            // here so they stay outside the pane Starlight hides when collapsed.
             ThemeSelect: 'autocatalog-docs-astro/overrides/ThemeSelect.astro',
             // A document's own `# Title` would repeat the title above it.
             MarkdownContent: 'autocatalog-docs-astro/overrides/MarkdownContent.astro',
@@ -244,8 +265,10 @@ export default function autocatalogDocs(opts: AutocatalogDocsOptions = {}): Star
             'astro:config:setup': ({ config: astro }) => {
               const processor = astro.markdown?.processor;
 
-              if (processor && isUnifiedProcessor(processor))
+              if (processor && isUnifiedProcessor(processor)) {
                 processor.options.remarkPlugins.push(remarkMermaid);
+                processor.options.remarkPlugins.push([remarkWikiRefs, { base: astro.base }]);
+              }
             },
           },
         });

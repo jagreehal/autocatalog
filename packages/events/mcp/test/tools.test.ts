@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import fs from 'node:fs/promises';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { isJsonObject } from 'autocatalog-core';
@@ -10,8 +12,10 @@ import {
   getExamples,
   searchEvents,
   findEventsBy,
+  askArchitecture,
   getLlmText,
   resolveEvent,
+  taskContextFor,
 } from '../src/tools.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -134,9 +138,59 @@ describe('tools', () => {
     expect(result.text).toContain('Payment Completed');
   });
 
+  it('askArchitecture points at llms.txt and matching events', async () => {
+    const catalog = await loadCatalog(starterEvents);
+    const result = askArchitecture(catalog, 'payment');
+
+    expect(result.site.llmsTxt).toBe('/llms.txt');
+    expect(result.site.catalogJson).toBe('/catalog.json');
+    expect(result.matches.some((match) => match.ref.includes('payment.completed'))).toBe(true);
+    expect(result.hint).toContain('llms.txt');
+  });
+
   it('resolveEvent resolves by domain/id', async () => {
     const catalog = await loadCatalog(starterEvents);
     const event = resolveEvent(catalog, 'payments/payment.completed');
     expect(event.frontmatter.id).toBe('payment.completed');
+  });
+});
+
+describe('taskContextFor', () => {
+  it('searches only this repository without a site, and says so', async () => {
+    const catalog = await loadCatalog(starterEvents);
+    const context = await taskContextFor(catalog, 'nothing like this exists');
+
+    expect(context.catalog.source).toBe(catalog.repoRoot);
+    expect(context.gaps.at(-1)).toMatch(/--site <url>/);
+  });
+
+  it("reads the company site's graph when given one", async () => {
+    const catalog = await loadCatalog(starterEvents);
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'ac-site-'));
+    const index = path.join(dir, 'catalog.json');
+
+    await fs.writeFile(
+      index,
+      JSON.stringify({
+        spec: 'autocatalog/graph-v1',
+        resources: [
+          {
+            ref: { kind: 'service', id: 'RefundService' },
+            title: 'RefundService',
+            tags: [],
+            provenance: { default: 'declared', fields: {} },
+            needsReview: false,
+            attributes: {},
+          },
+        ],
+        relationships: [],
+      }),
+    );
+
+    const context = await taskContextFor(catalog, 'add partial refunds', { index });
+
+    expect(context.catalog.source).toBe(index);
+    expect(context.matches.map((match) => match.key)).toEqual(['service:RefundService']);
+    expect(context.gaps.join(' ')).not.toMatch(/--site/);
   });
 });
