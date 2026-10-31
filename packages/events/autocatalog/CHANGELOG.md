@@ -1,5 +1,12 @@
 # autocatalog
 
+## 0.1.9
+
+### Patch Changes
+
+- Updated dependencies [80cb2b2]
+  - autocatalog-cli@0.6.2
+
 ## 0.1.8
 
 ### Patch Changes

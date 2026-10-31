@@ -1,5 +1,19 @@
 # autocatalog-docs-core
 
+## 0.6.0
+
+### Minor Changes
+
+- 80cb2b2: - `task_context` gives an agent what to read before a task: the services, contracts, decision records, runbooks and owners its words name, how each relationship is known, and what the catalog could not establish. `--site` reads the company site's `/catalog.json` so the bundle covers every repository.
+  - A breaking drift finding shows a payload the new schema accepts and the current contract rejects, with the check it fails.
+  - Glossary terms take `aliases` and `about`, so a business word leads to the services and events that implement it.
+  - New `/channels` and `/systems` pages, `[[kind|id]]` links in prose, pinned pages in the sidebar, a resizable sidebar, status banners, field lineage on schema trees, `?embed=1`, and a home page that counts what needs attention.
+
+### Patch Changes
+
+- Updated dependencies [80cb2b2]
+  - autocatalog-core@0.6.0
+
 ## 0.5.0
 
 ### Minor Changes

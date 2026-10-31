@@ -1,6 +1,6 @@
 {
   "name": "autocatalog-agents-adapter-autotel",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "description": "Autotel adapter: turn OpenTelemetry agent traces into autocatalog agent catalog evidence.",
   "license": "MIT",
   "repository": {
