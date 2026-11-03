@@ -1,5 +1,12 @@
 # autocatalog-adapter-zod
 
+## 0.2.5
+
+### Patch Changes
+
+- Updated dependencies [80c26b1]
+  - autocatalog-core@0.7.0
+
 ## 0.2.4
 
 ### Patch Changes
