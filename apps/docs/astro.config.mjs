@@ -59,6 +59,7 @@ export default defineConfig({
           items: [
             { label: 'From Zod', slug: 'docs/events/zod' },
             { label: 'From Pydantic', slug: 'docs/events/pydantic' },
+            { label: 'From Rust, Go, Java, .NET', slug: 'docs/events/other-languages' },
             { label: 'From JSON Schema', slug: 'docs/events/json-schema' },
             { label: 'Importing a catalog', slug: 'docs/events/importing' },
             { label: 'Writing an adapter', slug: 'docs/adapters' },
@@ -70,6 +71,7 @@ export default defineConfig({
           label: 'Keeping it honest',
           items: [
             { label: 'Drift gating in CI', slug: 'docs/drift-ci' },
+            { label: 'Delivery', slug: 'docs/delivery' },
             { label: 'Runtime evidence with autotel', slug: 'docs/runtime-evidence' },
             { label: 'Catalog rules', slug: 'docs/rules' },
             { label: 'Retiring a field', slug: 'docs/retire' },
@@ -81,6 +83,7 @@ export default defineConfig({
           label: 'Surfaces',
           items: [
             { label: 'The company site', slug: 'docs/site' },
+            { label: 'Federation', slug: 'docs/federation' },
             { label: 'MCP for coding agents', slug: 'docs/mcp' },
             { label: 'Agent catalogs', slug: 'docs/agents' },
             { label: 'The docs convention', slug: 'docs/docs-convention' },

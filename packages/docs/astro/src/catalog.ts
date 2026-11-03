@@ -23,6 +23,7 @@ import {
   type ResourceRef,
   readResourceGraph,
   mergeArchitectureGraphs,
+  earlierVersions,
   architectureConflicts,
   relationshipKey,
   isJsonObject,
@@ -30,6 +31,15 @@ import {
   createConsumerResourceGraph,
   mergeConsumerGraph,
   readConsumerDeclarations,
+  readDeclarationsFile,
+  resolveReferences,
+  parseResourceGraph,
+  type RepositoryReferences,
+  analyzeDelivery,
+  deliveryEvents,
+  scanDeliveryResources,
+  type ConsumerDeclaration,
+  type DeliveryReport,
   RESOURCE_GRAPH_FILE,
   architectureConfig,
   loadCodeowners,
@@ -42,6 +52,7 @@ import {
 } from 'autocatalog-core';
 import {
   buildDocsManifest,
+  invalidDocuments,
   createDescribesRelationships,
   createDocsResourceGraph,
   DocsManifestError,
@@ -76,7 +87,7 @@ import { catalogHref } from './view';
 export interface RepositoryFailure {
   repository: string;
   /** Which convention failed to compile: the repository's events, agents or API specs, or its name. */
-  source: 'events' | 'agents' | 'resources' | 'consumers' | 'apis' | 'name';
+  source: 'docs' | 'events' | 'agents' | 'resources' | 'consumers' | 'apis' | 'name';
   message: string;
 }
 
@@ -122,6 +133,11 @@ export interface DocsCatalog {
   /** The workflow runs each repository's runtime snapshot recorded. */
   workflows: WorkflowRuns[];
   /**
+   * Delivery routes across every repository: one team's broker configuration,
+   * another's events and a third's consumer declarations make one route.
+   */
+  delivery: DeliveryReport;
+  /**
    * What the build must say out loud: each quarantine, and each `about:` target
    * left out. Returned rather than printed, because one build compiles the
    * catalog more than once (configuration, then prerender), and a warning
@@ -142,8 +158,12 @@ export async function buildDocsCatalog(
   root: string,
   options: BuildDocsCatalogOptions = {},
 ): Promise<DocsCatalog> {
-  const docs = readDocs(root, options);
-  const manifest = documentsManifest(root, options);
+  // A repository with a document that breaks the contract has its documents
+  // left out, and is named, rather than failing every team's build.
+  const invalidDocs = invalidDocuments(root, options);
+  const withoutInvalid = { ...options, exclude: [...invalidDocs.keys()] };
+  const docs = readDocs(root, withoutInvalid);
+  const manifest = documentsManifest(root, withoutInvalid);
   // Left out of a repository without quarantining it, such as an unreadable snapshot.
   const notes: string[] = [];
 
@@ -170,7 +190,11 @@ export async function buildDocsCatalog(
   const declarations = new Map<string, Set<string>>();
   claim(declarations, 'docs/', docsGraph);
 
-  const failures: RepositoryFailure[] = [];
+  const failures: RepositoryFailure[] = [...invalidDocs].map(([repository, messages]) => ({
+    repository,
+    source: 'docs',
+    message: messages.join('; '),
+  }));
 
   const resourceFragments: Array<{
     repository: string;
@@ -212,9 +236,37 @@ export async function buildDocsCatalog(
     }
   };
 
+  // Repositories from outside the root, such as EventCatalog projects `ac site`
+  // imported into its cache: each one repository, named by its folder.
+  const { sources, indexes } = docsSiteConfig();
+  const taken = new Set(roots.map(({ repository }) => repository));
+
+  const extra = sources.map((dir) => {
+    const folder = path.basename(dir);
+    // The command names these folders, not a team: one named like the site's
+    // own pages publishes beside it rather than being left out.
+    const name = RESERVED_SEGMENTS.has(folder) ? `${folder}-eventcatalog` : folder;
+
+    if (name !== folder)
+      notes.push(`${folder} publishes as ${name}: /${folder}/ is one of the site's own pages`);
+
+    const duplicateOf = taken.has(name) ? '' : undefined;
+
+    taken.add(name);
+
+    return {
+      name,
+      repository: name,
+      dir,
+      path: dir,
+      nested: [],
+      ...(duplicateOf !== undefined && { duplicateOf }),
+    };
+  });
+
   // Sorted, so which of two contradicting repositories is quarantined does not
   // depend on the order the filesystem lists them in.
-  const found = roots
+  const found = [...roots, ...extra]
     .map((catalogRoot) => ({
       ...catalogRoot,
       name: catalogRoot.repository,
@@ -254,12 +306,18 @@ export async function buildDocsCatalog(
   // Every repository's events first, so an agent in one repository can name an
   // event another publishes and the edge lands on that exact Event resource.
   const graphEvents: GraphEvent[] = [];
+  // Earlier versions, for a reference whose range picks one.
+  const earlier: ResourceGraph[] = [];
   const snapshots: string[] = [];
   const workflows: WorkflowRuns[] = [];
+  const brokerGraphs: ResourceGraph[] = [];
+  const deliveryConsumers: ConsumerDeclaration[] = [];
 
   for (const { name, repositoryRoot, nested } of repositories) {
+    let resourceGraph: ResourceGraph | undefined;
+
     try {
-      const resourceGraph =
+      resourceGraph =
         (await readResourceGraph(repositoryRoot)) ??
         (await scannedModels(repositoryRoot, name, notes, root, nested));
 
@@ -307,6 +365,13 @@ export async function buildDocsCatalog(
     for (const event of loaded) {
       (event.folder.isVersioned ? history : events).push({ repository: name, event });
     }
+
+    earlier.push(earlierVersions(loaded, name));
+
+    if (resourceGraph) brokerGraphs.push(resourceGraph);
+
+    // A malformed consumes file is reported where consumers are joined, below.
+    deliveryConsumers.push(...(await readConsumerDeclarations(repositoryRoot).catch(() => [])));
 
     for (const resource of graph.resources.filter(isEventCatalogResource)) {
       graphEvents.push({
@@ -377,6 +442,7 @@ export async function buildDocsCatalog(
         createConsumerResourceGraph(await readConsumerDeclarations(repositoryRoot), {
           repository: name,
           events: graphEvents,
+          onWarning: (message) => notes.push(`${name}: ${message}`),
         }),
       );
     } catch (error) {
@@ -425,6 +491,45 @@ export async function buildDocsCatalog(
   // and events are in place first, and none of them can be pre-empted by
   // another repository naming the same service as a consumer.
   composed = consumerFragments.reduce(mergeConsumerGraph, composed);
+
+  // Other sites' graphs, joined without pages: their resources and edges fill
+  // in what this site does not have, and never replace what it does. Joined
+  // first, so a reference here can resolve to something only they publish.
+  for (const file of indexes) {
+    try {
+      const joined = parseResourceGraph(JSON.parse(fs.readFileSync(file, 'utf8')));
+      const have = new Set(composed.relationships.map(relationshipKey));
+
+      // Only what this site lacks: an edge it already has keeps its own attributes.
+      composed = mergeConsumerGraph(composed, {
+        ...joined,
+        relationships: joined.relationships.filter((edge) => !have.has(relationshipKey(edge))),
+      });
+    } catch (error) {
+      notes.push(
+        `${path.basename(file)}: not joined (${error instanceof Error ? error.message : String(error)})`,
+      );
+    }
+  }
+
+  // References by id to what another repository owns (EventCatalog's `sends`
+  // and `receives`), resolved once against everything composed, the indexes
+  // included. One that names nothing, or more than one thing, is said and left out.
+  const references: RepositoryReferences[] = [];
+
+  for (const { name, repositoryRoot } of repositories) {
+    if (quarantined.has(name)) continue;
+
+    const declared = await readDeclarationsFile(repositoryRoot).catch(() => undefined);
+
+    if (declared && declared.receives.length + declared.sends.length > 0)
+      references.push({ repository: name, receives: declared.receives, sends: declared.sends });
+  }
+
+  const resolved = resolveReferences(composed, references, mergeArchitectureGraphs(...earlier));
+
+  notes.push(...resolved.unresolved);
+  composed = mergeConsumerGraph(composed, resolved.graph);
 
   const about = createDescribesRelationships(docs, composed.resources, {
     repositories: identities,
@@ -545,6 +650,11 @@ export async function buildDocsCatalog(
     failures,
     snapshots,
     workflows,
+    delivery: analyzeDelivery({
+      graph: mergeArchitectureGraphs(...brokerGraphs),
+      events: deliveryEvents(events.map(({ event }) => event)),
+      consumers: deliveryConsumers,
+    }),
     warnings,
   };
 }
@@ -566,7 +676,12 @@ async function scannedModels(
 
   for (const error of errors) notes.push(`${repository}: ${error}`);
 
-  return graph.resources.some(({ ref }) => ['table', 'collection', 'command'].includes(ref.kind))
+  return graph.resources.some(
+    ({ ref }) =>
+      ['table', 'collection', 'command'].includes(ref.kind) ||
+      // A broker's exchanges, topics, queues and subscriptions, from its configuration.
+      ref.kind === 'queue',
+  )
     ? graph
     : undefined;
 }
@@ -605,17 +720,27 @@ function modelScan(root: string, ownersWithin: string, nested: string[]): ModelS
 
     const commands = await scanCommandResources({ root, exclude: nested });
 
-    const owned = resolveResourceOwnership(mergeArchitectureGraphs(graph, commands.graph), {
-      ...config.ownership,
-      claims: [],
-      codeowners: await loadCodeowners(root, ownersWithin),
+    const delivery = await scanDeliveryResources({
+      root,
+      exclude: nested,
+      environment: config.environment,
     });
+
+    const owned = resolveResourceOwnership(
+      mergeArchitectureGraphs(graph, commands.graph, delivery.graph),
+      {
+        ...config.ownership,
+        claims: [],
+        codeowners: await loadCodeowners(root, ownersWithin),
+      },
+    );
 
     return {
       graph: owned.graph,
       errors: [
         ...errors.map((error) => `data models were not scanned: ${error}`),
         ...commands.errors.map((error) => `commands were not scanned: ${error}`),
+        ...delivery.errors.map((error) => `broker configuration was not scanned: ${error}`),
       ],
     };
   })();
@@ -635,7 +760,9 @@ export const failureSource = (failure: RepositoryFailure) =>
         ? 'contracts/'
         : failure.source === 'name'
           ? 'repository name'
-          : `${failure.source}/ catalog`;
+          : failure.source === 'docs'
+            ? 'docs/'
+            : `${failure.source}/ catalog`;
 
 /** An observation only adds evidence; a declaration or an owner says what the resource is. */
 const declares = (entry: CatalogResource | CatalogRelationship) => {

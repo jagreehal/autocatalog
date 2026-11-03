@@ -1,0 +1,59 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "resources": [
+    {
+      "type": "Microsoft.ServiceBus/namespaces",
+      "apiVersion": "2022-10-01-preview",
+      "name": "payments-ns",
+      "location": "uksouth",
+      "sku": { "name": "Standard" },
+      "resources": [
+        {
+          "type": "topics",
+          "apiVersion": "2022-10-01-preview",
+          "name": "payments",
+          "dependsOn": ["payments-ns"],
+          "properties": {},
+          "resources": [
+            {
+              "type": "subscriptions",
+              "apiVersion": "2022-10-01-preview",
+              "name": "ledger",
+              "dependsOn": ["payments"],
+              "properties": {
+                "maxDeliveryCount": 5,
+                "lockDuration": "PT1M",
+                "defaultMessageTimeToLive": "P1D"
+              },
+              "resources": [
+                {
+                  "type": "rules",
+                  "apiVersion": "2022-10-01-preview",
+                  "name": "gbp-only",
+                  "dependsOn": ["ledger"],
+                  "properties": {
+                    "filterType": "SqlFilter",
+                    "sqlFilter": { "sqlExpression": "currency = 'GBP'" }
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "Microsoft.ServiceBus/namespaces/authorizationRules",
+          "apiVersion": "2022-10-01-preview",
+          "name": "payments-ns/payment-service",
+          "properties": { "rights": ["Send"] }
+        },
+        {
+          "type": "Microsoft.ServiceBus/namespaces/topics/authorizationRules",
+          "apiVersion": "2022-10-01-preview",
+          "name": "payments-ns/payments/ledger-service",
+          "properties": { "rights": ["Listen"] }
+        }
+      ]
+    }
+  ]
+}

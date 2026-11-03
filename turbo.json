@@ -8,6 +8,14 @@
     },
     "test": {
       "dependsOn": ["^build"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/fixtures/**",
+        "!$TURBO_ROOT$/fixtures/**/node_modules/**",
+        "$TURBO_ROOT$/examples/federation/**",
+        "$TURBO_ROOT$/skills/**",
+        "$TURBO_ROOT$/starters/**"
+      ],
       "outputs": []
     },
     "test:e2e": {

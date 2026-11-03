@@ -42,6 +42,13 @@ export interface ReadDocsOptions {
    * root cannot publish under it.
    */
   repository?: string;
+  /** Repositories whose documents are left out, such as one with a document that breaks the contract. */
+  exclude?: readonly string[];
+  /**
+   * Told about a document whose frontmatter does not parse, which is then left
+   * out. Without it, such a document throws.
+   */
+  onUnreadable?: (doc: Pick<Doc, 'file' | 'repo'>, message: string) => void;
 }
 
 /** Where the documents are and how a matched path becomes an id. */
@@ -79,7 +86,9 @@ export function resolveDocsLayout(root: string, options: ReadDocsOptions = {}): 
     repository: options.repository,
   }).filter(
     (candidate) =>
-      candidate.duplicateOf === undefined && fs.existsSync(path.join(candidate.dir, 'docs')),
+      candidate.duplicateOf === undefined &&
+      !options.exclude?.includes(candidate.name) &&
+      fs.existsSync(path.join(candidate.dir, 'docs')),
   );
 
   const dirs = roots.map((candidate) => docsDir(candidate).slice(0, -1));
@@ -117,20 +126,31 @@ export function resolveDocsLayout(root: string, options: ReadDocsOptions = {}): 
 export function readDocs(root: string, options: ReadDocsOptions = {}): Doc[] {
   const layout = resolveDocsLayout(root, options);
 
+  // Nothing publishes documents, every repository excluded included.
+  if (layout.roots.length === 0) return [];
+
   return fs
     .globSync(layout.pattern, { cwd: layout.root })
     .map((entry) => entry.split(path.sep).join('/'))
     .sort()
-    .map((file) => {
-      const parsed = parseFrontmatter(fs.readFileSync(path.join(layout.root, file), 'utf8'));
+    .flatMap((file) => {
+      const repo = layout.repoFor(file);
+      let parsed: ReturnType<typeof parseFrontmatter>;
 
-      return {
-        id: layout.idFor(file),
-        repo: layout.repoFor(file),
-        file,
-        data: parsed.data,
-        body: parsed.content,
-      };
+      try {
+        parsed = parseFrontmatter(fs.readFileSync(path.join(layout.root, file), 'utf8'));
+      } catch (error) {
+        if (!options.onUnreadable) throw error;
+
+        options.onUnreadable(
+          { file, repo },
+          `frontmatter is not valid YAML (${error instanceof Error ? error.message.split('\n')[0] : String(error)})`,
+        );
+
+        return [];
+      }
+
+      return [{ id: layout.idFor(file), repo, file, data: parsed.data, body: parsed.content }];
     });
 }
 

@@ -149,6 +149,15 @@ const transport = z.object({
   address: z.string().optional(),
   protocols: z.array(z.string()).default([]),
   deliveryMode: z.enum(['push', 'pull', 'push-pull']).optional(),
+  /** The routing key an AMQP producer publishes with. */
+  routingKey: z.string().optional(),
+  /** Payload paths the producer copies into message headers, for brokers that route on them. */
+  headers: z.array(z.string()).optional(),
+  /** Who the producer publishes as: a broker user, IAM role or access key name. */
+  identity: z.string().optional(),
+  /** EventBridge's `source` and `detail-type` for the event. */
+  source: z.string().optional(),
+  detailType: z.string().optional(),
 });
 
 /**

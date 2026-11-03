@@ -56,7 +56,8 @@ path under `public/`.
 
 The command prints how many repositories it cloned and whether it had a token.
 Private repositories need `GITHUB_TOKEN` or `GH_TOKEN`. The command sends the
-token as a request header, so it never lands in a clone's `.git/config`.
+token as a request header, over HTTPS to `github.com` or the host in
+`GITHUB_SERVER_URL`, so it never lands in a clone's `.git/config`.
 
 The command clones each repository once, even when you enrol it by topic and
 by `--repo`. When a clone fails, it names the repository with git's message and

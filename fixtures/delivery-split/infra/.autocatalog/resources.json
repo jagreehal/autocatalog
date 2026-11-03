@@ -1,0 +1,200 @@
+{
+  "spec": "autocatalog/graph-v1",
+  "resources": [
+    {
+      "ref": {
+        "kind": "queue",
+        "namespace": "rabbitmq-exchange",
+        "id": "ledger.dead-letter"
+      },
+      "title": "ledger.dead-letter",
+      "tags": [],
+      "provenance": {
+        "default": "extracted",
+        "fields": {}
+      },
+      "needsReview": false,
+      "source": {
+        "type": "code",
+        "file": "rabbitmq/definitions.json",
+        "line": 14
+      },
+      "attributes": {
+        "system": "rabbitmq",
+        "entity": "exchange",
+        "role": "router",
+        "type": "fanout",
+        "vhost": "/",
+        "unevaluated": []
+      }
+    },
+    {
+      "ref": {
+        "kind": "queue",
+        "namespace": "rabbitmq-exchange",
+        "id": "payments"
+      },
+      "title": "payments",
+      "tags": [],
+      "provenance": {
+        "default": "extracted",
+        "fields": {}
+      },
+      "needsReview": false,
+      "source": {
+        "type": "code",
+        "file": "rabbitmq/definitions.json",
+        "line": 5
+      },
+      "attributes": {
+        "system": "rabbitmq",
+        "entity": "exchange",
+        "role": "router",
+        "type": "headers",
+        "vhost": "/",
+        "unevaluated": []
+      }
+    },
+    {
+      "ref": {
+        "kind": "queue",
+        "namespace": "rabbitmq",
+        "id": "ledger.dead-letter"
+      },
+      "title": "ledger.dead-letter",
+      "tags": [],
+      "provenance": {
+        "default": "extracted",
+        "fields": {}
+      },
+      "needsReview": false,
+      "source": {
+        "type": "code",
+        "file": "rabbitmq/definitions.json",
+        "line": 32
+      },
+      "attributes": {
+        "system": "rabbitmq",
+        "entity": "queue",
+        "role": "store",
+        "vhost": "/",
+        "retentionUnbounded": true,
+        "unevaluated": []
+      }
+    },
+    {
+      "ref": {
+        "kind": "queue",
+        "namespace": "rabbitmq",
+        "id": "ledger.payments"
+      },
+      "title": "ledger.payments",
+      "tags": [],
+      "provenance": {
+        "default": "extracted",
+        "fields": {}
+      },
+      "needsReview": false,
+      "source": {
+        "type": "code",
+        "file": "rabbitmq/definitions.json",
+        "line": 25
+      },
+      "attributes": {
+        "system": "rabbitmq",
+        "entity": "queue",
+        "role": "store",
+        "vhost": "/",
+        "deadLetter": {
+          "target": "ledger.dead-letter"
+        },
+        "retentionUnbounded": true,
+        "unevaluated": []
+      }
+    }
+  ],
+  "relationships": [
+    {
+      "type": "routesTo",
+      "from": {
+        "kind": "queue",
+        "namespace": "rabbitmq-exchange",
+        "id": "ledger.dead-letter"
+      },
+      "to": {
+        "kind": "queue",
+        "namespace": "rabbitmq",
+        "id": "ledger.dead-letter"
+      },
+      "provenance": "extracted",
+      "needsReview": false,
+      "source": {
+        "type": "code",
+        "file": "rabbitmq/definitions.json",
+        "line": 49
+      },
+      "attributes": {
+        "bindings": [
+          {
+            "routingKey": "",
+            "arguments": {},
+            "line": 49
+          }
+        ]
+      }
+    },
+    {
+      "type": "routesTo",
+      "from": {
+        "kind": "queue",
+        "namespace": "rabbitmq-exchange",
+        "id": "payments"
+      },
+      "to": {
+        "kind": "queue",
+        "namespace": "rabbitmq",
+        "id": "ledger.payments"
+      },
+      "provenance": "extracted",
+      "needsReview": false,
+      "source": {
+        "type": "code",
+        "file": "rabbitmq/definitions.json",
+        "line": 41
+      },
+      "attributes": {
+        "bindings": [
+          {
+            "routingKey": "",
+            "arguments": {
+              "x-match": "all",
+              "currency": "GBP"
+            },
+            "line": 41
+          }
+        ]
+      }
+    },
+    {
+      "type": "deadLettersTo",
+      "from": {
+        "kind": "queue",
+        "namespace": "rabbitmq",
+        "id": "ledger.payments"
+      },
+      "to": {
+        "kind": "queue",
+        "namespace": "rabbitmq-exchange",
+        "id": "ledger.dead-letter"
+      },
+      "provenance": "extracted",
+      "needsReview": false,
+      "source": {
+        "type": "code",
+        "file": "rabbitmq/definitions.json",
+        "line": 25
+      },
+      "attributes": {}
+    }
+  ]
+}

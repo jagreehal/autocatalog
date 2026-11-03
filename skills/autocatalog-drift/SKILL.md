@@ -103,6 +103,8 @@ ac validate --catalog https://catalog.example.com/catalog.json
 
 Leave `fields` out when the service may read any field: every change to the event then reaches it.
 
+To name an event or command by id with a version, as EventCatalog does, add `receives` or `sends`: `{ "service": "OrderService", "id": "payments/payment.completed", "version": "^1" }`. Write `domain/id` when two domains use the id. `ac federation status` on the company site lists each reference that does not resolve.
+
 ## 4. Make it a gate, not a habit
 
 Drift is only a guarantee when CI runs it. The recipe is in `docs/drift-ci.md`; the gate is:

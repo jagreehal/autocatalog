@@ -83,7 +83,7 @@ export function buildChannels(
 
       byId.set(resource.id, {
         id: resource.id,
-        href: `${base}channels/${encodeURIComponent(resource.id)}/`,
+        href: `${base}channels/${pagePath(channelPath(resource.id))}`,
         bindings: [],
         source: 'design',
         designHref: `${base}designs/${design.repository}/${design.id}/`,
@@ -93,6 +93,24 @@ export function buildChannels(
 
   return [...byId.values()].sort((a, b) => a.id.localeCompare(b.id));
 }
+
+/**
+ * A channel's page path. An EventBridge rule or Service Bus subscription is
+ * named `parent/child`, so each segment is encoded and the slash kept. A name
+ * with an empty, `.` or `..` segment, or a backslash, has no page: it would
+ * be written outside `channels/`.
+ */
+export function channelPath(id: string): string | undefined {
+  const segments = id.split('/');
+
+  if (id.includes('\\') || segments.some((segment) => ['', '.', '..'].includes(segment)))
+    return undefined;
+
+  return segments.map(encodeURIComponent).join('/');
+}
+
+/** A channel page's path below `channels/`, or the list itself when it has none. */
+const pagePath = (segment: string | undefined) => (segment ? `${segment}/` : '');
 
 export function channelById(channels: ChannelRow[], id: string): ChannelRow | undefined {
   return channels.find((channel) => channel.id === id);

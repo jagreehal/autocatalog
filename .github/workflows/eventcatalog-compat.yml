@@ -7,11 +7,30 @@ name: EventCatalog compatibility
 # changes cannot break us without anyone noticing.
 on:
   pull_request:
+    paths:
+      - 'packages/events/**'
+      - 'scripts/eventcatalog-compat.sh'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - '.github/actions/**'
+      - '.github/workflows/eventcatalog-compat.yml'
   push:
     branches: [main]
+    paths:
+      - 'packages/events/**'
+      - 'scripts/eventcatalog-compat.sh'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - '.github/actions/**'
+      - '.github/workflows/eventcatalog-compat.yml'
   schedule:
     - cron: '23 5 * * *'
   workflow_dispatch:
+
+# A newer push to the same pull request cancels the run it replaces.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   compat:

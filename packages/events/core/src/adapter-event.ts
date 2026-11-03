@@ -57,6 +57,11 @@ export interface AdapterEventMeta {
     address?: string;
     protocols?: string[];
     deliveryMode?: 'push' | 'pull' | 'push-pull';
+    routingKey?: string;
+    headers?: string[];
+    identity?: string;
+    source?: string;
+    detailType?: string;
   }>;
   delivery?: EventFrontmatter['delivery'];
   example?: JsonValue;

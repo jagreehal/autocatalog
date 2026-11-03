@@ -15,6 +15,7 @@ import {
   hasFieldConflict,
   indexFields,
   provenanceSummary,
+  type DeliveryReport,
   type EventFrontmatter,
   type LoadedExample,
   type ResourceGraph,
@@ -52,6 +53,7 @@ import { docKindIcon, documentsByKind, kindCounts, kindHref, kindNoun } from './
 import { explorerModel } from './ui/components/catalog-explorer-model';
 import type { EventCatalogDiagramProps } from './ui/components/EventCatalogDiagram';
 import type { DeliveryView } from './ui/components/DeliveryFacts';
+import type { DeliveryPathProps } from './ui/components/DeliveryPath';
 import type { DeadLetterView } from './ui/components/RuntimeEvidence';
 import type { ExampleView } from './ui/components/Examples';
 import { runtimeEvidenceView } from './runtime-evidence-view';
@@ -874,9 +876,84 @@ export async function eventPageProps(
     facts,
     transport: fm.transport,
     delivery: deliveryView(fm.delivery, correlationPath(event)),
+    deliveryPath: deliveryPathView(
+      catalog.delivery,
+      `${fm.domain}/${fm.id}`,
+      base,
+      servicePages(catalog),
+    ),
     source,
     edit,
     diagram: diagramProps(base, eventCatalogEmbeds()?.events[fm.id], `${fm.name} in EventCatalog`),
+  };
+}
+
+const where = (source: { file?: string; line?: number } | undefined) =>
+  source?.file ? `${source.file}${source.line ? `:${source.line}` : ''}` : undefined;
+
+/** One event's routes and findings from the company's delivery report, as the page draws them. */
+export function deliveryPathView(
+  report: DeliveryReport | undefined,
+  event: string,
+  base: string,
+  /** Services with a page; one declared only in another repository has none. */
+  pages: ReadonlySet<string>,
+): DeliveryPathProps | undefined {
+  const routes = report?.routes.filter((route) => route.event === event) ?? [];
+  const findings = report?.findings.filter((finding) => finding.event === event) ?? [];
+
+  if (!report || (routes.length === 0 && findings.length === 0)) return undefined;
+
+  const service = (name: string) => ({
+    name,
+    entity: 'service' as const,
+    ...(pages.has(name) && { href: `${base}services/${name}/` }),
+  });
+
+  return {
+    complete: !findings.some((finding) => finding.confidence === 'unknown'),
+    findings: findings.map((finding) => ({
+      confidence: finding.confidence,
+      message: finding.message,
+      source: where(finding.source),
+    })),
+    routes: routes.map((route) => {
+      const path = route.examples.find((example) => example.reaches)?.path ?? [];
+
+      return {
+        consumer: route.consumer,
+        environment: report.environment,
+        hops: [
+          ...route.producers.map(service),
+          ...(path.length
+            ? path.map((hop) => ({
+                name: hop.ref.id,
+                entity: hop.entity ?? 'queue',
+                rule: hop.rule,
+                source: where(hop.source),
+              }))
+            : [{ name: route.exchange, entity: 'destination' }]),
+          ...(path.length ? [service(route.consumer)] : []),
+        ],
+        examples: route.examples.map((example) => ({
+          name: example.name,
+          headers: Object.entries(example.headers)
+            .map(([key, value]) => `${key} = ${String(value)}`)
+            .join(', '),
+          outcome:
+            example.reaches === undefined
+              ? ('not evaluated' as const)
+              : example.reaches
+                ? ('reaches' as const)
+                : ('excluded' as const),
+        })),
+        facts: route.facts,
+        deadLetter: route.deadLetter && {
+          exchange: route.deadLetter.exchange,
+          queues: route.deadLetter.queues,
+        },
+      };
+    }),
   };
 }
 

@@ -1,0 +1,10 @@
+{
+  "consumes": [
+    {
+      "service": "LedgerService",
+      "event": "payments/payment.completed",
+      "queue": "ledger.payments",
+      "deadLetter": { "queue": "ledger.dead-letter" }
+    }
+  ]
+}

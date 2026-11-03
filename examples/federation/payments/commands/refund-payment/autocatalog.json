@@ -1,0 +1,15 @@
+{
+  "kind": "command",
+  "id": "refund-payment",
+  "version": "1.0.0",
+  "name": "Refund payment",
+  "summary": "Give a customer their money back when an order is cancelled.",
+  "domain": "payments",
+  "handler": "PaymentService",
+  "transport": [
+    {
+      "address": "payments.refund",
+      "protocols": ["amqp"]
+    }
+  ]
+}

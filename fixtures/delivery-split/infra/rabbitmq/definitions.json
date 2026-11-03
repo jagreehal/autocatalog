@@ -1,0 +1,58 @@
+{
+  "rabbit_version": "4.1.0",
+  "vhosts": [{ "name": "/" }],
+  "exchanges": [
+    {
+      "name": "payments",
+      "vhost": "/",
+      "type": "headers",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    },
+    {
+      "name": "ledger.dead-letter",
+      "vhost": "/",
+      "type": "fanout",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    }
+  ],
+  "queues": [
+    {
+      "name": "ledger.payments",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": { "x-dead-letter-exchange": "ledger.dead-letter" }
+    },
+    {
+      "name": "ledger.dead-letter",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    }
+  ],
+  "bindings": [
+    {
+      "source": "payments",
+      "vhost": "/",
+      "destination": "ledger.payments",
+      "destination_type": "queue",
+      "routing_key": "",
+      "arguments": { "x-match": "all", "currency": "GBP" }
+    },
+    {
+      "source": "ledger.dead-letter",
+      "vhost": "/",
+      "destination": "ledger.dead-letter",
+      "destination_type": "queue",
+      "routing_key": "",
+      "arguments": {}
+    }
+  ]
+}

@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/jagreehal/autocatalog/examples/frameworks/go/payment-completed",
+  "properties": {
+    "paymentId": {
+      "type": "string"
+    },
+    "amount": {
+      "type": "number"
+    },
+    "currency": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "paymentId",
+    "amount",
+    "currency"
+  ],
+  "x-autocatalog": {
+    "consumers": [
+      "LedgerService"
+    ],
+    "domain": "payments",
+    "id": "payment.completed",
+    "producers": [
+      "PaymentService"
+    ],
+    "version": "1.0.0"
+  }
+}

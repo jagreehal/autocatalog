@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ShipmentStatusChanged",
+  "description": "A shipment moved to a new status.",
+  "type": "object",
+  "properties": {
+    "shipmentId": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string"
+    }
+  },
+  "required": ["shipmentId", "status"],
+  "x-autocatalog": {
+    "id": "status.changed",
+    "version": "1.0.0",
+    "domain": "shipping",
+    "producers": ["ShippingService"]
+  }
+}

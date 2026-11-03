@@ -60,6 +60,7 @@ setResourceContext(Astro.locals, {
 
 // The page's sections, for Starlight's "On this page".
 const headings = [
+  ...(page.deliveryPath ? [{ depth: 2, slug: 'delivery-path', text: 'Delivery path' }] : []),
   { depth: 2, slug: 'schema', text: 'Schema' },
   { depth: 2, slug: 'runtime', text: 'Runtime evidence' },
   ...(page.examples.length ? [{ depth: 2, slug: 'examples', text: 'Examples' }] : []),

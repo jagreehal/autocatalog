@@ -17,6 +17,8 @@ import {
   relationshipKey,
   resourceKey,
   summarizeResourceGraph,
+  CONSUMES_FILE,
+  readConsumerDeclarations,
 } from 'autocatalog-core';
 import { discoverDiscoveryAdapters } from '../adapters';
 import {
@@ -142,9 +144,32 @@ export async function runScan(opts: RunScanOptions): Promise<number> {
     ...installed.filter((adapter) => !adapterNames.has(adapter.name)),
   ];
 
+  // What consumers declare they read and need from the broker travels in the
+  // artifact, published with it atomically, so drift between two saved
+  // artifacts checks delivery too. Read first: a malformed file stops the scan
+  // before anything is written.
+  let declarations: Awaited<ReturnType<typeof readConsumerDeclarations>>;
+
+  try {
+    declarations = await readConsumerDeclarations(root);
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : String(error));
+
+    return 1;
+  }
+
   const result = await scanCatalog({
     root,
     outRoot: out,
+    files:
+      declarations.length > 0
+        ? [
+            {
+              name: CONSUMES_FILE,
+              content: `${JSON.stringify({ consumes: declarations }, null, 2)}\n`,
+            },
+          ]
+        : [],
     adapters,
     repository: await repositoryMetadata(root),
     snapshot: opts.snapshot ? await readSnapshot(opts.snapshot) : undefined,

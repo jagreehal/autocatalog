@@ -96,6 +96,37 @@ describe('ac from-eventcatalog (executable story: the on-ramp)', () => {
     expect(legacy.version).toBe('0.1.0');
   });
 
+  it('keeps the references and consumers a person wrote when it imports again', async () => {
+    const project = path.join(out, 'project');
+
+    const authored = {
+      consumes: [{ service: 'LedgerService', event: 'payments/payment.completed' }],
+      receives: [{ service: 'LedgerService', id: 'payments/payment.completed', version: '^1' }],
+      sends: [{ service: 'LedgerService', id: 'ledger/post-entry' }],
+    };
+
+    await fs.mkdir(project, { recursive: true });
+    await fs.writeFile(path.join(project, 'autocatalog.consumes.json'), JSON.stringify(authored));
+
+    for (let run = 0; run < 2; run++)
+      expect(
+        await runFromEventCatalog({
+          source: path.join(fixtures, 'eventcatalog-sample'),
+          out: path.join(project, 'events'),
+          cwd: project,
+          quiet: true,
+        }),
+      ).toBe(0);
+
+    const file = JSON.parse(
+      await fs.readFile(path.join(project, 'autocatalog.consumes.json'), 'utf8'),
+    );
+
+    expect(file.consumes).toEqual(authored.consumes);
+    expect(file.receives).toContainEqual(authored.receives[0]);
+    expect(file.sends).toContainEqual(authored.sends[0]);
+  });
+
   it('imported catalog passes validation', async () => {
     await runFromEventCatalog({
       source: path.join(fixtures, 'eventcatalog-sample'),

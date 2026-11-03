@@ -1,0 +1,7 @@
+{
+  "id": "payment.completed",
+  "version": "1.0.0",
+  "domain": "payments",
+  "producers": ["PaymentService"],
+  "consumers": ["LedgerService"]
+}

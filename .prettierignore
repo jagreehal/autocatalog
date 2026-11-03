@@ -14,8 +14,14 @@ examples/demo/events/
 # Vendored anti-slop Oxlint plugin, kept byte-identical to upstream.
 tools/oxlint/anti-slop/
 
+# Written by each language's own generator; verify:frameworks checks them byte for byte.
+examples/frameworks/*/contracts/
+
 # Agent worktrees and local tool state, never part of the repository.
 .claude/
 
 # Studio canvas copied from EventCatalog, kept byte-identical to upstream.
 packages/docs/astro/src/ui/vendor/
+
+# Deliberately does not parse: verify:federation checks the site leaves it out.
+examples/federation/notifications/

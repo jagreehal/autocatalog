@@ -53,6 +53,46 @@ describe('ac site arguments', () => {
     }
   });
 
+  it('names a repository enrolled since the lock was written, when building the pins', async () => {
+    const work = await fs.mkdtemp(path.join(os.tmpdir(), 'ac-site-'));
+    const lock = path.join(work, 'autocatalog.lock.json');
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    vi.spyOn(console, 'log').mockImplementation(() => undefined);
+
+    await fs.writeFile(
+      lock,
+      JSON.stringify({
+        spec: 'autocatalog/lock-v1',
+        repositories: [
+          {
+            name: 'payments',
+            url: `file://${path.join(work, 'payments')}`,
+            commit: 'a'.repeat(40),
+            tree: 'b'.repeat(40),
+            lockedAt: '2026-11-03T00:00:00Z',
+          },
+        ],
+      }),
+    );
+
+    try {
+      await runSite({
+        ...base,
+        lock,
+        cache: path.join(work, 'repos'),
+        repos: [`file://${path.join(work, 'payments')}`, `file://${path.join(work, 'ledger')}`],
+      });
+
+      const said = warn.mock.calls.join(' ');
+
+      expect(said).toMatch(/Left out ledger: enrolled but not in autocatalog\.lock\.json/);
+      expect(said).not.toMatch(/Left out payments: enrolled/);
+    } finally {
+      await fs.rm(work, { recursive: true, force: true });
+    }
+  });
+
   it('refuses two repositories that would clone into one folder, before cloning', async () => {
     const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     vi.spyOn(console, 'log').mockImplementation(() => undefined);

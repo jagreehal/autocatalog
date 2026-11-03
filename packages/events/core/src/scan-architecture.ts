@@ -1,3 +1,4 @@
+import { scanDeliveryResources } from './delivery';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { z } from 'zod';
@@ -228,8 +229,9 @@ export async function scanArchitecture(options: ArchitectureScanOptions) {
 
     const models = await scanModelResources(effective);
     const commands = await scanCommandResources(effective);
-    errors.push(...models.errors, ...commands.errors);
-    skipped.push(...models.skipped, ...commands.skipped);
+    const delivery = await scanDeliveryResources(effective);
+    errors.push(...models.errors, ...commands.errors, ...delivery.errors);
+    skipped.push(...models.skipped, ...commands.skipped, ...delivery.skipped);
 
     if (errors.length) return { graph, errors, skipped, conflicts };
     const imports: OwnershipImport[] = [];
@@ -266,6 +268,7 @@ export async function scanArchitecture(options: ArchitectureScanOptions) {
     const sources = [
       models.graph,
       commands.graph,
+      delivery.graph,
       ...imports.map((entry) => entry.graph),
       options.traces ? discoverTraceResources(options.traces, effective) : emptyResourceGraph(),
     ];

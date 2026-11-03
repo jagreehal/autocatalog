@@ -68,42 +68,9 @@ export function buildDocsManifest(
   root: string,
   options: BuildDocsManifestOptions = {},
 ): DocsManifest {
-  const docs = readDocs(root, options);
+  const { valid, invalid } = validateDocs(root, options);
 
-  const validate = kindValidator(
-    resolveFrontmatterContract(root, options.schemaPath).schema,
-    resolveDocKinds(root, options.conventionsPath).kinds,
-  );
-
-  const failures: string[] = [];
-  const valid: Array<Doc & { front: Frontmatter; kind: DocKind | null }> = [];
-
-  for (const doc of docs) {
-    const { kind, issues } = validate(doc);
-
-    if (issues.length > 0) {
-      for (const issue of issues) failures.push(kindFailure(doc.file, kind, issue));
-      continue;
-    }
-
-    // The contract is the company's own and may not declare the fields the
-    // index is built from, so they are checked here rather than assumed.
-    const front = frontmatterSchema.safeParse(doc.data);
-
-    if (!front.success) {
-      for (const issue of front.error.issues) {
-        failures.push(
-          `${doc.file}: ${issue.path.join('.') || '(root)'}: ${issue.message} (the docs index is built from title and owner, whatever the frontmatter contract requires)`,
-        );
-      }
-
-      continue;
-    }
-
-    valid.push({ ...doc, front: front.data, kind });
-  }
-
-  if (failures.length > 0) throw new DocsManifestError(failures);
+  if (invalid.size > 0) throw new DocsManifestError([...invalid.values()].flat());
 
   const manifest: DocsManifest = {};
 
@@ -132,4 +99,73 @@ export function buildDocsManifest(
   for (const entry of Object.values(manifest)) entry.linkedFrom.sort();
 
   return manifest;
+}
+
+/**
+ * Each repository with a document that breaks the contract, and what is wrong.
+ * A company site leaves those repositories' documents out (pass them as
+ * `exclude`) instead of failing every team's build; the repository's own
+ * `ac docs check` is what refuses the merge.
+ */
+export function invalidDocuments(
+  root: string,
+  options: BuildDocsManifestOptions = {},
+): Map<string, string[]> {
+  return validateDocs(root, options).invalid;
+}
+
+type ValidDoc = Doc & { front: Frontmatter; kind: DocKind | null };
+
+/** The documents that keep to the contract, and what is wrong with the rest, by repository. */
+interface ValidatedDocs {
+  valid: ValidDoc[];
+  invalid: Map<string, string[]>;
+}
+
+function validateDocs(root: string, options: BuildDocsManifestOptions): ValidatedDocs {
+  const invalid = new Map<string, string[]>();
+
+  const fail = (doc: Pick<Doc, 'file' | 'repo'>, message: string) =>
+    invalid.set(doc.repo, [...(invalid.get(doc.repo) ?? []), message]);
+
+  // A document that does not parse is named with its repository, like one that breaks the contract.
+  const docs = readDocs(root, {
+    ...options,
+    onUnreadable: (doc, message) => fail(doc, `${doc.file}: ${message}`),
+  });
+
+  const validate = kindValidator(
+    resolveFrontmatterContract(root, options.schemaPath).schema,
+    resolveDocKinds(root, options.conventionsPath).kinds,
+  );
+
+  const valid: ValidDoc[] = [];
+
+  for (const doc of docs) {
+    const { kind, issues } = validate(doc);
+
+    if (issues.length > 0) {
+      for (const issue of issues) fail(doc, kindFailure(doc.file, kind, issue));
+      continue;
+    }
+
+    // The contract is the company's own and may not declare the fields the
+    // index is built from, so they are checked here rather than assumed.
+    const front = frontmatterSchema.safeParse(doc.data);
+
+    if (!front.success) {
+      for (const issue of front.error.issues) {
+        fail(
+          doc,
+          `${doc.file}: ${issue.path.join('.') || '(root)'}: ${issue.message} (the docs index is built from title and owner, whatever the frontmatter contract requires)`,
+        );
+      }
+
+      continue;
+    }
+
+    valid.push({ ...doc, front: front.data, kind });
+  }
+
+  return { valid, invalid };
 }

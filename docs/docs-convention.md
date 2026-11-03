@@ -227,8 +227,10 @@ contract is: a rule that only exists as a TypeScript type cannot be enforced by
 a repository that does not run TypeScript.
 
 A repository whose own catalog will not compile is **quarantined**, not fatal.
-Its events or agents are left out, the build warns, and `/catalog` names the
-repository and the reason. Refusing to publish something partial still holds —
+Its documents, events or agents are left out, the build warns, and `/catalog` names the
+repository and the reason. A document that breaks the frontmatter contract
+leaves out every document in its repository, so its pages and the index never
+disagree. Refusing to publish something partial still holds —
 it holds in the repository that owns the mistake, where `ac docs check` and
 `ac validate` fail the merge. One team must not be able to take down the index
 every other team reads.

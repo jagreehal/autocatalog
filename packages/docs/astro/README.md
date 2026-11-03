@@ -77,14 +77,15 @@ committed:
 - **The sidebar is what is on disk.** Enrolling a repository is cloning it, not
   editing this site's config. Set `sidebar` in your Starlight config to take it
   back.
-- **The index is built, not read.** `buildDocsManifest` runs during the build, so
-  a document that breaks the contract fails the build.
+- **The index is built, not read.** It is built during the build from the
+  documents that keep to the contract. A repository with a document that breaks
+  the contract has all its documents left out, and the build names the file.
 - **The Catalog is composed, not copied.** Conventional `docs/`, `events/`, and
   Agent-system directories are compiled through their own Adapters and joined
   by Repository identity. A composed fact is never silently replaced by a later
   Adapter: contradictions fail with `ResourceGraphConflictError`.
-- **A repository that will not compile is quarantined, not hidden.** Its events
-  or agents are left out of the graph, the build warns, and `/catalog` names the
+- **A repository that will not compile is quarantined, not hidden.** Its
+  documents, events or agents are left out of the graph, the build warns, and `/catalog` names the
   repository and the reason. One team's broken catalog does not take down the
   index every other team reads — and failing the merge is that repository's own
   job, through `ac docs check` and `ac validate` where the mistake was made.

@@ -1,3 +1,4 @@
+import path from 'node:path';
 /**
  * What the integration decided, read back by the parts Astro loads on their own.
  *
@@ -5,6 +6,7 @@
  * graph, so options cannot simply be passed to it. The environment is the seam
  * Astro itself offers, and the events site already uses it.
  */
+
 export interface DocsSiteConfig {
   /** Absolute aggregation root. */
   root: string;
@@ -16,6 +18,15 @@ export interface DocsSiteConfig {
   schemaPath: string | undefined;
   /** Path to the organisation's conventions file, or undefined to find it by convention. */
   conventionsPath: string | undefined;
+  /**
+   * Repositories outside the root, each read as one: EventCatalog projects
+   * `ac site` imported into its own cache, so nobody's checkout is written to.
+   */
+  sources: string[];
+  /** Other sites' composed graphs (their `/catalog.json`), joined without pages. */
+  indexes: string[];
+  /** Repositories whose documents are left out because one breaks the contract. */
+  exclude: string[];
   title: string;
   description: string;
   /** A server-sent events feed the maps can follow live. */
@@ -31,6 +42,9 @@ export function docsSiteConfig(): DocsSiteConfig {
     repository: process.env.AUTOCATALOG_DOCS_REPOSITORY || undefined,
     schemaPath: process.env.AUTOCATALOG_DOCS_SCHEMA || undefined,
     conventionsPath: process.env.AUTOCATALOG_DOCS_CONVENTIONS || undefined,
+    sources: (process.env.AUTOCATALOG_DOCS_SOURCES ?? '').split(path.delimiter).filter(Boolean),
+    indexes: (process.env.AUTOCATALOG_DOCS_INDEXES ?? '').split(path.delimiter).filter(Boolean),
+    exclude: (process.env.AUTOCATALOG_DOCS_EXCLUDE ?? '').split(path.delimiter).filter(Boolean),
     title: process.env.AUTOCATALOG_DOCS_TITLE ?? 'Documentation',
     description:
       process.env.AUTOCATALOG_DOCS_DESCRIPTION ??

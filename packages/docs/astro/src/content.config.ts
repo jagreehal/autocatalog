@@ -11,11 +11,12 @@ import { docsLoader } from './loader';
 
 // AUTOCATALOG_DOCS_* are set by the autocatalogDocs() plugin in config:setup,
 // which fires before the loaders are invoked.
-const { root, repo, repository, schemaPath, conventionsPath } = docsSiteConfig();
+const { root, repo, repository, schemaPath, conventionsPath, exclude } = docsSiteConfig();
 
 // The reader and the site must address a document the same way, so the pattern
 // and the id both come from the shared layout rather than being restated here.
-const layout = resolveDocsLayout(root, { repo, repository });
+// A repository the catalog left out for an invalid document has no pages either.
+const layout = resolveDocsLayout(root, { repo, repository, exclude });
 
 /** Starlight's own frontmatter. A company field of the same name must not fight it. */
 const STARLIGHT_FIELDS = new Set([

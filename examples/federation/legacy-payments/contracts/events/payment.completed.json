@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PaymentCompleted",
+  "description": "The old billing system's copy of the payments event.",
+  "type": "object",
+  "properties": {
+    "paymentId": {
+      "type": "string"
+    }
+  },
+  "required": ["paymentId"],
+  "x-autocatalog": {
+    "id": "payment.completed",
+    "version": "1.0.0",
+    "domain": "payments",
+    "producers": ["BillingService"]
+  }
+}

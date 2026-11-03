@@ -1,0 +1,83 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Payments messaging
+Resources:
+  PaymentsTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: payments
+  LedgerQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: ledger-payments
+      MessageRetentionPeriod: 86400
+      VisibilityTimeout: 60
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt LedgerDeadLetter.Arn
+        maxReceiveCount: 5
+  LedgerDeadLetter:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: ledger-dead-letter
+  LedgerSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      Protocol: sqs
+      TopicArn: !Ref PaymentsTopic
+      Endpoint: !GetAtt LedgerQueue.Arn
+      FilterPolicy:
+        currency: [GBP]
+  RefundsRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: refunds-to-ledger
+      EventPattern:
+        source: [payments]
+        detail-type: [refund.issued]
+        detail:
+          amount: [{ numeric: ['>', 0] }]
+      Targets:
+        - Arn: !GetAtt LedgerQueue.Arn
+          Id: ledger
+          RetryPolicy:
+            MaximumRetryAttempts: 3
+            MaximumEventAgeInSeconds: 3600
+  LedgerQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues: [!Ref LedgerQueue]
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal: { Service: sns.amazonaws.com }
+            Action: sqs:SendMessage
+            Resource: !GetAtt LedgerQueue.Arn
+            Condition:
+              ArnEquals: { aws:SourceArn: !Ref PaymentsTopic }
+          - Effect: Allow
+            Principal: { Service: events.amazonaws.com }
+            Action: sqs:SendMessage
+            Resource: !GetAtt LedgerQueue.Arn
+            Condition:
+              ArnEquals: { aws:SourceArn: !GetAtt RefundsRule.Arn }
+  PaymentServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: payment-service
+      Policies:
+        - PolicyName: publish
+          PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Action: [sns:Publish, events:PutEvents]
+                Resource: '*'
+  LedgerServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: ledger-service
+      Policies:
+        - PolicyName: consume
+          PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Action: [sqs:ReceiveMessage, sqs:DeleteMessage]
+                Resource: !GetAtt LedgerQueue.Arn

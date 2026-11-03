@@ -272,6 +272,7 @@ export {
   composeResourceGraphs,
   createEventResourceGraph,
   createRepositoryResource,
+  earlierVersions,
   createResourceGraphComposer,
   isAgentSystemCatalogResource,
   isArchitectureCatalogResource,
@@ -326,6 +327,8 @@ export { readContractFile, type ContractFileResult } from './contract-file';
 export {
   loadRepositoryEvents,
   findCatalogRoots,
+  findEventCatalogProjects,
+  isEventCatalogProject,
   isSingleRepository,
   publishesCatalogContent,
   RUNTIME_SNAPSHOT,
@@ -354,5 +357,9 @@ export * from './schema-registries';
 export * from './cloudevents';
 
 export * from './scan-architecture';
+
+export * from './delivery';
+
+export * from './references';
 
 export * from './consumes';

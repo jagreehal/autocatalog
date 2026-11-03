@@ -1,5 +1,6 @@
 // The site `ac site` builds. Nobody edits this file: every choice arrives as
 // an environment variable, so one install serves any company's repositories.
+import { fileURLToPath } from 'node:url';
 import starlight from '@astrojs/starlight';
 import { defineConfig, passthroughImageService } from 'astro/config';
 import { unified } from '@astrojs/markdown-remark';
@@ -10,6 +11,9 @@ const env = process.env;
 const base = env.AUTOCATALOG_SITE_BASE || '/';
 
 export default defineConfig({
+  // `ac site` gives each run a root of its own; the sources stay here.
+  srcDir: fileURLToPath(new URL('./src/', import.meta.url)),
+  publicDir: fileURLToPath(new URL('./public/', import.meta.url)),
   // Starlight's sitemap needs an origin. Without one the site still builds.
   ...(env.AUTOCATALOG_SITE_URL && { site: env.AUTOCATALOG_SITE_URL }),
   base,

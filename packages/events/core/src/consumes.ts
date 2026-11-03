@@ -4,6 +4,7 @@ import { architectureService } from './architecture';
 import { fieldPaths } from './fields';
 import type { JsonObject } from './json';
 import { readOptionalResourceJson } from './resource-files';
+import { durationSeconds } from './schema';
 import {
   AUTOCATALOG_GRAPH_SPEC,
   relationshipKey,
@@ -24,12 +25,15 @@ export const CONSUMES_FILE = 'autocatalog.consumes.json';
  * A consumer name from another repository or from runtime evidence, safe to
  * print: it lands in terminal output, Markdown posted to a pull request and
  * GitHub annotations, where a newline, link, image or `@team` mention would
- * be injected. Names keep to letters, digits, spaces and `. _ : / -`.
+ * be injected. Names keep to letters, digits, spaces and `. _ : / - $`.
  */
-const SAFE_NAME = /^[A-Za-z0-9][\w .:/-]{0,199}$/;
+const SAFE_NAME = /^[A-Za-z0-9][\w .:/$-]{0,199}$/;
 
 /** An event as `domain/id`, each part under the same rule as a name. */
 const EVENT_NAME = /^[A-Za-z0-9][\w.:-]{0,199}\/[A-Za-z0-9][\w.:-]{0,199}$/;
+
+/** A resource id, bare or as `domain/id`, under the same rule. */
+const REFERENCE_ID = /^[A-Za-z0-9][\w.:-]{0,199}(\/[A-Za-z0-9][\w.:-]{0,199})?$/;
 
 /** A payload path such as `amount` or `items[].sku`, under the same rule. */
 const FIELD_PATH = /^[\w$][\w$.[\]-]{0,199}$/;
@@ -46,31 +50,79 @@ export const UNSAFE_CONSUMER = 'a consumer whose name is not safe to print';
 export const shownName = (name: string): string => JSON.stringify(name).slice(1, -1);
 
 const deadLetter = z.strictObject({
-  queue: z.string().regex(SAFE_NAME, 'use letters, digits, spaces and . _ : / -'),
+  queue: z.string().regex(SAFE_NAME, 'use letters, digits, spaces and . _ : / - $'),
   maxAttempts: z.number().int().positive().optional(),
 });
 
 export type DeadLetterDeclaration = z.infer<typeof deadLetter>;
 
+/** An ISO 8601 duration of days and smaller, as `PT4H`. */
+const duration = z
+  .string()
+  .refine((value) => durationSeconds(value) !== undefined, 'an ISO 8601 duration such as PT4H');
+
+/** What a consumer needs from the broker to receive the event, beside which event it reads. */
+const deliveryNeeds = {
+  /** The queue, subscription or topic the service reads the event from. */
+  queue: z.string().regex(SAFE_NAME, 'use letters, digits, spaces and . _ : / - $').optional(),
+  /** The consumer group it reads in, for brokers with groups such as Kafka. */
+  group: z.string().regex(SAFE_NAME, 'use letters, digits, spaces and . _ : / - $').optional(),
+  /** Who it consumes as: a broker user, IAM role or access key name. */
+  identity: z.string().regex(SAFE_NAME, 'use letters, digits, spaces and . _ : / - $').optional(),
+  /** How long it may be down and still expect every message when it is back. */
+  recovery: duration.optional(),
+  /** How long it may take, retries included, before a message is too late. */
+  processingWindow: duration.optional(),
+};
+
 const consumerDeclaration = z.strictObject({
-  service: z.string().regex(SAFE_NAME, 'use letters, digits, spaces and . _ : / -'),
+  service: z.string().regex(SAFE_NAME, 'use letters, digits, spaces and . _ : / - $'),
   // `domain/id`, as the site and AI agents name an event.
   event: z.string().regex(EVENT_NAME, 'name the event as domain/id'),
   /** Payload paths the service reads, such as `amount` or `items[].sku`. */
   fields: z.array(z.string().regex(FIELD_PATH, 'a payload path such as items[].sku')).optional(),
+  ...deliveryNeeds,
   /** Where the service puts a delivery it gives up on, and after how many attempts. */
   deadLetter: deadLetter.optional(),
 });
 
-const consumesFile = z.strictObject({ consumes: z.array(consumerDeclaration) });
+/**
+ * A pointer to a resource another repository owns, the way EventCatalog
+ * writes `sends` and `receives`: by id, bare or `domain/id`, with an optional
+ * version or range. Whether it names an event or a command is settled when the
+ * company's catalogs are composed.
+ */
+const reference = z.strictObject({
+  service: z.string().regex(SAFE_NAME, 'use letters, digits, spaces and . _ : / - $'),
+  id: z.string().regex(REFERENCE_ID, 'an id, or domain/id'),
+  /** An exact version, `latest`, or a range such as `^1.0.0`. */
+  version: z.string().max(100).optional(),
+});
+
+export type CatalogReference = z.infer<typeof reference>;
+
+const consumesFile = z.strictObject({
+  consumes: z.array(consumerDeclaration).default([]),
+  /** Events the service consumes and commands it handles, owned elsewhere. */
+  receives: z.array(reference).default([]),
+  /** Commands the service sends and events it produces, owned elsewhere. */
+  sends: z.array(reference).default([]),
+});
 
 export type ConsumerDeclaration = z.infer<typeof consumerDeclaration>;
 
+export type DeclarationsFile = z.infer<typeof consumesFile>;
+
 /** The repository's {@link CONSUMES_FILE}, or nothing when it has none. */
 export async function readConsumerDeclarations(root: string): Promise<ConsumerDeclaration[]> {
+  return (await readDeclarationsFile(root)).consumes;
+}
+
+/** The repository's {@link CONSUMES_FILE} whole: its consumers and its references by id. */
+export async function readDeclarationsFile(root: string): Promise<DeclarationsFile> {
   const value = await readOptionalResourceJson(path.join(root, CONSUMES_FILE), { root });
 
-  if (value === undefined) return [];
+  if (value === undefined) return { consumes: [], receives: [], sends: [] };
 
   const parsed = consumesFile.safeParse(value);
 
@@ -82,7 +134,7 @@ export async function readConsumerDeclarations(root: string): Promise<ConsumerDe
     );
   }
 
-  return parsed.data.consumes;
+  return parsed.data;
 }
 
 /** An Event resource as the composed graph holds it, with the repository that publishes it. */
@@ -104,11 +156,17 @@ export class ConsumerGraphError extends Error {
  * One repository's declarations as edges onto the exact Event resources that
  * other repositories publish. An id is unique inside a domain, not across a
  * company: when two repositories publish one `domain/id`, this repository's own
- * copy wins, and with none the reference is ambiguous rather than guessed.
+ * copy wins. With none, the edge goes onto every copy and `onWarning` is told:
+ * a producer's gate must still name the consumer while the duplicate is
+ * settled, and the consumer's own check refuses to guess.
  */
 export function createConsumerResourceGraph(
   declarations: ConsumerDeclaration[],
-  options: { repository?: string; events: PublishedEvent[] },
+  options: {
+    repository?: string;
+    events: PublishedEvent[];
+    onWarning?: (message: string) => void;
+  },
 ): ResourceGraph {
   const candidates = new Map<string, PublishedEvent[]>();
 
@@ -125,41 +183,47 @@ export function createConsumerResourceGraph(
     const all = candidates.get(declaration.event) ?? [];
     const local = all.filter((event) => event.repository === options.repository);
     const pick = local.length > 0 ? local : all;
-    const [published] = pick;
 
-    if (pick.length !== 1 || !published) {
-      const repositories = pick.map((event) => event.repository ?? '(unnamed)').sort();
-
+    if (pick.length === 0) {
       failures.push(
-        pick.length === 0
-          ? `${CONSUMES_FILE}: ${declaration.service} consumes ${declaration.event}, which no repository publishes`
-          : `${CONSUMES_FILE}: ${declaration.service} consumes ${declaration.event}, which ${pick.length} repositories publish (${repositories.join(', ')})`,
+        `${CONSUMES_FILE}: ${declaration.service} consumes ${declaration.event}, which no repository publishes`,
       );
       continue;
+    }
+
+    if (pick.length > 1) {
+      const repositories = pick.map((event) => event.repository ?? '(unnamed)').sort();
+
+      options.onWarning?.(
+        `${CONSUMES_FILE}: ${declaration.service} consumes ${declaration.event}, which ${repositories.join(' and ')} both publish; it is drawn as a consumer of each until one copy is removed`,
+      );
     }
 
     const service = architectureService(declaration.service);
     services.set(resourceKey(service.ref), service);
 
-    const relationship: CatalogRelationship = {
-      type: 'consumes',
-      from: published.ref,
-      to: service.ref,
-      provenance: 'declared',
-      needsReview: false,
-      source: { type: 'code', file: CONSUMES_FILE },
-      ...((declaration.fields || declaration.deadLetter) && {
-        attributes: {
-          ...(declaration.fields && { fields: [...declaration.fields] }),
-          ...(declaration.deadLetter && { deadLetter: { ...declaration.deadLetter } }),
-        },
-      }),
-    };
+    for (const published of pick) {
+      const relationship: CatalogRelationship = {
+        type: 'consumes',
+        from: published.ref,
+        to: service.ref,
+        provenance: 'declared',
+        needsReview: false,
+        source: { type: 'code', file: CONSUMES_FILE },
+        ...((declaration.fields || declaration.deadLetter || needsOf(declaration)) && {
+          attributes: {
+            ...(declaration.fields && { fields: [...declaration.fields] }),
+            ...(declaration.deadLetter && { deadLetter: { ...declaration.deadLetter } }),
+            ...(needsOf(declaration) && { delivery: needsOf(declaration)! }),
+          },
+        }),
+      };
 
-    const key = relationshipKey(relationship);
-    const earlier = relationships.get(key);
+      const key = relationshipKey(relationship);
+      const earlier = relationships.get(key);
 
-    relationships.set(key, earlier ? withFields(earlier, relationship) : relationship);
+      relationships.set(key, earlier ? withFields(earlier, relationship) : relationship);
+    }
   }
 
   if (failures.length > 0) throw new ConsumerGraphError(failures);
@@ -204,14 +268,37 @@ function withFields(earlier: CatalogRelationship, later: CatalogRelationship): C
   const after = declaredFields(later);
   const { attributes: _attributes, ...edge } = earlier;
   const queue = deadLetterOf(later) ?? deadLetterOf(earlier);
+  const needs = deliveryNeedsOf(later) ?? deliveryNeedsOf(earlier);
 
   const attributes = {
     ...(before && after && { fields: [...new Set([...before, ...after])] }),
     ...(queue && { deadLetter: queue }),
+    ...(needs && { delivery: needs }),
   };
 
   return Object.keys(attributes).length > 0 ? { ...edge, attributes } : edge;
 }
+
+const needsSchema = z.object(deliveryNeeds);
+
+export type DeliveryNeeds = z.infer<typeof needsSchema>;
+
+/** A declaration's delivery needs as an edge carries them, or nothing when it declares none. */
+function needsOf(declaration: ConsumerDeclaration): DeliveryNeeds | undefined {
+  const needs = Object.fromEntries(
+    (['queue', 'group', 'identity', 'recovery', 'processingWindow'] as const).flatMap((key) =>
+      declaration[key] === undefined ? [] : [[key, declaration[key]]],
+    ),
+  );
+
+  return Object.keys(needs).length > 0 ? needsSchema.parse(needs) : undefined;
+}
+
+const edgeNeeds = z.object({ delivery: needsSchema.optional() }).catch({});
+
+/** What a consumer declared it needs from the broker, on its edge. */
+export const deliveryNeedsOf = (edge: CatalogRelationship): DeliveryNeeds | undefined =>
+  edgeNeeds.parse(edge.attributes).delivery;
 
 const edgeDeadLetter = z.object({ deadLetter: deadLetter.optional() }).catch({});
 
@@ -251,14 +338,16 @@ export function mergeConsumerGraph(graph: ResourceGraph, fragment: ResourceGraph
       const own = declaredFields(edge);
       const before = ownFields.parse(existing.attributes).consumerFields ?? [];
       const queue = deadLetterOf(edge);
+      const needs = deliveryNeedsOf(edge);
 
-      if (own || queue) {
+      if (own || queue || needs) {
         relationships.set(key, {
           ...existing,
           attributes: {
             ...existing.attributes,
             ...(own && { consumerFields: [...new Set([...before, ...own])] }),
             ...(queue && { deadLetter: queue }),
+            ...(needs && { delivery: needs }),
           },
         });
       }

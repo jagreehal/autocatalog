@@ -9,7 +9,40 @@ on:
 permissions:
   contents: read
 
+# A newer push to the same pull request cancels the run it replaces. Called by
+# Release, each run is its own group, so nothing cancels a release check.
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+
 jobs:
+  # What the pull request touches, so the jobs below run only where it matters.
+  # Called by Release, every job runs.
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      events: ${{ steps.diff.outputs.events }}
+      python: ${{ steps.diff.outputs.python }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - id: diff
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.base_ref }}
+        run: |
+          if [ "$EVENT" != pull_request ]; then
+            echo events=true >> "$GITHUB_OUTPUT"
+            echo python=true >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          files=$(git diff --name-only "origin/$BASE...HEAD")
+          has() { grep -qE "$1" <<< "$files" && echo true || echo false; }
+          echo "events=$(has '^(packages/events/|fixtures/|package\.json|pnpm-lock\.yaml|turbo\.json|\.github/)')" >> "$GITHUB_OUTPUT"
+          echo "python=$(has '^(python/|\.github/)')" >> "$GITHUB_OUTPUT"
+
   build:
     runs-on: ubuntu-latest
     steps:
@@ -66,7 +99,11 @@ jobs:
             pnpm --filter "$pkg" publish --dry-run --no-git-checks
           done
 
+  # Path handling on Windows and macOS: three runners, so only when the event
+  # packages or their fixtures change.
   catalog-hardening:
+    needs: changes
+    if: needs.changes.outputs.events == 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -83,6 +120,8 @@ jobs:
   # autocatalog-py is not a pnpm workspace, so `pnpm test` never reaches it.
   # Kept as its own job so JS contributors do not need a Python toolchain.
   python:
+    needs: changes
+    if: needs.changes.outputs.python == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:

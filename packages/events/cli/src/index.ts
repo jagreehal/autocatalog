@@ -4,12 +4,14 @@ import type { CompatibilityMode } from 'autocatalog-core';
 import pkg from '../package.json' with { type: 'json' };
 import { runValidate } from './commands/validate';
 import { discoverAdapters, registerAdapterCommand } from './adapters';
+import { registerDeliveryCommands } from './commands/delivery';
 import { registerResourceCommands, withScanIdentities } from './commands/resources';
 
 export function buildProgram(): Command {
   const program = new Command();
   program.name('ac').description('Autocatalog CLI').version(pkg.version);
   registerResourceCommands(program);
+  registerDeliveryCommands(program);
 
   program
     .command('validate')
@@ -636,6 +638,16 @@ export function buildProgram(): Command {
     )
     .option('--live-url <url>', "a server-sent events feed the maps' Live mode follows")
     .option('--live-event <name>', 'the SSE event name its frames arrive under (default: message)')
+    .option(
+      '--lock <file>',
+      'the lock pinning each enrolled repository (default: autocatalog.lock.json, when it exists)',
+    )
+    .option(
+      '--unlocked',
+      'build enrolled repositories at their latest commits, ignoring the lock',
+      false,
+    )
+    .option('--index <url...>', "another site's /catalog.json, joined into the graph without pages")
     .action(
       async (
         root: string | undefined,
@@ -655,10 +667,75 @@ export function buildProgram(): Command {
           pages?: string;
           liveUrl?: string;
           liveEvent?: string;
+          lock?: string;
+          unlocked: boolean;
+          index?: string[];
         },
       ) => {
         const { runSite } = await import('./commands/site');
-        process.exit(await runSite({ ...opts, root: root ?? '.', repos: opts.repo }));
+        process.exit(
+          await runSite({ ...opts, root: root ?? '.', repos: opts.repo, indexes: opts.index }),
+        );
+      },
+    );
+
+  const federation = program
+    .command('federation')
+    .description(
+      'Pin and check the repositories and EventCatalog projects a company site federates',
+    );
+
+  federation
+    .command('lock')
+    .description('Pin every enrolled repository to its current commit in autocatalog.lock.json')
+    .option('--topic <topic>', 'every repository with this GitHub topic (needs --owner)')
+    .option('--owner <owner>', 'GitHub user or organisation that owns them')
+    .option('--repo <url...>', 'these repositories as well')
+    .option('--only <name...>', 'move only these pins, keeping every other as it is')
+    .option('--lock <file>', 'the lock file', 'autocatalog.lock.json')
+    .option('--cache <dir>', 'where clones go', '.autocatalog/repos')
+    .action(
+      async (opts: {
+        topic?: string;
+        owner?: string;
+        repo?: string[];
+        only?: string[];
+        lock: string;
+        cache: string;
+      }) => {
+        const { runFederationLock } = await import('./federation');
+        process.exit(await runFederationLock({ ...opts, repos: opts.repo }));
+      },
+    );
+
+  federation
+    .command('status [root]')
+    .description(
+      'What each federated source contributes: its pin, resources, and references that do not resolve',
+    )
+    .option('--topic <topic>', 'every repository with this GitHub topic (needs --owner)')
+    .option('--owner <owner>', 'GitHub user or organisation that owns them')
+    .option('--repo <url...>', 'these repositories as well')
+    .option(
+      '--lock <file>',
+      'the lock pinning them (default: autocatalog.lock.json, when it exists)',
+    )
+    .option('--cache <dir>', 'where clones go', '.autocatalog/repos')
+    .option('--format <fmt>', 'text or json', 'text')
+    .action(
+      async (
+        root: string | undefined,
+        opts: {
+          topic?: string;
+          owner?: string;
+          repo?: string[];
+          lock?: string;
+          cache: string;
+          format: 'text' | 'json';
+        },
+      ) => {
+        const { runFederationStatus } = await import('./federation');
+        process.exit(await runFederationStatus({ ...opts, root: root ?? '.', repos: opts.repo }));
       },
     );
 

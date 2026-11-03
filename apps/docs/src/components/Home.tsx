@@ -256,6 +256,12 @@ const starts: Array<{ mark: string; title: string; detail: ReactNode; slug: stri
     slug: 'docs/events/pydantic',
   },
   {
+    mark: 'Rs',
+    title: 'Rust, Go, Java or .NET',
+    detail: <>a test writes {c('contracts/')} with the language's own generator</>,
+    slug: 'docs/events/other-languages',
+  },
+  {
     mark: '{}',
     title: 'JSON Schema files',
     detail: <>{c('autocatalog scan .')} reads them where they are</>,

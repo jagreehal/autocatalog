@@ -1,0 +1,12 @@
+{
+  "consumes": [
+    {
+      "service": "LedgerService",
+      "event": "payments/payment.completed",
+      "queue": "payments/ledger",
+      "identity": "ledger-service",
+      "recovery": "PT12H",
+      "deadLetter": { "queue": "payments/ledger/$deadletterqueue", "maxAttempts": 5 }
+    }
+  ]
+}

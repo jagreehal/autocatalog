@@ -129,7 +129,8 @@ const REPOSITORY_MARKERS = ['.git', 'package.json'];
  * Whether a root is one repository rather than a folder of checkouts.
  *
  * `contracts/` alone does not decide it: a company keeps shared contracts at
- * the root of an aggregation. Approved message contracts sit beside their tests,
+ * the root of an aggregation. With a marker and no checkouts below it, though,
+ * the root is one repository's own, `contracts/` included. Approved message contracts sit beside their tests,
  * in `src/` or `test/`, so they belong to the root only when the root is
  * plainly a repository's own (a git checkout or a package) and none of its
  * folders is a checkout of its own. Otherwise `src/` would be enrolled as a
@@ -146,7 +147,13 @@ export function isSingleRepository(root: string): boolean {
     .readdirSync(root, { withFileTypes: true })
     .some((entry) => entry.isDirectory() && fs.existsSync(path.join(root, entry.name, '.git')));
 
-  return !holdsCheckouts && (hasMessageContracts(root) || hasResourceGraph(root));
+  return (
+    !holdsCheckouts &&
+    (hasMessageContracts(root) ||
+      hasResourceGraph(root) ||
+      isCatalogFolder(path.join(root, CONTRACTS)) ||
+      fs.existsSync(path.join(root, CONSUMES_FILE)))
+  );
 }
 
 /** A directory that publishes catalog content, wherever it sits below the root. */
@@ -163,6 +170,54 @@ export interface CatalogRoot {
   nested: string[];
   /** Set when an earlier root has the same name: the path of that one, which publishes instead. */
   duplicateOf?: string;
+}
+
+/** What makes a folder an EventCatalog project: its configuration file. */
+const EVENTCATALOG_CONFIGS = [
+  'eventcatalog.config.js',
+  'eventcatalog.config.mjs',
+  'eventcatalog.config.cjs',
+  'eventcatalog.config.ts',
+];
+
+/**
+ * Whether a folder is an EventCatalog project. Its `teams/` and `users/` are
+ * EventCatalog's, not autocatalog's directory, so it is never read as an
+ * autocatalog repository: `ac site` reads it as an EventCatalog source.
+ */
+export function isEventCatalogProject(dir: string): boolean {
+  return EVENTCATALOG_CONFIGS.some((name) => fs.existsSync(path.join(dir, name)));
+}
+
+/** Every EventCatalog project under a root, the root included, skipping what scans skip. */
+export function findEventCatalogProjects(root: string): string[] {
+  const top = path.resolve(root);
+  const exclude = new Set(DEFAULT_SCAN_EXCLUDE);
+  const found: string[] = [];
+
+  const walk = (dir: string) => {
+    if (isEventCatalogProject(dir)) {
+      found.push(dir);
+
+      return;
+    }
+
+    let entries: fs.Dirent[] = [];
+
+    try {
+      entries = fs.readdirSync(dir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+
+    for (const entry of entries)
+      if (entry.isDirectory() && !entry.name.startsWith('.') && !exclude.has(entry.name))
+        walk(path.join(dir, entry.name));
+  };
+
+  walk(top);
+
+  return found.sort();
 }
 
 /** Folders that hold a root's content or its test data, never another root. */
@@ -212,7 +267,10 @@ export function findCatalogRoots(
   const exclude = new Set(DEFAULT_SCAN_EXCLUDE);
   const found: CatalogRoot[] = [];
 
-  if (options.name !== undefined || isSingleRepository(top)) {
+  // An EventCatalog project holds no autocatalog repository: `ac site` reads it whole.
+  if (options.name === undefined && isEventCatalogProject(top)) return found;
+
+  if (options.name !== undefined || (isSingleRepository(top) && !isEventCatalogProject(top))) {
     const name = options.name ?? path.basename(top);
 
     found.push({ name, repository: options.repository ?? name, dir: top, path: '', nested: [] });
@@ -243,6 +301,9 @@ export function findCatalogRoots(
         continue;
 
       const child = path.join(dir, entry.name);
+
+      // An EventCatalog project is read as one, by `ac site`, and never walked into.
+      if (isEventCatalogProject(child)) continue;
 
       if (publishesCatalogContent(child))
         found.push({

@@ -1,0 +1,11 @@
+{
+  "consumes": [
+    {
+      "service": "LedgerService",
+      "event": "payments/payment.completed",
+      "group": "ledger",
+      "identity": "ledger-service",
+      "recovery": "P3D"
+    }
+  ]
+}

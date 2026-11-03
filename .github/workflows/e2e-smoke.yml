@@ -1,10 +1,39 @@
 name: E2E Smoke
 
+# The packed packages, the Python adapter and the docs demo end to end: only
+# when something they are built from changes.
 on:
   pull_request:
+    paths:
+      - 'packages/**'
+      - 'python/**'
+      - 'examples/docs-demo/**'
+      - 'scripts/e2e-smoke.sh'
+      - 'scripts/pack-smoke.sh'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'turbo.json'
+      - '.github/actions/**'
+      - '.github/workflows/e2e-smoke.yml'
   push:
     branches:
       - main
+    paths:
+      - 'packages/**'
+      - 'python/**'
+      - 'examples/docs-demo/**'
+      - 'scripts/e2e-smoke.sh'
+      - 'scripts/pack-smoke.sh'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'turbo.json'
+      - '.github/actions/**'
+      - '.github/workflows/e2e-smoke.yml'
+
+# A newer push to the same pull request cancels the run it replaces.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   smoke:
@@ -18,11 +47,6 @@ jobs:
           python-version: '3.11'
 
       - uses: ./.github/actions/setup-pnpm
-
-      - name: Test Python adapter
-        run: |
-          python -m pip install -e "python/autocatalog-py[dev]"
-          python -m pytest python/autocatalog-py/tests -q
 
       - name: Run E2E smoke script
         run: bash scripts/e2e-smoke.sh

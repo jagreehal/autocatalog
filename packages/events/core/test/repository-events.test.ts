@@ -90,6 +90,24 @@ it('reads a resource graph as one repository only like message contracts', async
   expect(isSingleRepository(repo)).toBe(false);
 });
 
+it('reads a checkout that publishes only contracts/ as one repository', async () => {
+  await fs.mkdir(path.join(repo, 'contracts/events'), { recursive: true });
+  // Without a marker it could as well be an aggregation root's shared contracts.
+  expect(isSingleRepository(repo)).toBe(false);
+  await fs.mkdir(path.join(repo, '.git'));
+  expect(isSingleRepository(repo)).toBe(true);
+  expect(findCatalogRoots(repo).map((root) => root.name)).toEqual([path.basename(repo)]);
+  // A checkout holding other checkouts is still a folder of them.
+  await fs.mkdir(path.join(repo, 'billing/.git'), { recursive: true });
+  expect(isSingleRepository(repo)).toBe(false);
+});
+
+it('reads a checkout that only declares what it consumes as one repository', async () => {
+  await fs.writeFile(path.join(repo, 'autocatalog.consumes.json'), '{"consumes": []}');
+  await fs.writeFile(path.join(repo, 'package.json'), '{}');
+  expect(isSingleRepository(repo)).toBe(true);
+});
+
 it('keeps an aggregation root holding a resource graph a folder of checkouts', async () => {
   await fs.mkdir(path.join(repo, '.git'));
   await writeGraph(repo, [statements]);
@@ -507,4 +525,13 @@ describe('autotel-message-contract approved files anywhere in the repository', (
 
     expect(await loadRepositoryEvents(repo)).toHaveLength(1);
   });
+});
+
+it('names a contract that does not parse by its path in the repository', async () => {
+  await fs.mkdir(path.join(repo, 'contracts/events'), { recursive: true });
+  await fs.writeFile(path.join(repo, 'contracts/events/email.sent.json'), '{ not json');
+
+  await expect(loadRepositoryEvents(repo)).rejects.toThrow(
+    /^contracts\/events\/email\.sent\.json: /,
+  );
 });

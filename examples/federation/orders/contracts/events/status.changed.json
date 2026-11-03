@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "OrderStatusChanged",
+  "description": "An order moved to a new status.",
+  "type": "object",
+  "properties": {
+    "orderId": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string"
+    }
+  },
+  "required": ["orderId", "status"],
+  "x-autocatalog": {
+    "id": "status.changed",
+    "version": "1.0.0",
+    "domain": "orders",
+    "producers": ["OrderService"]
+  }
+}

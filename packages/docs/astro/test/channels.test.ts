@@ -7,7 +7,7 @@ import {
   type ResourceGraph,
   type ResourceRef,
 } from 'autocatalog-core';
-import { buildChannels } from '../src/channels';
+import { buildChannels, channelPath } from '../src/channels';
 
 const graph = (
   resources: ResourceGraph['resources'],
@@ -99,5 +99,18 @@ describe('buildChannels with namespaced queues', () => {
       ['kafka:orders', ['Checkout']],
       ['sqs:orders', ['Billing']],
     ]);
+  });
+});
+
+describe('channelPath', () => {
+  it('gives no page to a name that would be written outside channels/', () => {
+    for (const id of ['../../catalog', 'a/../b', 'a//b', '.', 'a\\b', '/a'])
+      expect(channelPath(id)).toBeUndefined();
+  });
+
+  it('keeps the slash in a rule or subscription name, so its page is reachable', () => {
+    expect(channelPath('eventbridge-rule:default/refunds to ledger')).toBe(
+      'eventbridge-rule%3Adefault/refunds%20to%20ledger',
+    );
   });
 });
