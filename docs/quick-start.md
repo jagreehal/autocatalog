@@ -72,6 +72,7 @@ To build one site across every repository your company enrols, see
 | --------------------------------------- | ------------------------------------------------------------------------------- |
 | TypeScript, with Zod                    | [Zod](/docs/events/zod)                                                         |
 | Python, with Pydantic                   | [Pydantic](/docs/events/pydantic)                                               |
+| Rust, Go, Java or .NET                  | [Rust, Go, Java, .NET](/docs/events/other-languages)                            |
 | `.json` schema files in a repo          | [JSON Schema](/docs/events/json-schema)                                         |
 | OpenAPI, Avro, or protobuf in a repo    | [OpenAPI](/docs/events/openapi) · [Avro / protobuf](/docs/events/avro-protobuf) |
 | Another repo, AsyncAPI, or EventCatalog | [Importing](/docs/events/importing)                                             |

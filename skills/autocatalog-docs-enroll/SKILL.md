@@ -58,7 +58,7 @@ Use `/autocatalog-docs`. One real document beats a scaffolded placeholder — a 
 
 ### 4. Make it a gate in this repository's own CI
 
-A publishing repo should not learn its documentation is broken from the aggregator's build, hours later and in someone else's pipeline.
+The company site leaves out every document in a repository when one of them breaks the contract, and names the file in its build. Catch it here, in the pull request, instead.
 
 ```yaml
 - name: Check documentation
@@ -98,6 +98,15 @@ Edit `contracts/autocatalog.conventions.json` in place. Set a kind to `false` to
 ### 2. Build the site
 
 A Starlight site with the plugin — `autocatalog-docs-astro` — whose `root` points at wherever the repositories are checked out. Its README has the two files required. Do not copy anyone's documentation into this repository; it reads theirs where they wrote it.
+
+To build the site from team repositories, enrol them with `ac site --topic <topic> --owner <org>` or `--repo <url>`. Pin the commits it builds and commit the lock beside the site:
+
+```bash
+ac federation lock --topic catalog --owner acme
+ac federation status
+```
+
+`status` exits 1 when a repository is left out or two repositories define one event. See `docs/federation.md`.
 
 ### 3. Publish the index other repositories check against
 

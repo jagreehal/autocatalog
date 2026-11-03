@@ -18,7 +18,10 @@ export function docsLoader(layout: DocsLayout): Loader {
       // That checkout may no longer exist or may carry different images.
       if (context.meta.get('autocatalog-source') !== identity) context.store.clear();
 
-      await loader.load(context);
+      // Nothing publishes documents, every repository excluded included.
+      if (layout.roots.length === 0) context.store.clear();
+      else await loader.load(context);
+
       context.meta.set('autocatalog-source', identity);
     },
   };

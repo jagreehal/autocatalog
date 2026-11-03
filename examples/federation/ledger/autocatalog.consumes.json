@@ -1,0 +1,32 @@
+{
+  "consumes": [
+    {
+      "service": "LedgerService",
+      "event": "payments/payment.completed",
+      "queue": "ledger.payments",
+      "deadLetter": {
+        "queue": "ledger.dead-letter"
+      },
+      "fields": ["paymentId", "amount", "currency"]
+    }
+  ],
+  "receives": [
+    {
+      "service": "LedgerService",
+      "id": "payment.completed",
+      "version": "latest"
+    },
+    {
+      "service": "LedgerService",
+      "id": "shipping/status.changed"
+    },
+    {
+      "service": "LedgerService",
+      "id": "status.changed"
+    },
+    {
+      "service": "LedgerService",
+      "id": "invoice.issued"
+    }
+  ]
+}

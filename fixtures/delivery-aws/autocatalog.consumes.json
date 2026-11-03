@@ -1,0 +1,19 @@
+{
+  "consumes": [
+    {
+      "service": "LedgerService",
+      "event": "payments/payment.completed",
+      "queue": "ledger-payments",
+      "identity": "ledger-service",
+      "recovery": "PT12H",
+      "processingWindow": "PT10M",
+      "deadLetter": { "queue": "ledger-dead-letter", "maxAttempts": 5 }
+    },
+    {
+      "service": "LedgerService",
+      "event": "payments/refund.issued",
+      "queue": "ledger-payments",
+      "identity": "ledger-service"
+    }
+  ]
+}

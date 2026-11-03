@@ -1,7 +1,15 @@
 import type { SourceLocation } from './adapter-event';
-import { isJsonObject, type JsonObject, type JsonValue } from './json';
+import { deliveryEventOf } from './delivery-model';
+import { isJsonObject, jsonObjectSchema, type JsonObject, type JsonValue } from './json';
 import type { LoadedEvent } from './load';
 import type { EventFrontmatter, ProvenanceValue } from './schema';
+
+/** The event's delivery inputs as an attribute, when its transport names a broker. */
+function deliveryAttribute(event: LoadedEvent): { delivery?: JsonObject } {
+  const delivery = deliveryEventOf(event);
+
+  return delivery ? { delivery: jsonObjectSchema.parse(JSON.parse(JSON.stringify(delivery))) } : {};
+}
 
 export const AUTOCATALOG_GRAPH_SPEC = 'autocatalog/graph-v1' as const;
 
@@ -68,6 +76,8 @@ export interface EventResourceAttributes {
   schemaFormat?: string;
   registry?: JsonObject;
   envelope?: JsonObject;
+  /** How it is published and its committed examples, so delivery can be traced across repositories. */
+  delivery?: JsonObject;
 }
 
 export interface ServiceResourceAttributes {
@@ -187,6 +197,8 @@ export type CatalogRelationshipType =
   | 'references'
   | 'relatesTo'
   | 'repliesTo'
+  | 'routesTo'
+  | 'deadLettersTo'
   | 'usesModel'
   | 'usesTool';
 
@@ -373,6 +385,22 @@ function stableValue(
  * when the repository is known it is part of the identity: two repositories
  * publishing the same domain, id and version are two events, never one.
  */
+/**
+ * A repository's earlier event versions as resources, for a reference whose
+ * range picks a release behind the current one. The event graph itself holds
+ * current versions only.
+ */
+export function earlierVersions(events: LoadedEvent[], repository: string): ResourceGraph {
+  return createEventResourceGraph(
+    events.flatMap((event) =>
+      event.folder.isVersioned
+        ? [{ ...event, folder: { ...event.folder, isVersioned: false } }]
+        : [],
+    ),
+    { repository, urls: false },
+  );
+}
+
 function eventRef(event: LoadedEvent, repository?: string): ResourceRef<'event'> {
   const domain = event.frontmatter.domain;
 
@@ -533,6 +561,7 @@ export function createEventResourceGraph(
         examples: event.examples.length,
         deprecation: fm.deprecation,
         envelope: fm.envelope,
+        ...deliveryAttribute(event),
       },
     };
 

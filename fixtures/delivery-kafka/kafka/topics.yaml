@@ -1,0 +1,11 @@
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  name: payments
+  labels:
+    strimzi.io/cluster: main
+spec:
+  partitions: 6
+  replicas: 3
+  config:
+    retention.ms: 604800000

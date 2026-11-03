@@ -1,0 +1,31 @@
+{
+  "type": "object",
+  "properties": {
+    "paymentId": {
+      "type": "string"
+    },
+    "amount": {
+      "type": "number"
+    },
+    "currency": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "paymentId",
+    "amount",
+    "currency"
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "x-autocatalog": {
+    "id": "payment.completed",
+    "version": "1.0.0",
+    "domain": "payments",
+    "producers": [
+      "PaymentService"
+    ],
+    "consumers": [
+      "LedgerService"
+    ]
+  }
+}

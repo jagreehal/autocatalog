@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "OrderPlaced",
+  "description": "A customer placed an order.",
+  "type": "object",
+  "properties": {
+    "orderId": {
+      "type": "string"
+    },
+    "total": {
+      "type": "number"
+    }
+  },
+  "required": ["orderId", "total"],
+  "x-autocatalog": {
+    "id": "order.placed",
+    "version": "1.0.0",
+    "domain": "orders",
+    "producers": ["OrderService"]
+  }
+}

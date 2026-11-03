@@ -34,6 +34,8 @@ export interface ScanCatalogOptions {
   limits?: DiscoveryLimits;
   /** Runtime evidence to join onto what the scanners found. */
   snapshot?: ArchitectureSnapshot;
+  /** Files published at the artifact's root with the events, atomically. */
+  files?: Array<{ name: string; content: string }>;
   /** How far above `root` to look for CODEOWNERS: a monorepo's root, for one of its packages. */
   ownersWithin?: string;
 }
@@ -80,7 +82,10 @@ export async function scanCatalog(opts: ScanCatalogOptions): Promise<ScanCatalog
             }
           }
 
-          return valid;
+          // Each error starts with the file it is about, named the same way.
+          return within
+            ? { ...valid, errors: valid.errors.map((error) => `${within}/${error}`) }
+            : valid;
         })
         .catch((error) => ({
           candidates: [],
@@ -116,6 +121,7 @@ export async function scanCatalog(opts: ScanCatalogOptions): Promise<ScanCatalog
       outRoot,
       events,
       repository: opts.repository,
+      ...(opts.files && { files: opts.files }),
     });
 
     return {

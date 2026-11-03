@@ -17,6 +17,8 @@ import {
   pascalCase,
   publishCatalog,
   readContractFile,
+  readDeclarationsFile,
+  CONSUMES_FILE,
   resourceKey,
   parseResourceGraph,
   saveResourceImport,
@@ -122,15 +124,21 @@ const channelRefs = listOf(z.object({ id: z.string(), delivery_mode: deliveryMod
 
 // A service's sends/receives entry: a bare id, or `{ id, version, fields, to | from }`.
 const sendReceiveRef = z.union([
-  z.string().transform((id) => ({ id, fields: undefined, channels: [] })),
+  z.string().transform((id) => ({ id, version: undefined, fields: undefined, channels: [] })),
   z
     .object({
       id: z.string(),
+      version: z.string().optional().catch(undefined),
       fields: z.array(z.string()).optional().catch(undefined),
       to: channelRefs,
       from: channelRefs,
     })
-    .transform(({ id, fields, to, from }) => ({ id, fields, channels: [...to, ...from] })),
+    .transform(({ id, version, fields, to, from }) => ({
+      id,
+      version,
+      fields,
+      channels: [...to, ...from],
+    })),
 ]);
 
 /**
@@ -438,6 +446,75 @@ async function contractOf(
  * Producers/consumers are reconstructed by inverting each service's
  * sends/receives lists.
  */
+/**
+ * Add the catalog's references to other catalogs to the project's
+ * declarations file, keeping every `consumes`, `receives` and `sends` already
+ * there: the file cannot say which a person wrote. Returns how many the
+ * catalog has.
+ */
+async function writeReferences(
+  project: string,
+  pointers: Array<{
+    direction: 'receives' | 'sends';
+    service: string;
+    id: string;
+    version?: string;
+  }>,
+  skipped: string[],
+): Promise<number> {
+  const file = path.join(project, CONSUMES_FILE);
+  let existing: Awaited<ReturnType<typeof readDeclarationsFile>>;
+
+  try {
+    existing = await readDeclarationsFile(project);
+  } catch (error) {
+    skipped.push(
+      `references to other catalogs: ${CONSUMES_FILE} is not valid (${error instanceof Error ? error.message : String(error)}), so it was left as it is`,
+    );
+
+    return 0;
+  }
+
+  const distinct = (direction: 'receives' | 'sends') =>
+    [
+      ...new Map(
+        [
+          ...existing[direction],
+          ...pointers.flatMap(({ direction: which, service, id, version }) =>
+            which === direction ? [{ service, id, ...(version && { version }) }] : [],
+          ),
+        ].map((reference) => [
+          `${reference.service}\0${reference.id}\0${reference.version ?? ''}`,
+          reference,
+        ]),
+      ).values(),
+    ].sort((a, b) => `${a.service} ${a.id}`.localeCompare(`${b.service} ${b.id}`));
+
+  const receives = distinct('receives');
+  const sends = distinct('sends');
+
+  const imported = new Set(
+    pointers.map((p) => `${p.direction}\0${p.service}\0${p.id}\0${p.version ?? ''}`),
+  ).size;
+
+  if (receives.length + sends.length === 0 && existing.consumes.length === 0) return 0;
+
+  await fs.writeFile(
+    file,
+    `${JSON.stringify(
+      {
+        ...(existing.consumes.length > 0 && { consumes: existing.consumes }),
+        ...(receives.length > 0 && { receives }),
+        ...(sends.length > 0 && { sends }),
+      },
+      null,
+      2,
+    )}\n`,
+  );
+
+  return imported;
+}
+
 export async function runFromEventCatalog(opts: RunFromEventCatalogOptions): Promise<number> {
   const root = path.resolve(opts.source);
   const outRoot = path.resolve(opts.out);
@@ -495,6 +572,14 @@ export async function runFromEventCatalog(opts: RunFromEventCatalogOptions): Pro
   const systems: Array<{ folder: string; id: string; fm: EcFrontmatter }> = [];
   const containers = new Map<string, EcFrontmatter>();
   const domainByService = new Map<string, string>();
+  // Every message a service names, kept so the ones another catalog owns survive the import.
+
+  const pointers: Array<{
+    direction: 'receives' | 'sends';
+    service: string;
+    id: string;
+    version?: string;
+  }> = [];
 
   const onChannels = (eventId: string, refs: Array<z.infer<typeof channelRefs>[number]>) => {
     const byChannel = channelsByEvent.get(eventId) ?? new Map();
@@ -547,6 +632,22 @@ export async function runFromEventCatalog(opts: RunFromEventCatalogOptions): Pro
     if (inServices && id !== undefined) {
       const serviceName = doc.fm.name ?? id;
       services.push({ folder: dir, id, fm: doc.fm });
+
+      for (const ref of doc.fm.sends)
+        pointers.push({
+          direction: 'sends',
+          service: serviceName,
+          id: ref.id,
+          ...(ref.version && { version: ref.version }),
+        });
+
+      for (const ref of doc.fm.receives)
+        pointers.push({
+          direction: 'receives',
+          service: serviceName,
+          id: ref.id,
+          ...(ref.version && { version: ref.version }),
+        });
 
       for (const ref of doc.fm.sends) {
         producersByEvent.set(ref.id, (producersByEvent.get(ref.id) ?? new Set()).add(serviceName));
@@ -1031,6 +1132,13 @@ export async function runFromEventCatalog(opts: RunFromEventCatalogOptions): Pro
     }
   }
 
+  // What this catalog's services send and receive that another catalog owns:
+  // kept as references in autocatalog.consumes.json, so the company site joins
+  // them to the owner's events and commands instead of the import dropping them.
+  const local = new Set([...events.map((e) => e.id), ...commands.map((c) => c.id)]);
+  const external = pointers.filter((pointer) => !local.has(pointer.id));
+  const references = await writeReferences(projectRoot, external, skipped);
+
   // A skip is always said out loud, quiet or not: a document that silently
   // failed to migrate is the loss a migration must never hide.
   for (const reason of skipped) console.warn(kleur.yellow(`  ! skipped ${reason}`));
@@ -1059,6 +1167,13 @@ export async function runFromEventCatalog(opts: RunFromEventCatalogOptions): Pro
     if (commandsWritten > 0)
       console.log(kleur.bold(`${commandsWritten} command(s) and queries to ${commandsDir}`));
 
+    if (references > 0)
+      console.log(
+        kleur.bold(
+          `${references} reference(s) to what other catalogs own, kept in ${path.join(project, CONSUMES_FILE)}`,
+        ),
+      );
+
     if (skipped.length > 0) {
       console.log(kleur.yellow(`${skipped.length} skipped — the catalog is incomplete.`));
     }
@@ -1069,6 +1184,7 @@ export async function runFromEventCatalog(opts: RunFromEventCatalogOptions): Pro
       ...(written > 0 ? [opts.out] : []),
       ...(commandsWritten > 0 ? [commandsDir] : []),
       ...(graph.resources.length > 0 ? [path.join(project, '.autocatalog', 'imports')] : []),
+      ...(references > 0 ? [path.join(project, CONSUMES_FILE)] : []),
     ];
 
     const last = committed.pop();

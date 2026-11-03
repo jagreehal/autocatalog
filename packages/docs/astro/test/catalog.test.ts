@@ -240,6 +240,50 @@ describe('documentation catalog projection', () => {
     ).toEqual([['payments-service', '0.9.0']]);
   });
 
+  it("leaves out a repository's documents when one breaks the contract, and builds the rest", async () => {
+    await write(
+      'good-repo/docs/handbook.md',
+      '---\ntitle: Handbook\nowner: Reliability\nrelated:\n  - ledger/overview\n---\n\nRead it.\n',
+    );
+    await write('ledger/docs/overview.md', '---\ntitle: Ledger\n---\n\nNo owner.\n');
+    await write('ledger/docs/runbook.md', '---\ntitle: Runbook\nowner: Finance\n---\n\nFine.\n');
+
+    const catalog = await buildDocsCatalog(root, { includeDates: false });
+
+    expect(catalog.failures).toEqual([
+      {
+        repository: 'ledger',
+        source: 'docs',
+        message: expect.stringMatching(/^ledger\/docs\/overview\.md: .*owner/),
+      },
+    ]);
+    // The whole repository's documents, not only the invalid one: its pages
+    // and the index must not disagree about what ledger publishes.
+    expect(catalog.docs.map((doc) => doc.id)).toEqual(['good-repo/handbook']);
+    expect(Object.keys(catalog.manifest)).toEqual(['good-repo/handbook']);
+    expect(catalog.warnings).toContainEqual(
+      expect.stringMatching(/^ledger: its docs\/ did not compile/),
+    );
+  });
+
+  it('leaves out a repository whose document is not YAML, and builds the rest', async () => {
+    await write('good-repo/docs/handbook.md', '---\ntitle: Handbook\nowner: Reliability\n---\n');
+    await write('ledger/docs/overview.md', '---\ntitle: [unclosed\nowner: Finance\n---\n');
+
+    const catalog = await buildDocsCatalog(root, { includeDates: false });
+
+    expect(catalog.failures).toEqual([
+      {
+        repository: 'ledger',
+        source: 'docs',
+        message: expect.stringMatching(
+          /^ledger\/docs\/overview\.md: frontmatter is not valid YAML/,
+        ),
+      },
+    ]);
+    expect(catalog.docs.map((doc) => doc.id)).toEqual(['good-repo/handbook']);
+  });
+
   it('quarantines a repository whose version could climb out of its page directory', async () => {
     await writeEvent();
     const versioned = 'payments-service/events/payments/PaymentCaptured/versioned/0.9.0';
@@ -439,9 +483,16 @@ describe('documentation catalog projection', () => {
     );
     await write('payments-service/docs/runbook.md', '---\ntitle: Runbook\nowner: Payments\n---\n');
 
-    await expect(buildDocsCatalog(root, { includeDates: false })).rejects.toThrow(
-      /payments-service\/docs\/runbook\.md.*tier/,
-    );
+    const catalog = await buildDocsCatalog(root, { includeDates: false });
+
+    expect(catalog.failures).toEqual([
+      expect.objectContaining({
+        repository: 'payments-service',
+        source: 'docs',
+        message: expect.stringMatching(/payments-service\/docs\/runbook\.md.*tier/),
+      }),
+    ]);
+    expect(catalog.docs).toEqual([]);
   });
 });
 

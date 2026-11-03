@@ -1,0 +1,23 @@
+{
+  "consumes": [
+    {
+      "service": "OrderService",
+      "event": "payments/payment.completed",
+      "fields": ["paymentId"]
+    }
+  ],
+  "receives": [
+    {
+      "service": "OrderService",
+      "id": "payment.completed",
+      "version": "^1"
+    }
+  ],
+  "sends": [
+    {
+      "service": "OrderService",
+      "id": "payments/refund-payment",
+      "version": "latest"
+    }
+  ]
+}

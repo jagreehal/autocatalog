@@ -1,3 +1,4 @@
+import { channelPath } from './channels';
 /**
  * Turn `[[kind|id]]` in Markdown into catalog links. The kind names a page
  * family; the id is what that page already uses in its URL.
@@ -58,7 +59,7 @@ export function wikiRefHref(ref: WikiRef, base = ''): string {
     case 'owner':
       return `${root}/owners/${enc(ref.id)}/`;
     case 'channel':
-      return `${root}/channels/${enc(ref.id)}/`;
+      return `${root}/channels/${channelPath(ref.id)}/`;
     case 'system':
       return `${root}/systems/${enc(ref.id)}/`;
     case 'flow':

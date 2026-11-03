@@ -102,7 +102,7 @@ export function autocatalogDocsRoutes(root: string, ownPages?: string): AstroInt
           ['/domains', path.join(here, 'pages/domains.astro')],
           ['/domains/[domain]', path.join(here, 'pages/domain.astro')],
           ['/channels', path.join(here, 'pages/channels.astro')],
-          ['/channels/[id]', path.join(here, 'pages/channel.astro')],
+          ['/channels/[...id]', path.join(here, 'pages/channel.astro')],
           ['/systems', path.join(here, 'pages/systems.astro')],
           ['/systems/[id]', path.join(here, 'pages/system.astro')],
           ['/data', path.join(here, 'pages/data.astro')],

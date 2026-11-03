@@ -24,6 +24,10 @@ export const DEFAULT_SCAN_EXCLUDE = [
   '.vercel',
   'out',
   'vendor',
+  // Rust and Maven build output, and .NET's.
+  'target',
+  'bin',
+  'obj',
 ];
 
 export function pascalCase(input: string): string {

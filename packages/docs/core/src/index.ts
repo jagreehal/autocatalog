@@ -49,6 +49,7 @@ export { headCommit, lastChanged, sourceUrl, webUrl } from './git';
 export {
   type BuildDocsManifestOptions,
   buildDocsManifest,
+  invalidDocuments,
   type DocsManifest,
   type DocsManifestEntry,
   DocsManifestError,

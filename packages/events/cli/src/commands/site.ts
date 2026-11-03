@@ -9,7 +9,20 @@ import {
   repositoryName,
   type EnrolledRepository,
 } from '../enrol';
-import { buildEventCatalog, EVENTCATALOG_DIR, missingEmbeds } from './site-eventcatalog';
+import { readCompanyIndex } from '../company-index';
+import {
+  clonePinned,
+  enrolledSinceLock,
+  importEventCatalogSources,
+  LOCK_FILE,
+  readLock,
+} from '../federation';
+import {
+  buildEventCatalog,
+  EVENTCATALOG_DIR,
+  missingEmbeds,
+  type BuiltEventCatalog,
+} from './site-eventcatalog';
 
 export interface RunSiteOptions {
   /** Aggregation root when nothing is cloned: sibling checkouts, or one repository. */
@@ -41,6 +54,12 @@ export interface RunSiteOptions {
   /** A server-sent events feed the maps' Live mode follows, and the SSE event name its frames use. */
   liveUrl?: string;
   liveEvent?: string;
+  /** The lock that pins each enrolled repository; `autocatalog.lock.json` when it exists. */
+  lock?: string;
+  /** Build enrolled repositories at their latest commits, ignoring the lock. */
+  unlocked?: boolean;
+  /** Other sites' `/catalog.json`, joined into the graph without pages. */
+  indexes?: string[];
 }
 
 /**
@@ -51,8 +70,55 @@ export interface RunSiteOptions {
 export async function runSite(opts: RunSiteOptions): Promise<number> {
   const token = process.env.GITHUB_TOKEN ?? process.env.GH_TOKEN;
   let root = path.resolve(opts.root);
+  const lockPath = path.resolve(opts.lock ?? LOCK_FILE);
 
-  if (opts.topic || opts.owner || opts.repos?.length) {
+  const pins = opts.unlocked
+    ? undefined
+    : await readLock(lockPath, { required: Boolean(opts.lock) }).catch((error: Error) => error);
+
+  if (pins instanceof Error) {
+    console.error(kleur.red(pins.message));
+
+    return 1;
+  }
+
+  if (pins) {
+    // Pinned: exactly the reviewed commits, whatever the branches say now.
+    console.log(
+      kleur.dim(
+        `Building ${pins.length} repositories pinned by ${path.relative(process.cwd(), lockPath) || lockPath}`,
+      ),
+    );
+
+    const cloned = await clonePinned(pins, {
+      cache: path.resolve(opts.cache),
+      ...(token && { token }),
+    });
+
+    const notLocked = await enrolledSinceLock(
+      { topic: opts.topic, owner: opts.owner, repos: opts.repos },
+      pins,
+      lockPath,
+      token,
+    ).catch((error: Error) => error);
+
+    if (notLocked instanceof Error) {
+      console.error(kleur.red(notLocked.message));
+
+      return 1;
+    }
+
+    for (const failure of [...cloned.failures, ...notLocked])
+      console.warn(kleur.yellow(`Left out ${failure.name}: ${failure.reason}`));
+
+    if (cloned.failures.length === pins.length) {
+      console.error(kleur.red('No pinned repository could be built.'));
+
+      return 1;
+    }
+
+    root = cloned.root;
+  } else if (opts.topic || opts.owner || opts.repos?.length) {
     if (Boolean(opts.topic) !== Boolean(opts.owner)) {
       console.error(
         kleur.red('--topic and --owner go together: whose repositories, with which topic.'),
@@ -119,6 +185,49 @@ export async function runSite(opts: RunSiteOptions): Promise<number> {
     root = cloned.root;
   }
 
+  // EventCatalog projects, federated as they are: each is imported into a
+  // folder this command owns, so nobody's checkout is written to.
+  const imported = await importEventCatalogSources(
+    root,
+    path.join(path.dirname(path.resolve(opts.cache)), 'eventcatalog-sources'),
+  );
+
+  for (const failure of imported.failures)
+    console.warn(kleur.yellow(`Left out ${failure.name}: ${failure.reason}`));
+
+  if (imported.sources.length > 0)
+    console.log(
+      kleur.dim(
+        `Federating ${imported.sources.length} EventCatalog project${imported.sources.length === 1 ? '' : 's'}: ${imported.sources.map((dir) => path.basename(dir)).join(', ')}`,
+      ),
+    );
+
+  // Other sites' graphs, fetched once and joined without pages.
+  const indexFiles: string[] = [];
+
+  if (opts.indexes?.length) {
+    const dir = path.join(path.dirname(path.resolve(opts.cache)), 'indexes');
+
+    await fs.rm(dir, { recursive: true, force: true });
+    await fs.mkdir(dir, { recursive: true });
+
+    for (const [i, source] of opts.indexes.entries()) {
+      try {
+        const { graph } = await readCompanyIndex(source, {});
+        const file = path.join(dir, `${i}.json`);
+
+        await fs.writeFile(file, JSON.stringify(graph));
+        indexFiles.push(file);
+      } catch (error) {
+        console.warn(
+          kleur.yellow(
+            `Left out ${source}: ${error instanceof Error ? error.message : String(error)}`,
+          ),
+        );
+      }
+    }
+  }
+
   // Checked once anything enrolled is cloned: the contract may live in a clone.
   const docsSchema = opts.docsSchema && path.resolve(opts.docsSchema);
 
@@ -179,9 +288,20 @@ export async function runSite(opts: RunSiteOptions): Promise<number> {
     'astro.mjs',
   );
 
+  // Each run has a root of its own inside the bundled project, so two runs at
+  // once never share dist/, .astro/ or Astro's caches. Inside it, so its
+  // prerender chunks still resolve the packages they import.
+  // A dev server keeps running in the background after `astro dev` returns,
+  // so it gets a root that stays.
+  const run = opts.dev
+    ? path.join(siteProject, '.run-dev')
+    : await fs.mkdtemp(path.join(siteProject, '.run-'));
+
+  await fs.mkdir(run, { recursive: true });
+
   const code = await new Promise<number>((resolve) => {
-    // Run from the bundled project: Astro resolves some of its build output
-    // against the working directory, not --root.
+    // Run from that root: Astro resolves some of its build output against the
+    // working directory, not --root.
     const child = spawn(
       process.execPath,
       [
@@ -190,14 +310,21 @@ export async function runSite(opts: RunSiteOptions): Promise<number> {
         astro,
         opts.dev ? 'dev' : 'build',
         '--root',
-        siteProject,
+        run,
+        // Astro joins --config onto --root.
+        '--config',
+        path.relative(run, path.join(siteProject, 'astro.config.mjs')),
       ],
       {
-        cwd: siteProject,
+        cwd: run,
         stdio: 'inherit',
         env: {
           ...process.env,
           AUTOCATALOG_DOCS_ROOT: root,
+          ...(imported.sources.length && {
+            AUTOCATALOG_DOCS_SOURCES: imported.sources.join(path.delimiter),
+          }),
+          ...(indexFiles.length && { AUTOCATALOG_DOCS_INDEXES: indexFiles.join(path.delimiter) }),
           AUTOCATALOG_REACT_FROM: import.meta.resolve('autocatalog-docs-astro'),
           ...(opts.site && { AUTOCATALOG_SITE_URL: opts.site }),
           ...(opts.base && { AUTOCATALOG_SITE_BASE: opts.base }),
@@ -215,15 +342,29 @@ export async function runSite(opts: RunSiteOptions): Promise<number> {
     child.on('exit', (exit) => resolve(exit ?? 1));
   });
 
-  if (code !== 0 || opts.dev) return code;
+  if (opts.dev) return code;
 
-  // Astro builds inside the bundled project, where its prerender chunks can
-  // resolve the packages they import. The result is assembled beside --out
-  // and swapped in whole, so a failed build leaves the last good site.
-  const out = path.resolve(opts.out);
+  try {
+    return code === 0 ? await publishSite(path.join(run, 'dist'), opts.out, eventcatalog) : code;
+  } finally {
+    await fs.rm(run, { recursive: true, force: true });
+  }
+}
+
+/**
+ * Astro builds inside the bundled project, where its prerender chunks can
+ * resolve the packages they import. The result is assembled beside --out and
+ * swapped in whole, so a failed build leaves the last good site.
+ */
+async function publishSite(
+  dist: string,
+  outDir: string,
+  eventcatalog: BuiltEventCatalog | undefined,
+): Promise<number> {
+  const out = path.resolve(outDir);
   const next = `${out}.next`;
   await fs.rm(next, { recursive: true, force: true });
-  await fs.cp(path.join(siteProject, 'dist'), next, { recursive: true });
+  await fs.cp(dist, next, { recursive: true });
 
   if (eventcatalog) {
     await fs.cp(eventcatalog.dist, path.join(next, EVENTCATALOG_DIR), { recursive: true });

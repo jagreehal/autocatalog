@@ -35,6 +35,12 @@ import {
   RULES_DIRECTORY,
   isEventCatalogResource,
   type LoadedEvent,
+  analyzeDelivery,
+  companyDeliveryInputs,
+  deliveryEvents,
+  driftDelivery,
+  overlayDelivery,
+  readConsumerDeclarations,
 } from 'autocatalog-core';
 import { linkAgentsToEvents } from 'autocatalog-agents-core';
 import { discoverDiscoveryAdapters } from '../adapters';
@@ -258,7 +264,7 @@ async function artifactResources(events: string): Promise<ResourceGraph | undefi
 async function companyConsumers(
   source: string,
   options: { tokenEnv?: string; repository?: string; quiet?: boolean },
-): Promise<Map<string, EventConsumers> | undefined> {
+): Promise<{ consumers: Map<string, EventConsumers>; graph: ResourceGraph } | undefined> {
   try {
     const { graph, publishedAt } = await readCompanyIndex(source, { tokenEnv: options.tokenEnv });
 
@@ -278,7 +284,7 @@ async function companyConsumers(
         `! ${ambiguous.join(', ')}: more than one repository publishes it, so the consumers of every copy count. Pass --repository with this repository's name on the company site to count only its own.`,
       );
 
-    return consumers;
+    return { consumers, graph };
   } catch (error) {
     if (!options.quiet)
       console.warn(
@@ -359,7 +365,7 @@ export async function runDrift(opts: RunDriftOptions): Promise<number> {
     const events = await driftCatalogs(base, current, {
       consumersOf: (domain, id) => [
         ...(agents?.participants.get(`${domain}/${id}`)?.consumers ?? []),
-        ...(elsewhere?.get(`${domain}/${id}`)?.consumers ?? []),
+        ...(elsewhere?.consumers.get(`${domain}/${id}`)?.consumers ?? []),
       ],
       consumerFieldsOf: (domain, id) => {
         const local = agents?.participants.get(`${domain}/${id}`);
@@ -369,7 +375,7 @@ export async function runDrift(opts: RunDriftOptions): Promise<number> {
         // declared here says for itself what it reads.
         return {
           ...Object.fromEntries(
-            Object.entries(elsewhere?.get(`${domain}/${id}`)?.fields ?? {}).filter(
+            Object.entries(elsewhere?.consumers.get(`${domain}/${id}`)?.fields ?? {}).filter(
               ([consumer]) => !declaredHere.has(consumer),
             ),
           ),
@@ -412,6 +418,49 @@ export async function runDrift(opts: RunDriftOptions): Promise<number> {
 
     const resourceFindings: DriftFinding[] =
       before && after ? driftResources(before, after).map(asDriftFinding) : [];
+
+    // Delivery: the broker configuration on each side, routed with that side's
+    // events and the consumer queues its tree declares.
+    if (before && after) {
+      // Git-ref mode reads each source tree; saved artifacts carry their own copy.
+      const roots = generated?.sources ?? [base, current];
+
+      const [baseEvents, currentEvents, baseConsumers, currentConsumers] = await Promise.all([
+        loadCatalog(base, { skipVersioned: true }),
+        loadCatalog(current, { skipVersioned: true }),
+        readConsumerDeclarations(roots[0]),
+        readConsumerDeclarations(roots[1]),
+      ]);
+
+      const sides = {
+        base: { graph: before, events: deliveryEvents(baseEvents), consumers: baseConsumers },
+        current: {
+          graph: after,
+          events: deliveryEvents(currentEvents),
+          consumers: currentConsumers,
+        },
+      };
+
+      // With the company index, the route is checked whole: the broker
+      // configuration, events and consumers other repositories publish stand
+      // around this repository's change.
+      const company = elsewhere && companyDeliveryInputs(elsewhere.graph);
+
+      const proposed = analyzeDelivery(
+        company ? overlayDelivery(company, sides.current, sides.base) : sides.current,
+      );
+
+      const baseline = analyzeDelivery(
+        company ? overlayDelivery(company, sides.base, sides.current) : sides.base,
+      );
+
+      resourceFindings.push(...driftDelivery(baseline, proposed));
+
+      if (!proposed.complete && !opts.quiet)
+        console.warn(
+          '! delivery was not fully evaluated, so routes are not claimed to work; run ac delivery to see what was left out',
+        );
+    }
 
     // The repository's own rules, as the base has them: a change cannot loosen
     // the policy it is checked against. Only --base-ref has a base tree to trust,

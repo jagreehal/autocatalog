@@ -23,6 +23,12 @@ export interface PublishCatalogOptions {
   history?: Array<{ event: AdapterEvent; parentFolderName: string }>;
   historyOwnership?: 'preserve' | 'replace';
   narratives?: Array<{ domain: string; folderName: string; version?: string; body: string }>;
+  /**
+   * Files at the artifact's root that travel with its events, such as the
+   * consumer declarations drift reads. Staged and swapped in with everything
+   * else, so a failed publication leaves the previous artifact's copies as they were.
+   */
+  files?: Array<{ name: string; content: string }>;
 }
 
 export interface PublishCatalogResult {
@@ -158,6 +164,13 @@ export async function publishCatalog(opts: PublishCatalogOptions): Promise<Publi
         ),
         narrative.body,
       );
+    }
+
+    for (const file of opts.files ?? []) {
+      if (file.name !== path.basename(file.name) || file.name.startsWith('.'))
+        throw new Error(`Artifact file must be a plain name at the artifact's root: ${file.name}`);
+
+      await fs.writeFile(path.join(stage, file.name), file.content);
     }
 
     const existingFolders = await discoverEventFolders(outRoot);

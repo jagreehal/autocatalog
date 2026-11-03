@@ -1133,7 +1133,7 @@ describe('Prisma field and index syntax', () => {
 });
 
 describe('scan scope', () => {
-  it.each(['.next', '.output', '.svelte-kit', '.vercel', 'out', 'vendor'])(
+  it.each(['.next', '.output', '.svelte-kit', '.vercel', 'out', 'vendor', 'target', 'bin', 'obj'])(
     'does not read models from %s, which holds copies rather than source',
     async (folder) => {
       const result = await scanFiles({

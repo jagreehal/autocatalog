@@ -140,19 +140,6 @@ export default function autocatalogDocs(opts: AutocatalogDocsOptions = {}): Star
         // pages is worse than no sidebar.
         const effective = docsSiteConfig();
 
-        const sidebar = docsSidebar(effective.root, {
-          repo: effective.repo,
-          repository: effective.repository,
-        });
-
-        if (sidebar.length === 0) {
-          logger.warn(
-            `No documents found under ${effective.root}. A repository publishes by committing docs/*.md.`,
-          );
-        }
-
-        const contentSidebar = config.sidebar ?? sidebar;
-
         // Navigation comes from the validated catalog, not from raw files: a
         // repository whose catalog does not compile is quarantined here exactly
         // as it is on the pages, instead of failing the whole site.
@@ -167,6 +154,28 @@ export default function autocatalogDocs(opts: AutocatalogDocsOptions = {}): Star
         // Configuration is the one place a build compiles the catalog exactly
         // once, so it is where the build says what the catalog left out.
         for (const warning of catalog.warnings) logger.warn(warning);
+
+        // Documents the catalog left out have no pages, twins or navigation
+        // either: the content collection and the twins read this back.
+        const exclude = catalog.failures.flatMap((failure) =>
+          failure.source === 'docs' ? [failure.repository] : [],
+        );
+
+        process.env.AUTOCATALOG_DOCS_EXCLUDE = exclude.join(path.delimiter);
+
+        const sidebar = docsSidebar(effective.root, {
+          repo: effective.repo,
+          repository: effective.repository,
+          exclude,
+        });
+
+        if (sidebar.length === 0) {
+          logger.warn(
+            `No documents found under ${effective.root}. A repository publishes by committing docs/*.md.`,
+          );
+        }
+
+        const contentSidebar = config.sidebar ?? sidebar;
 
         const eventsSidebar = catalogSidebar(catalog.events);
 

@@ -1,0 +1,53 @@
+{
+  "openapi" : "3.1.0",
+  "info" : {
+    "title" : "PaymentService",
+    "version" : "1.0.0"
+  },
+  "servers" : [ {
+    "url" : "/"
+  } ],
+  "paths" : {
+    "/payments/{id}" : {
+      "get" : {
+        "tags" : [ "payments" ],
+        "operationId" : "getPayment",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Payment"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components" : {
+    "schemas" : {
+      "Payment" : {
+        "type" : "object",
+        "properties" : {
+          "paymentId" : {
+            "type" : "string"
+          },
+          "status" : {
+            "type" : "string"
+          }
+        }
+      }
+    }
+  }
+}

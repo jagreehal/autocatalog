@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { buildDocsManifest, DocsManifestError } from '../src/manifest';
+import { buildDocsManifest, DocsManifestError, invalidDocuments } from '../src/manifest';
 import { checkDocs } from '../src/check';
 import { docToMarkdown, readDocs, resolveDocsLayout } from '../src/read-docs';
 import {
@@ -292,6 +292,50 @@ describe('buildDocsManifest', () => {
 
     // A partial index would make "do my links resolve" quietly unreliable.
     expect(() => buildDocsManifest(root, { includeDates: false })).toThrow(DocsManifestError);
+  });
+
+  it('reads no documents once the only repository is excluded', async () => {
+    // The root is itself the one repository, with a document missing its owner.
+    await write('docs/bad.md', '---\ntitle: No owner here\n---\n\nBody.\n');
+
+    const exclude = [...invalidDocuments(root, { includeDates: false }).keys()];
+
+    expect(exclude).toEqual([path.basename(root)]);
+    expect(resolveDocsLayout(root, { exclude }).roots).toEqual([]);
+    expect(readDocs(root, { exclude })).toEqual([]);
+    expect(buildDocsManifest(root, { includeDates: false, exclude })).toEqual({});
+  });
+
+  it('names a document whose frontmatter is not YAML by its repository, and reads the rest', async () => {
+    await write('payments/docs/ok.md', doc('Fine'));
+    await write('ledger/docs/bad.md', '---\ntitle: [unclosed\nowner: Finance\n---\n\nBody.\n');
+
+    const invalid = invalidDocuments(root, { includeDates: false });
+
+    expect([...invalid.keys()]).toEqual(['ledger']);
+    expect(invalid.get('ledger')).toEqual([expect.stringMatching(/^ledger\/docs\/bad\.md: /)]);
+    expect(readDocs(root, { exclude: ['ledger'] }).map((d) => d.id)).toEqual(['payments/ok']);
+    // Strict callers still refuse, naming the file.
+    expect(() => buildDocsManifest(root, { includeDates: false })).toThrow(DocsManifestError);
+  });
+
+  it('names the repository an invalid doc belongs to, and builds once it is excluded', async () => {
+    await write('payments/docs/ok.md', doc('Fine', 'related:\n  - ledger/overview\n'));
+    await write('ledger/docs/overview.md', '---\ntitle: No owner here\n---\n\nBody.\n');
+
+    const invalid = invalidDocuments(root, { includeDates: false });
+
+    expect([...invalid.keys()]).toEqual(['ledger']);
+    expect(invalid.get('ledger')).toEqual([expect.stringMatching(/^ledger\/docs\/overview\.md: /)]);
+
+    const exclude = [...invalid.keys()];
+
+    // Every reader agrees: the excluded repository has no documents at all.
+    expect(readDocs(root, { exclude }).map((d) => d.id)).toEqual(['payments/ok']);
+    expect(resolveDocsLayout(root, { exclude }).pattern).toBe('payments/docs/**/*.{md,mdx}');
+    expect(Object.keys(buildDocsManifest(root, { includeDates: false, exclude }))).toEqual([
+      'payments/ok',
+    ]);
   });
 });
 

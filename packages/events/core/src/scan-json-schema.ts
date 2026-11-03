@@ -343,7 +343,13 @@ function eventFromJsonSchemaFile(input: {
     domain,
     folderName,
     schema,
-    examples: meta?.example !== undefined ? [{ name: 'default', data: meta.example }] : [],
+    examples: [
+      ...(meta?.example !== undefined ? [{ name: 'default', data: meta.example }] : []),
+      // JSON Schema's own `examples`: payloads the schema's author committed.
+      ...(Array.isArray(schema.examples) ? schema.examples : [])
+        .filter((data) => isJsonObject(data))
+        .map((data, index) => ({ name: `example-${index + 1}`, data })),
+    ],
     meta,
     source: { type: 'code', file: relFile, symbol: path.basename(relFile) },
     provenance: {

@@ -1,0 +1,18 @@
+{
+  "event": {
+    "id": "payment.completed",
+    "version": "1.0.0",
+    "domain": "payments",
+    "producers": ["PaymentService"],
+    "consumers": ["LedgerService"],
+    "fields": {
+      "amount": { "type": "number", "required": true },
+      "currency": { "type": "string", "required": true },
+      "paymentId": { "type": "string", "required": true }
+    }
+  },
+  "api": {
+    "title": "PaymentService",
+    "operations": ["GET /payments/{id}"]
+  }
+}

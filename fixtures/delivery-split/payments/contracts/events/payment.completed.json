@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PaymentCompleted",
+  "description": "A payment settled with the card network.",
+  "type": "object",
+  "properties": {
+    "paymentId": { "type": "string" },
+    "amount": { "type": "number" },
+    "currency": { "type": "string" }
+  },
+  "required": ["paymentId", "amount", "currency"],
+  "examples": [
+    { "paymentId": "pay_gbp", "amount": 12.5, "currency": "GBP" },
+    { "paymentId": "pay_eur", "amount": 40, "currency": "EUR" }
+  ],
+  "x-autocatalog": {
+    "id": "payment.completed",
+    "version": "1.0.0",
+    "domain": "payments",
+    "producers": ["PaymentService"],
+    "consumers": ["LedgerService"],
+    "transport": [
+      {
+        "address": "payments",
+        "protocols": ["amqp"],
+        "routingKey": "payment.completed",
+        "headers": ["currency"]
+      }
+    ]
+  }
+}

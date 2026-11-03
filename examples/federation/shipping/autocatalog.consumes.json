@@ -1,0 +1,9 @@
+{
+  "receives": [
+    {
+      "service": "ShippingService",
+      "id": "orders/order.placed",
+      "version": "^1.0.0"
+    }
+  ]
+}

@@ -45,3 +45,13 @@ packages/events/core/test/fixtures/bad-*-tmp/
 
 # playwright-cli session output
 .playwright-cli/
+
+# Build output from examples/frameworks/
+examples/frameworks/*/target/
+examples/frameworks/*/build/
+examples/frameworks/*/.gradle/
+examples/frameworks/**/bin/
+examples/frameworks/**/obj/
+
+# A run of ac site builds in a root of its own, removed when it ends.
+packages/docs/astro/site/.run-*/

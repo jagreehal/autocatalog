@@ -18,6 +18,7 @@ import { SchemaSection } from '../components/SchemaTree';
 import { SourceLinks } from '../components/SourceLinks';
 import { StatusBanners } from '../components/StatusBanners';
 import { DeliveryFacts, type DeliveryView } from '../components/DeliveryFacts';
+import { DeliveryPath, type DeliveryPathProps } from '../components/DeliveryPath';
 import { TransportFacts, type TransportEntry } from '../components/TransportFacts';
 import type { StatusBanner } from '../../resource-status';
 
@@ -48,6 +49,8 @@ export interface EventPageProps {
   transport?: TransportEntry[] | undefined;
   /** What a consumer may rely on about arrival. */
   delivery?: DeliveryView | undefined;
+  /** How it reaches each consumer, from the broker configuration. */
+  deliveryPath?: DeliveryPathProps | undefined;
   /** Where the event's folder lives, and where to edit its narrative. */
   source?: string | null | undefined;
   edit?: string | null | undefined;
@@ -72,6 +75,7 @@ export function EventPage({
   facts,
   transport,
   delivery,
+  deliveryPath,
   source,
   edit,
   diagram,
@@ -150,6 +154,8 @@ export function EventPage({
           visualiser={visualiser}
           fallback={<FlowStrip label="Message flow" {...flow} />}
         />
+
+        {deliveryPath && <DeliveryPath {...deliveryPath} />}
 
         {/* The contract on the left: what the event is. What was seen of it, and
             where to read more, on the right. */}

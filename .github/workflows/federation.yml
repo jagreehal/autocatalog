@@ -1,0 +1,47 @@
+name: Federation
+
+# Composes examples/federation/ into one company site from local git
+# repositories: lock, move one pin, status, pinned build, consumers named across
+# repositories in drift, a business-unit site over --index, and a broken
+# repository left out while the rest still build.
+on:
+  pull_request:
+    paths:
+      - 'examples/federation/**'
+      - 'packages/events/**'
+      - 'packages/docs/**'
+      - 'scripts/verify-federation.mjs'
+      - '.github/workflows/federation.yml'
+      - '.github/actions/**'
+      - 'pnpm-lock.yaml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'examples/federation/**'
+      - 'packages/events/**'
+      - 'packages/docs/**'
+      - 'scripts/verify-federation.mjs'
+      - '.github/workflows/federation.yml'
+      - '.github/actions/**'
+      - 'pnpm-lock.yaml'
+
+permissions:
+  contents: read
+
+# A newer push to the same pull request cancels the run it replaces.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: ./.github/actions/setup-pnpm
+
+      - run: pnpm turbo run build --filter=autocatalog-cli...
+
+      - run: pnpm verify:federation

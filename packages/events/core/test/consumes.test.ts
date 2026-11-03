@@ -157,13 +157,21 @@ describe('createConsumerResourceGraph', () => {
     ).toThrow(/payments\/gone/);
   });
 
-  it('refuses to guess between two repositories publishing the same event', () => {
-    expect(() =>
-      createConsumerResourceGraph([{ service: 'Ledger', event: 'payments/paid' }], {
-        repository: 'ledger',
-        events: [event('a', 'payments', 'paid'), event('b', 'payments', 'paid')],
-      }),
-    ).toThrow(/a, b/);
+  it('consumes every copy when two repositories publish the event, and says so', () => {
+    const warnings: string[] = [];
+
+    const graph = createConsumerResourceGraph([{ service: 'Ledger', event: 'payments/paid' }], {
+      repository: 'ledger',
+      events: [event('a', 'payments', 'paid'), event('b', 'payments', 'paid')],
+      onWarning: (message) => warnings.push(message),
+    });
+
+    // A producer's gate in either repository still names Ledger.
+    expect(graph.relationships.map((edge) => edge.from)).toEqual([
+      event('a', 'payments', 'paid').ref,
+      event('b', 'payments', 'paid').ref,
+    ]);
+    expect(warnings).toEqual([expect.stringMatching(/which a and b both publish/)]);
   });
 
   it('takes its own repository when it publishes the event too', () => {

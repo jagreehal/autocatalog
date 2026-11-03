@@ -114,6 +114,34 @@ export interface ClonedRepositories {
 }
 
 /**
+ * git's arguments that send the token with requests to `url`: as a header,
+ * never in the URL, so it is not written into .git/config or echoed in an
+ * error. Only over HTTPS to GitHub, or the host in GITHUB_SERVER_URL, so a URL
+ * a lock or `--repo` names elsewhere never receives it.
+ */
+export function tokenHeader(url: string, token: string | undefined): string[] {
+  if (!token) return [];
+
+  const host = (value: string | undefined) => {
+    try {
+      return value ? new URL(value) : undefined;
+    } catch {
+      return undefined;
+    }
+  };
+
+  const target = host(url);
+  const github = new Set(['github.com', host(process.env.GITHUB_SERVER_URL)?.host]);
+
+  if (target?.protocol !== 'https:' || !github.has(target.host.toLowerCase())) return [];
+
+  return [
+    '-c',
+    `http.extraHeader=Authorization: Basic ${Buffer.from(`x-access-token:${token}`).toString('base64')}`,
+  ];
+}
+
+/**
  * Blobless clones: full history, so git can say when each document last
  * changed, without downloading every old version of every file. A repository
  * that cannot be cloned is left out and named, so one deleted or private
@@ -131,22 +159,14 @@ export async function cloneRepositories(
   await fs.rm(opts.into, { recursive: true, force: true });
   await ignoredDirectory(opts.into);
 
-  // The token travels as a header, never in the URL, so it is not written
-  // into .git/config or echoed in an error message.
-  const auth = opts.token
-    ? [
-        '-c',
-        `http.extraHeader=Authorization: Basic ${Buffer.from(`x-access-token:${opts.token}`).toString('base64')}`,
-      ]
-    : [];
-
   const results = await Promise.allSettled(
     distinct.map((repo) =>
       run('git', [
-        ...auth,
+        ...tokenHeader(repo.cloneUrl, opts.token),
         'clone',
         '--quiet',
         '--filter=blob:none',
+        '--',
         repo.cloneUrl,
         path.join(opts.into, repo.name),
       ]),
@@ -178,7 +198,7 @@ export async function cloneRepositories(
 const failedCommand = z.object({ stderr: z.string() });
 
 /** git's `fatal:` line, the one that names what went wrong, wherever it falls. */
-function gitStderr(error: Error): string {
+export function gitStderr(error: Error): string {
   const parsed = failedCommand.safeParse(error);
   const lines = (parsed.success ? parsed.data.stderr : '').split(/\r?\n/).filter(Boolean);
 
