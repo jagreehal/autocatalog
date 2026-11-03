@@ -9,7 +9,7 @@ import { rule, tone } from './Evidence';
 // produces on the right, and a tag on every field saying how it got there.
 // This is the whole argument for the tool, so it is the only place on the page
 // allowed to be loud.
-const source = `import { defineEvent } from 'autocatalog-adapter-zod';
+const source = `import { defineEvent } from 'autocatalog-plugin-zod';
 import { z } from 'zod';
 
 export default [

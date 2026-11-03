@@ -1,6 +1,7 @@
 import { computeImpact } from './impact.js';
 import { estimateAgentCost } from './cost.js';
 import { entitiesOf, entityOf, refKey, type Catalog } from './loader.js';
+import { isPinned } from './mcp-config.js';
 
 const COST_CEILING_USD = (() => {
   const fromEnv =
@@ -38,6 +39,7 @@ export type FindingDetails = {
   sources?: NonNullable<Entity['discovery']>['sources'];
   needsReview?: string[];
   dangerousTools?: string[];
+  unannotatedTools?: string[];
   reason?: string;
   model?: string;
   modelStatus?: Model['status'];
@@ -221,6 +223,69 @@ const RULES: Array<(cat: Catalog) => Finding[]> = [
         severity: 'P1',
         ref: { kind: 'tool', id: t.id },
         message: `Tool "${t.id}" has unknown side effects. Classify it as read-only, mutating, external-write, or destructive before production use.`,
+      });
+    }
+
+    return out;
+  },
+
+  // P1: A package run without a pinned version can change under every client that starts it
+  (cat) => {
+    const out: Finding[] = [];
+
+    for (const server of entitiesOf(cat, 'mcp-server')) {
+      if (!server.package || isPinned(server.package) || server.origin === 'built') continue;
+      out.push({
+        rule: 'mcp-server-unpinned',
+        severity: 'P1',
+        ref: { kind: 'mcp-server', id: server.id },
+        message: `MCP server "${server.id}" runs ${server.package.name} without a pinned version. Pin ${server.package.registry === 'oci' ? 'its digest' : 'an exact version'} in the client config so an update is a reviewed change.`,
+      });
+    }
+
+    return out;
+  },
+
+  // P2: Nothing to compare the server against, so a change to its tools goes unseen
+  (cat) => {
+    const out: Finding[] = [];
+
+    for (const server of entitiesOf(cat, 'mcp-server')) {
+      if (cat.snapshots.has(server.id)) continue;
+      out.push({
+        rule: 'mcp-server-no-snapshot',
+        severity: 'P2',
+        ref: { kind: 'mcp-server', id: server.id },
+        message: `MCP server "${server.id}" has no tool snapshot. Run ac agents snapshot so changes to its tools are caught.`,
+      });
+    }
+
+    return out;
+  },
+
+  // P2: With no destructiveHint, the MCP specification says to assume a tool is destructive
+  (cat) => {
+    const out: Finding[] = [];
+
+    for (const [server, snapshots] of cat.snapshots) {
+      const unannotated = new Set(
+        snapshots
+          .filter(({ source }) => source === 'live')
+          .flatMap(({ tools }) => tools)
+          .filter(
+            ({ annotations }) =>
+              annotations?.readOnlyHint !== true && annotations?.destructiveHint === undefined,
+          )
+          .map(({ name }) => name),
+      );
+
+      if (unannotated.size === 0) continue;
+      out.push({
+        rule: 'mcp-tool-unannotated',
+        severity: 'P2',
+        ref: { kind: 'mcp-server', id: server },
+        message: `MCP server "${server}" has ${unannotated.size} tool(s) with no destructiveHint, which the specification treats as destructive. A client that reads a missing hint as safe runs them without approval.`,
+        details: { unannotatedTools: [...unannotated].sort() },
       });
     }
 

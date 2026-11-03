@@ -12,6 +12,7 @@ const githubRepositories = z.array(
     name: z.string(),
     clone_url: z.string(),
     archived: z.boolean().optional(),
+    fork: z.boolean().optional(),
     topics: z.array(z.string()).optional(),
   }),
 );
@@ -28,21 +29,23 @@ export interface EnrolledRepository {
 
 type FetchLike = (url: string, init?: { headers?: Record<string, string> }) => Promise<Response>;
 
-export interface ListByTopicOptions {
+export interface ListRepositoriesOptions {
   owner: string;
-  topic: string;
+  /** Only repositories with this topic. Without one, every repository the owner keeps. */
+  topic?: string | undefined;
   /** Reads private repositories and lifts the unauthenticated rate limit. */
   token?: string;
   fetch?: FetchLike;
 }
 
 /**
- * Every non-archived repository an owner has with the topic. Lists the owner's
+ * Every non-archived repository an owner has, with the topic when one is given,
+ * or leaving out forks when not: a fork is someone else's code. Lists the owner's
  * repositories rather than using search, because the search index can lag a
  * topic change by minutes and a build should see the enrolment that was made.
  */
-export async function listRepositoriesByTopic(
-  opts: ListByTopicOptions,
+export async function listRepositories(
+  opts: ListRepositoriesOptions,
 ): Promise<EnrolledRepository[]> {
   const get = opts.fetch ?? fetch;
 
@@ -79,7 +82,9 @@ export async function listRepositoriesByTopic(
     const batch = githubRepositories.parse(await response.json());
 
     for (const repo of batch) {
-      if (!repo.archived && repo.topics?.includes(opts.topic)) {
+      const wanted = opts.topic ? repo.topics?.includes(opts.topic) : !repo.fork;
+
+      if (!repo.archived && wanted) {
         repositories.push({ name: repo.name, cloneUrl: repo.clone_url });
       }
     }
@@ -98,7 +103,12 @@ export function repositoryName(url: string): string {
 export interface CloneOptions {
   into: string;
   token?: string;
+  /** Just the latest commit, for a scan that has no use for history. */
+  shallow?: boolean;
 }
+
+/** Enough to keep the network busy without opening hundreds of connections at once. */
+const CLONES_AT_ONCE = 8;
 
 /** A repository that could not be cloned, and what git said. */
 export interface CloneFailure {
@@ -159,19 +169,28 @@ export async function cloneRepositories(
   await fs.rm(opts.into, { recursive: true, force: true });
   await ignoredDirectory(opts.into);
 
-  const results = await Promise.allSettled(
-    distinct.map((repo) =>
-      run('git', [
-        ...tokenHeader(repo.cloneUrl, opts.token),
-        'clone',
-        '--quiet',
-        '--filter=blob:none',
-        '--',
-        repo.cloneUrl,
-        path.join(opts.into, repo.name),
-      ]),
-    ),
-  );
+  const results: Array<PromiseSettledResult<unknown>> = [];
+
+  for (let i = 0; i < distinct.length; i += CLONES_AT_ONCE) {
+    results.push(
+      ...(await Promise.allSettled(
+        distinct
+          .slice(i, i + CLONES_AT_ONCE)
+          .map((repo) =>
+            run('git', [
+              ...tokenHeader(repo.cloneUrl, opts.token),
+              'clone',
+              '--quiet',
+              '--filter=blob:none',
+              ...(opts.shallow ? ['--depth=1'] : []),
+              '--',
+              repo.cloneUrl,
+              path.join(opts.into, repo.name),
+            ]),
+          ),
+      )),
+    );
+  }
 
   const cloned: string[] = [];
   const failed: CloneFailure[] = [];

@@ -27,7 +27,7 @@ import { fieldsByPath, withFieldLineage } from './field-lineage';
 import { statusBanners } from './resource-status';
 import { buildSystems } from './systems';
 import { z } from 'zod';
-import { sourceUrl } from 'autocatalog-docs-core';
+import { type RepositoryMeta, sourceUrl } from 'autocatalog-docs-core';
 import { documentsAbout } from './about';
 import { apiPath, apisForService, apiTitle } from './apis';
 import { specificationPath, specificationsForService } from './specifications';
@@ -51,6 +51,7 @@ import { type ShellLink, versionLabel } from './shell';
 import { remarkMermaid } from './mermaid';
 import { docKindIcon, documentsByKind, kindCounts, kindHref, kindNoun } from './kinds';
 import { explorerModel } from './ui/components/catalog-explorer-model';
+import { buildMcpServers } from './mcp-servers';
 import type { EventCatalogDiagramProps } from './ui/components/EventCatalogDiagram';
 import type { DeliveryView } from './ui/components/DeliveryFacts';
 import type { DeliveryPathProps } from './ui/components/DeliveryPath';
@@ -69,7 +70,7 @@ import type {
   OwnersPageProps,
   ServicePageProps,
 } from './ui/pages';
-import { catalogAnchor, groupByRepo, groupByTag, type DocListItem } from './view';
+import { catalogAnchor, docHref, groupByRepo, groupByTag, type DocListItem } from './view';
 import { buildDomains, domainHref, type Domain } from './domains';
 import {
   catalogGraph,
@@ -95,6 +96,7 @@ export function homePageProps(
   catalog: DocsCatalog,
   items: DocListItem[],
   base: string,
+  metas: ReadonlyMap<string, RepositoryMeta> = new Map(),
 ): HomePageProps {
   const domains = buildDomains(catalog.events).length;
 
@@ -139,6 +141,16 @@ export function homePageProps(
             href: `${base}architecture/`,
             icon: 'architecture' as const,
             kind: 'channel',
+          },
+        ]
+      : []),
+    ...(catalog.graph.resources.some(({ ref }) => ref.kind === 'mcp-server')
+      ? [
+          {
+            title: 'MCP servers',
+            text: 'Every server the company builds or uses, who depends on it, and what changed.',
+            href: `${base}mcp-servers/`,
+            icon: 'mcp-server' as const,
           },
         ]
       : []),
@@ -283,7 +295,21 @@ export function homePageProps(
   return {
     stats,
     explore,
-    repos: groupByRepo(items),
+    repos: groupByRepo(items)
+      .map(([name, docs]) => {
+        const meta = metas.get(name);
+        const index = docs.find(({ id }) => id === `${name}/index`);
+
+        return {
+          name,
+          label: meta?.label ?? name,
+          description: meta?.description,
+          // A repository with no index page still has a first page to open.
+          href: docHref((index ?? docs[0]!).id),
+          docs,
+        };
+      })
+      .sort((a, b) => a.label.localeCompare(b.label)),
     tags: groupByTag(items),
     attention,
   };
@@ -299,6 +325,16 @@ export function channelPageProps(catalog: DocsCatalog, id: string, base: string)
   );
 
   return channel ? { channel } : null;
+}
+
+export function mcpServersPageProps(catalog: DocsCatalog, base: string) {
+  return { servers: buildMcpServers(catalog.graph, base) };
+}
+
+export function mcpServerPageProps(catalog: DocsCatalog, id: string, base: string) {
+  const server = buildMcpServers(catalog.graph, base).find((entry) => entry.id === id);
+
+  return server ? { server } : null;
 }
 
 export function systemsPageProps(catalog: DocsCatalog, base: string) {

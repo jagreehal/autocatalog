@@ -57,8 +57,8 @@ const meta = {
       },
     ],
     repos: [
-      ['billing', [docs[1]!]],
-      ['orders', [docs[0]!]],
+      { name: 'billing', label: 'Billing', description: 'How invoices go out.', docs: [docs[1]!] },
+      { name: 'orders', label: 'orders', docs: [docs[0]!] },
     ],
     tags: [
       ['oncall', [docs[0]!]],

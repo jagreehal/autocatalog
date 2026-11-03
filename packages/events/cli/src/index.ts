@@ -53,15 +53,12 @@ export function buildProgram(): Command {
       .description('Discover event definitions across a repo and generate the catalog')
       .option('-o, --out <dir>', 'events output directory', './events'),
   )
-    .option(
-      '--allow-code-execution',
-      'run installed runtime discovery Adapters for a repository you trust',
-      false,
-    )
+    .option('--allow-code-execution', 'run installed plugins, for a repository you trust', false)
     .option(
       '--snapshot <file>',
       'runtime architecture snapshot to join onto the catalog as observed evidence',
     )
+    .option('--conventions <file>', "a shared conventions file, in place of the repository's own")
     .option('-q, --quiet', 'suppress non-error output', false)
     .action(
       async (
@@ -70,6 +67,7 @@ export function buildProgram(): Command {
           out: string;
           quiet: boolean;
           allowCodeExecution: boolean;
+          conventions?: string;
           snapshot?: string;
           traces?: string;
           datastore?: string;
@@ -86,6 +84,7 @@ export function buildProgram(): Command {
             quiet: opts.quiet,
             allowCodeExecution: opts.allowCodeExecution,
             snapshot: opts.snapshot,
+            conventions: opts.conventions,
             traces: opts.traces,
             datastore: opts.datastore,
             database: opts.database,
@@ -205,11 +204,8 @@ export function buildProgram(): Command {
     .option('--base <dir>', 'baseline events directory (e.g. generated from main)')
     .option('--base-ref <ref>', 'Git ref to scan as the baseline (for example origin/main)')
     .option('--root <dir>', 'source tree to scan with --base-ref', process.cwd())
-    .option(
-      '--allow-code-execution',
-      'run installed runtime discovery Adapters for trusted Git content',
-      false,
-    )
+    .option('--conventions <file>', "a shared conventions file, in place of the repository's own")
+    .option('--allow-code-execution', 'run installed plugins, for Git content you trust', false)
     .option('--current <dir>', 'current events directory', './events')
     .addOption(
       new Option('--format <fmt>', 'output format')
@@ -257,6 +253,7 @@ export function buildProgram(): Command {
         baseRef?: string;
         root: string;
         allowCodeExecution: boolean;
+        conventions?: string;
         current: string;
         format: 'text' | 'markdown' | 'json' | 'github';
         failOn: 'breaking' | 'suspicious' | 'never';
@@ -270,6 +267,7 @@ export function buildProgram(): Command {
           await runDrift({
             base: opts.base,
             baseRef: opts.baseRef,
+            conventions: opts.conventions,
             root: opts.root,
             allowCodeExecution: opts.allowCodeExecution,
             current: opts.current,
@@ -610,6 +608,24 @@ export function buildProgram(): Command {
     );
 
   program
+    .command('check [root]')
+    .description('Check what this repository publishes, as its pull request should')
+    .option('--base-ref <ref>', 'also compare contracts against this ref, e.g. origin/main')
+    .option('--allow-code-execution', 'run committed rules, for a repository you trust', false)
+    .addOption(
+      new Option('--format <fmt>', 'output format').choices(['text', 'github']).default('text'),
+    )
+    .action(
+      async (
+        root: string | undefined,
+        opts: { baseRef?: string; format: 'text' | 'github'; allowCodeExecution: boolean },
+      ) => {
+        const { runCheck } = await import('./commands/check');
+        process.exit(await runCheck({ ...opts, root: root ?? '.' }));
+      },
+    );
+
+  program
     .command('site [root]')
     .description(
       'Build the company index: docs, events, services and fields from every enrolled repository',
@@ -622,6 +638,10 @@ export function buildProgram(): Command {
     .option('--site <url>', 'origin the site is deployed at, for the sitemap and llms.txt')
     .option('--base <path>', 'path the site is served under, e.g. /docs/')
     .option('--title <text>', 'site title')
+    .option('--description <text>', 'one sentence for the home page and llms.txt')
+    .option('--brand <dir>', 'your logo.*, logo-dark.*, favicon.svg and theme.css')
+    .option('--theme <name>', 'an accent colour: teal, blue, orange, green or purple')
+    .option('--fingerprint', 'print a hash of what is enrolled, and build nothing', false)
     .option('--dev', 'serve with live reload instead of building', false)
     .option('--eventcatalog', 'install EventCatalog and embed its diagrams in the site', false)
     .option(
@@ -665,6 +685,10 @@ export function buildProgram(): Command {
           docsSchema?: string;
           docsConventions?: string;
           pages?: string;
+          brand?: string;
+          theme?: string;
+          fingerprint: boolean;
+          description?: string;
           liveUrl?: string;
           liveEvent?: string;
           lock?: string;
@@ -674,7 +698,13 @@ export function buildProgram(): Command {
       ) => {
         const { runSite } = await import('./commands/site');
         process.exit(
-          await runSite({ ...opts, root: root ?? '.', repos: opts.repo, indexes: opts.index }),
+          await runSite({
+            ...opts,
+            root: root ?? '.',
+            rootGiven: root !== undefined,
+            repos: opts.repo,
+            indexes: opts.index,
+          }),
         );
       },
     );
@@ -736,6 +766,33 @@ export function buildProgram(): Command {
       ) => {
         const { runFederationStatus } = await import('./federation');
         process.exit(await runFederationStatus({ ...opts, root: root ?? '.', repos: opts.repo }));
+      },
+    );
+
+  program
+    .command('mcp-sweep')
+    .description('List every MCP server a GitHub owner builds or uses, across its repositories')
+    .option('--owner <owner>', 'GitHub user or organisation to sweep')
+    .option('--topic <topic>', 'only repositories with this topic (needs --owner)')
+    .option('--repo <url...>', 'these repositories as well')
+    .option('--root <dir>', 'the catalog to write into', '.')
+    .option('--internal <values>', 'hosts and package scopes the company owns, comma separated')
+    .option('--prune', 'remove servers no repository names any more')
+    .option('--dry-run', 'print the inventory without writing')
+    .option('--cache <dir>', 'where clones go', '.autocatalog/mcp-sweep')
+    .action(
+      async (opts: {
+        owner?: string;
+        topic?: string;
+        repo?: string[];
+        root: string;
+        internal?: string;
+        prune?: boolean;
+        dryRun?: boolean;
+        cache: string;
+      }) => {
+        const { runMcpSweep } = await import('./commands/mcp-sweep');
+        process.exit(await runMcpSweep({ ...opts, repos: opts.repo }));
       },
     );
 

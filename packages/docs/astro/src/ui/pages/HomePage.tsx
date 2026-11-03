@@ -47,7 +47,13 @@ export interface HomePageProps {
   stats: Stat[];
   explore: ExploreCard[];
   /** Repositories in name order, each with the documents it publishes. */
-  repos: Array<[string, DocListItem[]]>;
+  repos: Array<{
+    name: string;
+    label: string;
+    description?: string | undefined;
+    href?: string | undefined;
+    docs: DocListItem[];
+  }>;
   /** Tags in name order; empty when no document is tagged. */
   tags: Array<[string, DocListItem[]]>;
   /** Dark spots: review work, quarantine, orphans. */
@@ -58,8 +64,11 @@ const plural = (count: number, one: string, many: string) => `${count} ${count =
 
 const documents = (count: number) => plural(count, 'document', 'documents');
 
+/** Enough to show what a repository holds; the rest stay a click away. */
+const SHELF_SIZE = 5;
+
 export function HomePage({ stats, explore, repos, tags, attention }: HomePageProps) {
-  const total = repos.reduce((sum, [, docs]) => sum + docs.length, 0);
+  const total = repos.reduce((sum, { docs }) => sum + docs.length, 0);
 
   // Built as one string: adjacent expressions in the template lose the whitespace
   // between them, which is how "5documents" gets shipped.
@@ -67,6 +76,48 @@ export function HomePage({ stats, explore, repos, tags, attention }: HomePagePro
 
   return (
     <div className="not-content flex flex-col gap-10" data-wide>
+      <section className="flex flex-col gap-4" aria-labelledby="home-documents">
+        <SectionHeading id="home-documents" count={total > 0 ? counted : undefined}>
+          Documents
+        </SectionHeading>
+        {repos.length === 0 ? (
+          <Empty>
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <Icon name="doc" />
+              </EmptyMedia>
+              <EmptyTitle>No documents yet</EmptyTitle>
+              <EmptyDescription>
+                Commit Markdown to a <code>docs/</code> folder in an enrolled repository and it
+                appears here on the next build.
+              </EmptyDescription>
+            </EmptyHeader>
+          </Empty>
+        ) : (
+          <div className="grid items-start gap-4 md:grid-cols-2">
+            {repos.map(({ name, label, description, href, docs }) => (
+              <Shelf
+                key={name}
+                title={label}
+                href={href}
+                description={description}
+                count={documents(docs.length)}
+              >
+                <DocList items={docs.slice(0, SHELF_SIZE)} />
+                {docs.length > SHELF_SIZE && (
+                  <details className="mt-3">
+                    <summary className="cursor-pointer text-sm text-muted-foreground">
+                      All {docs.length} documents
+                    </summary>
+                    <DocList items={docs.slice(SHELF_SIZE)} />
+                  </details>
+                )}
+              </Shelf>
+            ))}
+          </div>
+        )}
+      </section>
+
       {attention && hasAttention(attention) && <Attention attention={attention} />}
 
       {stats.some((stat) => stat.value > 0) && <Holds stats={stats} />}
@@ -103,34 +154,6 @@ export function HomePage({ stats, explore, repos, tags, attention }: HomePagePro
             </li>
           ))}
         </ul>
-      </section>
-
-      <section className="flex flex-col gap-4" aria-labelledby="home-documents">
-        <SectionHeading id="home-documents" count={total > 0 ? counted : undefined}>
-          Documents
-        </SectionHeading>
-        {repos.length === 0 ? (
-          <Empty>
-            <EmptyHeader>
-              <EmptyMedia variant="icon">
-                <Icon name="doc" />
-              </EmptyMedia>
-              <EmptyTitle>No documents yet</EmptyTitle>
-              <EmptyDescription>
-                Commit Markdown to a <code>docs/</code> folder in an enrolled repository and it
-                appears here on the next build.
-              </EmptyDescription>
-            </EmptyHeader>
-          </Empty>
-        ) : (
-          <div className="grid items-start gap-4 md:grid-cols-2">
-            {repos.map(([repo, docs]) => (
-              <Shelf key={repo} title={repo} count={documents(docs.length)}>
-                <DocList items={docs} />
-              </Shelf>
-            ))}
-          </div>
-        )}
       </section>
 
       {tags.length > 0 && (
@@ -255,13 +278,32 @@ function Holds({ stats }: { stats: Stat[] }) {
 }
 
 /** A repository and the documents under it. */
-function Shelf({ title, count, children }: { title: string; count: string; children: ReactNode }) {
+function Shelf({
+  title,
+  href,
+  description,
+  count,
+  children,
+}: {
+  title: string;
+  href?: string | undefined;
+  description?: string | undefined;
+  count: string;
+  children: ReactNode;
+}) {
   return (
     <Card>
       <CardHeader>
         <CardTitle role="heading" aria-level={3}>
-          {title}
+          {href ? (
+            <a href={href} className="text-foreground underline-offset-4 hover:underline">
+              {title}
+            </a>
+          ) : (
+            title
+          )}
         </CardTitle>
+        {description && <CardDescription>{description}</CardDescription>}
         <CardAction>
           <span className="text-xs text-muted-foreground">{count}</span>
         </CardAction>

@@ -103,4 +103,4 @@ structure the TypeScript path writes.
 
 Because extraction imports your module, run it where importing that module is
 safe — the same rule the [production](/docs/production) page sets out for runtime
-adapters.
+plugins.

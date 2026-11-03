@@ -5,6 +5,7 @@ import tailwindcss from '@tailwindcss/vite';
 import type { StarlightPlugin } from '@astrojs/starlight/types';
 import { z } from 'astro/zod';
 import { isUnifiedProcessor } from '@astrojs/markdown-remark';
+import type { SiteNavigationInput, SITE_THEMES } from 'autocatalog-docs-core';
 import type { PluginOption } from 'vite';
 import { docsSiteConfig } from './config';
 import { autocatalogDocsRoutes } from './routes';
@@ -17,7 +18,7 @@ export { docsCatalog, type DocsCatalog } from './catalog';
 import { buildDocsCatalog } from './catalog';
 import { graphOwners } from './owners';
 import { retirementsPageProps } from './retirements';
-import { catalogSidebar, docsSidebar } from './sidebar';
+import { catalogSidebar, docsSidebar, navigationGroups } from './sidebar';
 import { eventCatalogEmbeds } from './eventcatalog';
 import { reactRendererIntegration, siteHasReact } from './react-integration';
 import { EMBED_SCRIPT } from './embed';
@@ -67,6 +68,10 @@ export interface AutocatalogDocsOptions {
   pages?: string;
   /** One sentence describing what is aggregated here, used on / and llms.txt. */
   description?: string;
+  /** An accent colour by name. A site's own `customCss` goes further. */
+  theme?: (typeof SITE_THEMES)[number];
+  /** Groups to show in place of the catalog's own. */
+  navigation?: SiteNavigationInput;
   /**
    * A server-sent events URL the maps follow in their live mode: each frame's
    * JSON names the event that fired (`{ "name": "order.placed", "producer"? }`).
@@ -113,6 +118,12 @@ export default function autocatalogDocs(opts: AutocatalogDocsOptions = {}): Star
         process.env.AUTOCATALOG_DOCS_TITLE ??= starlightTitle.parse(config.title);
 
         if (opts.description) process.env.AUTOCATALOG_DOCS_DESCRIPTION ??= opts.description;
+
+        if (opts.navigation) {
+          process.env.AUTOCATALOG_SITE_NAVIGATION ??= JSON.stringify(opts.navigation);
+        }
+
+        const theme = opts.theme ?? process.env.AUTOCATALOG_SITE_THEME;
 
         if (opts.repo) process.env.AUTOCATALOG_DOCS_REPO ??= opts.repo;
 
@@ -169,6 +180,13 @@ export default function autocatalogDocs(opts: AutocatalogDocsOptions = {}): Star
           exclude,
         });
 
+        // A site with every document left out would replace the last good one.
+        if (sidebar.length === 0 && exclude.length > 0) {
+          throw new Error(
+            `Every document was left out (${exclude.join(', ')}). The warnings above say why.`,
+          );
+        }
+
         if (sidebar.length === 0) {
           logger.warn(
             `No documents found under ${effective.root}. A repository publishes by committing docs/*.md.`,
@@ -177,7 +195,11 @@ export default function autocatalogDocs(opts: AutocatalogDocsOptions = {}): Star
 
         const contentSidebar = config.sidebar ?? sidebar;
 
-        const eventsSidebar = catalogSidebar(catalog.events);
+        // Starlight opens the group holding the current page.
+        const eventsSidebar = catalogSidebar(catalog.events).map((group) => ({
+          ...group,
+          collapsed: true,
+        }));
 
         // A plugin `favicon` fills Starlight when the site did not set one.
         // `ac site` ships `public/favicon.svg` and reads AUTOCATALOG_SITE_FAVICON.
@@ -186,57 +208,64 @@ export default function autocatalogDocs(opts: AutocatalogDocsOptions = {}): Star
             ? opts.favicon
             : undefined;
 
+        const catalogPages = [
+          { label: 'Knowledge graph', link: '/catalog' },
+          ...(eventCatalogEmbeds() ? [{ label: 'Architecture', link: '/architecture' }] : []),
+          ...(eventsSidebar.length > 0
+            ? [
+                { label: 'Domains', link: '/domains' },
+                { label: 'Schemas', link: '/schemas' },
+                { label: 'Fields', link: '/fields' },
+              ]
+            : []),
+          ...(retirementsPageProps(catalog, '/').retirements.length > 0
+            ? [{ label: 'Retirements', link: '/retirements' }]
+            : []),
+          ...(catalog.apis.length > 0 ? [{ label: 'APIs', link: '/apis' }] : []),
+          ...(catalog.graph.resources.some(({ ref }) => ref.kind === 'mcp-server')
+            ? [{ label: 'MCP servers', link: '/mcp-servers' }]
+            : []),
+          ...(catalog.flows.length > 0 ? [{ label: 'Flows', link: '/flows' }] : []),
+          // `ac site` dev starts designs there, so it is listed before there are any.
+          ...(catalog.designs.length > 0 || command === 'dev'
+            ? [{ label: 'Designs', link: '/designs' }]
+            : []),
+          ...(catalog.model.glossaries.length > 0
+            ? [{ label: 'Glossary', link: '/glossary' }]
+            : []),
+          ...(catalog.model.entities.length > 0 ? [{ label: 'Entities', link: '/entities' }] : []),
+          ...(catalog.model.dataProducts.length > 0
+            ? [{ label: 'Data products', link: '/data-products' }]
+            : []),
+          ...(catalog.specifications.length > 0
+            ? [{ label: 'Specifications', link: '/specs' }]
+            : []),
+          // Decisions, runbooks, incidents: each kind with documents.
+          ...catalog.kinds.map((kind) => ({ label: kind.label, link: `/${kind.path}` })),
+          ...(catalog.models.length > 0 ? [{ label: 'Data models', link: '/data' }] : []),
+          ...(graphOwners(catalog.graph).length > 0 ? [{ label: 'Owners', link: '/owners' }] : []),
+        ];
+
         updateConfig({
           ...(favicon && { favicon }),
+          // Starlight draws asides and heading links only in the folders it is told about.
+          markdown: {
+            ...config.markdown,
+            processedDirs: [...(config.markdown?.processedDirs ?? []), effective.root],
+          },
           // A sidebar the site was configured with would have to be edited every
           // time a team writes a document. This one is what is on disk.
           sidebar: [
-            {
-              label: 'Catalog',
-              items: [
-                { label: 'Knowledge graph', link: '/catalog' },
-                ...(eventCatalogEmbeds() ? [{ label: 'Architecture', link: '/architecture' }] : []),
-                ...(eventsSidebar.length > 0
-                  ? [
-                      { label: 'Domains', link: '/domains' },
-                      { label: 'Schemas', link: '/schemas' },
-                      { label: 'Fields', link: '/fields' },
-                    ]
-                  : []),
-                ...(retirementsPageProps(catalog, '/').retirements.length > 0
-                  ? [{ label: 'Retirements', link: '/retirements' }]
-                  : []),
-                ...(catalog.apis.length > 0 ? [{ label: 'APIs', link: '/apis' }] : []),
-                ...(catalog.flows.length > 0 ? [{ label: 'Flows', link: '/flows' }] : []),
-                // `ac site` dev starts designs there, so it is listed before there are any.
-                ...(catalog.designs.length > 0 || command === 'dev'
-                  ? [{ label: 'Designs', link: '/designs' }]
-                  : []),
-                ...(catalog.model.glossaries.length > 0
-                  ? [{ label: 'Glossary', link: '/glossary' }]
-                  : []),
-                ...(catalog.model.entities.length > 0
-                  ? [{ label: 'Entities', link: '/entities' }]
-                  : []),
-                ...(catalog.model.dataProducts.length > 0
-                  ? [{ label: 'Data products', link: '/data-products' }]
-                  : []),
-                ...(catalog.specifications.length > 0
-                  ? [{ label: 'Specifications', link: '/specs' }]
-                  : []),
-                // Decisions, runbooks, incidents: each kind with documents.
-                ...catalog.kinds.map((kind) => ({ label: kind.label, link: `/${kind.path}` })),
-                ...(catalog.models.length > 0 ? [{ label: 'Data models', link: '/data' }] : []),
-                ...(graphOwners(catalog.graph).length > 0
-                  ? [{ label: 'Owners', link: '/owners' }]
-                  : []),
-              ],
-            },
+            ...navigationGroups(catalogPages, effective.navigation),
             ...contentSidebar,
             ...eventsSidebar,
           ],
           // The theme (DESIGN.md). First, so a site's own customCss still wins.
-          customCss: ['autocatalog-docs-astro/styles/index.css', ...(config.customCss ?? [])],
+          customCss: [
+            'autocatalog-docs-astro/styles/index.css',
+            ...(theme ? [`autocatalog-docs-astro/styles/themes/${theme}.css`] : []),
+            ...(config.customCss ?? []),
+          ],
           // Draws ```mermaid fences, on the pages that have one.
           head: [
             ...(config.head ?? []),

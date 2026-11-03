@@ -1,0 +1,99 @@
+name: Autocatalog site
+description: Build a company site from every enrolled repository, ready for any host.
+branding:
+  icon: book-open
+  color: blue
+inputs:
+  token:
+    description: A token that can read the enrolled repositories.
+    default: ${{ github.token }}
+  changed-only:
+    description: Build only when an enrolled repository changed since the last successful job.
+    default: 'false'
+  topic:
+    description: The GitHub topic that enrols a repository, when autocatalog.site.json names none.
+    default: ''
+  owner:
+    description: Whose repositories, when autocatalog.site.json names none.
+    default: ''
+  site:
+    description: The origin the site is deployed at, for the sitemap and llms.txt.
+    default: ''
+  base:
+    description: The path the site is served under, such as /docs/.
+    default: ''
+  title:
+    description: The site's title, when autocatalog.site.json names none.
+    default: ''
+  version:
+    description: The autocatalog version to run.
+    default: latest
+  node-version:
+    description: The Node.js version to run it on.
+    default: '24'
+outputs:
+  built:
+    description: Whether a site was built. Gate your deploy on this.
+    value: ${{ steps.build.outputs.built }}
+  path:
+    description: The folder holding the built site.
+    value: dist
+runs:
+  using: composite
+  steps:
+    # The build runs enrolled repositories' MDX, so no credential stays in .git/config.
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        persist-credentials: false
+    - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      with:
+        node-version: ${{ inputs.node-version }}
+    - id: fingerprint
+      if: inputs.changed-only == 'true'
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.token }}
+        VERSION: ${{ inputs.version }}
+        TOPIC: ${{ inputs.topic }}
+        OWNER: ${{ inputs.owner }}
+        SITE_COMMIT: ${{ github.sha }}
+      run: |
+        flags=(site --fingerprint)
+        if [ -n "$TOPIC" ]; then flags+=(--topic "$TOPIC"); fi
+        if [ -n "$OWNER" ]; then flags+=(--owner "$OWNER"); fi
+        hash=$(npx --yes "autocatalog@$VERSION" "${flags[@]}")
+        echo "key=autocatalog-site-$hash-${SITE_COMMIT:0:7}" >> "$GITHUB_OUTPUT"
+        mkdir -p .autocatalog && echo "$hash" > .autocatalog/deployed
+    # Saved after the job, and only if it succeeds: deploy in this job and a failed deploy is tried again.
+    - id: deployed
+      if: inputs.changed-only == 'true'
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: .autocatalog/deployed
+        key: ${{ steps.fingerprint.outputs.key }}
+        lookup-only: true
+    - id: build
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.token }}
+        VERSION: ${{ inputs.version }}
+        TOPIC: ${{ inputs.topic }}
+        OWNER: ${{ inputs.owner }}
+        SITE: ${{ inputs.site }}
+        BASE: ${{ inputs.base }}
+        TITLE: ${{ inputs.title }}
+        UNCHANGED: ${{ steps.deployed.outputs.cache-hit }}
+      run: |
+        if [ "$UNCHANGED" = "true" ]; then
+          echo "Nothing enrolled has changed since the last deploy."
+          echo "built=false" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+        flags=(site)
+        if [ -n "$TOPIC" ]; then flags+=(--topic "$TOPIC"); fi
+        if [ -n "$OWNER" ]; then flags+=(--owner "$OWNER"); fi
+        if [ -n "$SITE" ]; then flags+=(--site "$SITE"); fi
+        if [ -n "$BASE" ]; then flags+=(--base "$BASE"); fi
+        if [ -n "$TITLE" ]; then flags+=(--title "$TITLE"); fi
+        npx --yes "autocatalog@$VERSION" "${flags[@]}"
+        echo "built=true" >> "$GITHUB_OUTPUT"

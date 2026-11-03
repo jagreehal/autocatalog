@@ -24,6 +24,8 @@ Its last line names the contract in force:
 
 If `additionalProperties` is `false`, a field the contract does not declare will fail the check. Ask before proposing a contract change.
 
+When `docs/meta.json` names an `owner`, a page takes it unless the page names its own. Leave `owner` out of those pages.
+
 ## 2. Put the file in the repository that owns the code
 
 `<owning-repo>/docs/<path>.md`. The id readers and links use is derived from that path — `payments-service/docs/ops/replay.md` is `payments-service/ops/replay` — so the path is the URL and the permanent name. Choose it once, deliberately.
@@ -77,6 +79,8 @@ These sit beside `docs/`, in the repository that owns the domain, and `ac docs c
 - **Teams and users**: `teams/<id>.md` (`name`, `summary`, `email`, `slackDirectMessageUrl`, `members`) and `users/<id>.md` (`name`, `role`, `email`). Write them in one repository, usually the handbook, and name the file after the owner as CODEOWNERS writes it. A repository with only these folders still joins the site.
 
 ### MDX
+
+A ` ```mermaid ` diagram with `%% narrate <node>: <sentence>` lines plays step by step and reads each sentence aloud; ` ```mermaid interactive ` lets the reader click through it.
 
 Write `docs/<path>.mdx` when the document should show live catalog facts. `<Map focus="service/PaymentService" />`, `<Schema event="event/payments/payment.captured" />`, `<Term id="capture" />` and `<Owner name="Payments" />` need no import. A reference that names nothing fails the build, so check each against `ac docs check` and the catalog before writing it.
 

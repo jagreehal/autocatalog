@@ -52,7 +52,7 @@ Promotion preserves evidence and survives subsequent scans. Source-only rescans 
 
 ## Model contracts and document validation
 
-Static adapters discover Mongoose schemas, Prisma models and Drizzle tables without executing repository code. They extract collection/table JSON Schema and recognizable read/write operations, including relative imports and Prisma field mappings. Dynamic models and unsupported constructs produce scan diagnostics. Review extracted contracts before using them as authoritative compatibility gates.
+Built-in scanners discover Mongoose schemas, Prisma models and Drizzle tables without executing repository code. They extract collection/table JSON Schema and recognizable read/write operations, including relative imports and Prisma field mappings. Dynamic models and unsupported constructs produce scan diagnostics. Review extracted contracts before using them as authoritative compatibility gates.
 
 Beside the JSON Schema, each table or collection carries `attributes.fields`, one entry per field as the code names it, for its page on the site:
 

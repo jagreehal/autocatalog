@@ -3,6 +3,7 @@ export {
   docToMarkdown,
   type DocsLayout,
   readDocs,
+  repositoryMetas,
   type ReadDocsOptions,
   resolveDocsLayout,
 } from './read-docs';
@@ -166,3 +167,21 @@ export {
   type ReadDomainModelResult,
   type Term,
 } from './model';
+
+export {
+  REPOSITORY_META,
+  type RepositoryMeta,
+  readRepositoryMeta,
+  repositoryMetaSchema,
+} from './repository-meta';
+
+export {
+  readSiteConfig,
+  SITE_CONFIG,
+  SITE_THEMES,
+  type SiteConfig,
+  type SiteNavigation,
+  type SiteNavigationInput,
+  siteConfigSchema,
+  siteNavigationSchema,
+} from './site-config';

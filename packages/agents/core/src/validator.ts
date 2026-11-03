@@ -32,6 +32,16 @@ export const validateEdges = (cat: Catalog): EdgeIssue[] => {
       }
     }
 
+    for (const serverId of a.servers) {
+      if (!lookup(cat, 'mcp-server', serverId)) {
+        issues.push({
+          from: { kind: 'agent', id: a.id },
+          ref: { kind: 'mcp-server', id: serverId },
+          message: `Agent "${a.id}" references unknown MCP server "${serverId}"`,
+        });
+      }
+    }
+
     for (const policyId of a.policies) {
       if (!lookup(cat, 'policy', policyId)) {
         issues.push({
@@ -57,6 +67,14 @@ export const validateEdges = (cat: Catalog): EdgeIssue[] => {
         from: { kind: 'tool', id: t.id },
         ref: { kind: 'domain', id: t.domain },
         message: `Tool "${t.id}" references unknown Domain "${t.domain}"`,
+      });
+    }
+
+    if (t.server && !lookup(cat, 'mcp-server', t.server)) {
+      issues.push({
+        from: { kind: 'tool', id: t.id },
+        ref: { kind: 'mcp-server', id: t.server },
+        message: `Tool "${t.id}" references unknown MCP server "${t.server}"`,
       });
     }
   }

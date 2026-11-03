@@ -24,10 +24,11 @@ page covers what each command is for.
 
 ## Daily commands
 
-`ac resources` discovers datastore access and commands, imports ownership and registry contracts, and reviews trace-inferred relationships: `scan`, `list` (the keys `promote` and `validate` take), `ownership`, `promote`, `drift`, `validate` and `import`. See [Brownfield resources](./brownfield-resources.md) for model adapters, OTLP discovery, document validation and CloudEvents examples.
+`ac resources` discovers datastore access and commands, imports ownership and registry contracts, and reviews trace-inferred relationships: `scan`, `list` (the keys `promote` and `validate` take), `ownership`, `promote`, `drift`, `validate` and `import`. See [Brownfield resources](./brownfield-resources.md) for model plugins, OTLP discovery, document validation and CloudEvents examples.
 
 ```text
 ac scan          Discover events across a repo and generate the catalog
+ac check         Check what this repository publishes, as its pull request should
 ac site          Build one site from every enrolled repository
 ac validate      Check every event
 ac drift         Compare against a baseline and gate breaking changes
@@ -43,7 +44,7 @@ ac to-asyncapi   Write the catalog as AsyncAPI 3.0, for mock servers
 **`ac scan [root]`** — discovers event definitions and generates the catalog.
 Passive [JSON Schema](/docs/events/json-schema), [OpenAPI](/docs/events/openapi)
 and [Avro / protobuf](/docs/events/avro-protobuf) discovery by default;
-`--allow-code-execution` additionally runs installed runtime adapters such as
+`--allow-code-execution` additionally runs installed runtime plugins such as
 Zod, which evaluate repository code. `--out` sets the events directory
 (default `./events`). It also discovers datastore models, commands and Backstage
 ownership; when it finds any it writes `.autocatalog/resources.json` and
@@ -134,6 +135,11 @@ answers on, with the result's schema as the reply message. It exits with an
 error when it cannot read the whole folder. `ac from-asyncapi` imports the
 events and leaves commands and replies out.
 
+**`ac scan --conventions <file>`** reads a conventions file a company shares in
+place of the repository's own, so events kept in a shape of your own
+[need no plugin](/docs/plugins#you-may-not-need-one). `ac drift` takes the same
+flag.
+
 **`ac scan --snapshot <file>`** joins a runtime architecture snapshot onto the
 catalog. Events the snapshot saw gain an `observed` block — count, first and
 last seen, and consumer participants — and a consumer recorded only in the
@@ -159,9 +165,9 @@ that produced it, so any runtime in any language emitting the
 `autotel-architecture/*` shape is a first-class source of evidence.
 `fixtures/demo-repo/runtime-snapshot.json` is a worked example.
 
-**`ac from-zod <file>`** — registered by `autocatalog-adapter-zod` when it is
-installed. Adapters can add their own commands this way; `ac` discovers them
-from `node_modules`. See [Writing an adapter](/docs/adapters).
+**`ac from-zod <file>`**: registered by `autocatalog-plugin-zod` when it is
+installed. Plugins can add their own commands this way; `ac` discovers them
+from `node_modules`. See [Writing a plugin](/docs/plugins).
 
 ## The site
 
@@ -172,6 +178,11 @@ serves instead of building. `--eventcatalog` builds EventCatalog into the site
 and embeds its diagrams. `--docs-schema` names the docs frontmatter contract to
 enforce; without it the site uses the root's, else an enrolled repository's.
 `--docs-conventions` names the conventions file, found the same way.
+`--brand` takes a folder with your logo, favicon and theme; see
+[the company site](/docs/site#make-it-yours). `--fingerprint` prints a hash of
+what is enrolled and builds nothing, so a scheduled job can skip a site with
+nothing new.
+
 `--pages` adds a folder of your own pages and API routes, laid out as
 `src/pages/` is.
 `--live-url` gives the maps' Live mode a server-sent events feed to follow, and
@@ -221,9 +232,14 @@ See [the docs convention](/docs/docs-convention) for what these enforce.
 ## Agents
 
 **`ac agents <command>`** — the agent catalog commands: `validate`, `impact`,
-`search`, `cost`, `audit`, `drift`, `discover`, `llmstxt`, `mcp`. They live in
+`search`, `cost`, `audit`, `drift`, `discover`, `snapshot`, `llmstxt`, `mcp`. They live in
 `autocatalog-agents-cli`, which is an optional install — `ac agents` says so if
 it is missing, because an events-only project should not carry the agent model.
 Every flag behaves exactly as `ac agents --help` documents it.
+
+**`ac mcp-sweep`** lists every MCP server a GitHub owner builds or uses, across its
+repositories, into one catalog: `--owner`, `--topic`, `--repo`, `--root`, `--internal`,
+`--prune`, `--dry-run`. It needs `autocatalog-agents-cli`, and reads private repositories
+with `GITHUB_TOKEN`.
 
 See [agent catalogs](/docs/agents).

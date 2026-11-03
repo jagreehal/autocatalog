@@ -83,3 +83,68 @@ def test_delivery_matches_the_typescript_contract():
     # Months and years have no fixed length, as in autocatalog-core.
     for lateness in ("P1M", "P1Y", "PT", "P", "5 minutes"):
         assert not accepted({"maxLateness": lateness}), lateness
+
+
+def _manifest(**extra):
+    return {"id": "a", "version": "1.0.0", "name": "A", "summary": "An event", **extra}
+
+
+def test_keeps_what_a_snapshot_observed():
+    observed = {
+        "count": 3,
+        "firstSeen": "2026-01-01",
+        "lastSeen": "2026-01-02",
+        "consumerOutcomes": [
+            {
+                "consumer": "ledger",
+                "count": 3,
+                "deadLetterReasons": [{"reason": "poison", "count": 1}],
+            }
+        ],
+        "snapshot": {"spec": "s", "generatedAt": "2026-01-02"},
+    }
+
+    dumped = EventFrontmatter(**_manifest(observed=observed)).model_dump(
+        mode="json", by_alias=True, exclude_none=True
+    )
+
+    assert dumped["observed"]["consumerOutcomes"][0]["deadLetterReasons"][0]["reason"] == "poison"
+
+
+def test_keeps_broker_and_code_detail():
+    event = EventFrontmatter(
+        **_manifest(
+            source={"type": "code", "file": "src/a.py", "symbol": "A", "line": 3},
+            transport=[{"routingKey": "a.b", "headers": ["id"], "detailType": "A"}],
+            provenance={"default": "observed", "fields": {"owner": "overridden"}},
+        )
+    )
+
+    assert event.source.line == 3
+    assert event.transport[0].routingKey == "a.b"
+    assert event.provenance.default == "observed"
+
+
+def test_accepts_any_contact_address_the_catalog_does():
+    event = EventFrontmatter(**_manifest(owner={"team": "t", "contact": "mailto:t@acme.dev"}))
+
+    assert str(event.owner.contact) == "mailto:t@acme.dev"
+
+
+def test_rejects_what_the_catalog_rejects():
+    with pytest.raises(ValidationError):
+        EventFrontmatter(**_manifest(owner={"team": "t", "name": ""}))
+
+    with pytest.raises(ValidationError):
+        EventFrontmatter(**_manifest(source={"line": 0}))
+
+
+def test_defaults_are_not_shared_between_events():
+    first = EventFrontmatter(**_manifest())
+    second = EventFrontmatter(**_manifest())
+
+    first.tags.append("x")
+    first.provenance.fields["owner"] = "declared"
+
+    assert second.tags == []
+    assert second.provenance.fields == {}

@@ -13,6 +13,10 @@ describe('githubDirectoryEnrichment', () => {
     });
     expect(githubDirectoryEnrichment('not a handle')).toBeUndefined();
   });
+
+  it('leaves a plain team name alone, since a GitHub user may hold that name', () => {
+    expect(githubDirectoryEnrichment('payments')).toBeUndefined();
+  });
 });
 
 describe('withDirectoryEnrichment', () => {

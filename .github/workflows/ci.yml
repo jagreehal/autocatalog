@@ -41,7 +41,7 @@ jobs:
           files=$(git diff --name-only "origin/$BASE...HEAD")
           has() { grep -qE "$1" <<< "$files" && echo true || echo false; }
           echo "events=$(has '^(packages/events/|fixtures/|package\.json|pnpm-lock\.yaml|turbo\.json|\.github/)')" >> "$GITHUB_OUTPUT"
-          echo "python=$(has '^(python/|\.github/)')" >> "$GITHUB_OUTPUT"
+          echo "python=$(has '^(python/|scripts/check-schema-sync\.sh|\.github/)')" >> "$GITHUB_OUTPUT"
 
   build:
     runs-on: ubuntu-latest
@@ -56,6 +56,9 @@ jobs:
       # Packages resolve each other through dist/, so build before type-checking.
       - name: Build
         run: pnpm build
+
+      - name: Published JSON Schemas match the code
+        run: pnpm contracts --check
 
       - name: Type-check with TypeScript 7
         run: pnpm typecheck
@@ -87,7 +90,7 @@ jobs:
 
       - name: Publish dry-run (event packages)
         run: |
-          for pkg in autocatalog autocatalog-core autocatalog-cli autocatalog-adapter-zod autocatalog-mcp autocatalog-docs-core autocatalog-docs-astro; do
+          for pkg in autocatalog autocatalog-core autocatalog-cli autocatalog-plugin-zod autocatalog-mcp autocatalog-docs-core autocatalog-docs-astro; do
             echo "=== dry-run: $pkg ==="
             pnpm --filter "$pkg" publish --dry-run --no-git-checks
           done
@@ -136,3 +139,20 @@ jobs:
         run: ruff check .
       - name: Run tests
         run: pytest -q
+
+  # The Python IR mirrors the Zod schema by hand, so a field added to one side
+  # has to fail here until the other side has it.
+  schema-sync:
+    needs: changes
+    if: needs.changes.outputs.events == 'true' || needs.changes.outputs.python == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup-pnpm
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.11'
+      - run: pip install -e python/autocatalog-py
+      - run: pnpm turbo run build --filter=autocatalog-core
+      - name: Compare the TypeScript and Python IR
+        run: bash scripts/check-schema-sync.sh

@@ -35,7 +35,7 @@
     "@aws-sdk/client-glue": "3.1149.0",
     "@eventcatalog/sdk": "^2.29.2",
     "astro": "^7.3.8",
-    "autocatalog-adapter-zod": "workspace:*",
+    "autocatalog-plugin-zod": "workspace:*",
     "autocatalog-agents-core": "workspace:*",
     "autocatalog-core": "workspace:*",
     "autocatalog-docs-astro": "workspace:*",

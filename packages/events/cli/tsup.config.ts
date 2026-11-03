@@ -8,4 +8,6 @@ export default defineConfig({
   sourcemap: true,
   target: 'node24',
   banner: { js: '#!/usr/bin/env node' },
+  // Found at run time when installed, so an events-only project never carries it.
+  external: ['autocatalog-agents-cli'],
 });

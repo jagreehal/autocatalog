@@ -1,0 +1,16 @@
+/* An accent for `theme: "blue"`: the surfaces stay the catalog's own. */
+:root {
+  --primary: oklch(0.45 0.17 255);
+  --primary-foreground: oklch(0.98 0.005 255);
+  --accent: oklch(0.95 0.028 255);
+  --accent-foreground: oklch(0.3 0.085 255);
+  --ring: oklch(0.45 0.17 255);
+}
+
+[data-theme='dark'] {
+  --primary: oklch(0.8 0.119 255);
+  --primary-foreground: oklch(0.2 0.03 255);
+  --accent: oklch(0.32 0.057 255);
+  --accent-foreground: oklch(0.93 0.028 255);
+  --ring: oklch(0.8 0.119 255);
+}

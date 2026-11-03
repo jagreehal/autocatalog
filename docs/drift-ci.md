@@ -33,10 +33,10 @@ jobs:
 
       - run: git fetch origin main
 
-      # Scans origin/main and the PR through the same adapters, then compares.
+      # Scans origin/main and the PR through the same plugins, then compares.
       # Exits 1 on breaking changes and names the consumers they break.
       # Add --allow-code-execution only on a locked-down runner when runtime
-      # adapters (for example Zod) or catalog rules (docs/rules) are required
+      # plugins (for example Zod) or catalog rules (docs/rules) are required
       # and PR code is trusted.
       # Optional: gate on Schema Registry compatibility instead of severity
       # - run: pnpm exec ac drift --base-ref origin/main --root . --format github --compatibility backward

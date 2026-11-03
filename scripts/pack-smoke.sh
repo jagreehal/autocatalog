@@ -13,10 +13,11 @@ PACKAGES=(
   packages/events/autocatalog
   packages/events/cli
   packages/events/core
-  packages/events/adapter-zod
+  packages/events/plugin-zod
   packages/docs/core
   packages/docs/astro
   packages/agents/core
+  packages/agents/cli
 )
 
 echo "==> build and pack"
@@ -49,5 +50,12 @@ done
 echo "==> autocatalog to-eventcatalog"
 npx autocatalog to-eventcatalog "$TMP/eventcatalog" --root "$TMP/repos/payments-service/events"
 test -f "$TMP/eventcatalog/domains/payments/index.mdx"
+
+echo "==> autocatalog agents, reached through the front door"
+npx autocatalog agents --help | grep -q 'ac agents snapshot'
+mkdir -p "$TMP/agents-repo"
+printf '%s' '{"mcpServers":{"linear":{"url":"https://mcp.linear.app/mcp"}}}' > "$TMP/agents-repo/.mcp.json"
+npx autocatalog agents discover --from mcp "$TMP/agents-repo" --root "$TMP/agents-repo"
+test -f "$TMP/agents-repo/mcp-servers/linear-app/autocatalog.json"
 
 echo "pack smoke passed"

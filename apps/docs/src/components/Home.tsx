@@ -246,7 +246,7 @@ const starts: Array<{ mark: string; title: string; detail: ReactNode; slug: stri
   {
     mark: 'TS',
     title: 'TypeScript, with Zod',
-    detail: <>{c('defineEvent()')} from autocatalog-adapter-zod</>,
+    detail: <>{c('defineEvent()')} from autocatalog-plugin-zod</>,
     slug: 'docs/events/zod',
   },
   {

@@ -1,20 +1,28 @@
-import { spawn } from 'node:child_process';
+import { execFile, spawn } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { promisify } from 'node:util';
+import { readSiteConfig, SITE_THEMES, type SiteConfig } from 'autocatalog-docs-core';
 import kleur from 'kleur';
 import {
   cloneRepositories,
-  listRepositoriesByTopic,
+  gitStderr,
+  listRepositories,
   repositoryName,
+  tokenHeader,
   type EnrolledRepository,
 } from '../enrol';
 import { readCompanyIndex } from '../company-index';
 import {
   clonePinned,
+  enrolled,
   enrolledSinceLock,
+  type EnrolmentFlags,
   importEventCatalogSources,
   LOCK_FILE,
+  type LockEntry,
   readLock,
 } from '../federation';
 import {
@@ -23,6 +31,80 @@ import {
   missingEmbeds,
   type BuiltEventCatalog,
 } from './site-eventcatalog';
+
+/** The files of a brand folder that `ac site` reads, each one optional. */
+export interface Brand {
+  logo?: string;
+  logoDark?: string;
+  favicon?: string;
+  css?: string;
+}
+
+const execFileAsync = promisify(execFile);
+
+const LOGO = /\.(?:svg|png|webp|jpe?g|avif)$/;
+
+/** What a company's brand folder holds, read by file name. */
+export async function readBrand(dir: string): Promise<Brand> {
+  const names = await fs.readdir(dir);
+  const file = (found: string | undefined) => (found ? path.join(dir, found) : undefined);
+  const logo = file(names.find((name) => LOGO.test(name) && name.startsWith('logo.')));
+  const logoDark = file(names.find((name) => LOGO.test(name) && name.startsWith('logo-dark.')));
+  const favicon = file(names.find((name) => name === 'favicon.svg'));
+  const css = file(names.find((name) => name === 'theme.css'));
+
+  if (!logo && !logoDark && !favicon && !css) {
+    throw new Error(`${dir} holds no logo, logo-dark, favicon.svg or theme.css`);
+  }
+
+  return {
+    ...(logo && { logo }),
+    ...(logoDark && { logoDark }),
+    ...(favicon && { favicon }),
+    ...(css && { css }),
+  };
+}
+
+/**
+ * What the site would be built from, as a short hash: the commits a lock pins,
+ * or the latest commit of each enrolled repository. A scheduled build compares
+ * this with the last one it deployed and skips a site with nothing new.
+ */
+async function siteFingerprint(
+  pins: LockEntry[] | undefined,
+  flags: EnrolmentFlags,
+  token: string | undefined,
+): Promise<string> {
+  const heads = pins
+    ? pins.map((pin) => JSON.stringify(pin))
+    : await Promise.all(
+        (await enrolled(flags, token)).map(async ({ name, cloneUrl }) => {
+          const { stdout } = await execFileAsync('git', [
+            ...tokenHeader(cloneUrl, token),
+            'ls-remote',
+            cloneUrl,
+            'HEAD',
+          ]).catch((error: Error) => {
+            // git's own words: the error message repeats the command line, token included.
+            throw new Error(`${name}: ${gitStderr(error)}`);
+          });
+
+          return `${name} ${stdout.split('\t')[0]}`;
+        }),
+      );
+
+  return createHash('sha256').update(heads.sort().join('\n')).digest('hex').slice(0, 16);
+}
+
+/**
+ * What the build runs with. An enrolled repository's MDX runs inside it, so the
+ * token that cloned every repository stays behind.
+ */
+export function siteEnvironment(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+  const { GITHUB_TOKEN: _github, GH_TOKEN: _gh, ...rest } = env;
+
+  return rest;
+}
 
 export interface RunSiteOptions {
   /** Aggregation root when nothing is cloned: sibling checkouts, or one repository. */
@@ -51,6 +133,16 @@ export interface RunSiteOptions {
   docsConventions?: string;
   /** A folder of the site's own pages and API routes. */
   pages?: string;
+  /** Whether `root` came from the command line, which then decides what is built. */
+  rootGiven?: boolean;
+  /** A folder holding the company's logo, favicon and theme. */
+  brand?: string;
+  /** An accent colour by name. */
+  theme?: string;
+  /** Print a hash of what is enrolled instead of building. */
+  fingerprint?: boolean;
+  /** One sentence for the home page and llms.txt. */
+  description?: string;
   /** A server-sent events feed the maps' Live mode follows, and the SSE event name its frames use. */
   liveUrl?: string;
   liveEvent?: string;
@@ -67,7 +159,23 @@ export interface RunSiteOptions {
  * serves) the Starlight site that ships inside autocatalog-docs-astro. Nothing
  * is scaffolded: every choice is a flag.
  */
-export async function runSite(opts: RunSiteOptions): Promise<number> {
+export async function runSite(input: RunSiteOptions): Promise<number> {
+  let config: SiteConfig;
+
+  try {
+    config = readSiteConfig(process.cwd());
+  } catch (error) {
+    console.error(kleur.red(error instanceof Error ? error.message : String(error)));
+
+    return 1;
+  }
+
+  const opts = {
+    ...input,
+    topic: input.topic ?? (input.rootGiven ? undefined : config.topic),
+    owner: input.owner ?? (input.rootGiven ? undefined : config.owner),
+  };
+
   const token = process.env.GITHUB_TOKEN ?? process.env.GH_TOKEN;
   let root = path.resolve(opts.root);
   const lockPath = path.resolve(opts.lock ?? LOCK_FILE);
@@ -80,6 +188,20 @@ export async function runSite(opts: RunSiteOptions): Promise<number> {
     console.error(kleur.red(pins.message));
 
     return 1;
+  }
+
+  if (opts.fingerprint) {
+    const printed = await siteFingerprint(pins, opts, token).catch((error: Error) => error);
+
+    if (printed instanceof Error) {
+      console.error(kleur.red(printed.message));
+
+      return 1;
+    }
+
+    console.log(printed);
+
+    return 0;
   }
 
   if (pins) {
@@ -127,14 +249,14 @@ export async function runSite(opts: RunSiteOptions): Promise<number> {
       return 1;
     }
 
-    const enrolled: EnrolledRepository[] = [
+    const repositories: EnrolledRepository[] = [
       ...(opts.topic && opts.owner
-        ? await listRepositoriesByTopic({ owner: opts.owner, topic: opts.topic, token })
+        ? await listRepositories({ owner: opts.owner, topic: opts.topic, token })
         : []),
       ...(opts.repos ?? []).map((url) => ({ name: repositoryName(url), cloneUrl: url })),
     ];
 
-    if (enrolled.length === 0) {
+    if (repositories.length === 0) {
       console.error(
         kleur.red(
           opts.topic
@@ -146,9 +268,9 @@ export async function runSite(opts: RunSiteOptions): Promise<number> {
       return 1;
     }
 
-    console.log(kleur.dim(`Cloning ${enrolled.map((repo) => repo.name).join(', ')}`));
+    console.log(kleur.dim(`Cloning ${repositories.map((repo) => repo.name).join(', ')}`));
 
-    const cloned = await cloneRepositories(enrolled, {
+    const cloned = await cloneRepositories(repositories, {
       into: path.resolve(opts.cache),
       token,
     }).catch((error: Error) => error);
@@ -253,6 +375,32 @@ export async function runSite(opts: RunSiteOptions): Promise<number> {
     return 1;
   }
 
+  const theme = opts.theme ?? config.theme;
+
+  if (theme && !SITE_THEMES.some((name) => name === theme)) {
+    console.error(kleur.red(`--theme: pick one of ${SITE_THEMES.join(', ')}`));
+
+    return 1;
+  }
+
+  const brandDir = opts.brand ?? config.brand;
+
+  if (brandDir && !(await fs.stat(brandDir).catch(() => null))?.isDirectory()) {
+    console.error(kleur.red(`--brand: no folder at ${brandDir}`));
+
+    return 1;
+  }
+
+  const brand = brandDir
+    ? await readBrand(path.resolve(brandDir)).catch((error: Error) => error)
+    : {};
+
+  if (brand instanceof Error) {
+    console.error(kleur.red(`--brand: ${brand.message}`));
+
+    return 1;
+  }
+
   if (opts.eventcatalog && opts.dev) {
     console.error(kleur.red('--eventcatalog draws diagrams at build time; leave out --dev.'));
 
@@ -299,6 +447,17 @@ export async function runSite(opts: RunSiteOptions): Promise<number> {
 
   await fs.mkdir(run, { recursive: true });
 
+  // The bundled public folder is shared by every run, so a favicon gets a copy.
+  const publicDir = brand.favicon ? path.join(run, 'public') : undefined;
+
+  if (publicDir && brand.favicon) {
+    await fs.cp(path.join(siteProject, 'public'), publicDir, { recursive: true });
+    await fs.copyFile(brand.favicon, path.join(publicDir, 'favicon.svg'));
+  }
+
+  const title = opts.title ?? config.title;
+  const description = opts.description ?? config.description;
+
   const code = await new Promise<number>((resolve) => {
     // Run from that root: Astro resolves some of its build output against the
     // working directory, not --root.
@@ -319,7 +478,7 @@ export async function runSite(opts: RunSiteOptions): Promise<number> {
         cwd: run,
         stdio: 'inherit',
         env: {
-          ...process.env,
+          ...siteEnvironment(process.env),
           AUTOCATALOG_DOCS_ROOT: root,
           ...(imported.sources.length && {
             AUTOCATALOG_DOCS_SOURCES: imported.sources.join(path.delimiter),
@@ -328,7 +487,18 @@ export async function runSite(opts: RunSiteOptions): Promise<number> {
           AUTOCATALOG_REACT_FROM: import.meta.resolve('autocatalog-docs-astro'),
           ...(opts.site && { AUTOCATALOG_SITE_URL: opts.site }),
           ...(opts.base && { AUTOCATALOG_SITE_BASE: opts.base }),
-          ...(opts.title && { AUTOCATALOG_DOCS_TITLE: opts.title }),
+          ...(title && { AUTOCATALOG_DOCS_TITLE: title }),
+          ...(description && { AUTOCATALOG_DOCS_DESCRIPTION: description }),
+          ...(theme && { AUTOCATALOG_SITE_THEME: theme }),
+          ...(config.navigation && {
+            AUTOCATALOG_SITE_NAVIGATION: JSON.stringify(config.navigation),
+          }),
+          ...(publicDir && { AUTOCATALOG_SITE_PUBLIC: publicDir }),
+          ...((brand.logo ?? brand.logoDark) && {
+            AUTOCATALOG_SITE_LOGO: path.relative(run, (brand.logo ?? brand.logoDark)!),
+            AUTOCATALOG_SITE_LOGO_DARK: path.relative(run, (brand.logoDark ?? brand.logo)!),
+          }),
+          ...(brand.css && { AUTOCATALOG_SITE_CSS: brand.css }),
           ...(docsSchema && { AUTOCATALOG_DOCS_SCHEMA: docsSchema }),
           ...(docsConventions && { AUTOCATALOG_DOCS_CONVENTIONS: docsConventions }),
           ...(pages && { AUTOCATALOG_DOCS_PAGES: pages }),

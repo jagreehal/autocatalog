@@ -20,7 +20,13 @@ Defines the terms this project uses. Consistent language across docs, code, and 
 
 **Catalog artifact** — The complete producer-owned output of one scan. It contains canonical event folders plus `autocatalog.artifact.json`, a deterministic index of Event paths and complete content hashes with repository revision and working-tree identity. Publication is staged, validated, locked, flushed, and transactionally swapped. Supported readers wait through the rename window and verify the index before returning a Catalog snapshot. Generated stale Events are removed; human-authored narrative is preserved or blocks retirement.
 
-**Discovery Adapter** — An Implementation of the Scanner Interface. It receives a repository discovery context and emits cohesive Discovery Candidates. Installed adapter packages can advertise this Implementation in `package.json`, letting `ac scan` add a language or framework without changing the Scanner Module.
+**Plugin** — What a user installs to teach `ac` a format: an npm package named `autocatalog-plugin-<x>` that declares `autocatalog.plugin`. Inside it is a Discovery Adapter, which is the word the code keeps; "adapter" also covers the built-in scanners and the resource Adapters, which nobody installs. A package from before the rename, `autocatalog-adapter-<x>` declaring `autocatalog.adapter`, is still found, and gives way to its renamed package when both are installed.
+
+**Discovery Adapter** — An Implementation of the Scanner Interface. It receives a repository discovery context and emits cohesive Discovery Candidates. Installed Plugins can advertise this Implementation in `package.json`, letting `ac scan` add a language or framework without changing the Scanner Module.
+
+**Convention source** — A mapping in `contracts/autocatalog.conventions.json` that says how a repository keeps its events in a shape of its own: which files, how a key names an event, and what the files cannot say. It is data, read by the built-in `convention` Discovery Adapter, so it needs no **Runtime discovery consent**, and a company can share one file with `--conventions`. A code Adapter remains the answer for a format a mapping cannot describe.
+
+**Published contract** — A JSON Schema generated from the Zod schema that reads a file, under each core package's `contracts/` and compared in CI. It lets someone write catalog files without our code. It carries a file's shape; checks with no JSON Schema form still run when `ac` reads the file.
 
 **Runtime discovery consent** — Explicit authorization to evaluate a trusted repository through runtime Discovery Adapters such as Zod. Without `--allow-code-execution`, the Scanner runs passive data Adapters only and refuses to silently execute installed code. Authorized Adapters run in a restricted child process; this provides least privilege and failure isolation, not a universal security sandbox.
 
@@ -42,9 +48,13 @@ Defines the terms this project uses. Consistent language across docs, code, and 
 
 **Architecture evidence** — Observations from OTLP spans attached to resources and relationships, including counts, times and sample trace ids. Observed relationships remain reviewable; promotion declares an edge while retaining its evidence. `.autocatalog/resources.json` stores the repository's graph independently of event declarations; it is written only when there are resources, and copied into the catalog artifact as `resources.json` for directory-mode drift. Re-importing one OTLP export counts its spans once. `.autocatalog/config.json` holds the scan identities (service, datastore, database, environment) every rescan applies. On the site, a repository's graph may add evidence to another repository's resources but never redefine or own them; a contradiction quarantines that repository's graph.
 
-**Catalog relationship** — A typed, directed edge between Resource references, with provenance retained on the edge. Current types are `routesTo` (broker exchange → exchange or queue), `deadLettersTo` (queue → dead-letter exchange), `produces` (Service, Agent or Tool → Event), `consumes` (Event → Service, Agent or Tool), `publishes` (Repository → Document), `defines` (Repository → Event or Agent), `relatesTo` (Document → Document), `describes` (Document → any other Resource, declared in `about:`), `usesModel` (Agent → Model), `usesTool` (Agent → Tool), `governedBy` (Agent → Policy), `belongsTo` (Agent, Tool, or Workflow → Domain), `orchestrates` (Workflow → Agent), and `evaluates` (Eval → Agent).
+**Catalog relationship** — A typed, directed edge between Resource references, with provenance retained on the edge. Current types are `routesTo` (broker exchange → exchange or queue), `deadLettersTo` (queue → dead-letter exchange), `produces` (Service, Agent or Tool → Event), `consumes` (Event → Service, Agent or Tool), `publishes` (Repository → Document), `defines` (Repository → Event or Agent), `relatesTo` (Document → Document), `describes` (Document → any other Resource, declared in `about:`), `usesModel` (Agent → Model), `usesTool` (Agent → Tool), `usesServer` (Repository or Agent → MCP server), `exposedBy` (Tool → MCP server), `governedBy` (Agent → Policy), `belongsTo` (Agent, Tool, or Workflow → Domain), `orchestrates` (Workflow → Agent), and `evaluates` (Eval → Agent).
 
-**Agent system** — The operational graph around an AI Agent: Agents, Tools, Models, Workflows, Policies, Evals, and Domains. The Agents catalog remains the deep model for cost, audit, impact, and runtime drift; its resource Adapter projects shared identity and relationships into graph-v1.
+**Agent system** — The operational graph around an AI Agent: Agents, Tools, MCP servers, Models, Workflows, Policies, Evals, and Domains. The Agents catalog remains the deep model for cost, audit, impact, and runtime drift; its resource Adapter projects shared identity and relationships into graph-v1.
+
+**MCP server** — A server a company builds or uses, in `mcp-servers/<id>/`. Its id comes from its endpoint (URL, then package, then the configured name), so repositories that name it differently share one Resource; composition merges their owners, sources and versions instead of treating them as a conflict. It records the address and package only. `origin` says `built`, `third-party` or `unknown`. `ac agents discover --from mcp` reads committed client configs, `server.json` and SDK code, and never starts or connects to a server. `ac mcp-sweep` runs it across a GitHub owner into one catalog, recording each repository in `used_by`. The site lists every server at `/mcp-servers`.
+
+**MCP snapshot** — What a server offered when last asked, in `mcp-servers/<id>/snapshots/<connection>.json`: tool names, descriptions, schemas and annotations, nothing else it sent. Keyed by connection because two identities can see different tools. `ac agents snapshot` writes it from the live server or from Executor. Each change also lands in `changes.json` beside it, as dated facts with no text the server wrote, so the site can publish them. Comparing two gives `breaking`, `review` or `info`: a new tool and a changed description are `review`, since each changes what an agent can do or is told. Tool input reads the opposite way to an Event, because the agent writes it and the server reads it.
 
 **Catalog shell** — The central Starlight surface that discovers each enrolled repository's conventional `docs/`, `events/`, and Agent-system directories, composes their Adapter fragments, and publishes one browsable `/catalog` plus machine-readable `/catalog.json`. It does not flatten the deeper Events or Agents models; it navigates their shared Resource graph.
 
@@ -86,9 +96,9 @@ Defines the terms this project uses. Consistent language across docs, code, and 
 
 **autocatalog-docs-astro** — The one site. A Starlight plugin that reads every enrolled repository's `docs/`, `events/` and Agent-system directories and publishes document pages, event pages (`/events/<repository>/<domain>/<id>/`, namespaced so two repositories can publish the same id, with `schema.json` beside each), inferred service pages, `/fields`, `/catalog`, `/catalog.json`, Markdown twins and `llms.txt`. It also ships the ready-made site project `ac site` builds, configured entirely by environment variables, so nobody scaffolds a site.
 
-**autocatalog-cli** — The `ac` binary. Discovers adapter plugins from `node_modules` (any package with `autocatalog-adapter-` prefix and an `autocatalog.adapter` field in `package.json`). Commands: validate, scan (built-in and installed Discovery Adapters), drift (catalog directory or Git-ref baseline), changelog, health, from-eventcatalog, from-asyncapi, init, import, dev, build, eject, plus dynamically registered adapter commands.
+**autocatalog-cli** — The `ac` binary. Discovers Plugins from `node_modules` (any package with the `autocatalog-plugin-` prefix and an `autocatalog.plugin` field in `package.json`). Commands: validate, scan (built-in and installed Discovery Adapters), drift (catalog directory or Git-ref baseline), changelog, health, from-eventcatalog, from-asyncapi, init, import, dev, build, eject, plus dynamically registered plugin commands.
 
-**autocatalog-adapter-zod** — Converts Zod schemas to JSON Schema `AdapterEvent`s. Provides `defineEvent()` for metadata in schema. Handles two input shapes: Compact (`{name, description, schema, example}`) and Explicit (`{id, version, name, summary, schema, ...}`). Writes via core `writeEventFolder`.
+**autocatalog-plugin-zod** — Converts Zod schemas to JSON Schema `AdapterEvent`s. Provides `defineEvent()` for metadata in schema. Handles two input shapes: Compact (`{name, description, schema, example}`) and Explicit (`{id, version, name, summary, schema, ...}`). Writes via core `writeEventFolder`.
 
 **autocatalog-mcp** — MCP server over stdio. Uses the strict catalog snapshot and projection from core. Fourteen tools, including impact, compatibility, `define` for the glossary and entities, a runtime investigation handoff to autotel-mcp, and `show_map`, an MCP App that draws the catalog, a flow, a design or a data product in the conversation from the same diagram projection the site draws. Ships compiled stdio and server entry points.
 
@@ -128,7 +138,7 @@ Defines the terms this project uses. Consistent language across docs, code, and 
 
 **createDocsResourceGraph(docs, manifest): ResourceGraph** — The Docs Adapter. Compiles validated Documents, inferred Repositories, `publishes` edges, and declared `relatesTo` edges into the shared graph contract.
 
-**createAgentsResourceGraph(catalog): ResourceGraph** — The Agents Adapter. Rejects load or reference failures, then deterministically compiles all seven Agent-system kinds and their evidence-bearing relationships. Reference fields become graph edges; workflow conditions remain local attributes until relationship identity can represent qualifiers.
+**createAgentsResourceGraph(catalog): ResourceGraph** — The Agents Adapter. Rejects load or reference failures, then deterministically compiles all eight Agent-system kinds and their evidence-bearing relationships. Reference fields become graph edges; workflow conditions remain local attributes until relationship identity can represent qualifiers.
 
 **buildGraph(events): GraphData** — Builds a node and edge graph from loaded events. Extracts services from `producers` and `consumers` fields. Produces nodes (events + services) and edges (produces/consumes). Exported from core.
 
@@ -178,7 +188,7 @@ Repository-owned Markdown
 Agent manifests and framework source
   → conventions or discovery create the deep Agents Catalog
     → validation rejects broken Model, Tool, Policy, Domain, Workflow, and Eval references
-      → Agents Adapter emits seven resource kinds and typed relationships
+      → Agents Adapter emits eight resource kinds and typed relationships
         → Catalog shell composes graph-v1 through filesystem Repository identity
         → audit, cost, impact, and drift retain the deep Agents model
 ```

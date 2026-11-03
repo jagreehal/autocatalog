@@ -23,8 +23,8 @@ const profile = ownerProfile(owner, (await docsCatalog()).model.people);
 
 <StarlightPage
   frontmatter={{
-    title: owner.name,
-    description: `Everything the catalog says ${owner.name} owns.`,
+    title: profile?.name ?? owner.name,
+    description: `Everything the catalog says ${profile?.name ?? owner.name} owns.`,
     tableOfContents: false,
   }}
 >

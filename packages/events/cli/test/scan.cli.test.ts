@@ -22,6 +22,32 @@ describe('runtime evidence', () => {
     await fs.rm(out, { recursive: true, force: true });
   });
 
+  it('reads a shared conventions file named on the command line', async () => {
+    const repo = await fs.mkdtemp(path.join(os.tmpdir(), 'ac-shared-'));
+    const shared = path.join(repo, 'company.conventions.json');
+
+    await fs.writeFile(
+      shared,
+      JSON.stringify({
+        sources: [
+          { kind: 'event', files: ['events.json'], match: ['v{version}.{id}'], domain: 'orders' },
+        ],
+      }),
+    );
+    await fs.writeFile(
+      path.join(repo, 'events.json'),
+      JSON.stringify({ 'v1.order.placed': { type: 'object', properties: {} } }),
+    );
+
+    const code = await runScan({ root: repo, out, conventions: shared, quiet: true });
+
+    await expect(
+      fs.stat(path.join(out, 'orders/order.placed/autocatalog.json')),
+    ).resolves.toBeDefined();
+    await fs.rm(repo, { recursive: true, force: true });
+    expect(code).toBe(0);
+  });
+
   it('joins what the runtime did onto what the code says', async () => {
     const code = await runScan({
       root: demoRepo,

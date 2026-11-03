@@ -21,7 +21,7 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
-    "./contracts/graph-v1.schema.json": "./contracts/graph-v1.schema.json"
+    "./contracts/*": "./contracts/*"
   },
   "files": [
     "dist",

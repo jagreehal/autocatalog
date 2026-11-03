@@ -4,6 +4,7 @@ import path from 'node:path';
 import kleur from 'kleur';
 import {
   createAgentsResourceGraph,
+  publishesAgentCatalog,
   loadCatalog as loadAgentsCatalog,
 } from 'autocatalog-agents-core';
 import {
@@ -27,6 +28,7 @@ import {
   readFlows,
   syncFrontmatterContract,
 } from 'autocatalog-docs-core';
+import { githubAnnotation } from './annotation';
 
 /** `, 2 entities`, or nothing for none. */
 const counted = (n: number, one: string, many: string) =>
@@ -49,6 +51,8 @@ export interface DocsCommandOptions {
   manifest?: string;
   repo?: string;
   quiet?: boolean;
+  /** `github` puts each failure on its file in a pull request. */
+  format?: 'text' | 'github';
 }
 
 /**
@@ -69,7 +73,7 @@ async function checkoutResources(root: string, repo?: string): Promise<CatalogRe
 
     resources.push(...(graph?.resources ?? []));
 
-    if (existsSync(path.join(dir, 'agents'))) {
+    if (publishesAgentCatalog(dir)) {
       const graph = await loadAgentsCatalog(dir)
         .then((catalog) => createAgentsResourceGraph(catalog, { repository: name }))
         .catch(() => undefined);
@@ -129,7 +133,14 @@ export async function runDocsCheck(opts: DocsCommandOptions): Promise<number> {
   ].join('\n');
 
   if (failures.length > 0) {
-    for (const failure of failures) console.error(`${kleur.red('✗')} ${failure}`);
+    for (const failure of failures) {
+      console.error(
+        opts.format === 'github'
+          ? githubAnnotation(failure, opts.root)
+          : `${kleur.red('✗')} ${failure}`,
+      );
+    }
+
     console.error(kleur.dim(contract));
 
     return 1;

@@ -200,6 +200,7 @@ const TYPES = new Map<string, DesignResource['type']>([
   ['command', 'command'],
   ['domain', 'domain'],
   ['tool', 'service'],
+  ['mcp-server', 'service'],
   ['channel', 'channel'],
   ['table', 'container'],
   ['collection', 'container'],

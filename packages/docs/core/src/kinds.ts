@@ -1,4 +1,11 @@
-import { type JsonObject, type JsonValue, isJsonObject, jsonObjectSchema } from 'autocatalog-core';
+import {
+  conventionSourcesSchema,
+  CONVENTIONS_PATH,
+  type JsonObject,
+  type JsonValue,
+  isJsonObject,
+  jsonObjectSchema,
+} from 'autocatalog-core';
 import { z } from 'zod';
 import {
   declaredFrontmatterFields,
@@ -13,7 +20,7 @@ import type { Doc } from './read-docs';
  * contract and found by the same rules: at the aggregation root, or the one an
  * enrolled repository (usually the handbook) publishes.
  */
-export const DOCS_CONVENTIONS_PATH = 'contracts/autocatalog.conventions.json';
+export const DOCS_CONVENTIONS_PATH = CONVENTIONS_PATH;
 
 /** One sort of document the organisation keeps, such as an ADR or a runbook. */
 export interface DocKind {
@@ -138,6 +145,7 @@ const kindFields = z.strictObject({
 /** The conventions file as an organisation writes it. */
 export const docsConventionsSchema = z.strictObject({
   $schema: z.string().optional(),
+  sources: conventionSourcesSchema.optional(),
   kinds: z
     .record(
       z.string().regex(/^[a-z][a-z0-9-]*$/),

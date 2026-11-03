@@ -1,31 +1,59 @@
-import { mkdir, writeFile } from 'node:fs/promises';
-import { join, resolve } from 'node:path';
+import { mkdir, readdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
+import { homedir } from 'node:os';
+import { join, relative, resolve } from 'node:path';
 import kleur from 'kleur';
 import {
   AUTOCATALOG_ENTITY_FILE,
+  DIR_BY_KIND,
   discoverFramework,
+  discoverMcpServers,
+  entitiesOf,
+  HOME_PREFIX,
+  loadCatalog,
+  MCP_ADAPTER,
+  MCP_SNAPSHOT_ADAPTER,
+  mcpCredentialsAtRisk,
+  mcpServerDraft,
+  mcpServerSightings,
+  mcpSnapshotPath,
+  mcpToolDraft,
+  mcpToolId,
+  parseStoredMcpServer,
+  refreshMcpServer,
   type DiscoveredAgent,
+  type DiscoveredMcpServer,
   type DiscoveredModel,
   type DiscoveredTool,
   type DiscoveryAdapter,
   type DiscoveryResult,
 } from 'autocatalog-agents-core';
 
+type DiscoverSource = DiscoveryAdapter | typeof MCP_ADAPTER | typeof MCP_SNAPSHOT_ADAPTER;
+
 type DiscoverArgs = {
-  adapter: DiscoveryAdapter;
+  adapter: DiscoverSource;
   source: string;
   root: string;
   dryRun: boolean;
+  home: boolean;
+  prune: boolean;
+  perRepository: boolean;
+  internal: string[];
 };
 
 const usage = (): string =>
-  'usage: ac-agents discover --from pydantic-ai|ai-sdk <source-dir> [--root <catalog>] [--dry-run]\n';
+  'usage: ac-agents discover --from pydantic-ai|ai-sdk|mcp|mcp-snapshot [<source-dir>] [--root <catalog>] [--dry-run]\n' +
+  '       with mcp: [--home] [--prune] [--per-repository] [--internal <host-or-@scope>,...]\n';
 
 const parseArgs = (args: string[]): DiscoverArgs | null => {
-  let adapter: DiscoveryAdapter | null = null;
+  let adapter: DiscoverSource | null = null;
   let source: string | null = null;
   let root = '.';
   let dryRun = false;
+  let home = false;
+  let prune = false;
+  let perRepository = false;
+  let internal: string[] = [];
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i]!;
@@ -33,12 +61,26 @@ const parseArgs = (args: string[]): DiscoverArgs | null => {
     if (arg === '--from') {
       const value = args[++i];
 
-      if (value === 'pydantic-ai' || value === 'ai-sdk') adapter = value;
-      else return null;
+      if (
+        value === 'pydantic-ai' ||
+        value === 'ai-sdk' ||
+        value === MCP_ADAPTER ||
+        value === MCP_SNAPSHOT_ADAPTER
+      ) {
+        adapter = value;
+      } else return null;
     } else if (arg === '--root') {
       root = args[++i] ?? '.';
     } else if (arg === '--dry-run') {
       dryRun = true;
+    } else if (arg === '--home') {
+      home = true;
+    } else if (arg === '--prune') {
+      prune = true;
+    } else if (arg === '--per-repository') {
+      perRepository = true;
+    } else if (arg === '--internal') {
+      internal = (args[++i] ?? '').split(',').filter(Boolean);
     } else if (!source) {
       source = arg;
     } else {
@@ -46,9 +88,9 @@ const parseArgs = (args: string[]): DiscoverArgs | null => {
     }
   }
 
-  if (!adapter || !source) return null;
+  if (!adapter) return null;
 
-  return { adapter, source, root, dryRun };
+  return { adapter, source: source ?? '.', root, dryRun, home, prune, perRepository, internal };
 };
 
 const discovery = (
@@ -148,6 +190,238 @@ const writeDrafts = async (catalogRoot: string, result: DiscoveryResult): Promis
   return written;
 };
 
+type ServerWrite = 'new' | 'updated' | 'unchanged' | 'kept' | 'moved';
+
+const serversDir = (catalogRoot: string): string => join(catalogRoot, DIR_BY_KIND['mcp-server']);
+
+type StaleServer = { id: string; sightings: string[] };
+
+/**
+ * Manifests a scan could have seen and did not. A scan of a repository says
+ * nothing about servers found in someone's home folder, so those stay.
+ */
+const staleServers = async (
+  catalogRoot: string,
+  seen: Set<string>,
+  home: boolean,
+): Promise<StaleServer[]> => {
+  const entries = await readdir(serversDir(catalogRoot), { withFileTypes: true }).catch(() => []);
+  const stale: StaleServer[] = [];
+
+  for (const entry of entries) {
+    if (!entry.isDirectory() || seen.has(entry.name)) continue;
+
+    const path = join(serversDir(catalogRoot), entry.name, AUTOCATALOG_ENTITY_FILE);
+    const text = await readFile(path, 'utf8').catch(() => null);
+    const sightings = text ? mcpServerSightings(parseStoredMcpServer(text)) : [];
+    const inScope = home || sightings.every((sighting) => !sighting.startsWith(HOME_PREFIX));
+
+    if (sightings.length > 0 && inScope) stale.push({ id: entry.name, sightings });
+  }
+
+  return stale;
+};
+
+/** A stale entry whose config now names a new address is that server, moved. */
+const movedTo = (stale: StaleServer, servers: DiscoveredMcpServer[]): string | undefined =>
+  servers.find(({ sources }) =>
+    sources.some(({ file, symbol }) => stale.sightings.includes(`${file}#${symbol ?? ''}`)),
+  )?.id;
+
+/** Write one server's manifest, keeping what a person has already decided in it. */
+const writeServer = async (
+  catalogRoot: string,
+  server: DiscoveredMcpServer,
+): Promise<ServerWrite> => {
+  const dir = join(catalogRoot, DIR_BY_KIND['mcp-server'], server.id);
+  const path = join(dir, AUTOCATALOG_ENTITY_FILE);
+  const before = await readFile(path, 'utf8').catch(() => null);
+
+  if (before === null) {
+    await mkdir(dir, { recursive: true });
+    await writeFile(path, jsonFile(mcpServerDraft(server)), 'utf8');
+
+    return 'new';
+  }
+
+  const existing = parseStoredMcpServer(before);
+
+  if (existing.discovery && mcpCredentialsAtRisk(existing, server)) {
+    process.stdout.write(
+      `  ${kleur.yellow('warning')} ${server.id} changed endpoint, so its snapshot credentials were removed. Check the new address, then add them back.\n`,
+    );
+  }
+
+  const after = jsonFile(refreshMcpServer(existing, server));
+
+  if (!existing.discovery) return 'kept';
+
+  if (after === before) return 'unchanged';
+
+  await writeFile(path, after, 'utf8');
+
+  return 'updated';
+};
+
+const endpointOf = (server: DiscoveredMcpServer): string =>
+  server.url ??
+  (server.package
+    ? `${server.package.registry}:${server.package.name}${server.package.version ? `@${server.package.version}` : ''}`
+    : (server.command ?? (server.origin === 'built' ? 'in code' : 'local command')));
+
+const runMcpDiscover = async (parsed: DiscoverArgs): Promise<number> => {
+  const sourceRoot = resolve(parsed.source);
+  const catalogRoot = resolve(parsed.root);
+
+  const result = await discoverMcpServers(sourceRoot, {
+    home: parsed.home ? homedir() : undefined,
+    internal: parsed.internal,
+    perRepository: parsed.perRepository,
+  });
+
+  process.stdout.write(`${kleur.bold('discover:')} mcp ${kleur.dim(sourceRoot)}\n`);
+  process.stdout.write(`  client configs ${result.files.length}\n`);
+  process.stdout.write(`  servers ${result.servers.length}\n`);
+
+  for (const warning of result.warnings) {
+    process.stdout.write(`  ${kleur.yellow('warning')} ${warning}\n`);
+  }
+
+  if (result.servers.length === 0) {
+    process.stdout.write(
+      `  ${kleur.dim('nothing found: read client configs, server.json and MCP SDK code')}\n`,
+    );
+  }
+
+  const counts: Record<ServerWrite, number> = {
+    new: 0,
+    updated: 0,
+    unchanged: 0,
+    kept: 0,
+    moved: 0,
+  };
+
+  const onDisk = new Set(
+    (await readdir(serversDir(catalogRoot), { withFileTypes: true }).catch(() => []))
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name),
+  );
+
+  const stale = await staleServers(
+    catalogRoot,
+    new Set(result.servers.map(({ id }) => id)),
+    parsed.home,
+  );
+
+  const moves = new Map<string, string>();
+
+  for (const entry of stale) {
+    const target = movedTo(entry, result.servers);
+
+    if (target && !onDisk.has(target) && !moves.has(target)) moves.set(target, entry.id);
+  }
+
+  for (const server of result.servers) {
+    const files = [...new Set(server.sources.map(({ file }) => file))].join(', ');
+    const line = `${server.id} ${kleur.dim(`${endpointOf(server)} (${files})`)}`;
+
+    if (parsed.dryRun) {
+      process.stdout.write(`  ${kleur.cyan('mcp-server')} ${line}\n`);
+      continue;
+    }
+
+    try {
+      const from = moves.get(server.id);
+
+      if (from) {
+        await rename(join(serversDir(catalogRoot), from), join(serversDir(catalogRoot), server.id));
+      }
+
+      const outcome = from ? 'moved' : await writeServer(catalogRoot, server);
+
+      if (from) await writeServer(catalogRoot, server);
+
+      counts[outcome]++;
+      process.stdout.write(
+        `  ${kleur.green(outcome)} ${line}${from ? kleur.dim(` from ${from}`) : ''}\n`,
+      );
+    } catch (cause) {
+      process.stdout.write(
+        `  ${kleur.yellow('skip')} ${server.id} ${kleur.dim(cause instanceof Error ? cause.message : String(cause))}\n`,
+      );
+    }
+  }
+
+  const moved = new Set(moves.values());
+
+  for (const { id } of stale.filter(({ id }) => !moved.has(id))) {
+    if (parsed.prune && !parsed.dryRun) {
+      await rm(join(serversDir(catalogRoot), id), { recursive: true, force: true });
+      process.stdout.write(`  ${kleur.yellow('removed')} ${id}\n`);
+    } else {
+      process.stdout.write(
+        `  ${kleur.yellow('gone')} ${id} ${kleur.dim('no config names it; --prune removes it')}\n`,
+      );
+    }
+  }
+
+  if (moves.size > 0) {
+    process.stdout.write(
+      `\nA moved server has a new id. ac agents validate names anything still using the old one.\n`,
+    );
+  }
+
+  if (counts.new > 0) {
+    process.stdout.write(
+      `\nNext: set owner and origin in ${DIR_BY_KIND['mcp-server']}/*/${AUTOCATALOG_ENTITY_FILE}, then run ac agents audit.\n`,
+    );
+  }
+
+  return 0;
+};
+
+/** Draft a Tool entry for each tool a snapshot holds, leaving existing entries alone. */
+const runSnapshotDiscover = async (parsed: DiscoverArgs): Promise<number> => {
+  const catalogRoot = resolve(parsed.root);
+  const cat = await loadCatalog(catalogRoot);
+
+  process.stdout.write(`${kleur.bold('discover:')} mcp-snapshot ${kleur.dim(catalogRoot)}\n`);
+
+  const known = new Set(cat.entities.get('tool')?.keys());
+  let written = 0;
+
+  for (const server of entitiesOf(cat, 'mcp-server')) {
+    for (const snapshot of cat.snapshots.get(server.id) ?? []) {
+      const file = relative(
+        catalogRoot,
+        mcpSnapshotPath(catalogRoot, server.id, snapshot.connection),
+      );
+
+      for (const tool of snapshot.tools) {
+        const id = mcpToolId(server.id, tool.name);
+
+        if (known.has(id)) continue;
+
+        known.add(id);
+        written += 1;
+        process.stdout.write(`  ${kleur.green('new')} tool/${id}\n`);
+
+        if (parsed.dryRun) continue;
+
+        const dir = join(catalogRoot, DIR_BY_KIND.tool, id);
+        const draft = mcpToolDraft(server, tool, { file, line: 1, symbol: tool.name });
+
+        await mkdir(dir, { recursive: true });
+        await writeFile(join(dir, AUTOCATALOG_ENTITY_FILE), jsonFile(draft), 'utf8');
+      }
+    }
+  }
+
+  process.stdout.write(`  tools ${written}\n`);
+
+  return 0;
+};
+
 export const runDiscover = async (args: string[]): Promise<number> => {
   const parsed = parseArgs(args);
 
@@ -156,6 +430,10 @@ export const runDiscover = async (args: string[]): Promise<number> => {
 
     return 2;
   }
+
+  if (parsed.adapter === MCP_ADAPTER) return runMcpDiscover(parsed);
+
+  if (parsed.adapter === MCP_SNAPSHOT_ADAPTER) return runSnapshotDiscover(parsed);
 
   const sourceRoot = resolve(parsed.source);
   const catalogRoot = resolve(parsed.root);

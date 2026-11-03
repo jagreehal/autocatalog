@@ -15,7 +15,8 @@ export function githubDirectoryEnrichment(
 ): DirectoryEnrichment | undefined {
   if (!handle) return undefined;
 
-  const trimmed = handle.trim().replace(/^@/, '');
+  const named = handle.trim();
+  const trimmed = named.replace(/^@/, '');
 
   if (!trimmed) return undefined;
 
@@ -28,6 +29,9 @@ export function githubDirectoryEnrichment(
       profileUrl: `https://github.com/orgs/${team[1]}/teams/${team[2]}`,
     };
   }
+
+  // Only `@name` is a handle. A plain `payments` is a team, not GitHub's user of that name.
+  if (!named.startsWith('@')) return undefined;
 
   if (!/^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$/.test(trimmed)) return undefined;
 

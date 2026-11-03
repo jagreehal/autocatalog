@@ -56,7 +56,14 @@ function catalogOf(
 
   for (const entity of input) byKind.get(entity.kind)?.set(entity.id, entity);
 
-  return { root: '/repo', entities: byKind, meta: new Map(), issues: [] };
+  return {
+    root: '/repo',
+    entities: byKind,
+    meta: new Map(),
+    snapshots: new Map(),
+    changes: new Map(),
+    issues: [],
+  };
 }
 
 describe('resolving an event reference', () => {

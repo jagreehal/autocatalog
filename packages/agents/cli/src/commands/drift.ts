@@ -10,6 +10,8 @@ const KIND_COLOR: Record<DriftKind, (s: string) => string> = {
   'undeclared-model': kleur.yellow,
   'model-mismatch': kleur.red,
   'unused-declared-tool': kleur.dim,
+  'unknown-mcp-server': kleur.red,
+  'tool-not-in-snapshot': kleur.yellow,
 };
 
 export const runDrift = async (args: string[]): Promise<number> => {

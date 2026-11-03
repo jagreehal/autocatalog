@@ -1,0 +1,16 @@
+/* An accent for `theme: "purple"`: the surfaces stay the catalog's own. */
+:root {
+  --primary: oklch(0.45 0.2 300);
+  --primary-foreground: oklch(0.98 0.005 300);
+  --accent: oklch(0.95 0.033 300);
+  --accent-foreground: oklch(0.3 0.1 300);
+  --ring: oklch(0.45 0.2 300);
+}
+
+[data-theme='dark'] {
+  --primary: oklch(0.8 0.14 300);
+  --primary-foreground: oklch(0.2 0.03 300);
+  --accent: oklch(0.32 0.067 300);
+  --accent-foreground: oklch(0.93 0.033 300);
+  --ring: oklch(0.8 0.14 300);
+}

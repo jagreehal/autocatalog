@@ -10,6 +10,7 @@ import { SchemaTree } from '../src/ui/components/SchemaTree';
 import { schemaTree } from '../src/ui/lib/schema-tree';
 import { PageTitleChrome } from '../src/ui/overrides/PageTitleChrome';
 import { FieldsPage, type FieldRow } from '../src/ui/pages/FieldsPage';
+import { HomePage } from '../src/ui/pages/HomePage';
 import { KindIndexPage } from '../src/ui/pages/KindIndexPage';
 
 afterEach(() => {
@@ -338,5 +339,35 @@ describe('KindIndexPage behaviour', () => {
     fireEvent.click(screen.getByRole('radio', { name: 'All 2' }));
 
     expect(status()).toBe('2 documents');
+  });
+});
+
+describe('the home page', () => {
+  const doc = (n: number) => ({
+    id: `payments/doc-${n}`,
+    repo: 'payments',
+    title: `Document ${n}`,
+    owner: 'Payments',
+    updated: null,
+    tags: [],
+  });
+
+  it('keeps every document of a repository within reach', () => {
+    const docs = Array.from({ length: 8 }, (_, n) => doc(n + 1));
+
+    render(
+      createElement(HomePage, {
+        stats: [],
+        explore: [],
+        tags: [],
+        repos: [{ name: 'payments', label: 'Payments', href: '/payments/doc-1', docs }],
+      }),
+    );
+
+    for (const { title } of docs) expect(screen.getByText(title)).toBeTruthy();
+    expect(screen.getByText('All 8 documents')).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Payments' }).getAttribute('href')).toBe(
+      '/payments/doc-1',
+    );
   });
 });

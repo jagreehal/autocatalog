@@ -22,7 +22,10 @@ export function lastChanged(root: string, file: string): string | null {
   const target = isNestedCheckout ? rest.join('/') : file;
 
   try {
-    const out = execFileSync('git', ['log', '-1', '--format=%cI', '--', target], {
+    // A site reads repositories it does not trust: their config runs nothing here.
+    const safe = ['-c', 'log.showSignature=false', '-c', 'safe.bareRepository=explicit'];
+
+    const out = execFileSync('git', [...safe, 'log', '-1', '--format=%cI', '--', target], {
       cwd,
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'ignore'],

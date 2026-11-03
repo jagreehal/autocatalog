@@ -43,5 +43,10 @@ export function day(iso: string | null | undefined): string | null {
  * every one of them the day a site is deployed under a path.
  */
 export function docHref(id: string): string {
-  return `${import.meta.env.BASE_URL.replace(/\/$/, '')}/${id}`;
+  return `${import.meta.env.BASE_URL.replace(/\/$/, '')}/${docPage(id)}`;
+}
+
+/** Where a document is served: an index document at its folder. */
+export function docPage(id: string): string {
+  return id.replace(/\/index$/, '');
 }

@@ -1,12 +1,12 @@
 {
-  "name": "autocatalog-adapter-zod",
+  "name": "autocatalog-plugin-zod",
   "version": "0.2.5",
   "description": "defineEvent() and Zod to JSON Schema extraction, so a Zod schema is the catalog entry.",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/jagreehal/autocatalog.git",
-    "directory": "packages/events/adapter-zod"
+    "directory": "packages/events/plugin-zod"
   },
   "homepage": "https://jagreehal.github.io/autocatalog",
   "bugs": {
@@ -28,7 +28,7 @@
     "dist"
   ],
   "autocatalog": {
-    "adapter": {
+    "plugin": {
       "command": "from-zod",
       "description": "Generate events from a Zod TS module",
       "entry": "./dist/bin.js",

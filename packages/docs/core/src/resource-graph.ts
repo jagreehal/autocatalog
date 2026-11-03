@@ -31,7 +31,11 @@ export function documentRef(id: string): ResourceRef<'document'> {
 }
 
 function documentUrl(id: string): string {
-  return `/${id.split('/').map(encodeURIComponent).join('/')}`;
+  return `/${id
+    .replace(/\/index$/, '')
+    .split('/')
+    .map(encodeURIComponent)
+    .join('/')}`;
 }
 
 export interface CreateDocsResourceGraphOptions {

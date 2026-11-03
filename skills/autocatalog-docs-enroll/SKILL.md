@@ -20,7 +20,7 @@ If the working directory contains application code, it is A. If it is a fresh or
 mkdir -p docs
 ```
 
-`docs/` at the repository root. Nothing else is configuration: the shape is detected from disk.
+`docs/` at the repository root. Nothing else is configuration: the shape is detected from disk. `docs/meta.json` is optional: `label`, `description`, `owner` for every page that names none, and `sidebar` to order folders. Add the `actions/check` workflow from `docs/docs-convention.md` so a bad document fails its pull request.
 
 In a monorepo, give each package that owns code its own `docs/`, beside its `package.json`. The site publishes each package under its folder name, as if it were its own repository, and reads CODEOWNERS from the monorepo root. Keep workspace-wide documents in the root's `docs/`.
 

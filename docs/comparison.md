@@ -82,7 +82,7 @@ EventCatalog.
 ## Where autocatalog goes further
 
 **A gate on the pull request.** `ac drift` scans your default branch and the
-branch under review with the same adapters, compares the two, and names the
+branch under review with the same plugins, compares the two, and names the
 consumers each breaking change reaches. Teams in other repositories declare what
 they read, and the check finds them through the company site.
 

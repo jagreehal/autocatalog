@@ -24,7 +24,7 @@ import {
   cloneRepositories,
   gitStderr,
   ignoredDirectory,
-  listRepositoriesByTopic,
+  listRepositories,
   repositoryName,
   tokenHeader,
   type EnrolledRepository,
@@ -156,7 +156,7 @@ export async function enrolled(
 
   return [
     ...(flags.topic && flags.owner
-      ? await listRepositoriesByTopic({ owner: flags.owner, topic: flags.topic, token })
+      ? await listRepositories({ owner: flags.owner, topic: flags.topic, token })
       : []),
     ...(flags.repos ?? []).map((url) => ({ name: repositoryName(url), cloneUrl: url })),
   ];

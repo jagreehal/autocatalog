@@ -48,6 +48,8 @@ export interface DiscoveryContext {
   exclude?: string[];
   signal?: AbortSignal;
   limits?: DiscoveryLimits;
+  /** A shared conventions file, read in place of the repository's own. */
+  conventions?: string;
 }
 
 export interface DiscoveryLimits {

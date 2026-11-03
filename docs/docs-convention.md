@@ -61,6 +61,31 @@ it is about are listed under the document, and `/catalog.json` carries each as a
 by, with the near miss it probably meant; a kind the repository defines none of
 is left to the composed site, which warns and leaves the edge out.
 
+## A repository describes itself
+
+`docs/meta.json` is where a team names its documents, so nobody edits the site
+to join it. Every field is optional:
+
+```json
+{
+  "$schema": "https://unpkg.com/autocatalog-docs-core/contracts/docs-meta.schema.json",
+  "label": "Payments",
+  "description": "How the payments platform works, from batch submission to payout.",
+  "owner": "payments",
+  "sidebar": [
+    { "directory": "guide", "label": "Start here" },
+    { "directory": "runbooks", "label": "Runbooks", "collapsed": true }
+  ]
+}
+```
+
+`label` and `description` are what readers see in the navigation and on the home
+page. `owner` owns every document here that names none of its own, so one line
+covers a repository and a page can still name another team. `sidebar` orders the
+folders of `docs/`; a folder it leaves out still appears, last and collapsed, so
+a new section is never hidden. `ac docs check` fails a file that does not parse
+or a `directory` that is not a folder directly under `docs/`.
+
 ## Decisions, runbooks and incidents
 
 Architecture decision records, runbooks and incident write-ups live in the
@@ -128,7 +153,8 @@ kind's schema together, names the kind in each failure, and checks that every
 ### The conventions file
 
 An organisation changes the kinds with one file,
-`contracts/autocatalog.conventions.json`, published and found the way the
+`contracts/autocatalog.conventions.json`, which also says
+[where a team keeps its events](/docs/plugins#you-may-not-need-one), published and found the way the
 frontmatter contract is: at the aggregation root, or the one an enrolled
 repository (usually the handbook) publishes. Two repositories publishing
 different copies is an error that names both files.
@@ -182,6 +208,29 @@ the fields it names, and a field it names replaces the built-in one whole,
 `schema` included. A kind's path must not be an enrolled repository's name or
 a page the site already publishes, such as `catalog`; the build says which kind
 to change.
+
+## Check every pull request
+
+A document that breaks the contract leaves its repository's documents off the
+site, so catch it in the pull request. This is the whole workflow:
+
+```yaml
+name: catalog
+on: pull_request
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: jagreehal/autocatalog/actions/check@v1
+```
+
+It checks the documents, source contracts and events the repository publishes,
+and skips what it does not have. On a pull request it also compares against the
+base branch, so a change that deletes a contract fails even when nothing is left
+to check. Document and contract failures mark the files they name. A repository with
+rules passes `allow-code-execution: true`, which runs them, so leave it off for
+pull requests from forks. On another CI, run
+`npx autocatalog check --base-ref origin/main`.
 
 ## The contract is yours
 

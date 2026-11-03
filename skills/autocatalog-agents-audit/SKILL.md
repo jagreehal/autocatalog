@@ -40,6 +40,9 @@ For each finding, in severity order:
 | `agent-without-prompt`                           | Move the system prompt into `agents/<id>/prompts/system.md` and reference it via `prompts.system` |
 | `orphan-tool` / `orphan-model` / `orphan-policy` | Confirm with the user: wire it into an Agent, or remove the entity                                |
 | `agent-without-domain`                           | Add `domain: <slug>` to the Agent; create the Domain if absent                                    |
+| `mcp-server-unpinned`                            | Pin an exact version in the client config, or a digest for a container image                      |
+| `mcp-server-no-snapshot`                         | Run `ac agents snapshot` and commit what it saves                                                 |
+| `mcp-tool-unannotated`                           | Ask the server's owner to set `destructiveHint`, and treat the tool as destructive until then     |
 
 Ask before mutating. Batch P2 fixes if the user prefers.
 

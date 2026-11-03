@@ -117,6 +117,27 @@ it('keeps an aggregation root holding a resource graph a folder of checkouts', a
   expect(publishesCatalogContent(path.join(repo, 'billing'))).toBe(true);
 });
 
+it('reads a repository’s conventions file for the site, from outside contracts/', async () => {
+  await fs.mkdir(path.join(repo, 'contracts'), { recursive: true });
+  await fs.mkdir(path.join(repo, 'sdk'), { recursive: true });
+  await fs.writeFile(
+    path.join(repo, 'contracts/autocatalog.conventions.json'),
+    JSON.stringify({
+      sources: [
+        { kind: 'event', files: ['sdk/events.json'], match: ['v{version}.{id}'], domain: 'orders' },
+      ],
+    }),
+  );
+  await fs.writeFile(
+    path.join(repo, 'sdk/events.json'),
+    JSON.stringify({ 'v1.order.placed': { type: 'object', properties: {} } }),
+  );
+
+  const events = await loadRepositoryEvents(repo);
+
+  expect(events.map((event) => event.frontmatter.id)).toEqual(['order.placed']);
+});
+
 it('finds the events in committed contracts when there is no events/ catalog', async () => {
   await fs.mkdir(path.join(repo, 'contracts/events'), { recursive: true });
   await fs.writeFile(
@@ -378,6 +399,129 @@ describe("a contracts-only repository's git history", { timeout: 30_000 }, () =>
     const events = await loadRepositoryEvents(repo, { history: true });
 
     expect(events.map((e) => e.frontmatter.version)).toEqual(['2.0.0', '1.0.0']);
+  });
+
+  describe('of a file a convention names', () => {
+    const conventions = {
+      sources: [
+        { kind: 'event', files: ['sdk/events.json'], match: ['v{version}.{id}'], domain: 'orders' },
+      ],
+    };
+
+    const schemas = async (...versions: number[]) => {
+      await fs.mkdir(path.join(repo, 'sdk'), { recursive: true });
+      await fs.writeFile(
+        path.join(repo, 'sdk/events.json'),
+        JSON.stringify(
+          Object.fromEntries(
+            versions.map((version) => [
+              `v${version}.order.placed`,
+              { type: 'object', properties: { [`field${version}`]: { type: 'string' } } },
+            ]),
+          ),
+        ),
+      );
+      git('add', '-A');
+      git('commit', '-qm', `v${versions.join()}`);
+    };
+
+    const adoptConventions = async () => {
+      await fs.mkdir(path.join(repo, 'contracts'), { recursive: true });
+      await fs.writeFile(
+        path.join(repo, 'contracts/autocatalog.conventions.json'),
+        JSON.stringify(conventions),
+      );
+      git('add', '-A');
+      git('commit', '-qm', 'conventions');
+    };
+
+    const versions = async () =>
+      (await loadRepositoryEvents(repo, { history: true })).map((e) => [
+        e.frontmatter.version,
+        e.folder.isVersioned,
+      ]);
+
+    it('keeps its earlier versions', async () => {
+      await adoptConventions();
+      await schemas(1);
+      await schemas(2);
+
+      expect(await versions()).toEqual([
+        ['2.0.0', false],
+        ['1.0.0', true],
+      ]);
+    });
+
+    it('reads commits from before the repository adopted the convention', async () => {
+      await schemas(1);
+      await schemas(2);
+      await adoptConventions();
+
+      expect(await versions()).toEqual([
+        ['2.0.0', false],
+        ['1.0.0', true],
+      ]);
+    });
+  });
+
+  it('runs nothing a committed bare repository configures', async () => {
+    const marker = path.join(repo, 'ran');
+    const program = path.join(repo, 'program.sh');
+    const bare = path.join(repo, 'bare');
+
+    await fs.writeFile(program, `#!/bin/sh\ntouch "${marker}"\n`, { mode: 0o755 });
+    git('init', '-q', '--bare', 'bare');
+    await fs.appendFile(
+      path.join(bare, 'config'),
+      `[log]\n\tshowSignature = true\n[gpg]\n\tprogram = ${program.replaceAll('\\', '/')}\n`,
+    );
+
+    const run = (args: string[], input?: string) =>
+      execFileSync('git', args, { cwd: bare, input, encoding: 'utf8' }).trim();
+
+    await fs.mkdir(path.join(bare, 'contracts'));
+    await fs.writeFile(path.join(bare, 'contracts/order-placed.json'), contract('1.0.0', ['id']));
+
+    const object = run(['hash-object', '-w', 'contracts/order-placed.json']);
+    const contracts = run(['mktree'], `100644 blob ${object}\torder-placed.json\n`);
+    const tree = run(['mktree'], `040000 tree ${contracts}\tcontracts\n`);
+    const who = 'Test <test@example.com> 1700000000 +0000';
+
+    const signed = run(
+      ['hash-object', '-t', 'commit', '-w', '--stdin'],
+      `tree ${tree}\nauthor ${who}\ncommitter ${who}\ngpgsig -----BEGIN PGP SIGNATURE-----\n \n -----END PGP SIGNATURE-----\n\nsigned\n`,
+    );
+
+    run(['update-ref', 'HEAD', signed]);
+
+    await loadRepositoryEvents(bare, { history: true });
+
+    await expect(fs.stat(marker)).rejects.toThrow();
+  });
+
+  it('skips a commit it cannot read instead of failing the repository', async () => {
+    await commit('1.0.0', ['id']);
+    await fs.writeFile(path.join(repo, 'contracts/huge.bin'), Buffer.alloc(70 * 1024 * 1024));
+    await commit('2.0.0', ['id', 'total']);
+    await fs.rm(path.join(repo, 'contracts/huge.bin'));
+    await commit('3.0.0', ['id', 'total', 'tax']);
+
+    const events = await loadRepositoryEvents(repo, { history: true });
+
+    expect(events.map((e) => e.frontmatter.version)).toEqual(['3.0.0', '1.0.0']);
+  });
+
+  it.skipIf(process.platform === 'win32')('reads a file with a tab in its name', async () => {
+    await commit('1.0.0', ['id']);
+    await fs.mkdir(path.join(repo, 'contracts/a'));
+    await fs.writeFile(path.join(repo, 'contracts/a/c.txt'), '');
+    await fs.writeFile(path.join(repo, 'contracts/a\tb'), '');
+    await commit('2.0.0', ['id', 'total']);
+    await commit('3.0.0', ['id', 'total', 'tax']);
+
+    const events = await loadRepositoryEvents(repo, { history: true });
+
+    expect(events.map((e) => e.frontmatter.version)).toEqual(['3.0.0', '2.0.0', '1.0.0']);
   });
 
   it('leaves history out unless asked for', async () => {

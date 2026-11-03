@@ -23,13 +23,13 @@ catalog cannot casually break the catalog.
 
 Raw JSON Schema discovery is passive: it reads data files and does not execute repository code.
 
-Runtime Adapters such as Zod must evaluate code to recover the runtime schema. Autocatalog refuses that by default. For a repository you trust:
+Plugins such as Zod must evaluate code to recover the runtime schema. Autocatalog refuses that by default. For a repository you trust:
 
 ```bash
 ac scan . --allow-code-execution
 ```
 
-Authorized runtime Adapters execute outside the CLI process with:
+Authorized plugins execute outside the CLI process with:
 
 - repository and dependency paths read-only;
 - filesystem writes, network access, child processes, workers, and inherited credentials denied;

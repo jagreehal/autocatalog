@@ -134,7 +134,7 @@ export const notEvents = [{ label: 'nav' }];
     await write(
       'src/payments/paid.ts',
       `import { z } from 'zod';
-import { defineEvent } from 'autocatalog-adapter-zod';
+import { defineEvent } from 'autocatalog-plugin-zod';
 export const PaidEvent = defineEvent({ id: 'payment.paid', version: 1 }, z.object({ id: z.string() }));
 `,
     );

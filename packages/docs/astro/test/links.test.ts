@@ -93,6 +93,16 @@ describe('rehypeDocsBase on links written for GitHub', () => {
     ]);
   });
 
+  it('points a link to an index page at its folder', () => {
+    const root = aggregate();
+
+    fs.writeFileSync(path.join(root, 'payments/docs/index.md'), '# x\n');
+
+    expect(render('/', path.join(root, 'payments/docs/runbook.md'), ['./index.md#start'])).toEqual([
+      '/payments#start',
+    ]);
+  });
+
   it('leaves a missing file and another repository for the checks to report', () => {
     const root = aggregate();
 

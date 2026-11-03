@@ -10,6 +10,7 @@ const base = '/autocatalog';
 export default defineConfig({
   site: 'https://jagreehal.github.io',
   base,
+  redirects: { '/docs/adapters': `${base}/docs/plugins` },
   // Documents address each other by id, so a link in a body is root-relative
   // and would miss the base. Astro freezes the markdown pipeline before a
   // plugin-added integration could touch it, so it is wired here.
@@ -62,7 +63,7 @@ export default defineConfig({
             { label: 'From Rust, Go, Java, .NET', slug: 'docs/events/other-languages' },
             { label: 'From JSON Schema', slug: 'docs/events/json-schema' },
             { label: 'Importing a catalog', slug: 'docs/events/importing' },
-            { label: 'Writing an adapter', slug: 'docs/adapters' },
+            { label: 'Writing a plugin', slug: 'docs/plugins' },
             { label: 'Validation', slug: 'docs/events/validation' },
             { label: 'Versioning', slug: 'docs/events/versioning' },
           ],

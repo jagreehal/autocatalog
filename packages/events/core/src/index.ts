@@ -244,6 +244,16 @@ export { scanCatalog, type ScanCatalogOptions, type ScanCatalogResult } from './
 
 export { builtInDiscoveryAdapters } from './built-in-adapters';
 
+export { jsonSchemaAjv } from './json-schema-dialect';
+
+export {
+  conventionDiscoveryAdapter,
+  conventionSourcesSchema,
+  CONVENTIONS_PATH,
+  eventSourceSchema,
+  type EventSource,
+} from './scan-convention';
+
 export {
   discoverAvro,
   avroDiscoveryAdapter,
