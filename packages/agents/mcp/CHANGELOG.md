@@ -1,5 +1,13 @@
 # autocatalog-agents-mcp
 
+## 0.2.8
+
+### Patch Changes
+
+- Updated dependencies [ffa29c9]
+  - autocatalog-agents-core@0.3.0
+  - autocatalog-agents-adapter-autotel@0.3.0
+
 ## 0.2.7
 
 ### Patch Changes
