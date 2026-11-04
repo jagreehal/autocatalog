@@ -9,22 +9,19 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
-PACKAGES=(
-  packages/events/autocatalog
-  packages/events/cli
-  packages/events/core
-  packages/events/plugin-zod
-  packages/docs/core
-  packages/docs/astro
-  packages/agents/core
-  packages/agents/cli
-)
+cd "$ROOT"
+
+# Every package a release publishes. A package left out resolves from npm, which
+# does not have the version a release pull request has just bumped it to.
+PACKAGES=$(pnpm -s -r ls --depth -1 --json | node -e '
+  const packages = JSON.parse(require("fs").readFileSync(0, "utf8"));
+  console.log(packages.filter((pkg) => !pkg.private).map((pkg) => pkg.path).join("\n"));
+')
 
 echo "==> build and pack"
-cd "$ROOT"
 pnpm -s build
-for pkg in "${PACKAGES[@]}"; do
-  pnpm --filter "./$pkg" pack --pack-destination "$TMP/packs" >/dev/null
+for pkg in $PACKAGES; do
+  (cd "$pkg" && pnpm pack --pack-destination "$TMP/packs" >/dev/null)
 done
 
 echo "==> install into an empty project with npm"
