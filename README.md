@@ -1,15 +1,50 @@
 # autocatalog
 
-Know who depends on your event contracts before you break them.
+A catalog of your events, services and docs, with nothing to set up.
 
-Your contracts already live in code, as Zod, Pydantic, JSON Schema, OpenAPI,
-AsyncAPI, Avro or protobuf. autocatalog finds them, captures their producers
-and consumers, and fails a pull request before a breaking change reaches
-another team.
+Run one command in a repository that has schemas and Markdown:
 
-Each team keeps its contracts with its code. autocatalog joins those
-repositories into one view of events, services, owners and dependencies, and
-checks each team's pull requests against the consumers it declares.
+```bash
+npx autocatalog site . --dev
+```
+
+You get a site with a page for each event and each service, and your docs beside
+them. You write no config, no catalog entries and no service definitions, and
+your repository stays exactly as it was. Add one step to CI and a pull request
+that breaks another team fails, naming the service it breaks.
+
+**[Documentation](https://jagreehal.github.io/autocatalog)**
+
+## The setup you skip
+
+We started from two files: one JSON Schema and one Markdown page.
+
+| What you do                    |                                     |
+| ------------------------------ | ----------------------------------- |
+| Commands to run                | 1                                   |
+| Config files to write          | 0                                   |
+| Packages to install            | 0, `npx` runs it                    |
+| Files added to your repository | 0                                   |
+| Pages you get                  | 24, built in 13 seconds on a laptop |
+| Service pages you wrote        | 0 of 2                              |
+
+Your first `npx` run also downloads the package, which took us under two minutes.
+
+The rest of a catalog's usual upkeep goes the same way:
+
+| The job               | The usual way                                     | With autocatalog                                     |
+| --------------------- | ------------------------------------------------- | ---------------------------------------------------- |
+| Describe a service    | Write and maintain an entry for it                | It comes from the events that name it                |
+| Add a repository      | Edit a central list                               | Add a GitHub topic                                   |
+| Keep the catalog true | Remember to update it in each pull request        | It rebuilds from your contracts on every run         |
+| Name owners           | Keep a list somewhere                             | It reads CODEOWNERS, or one line in `docs/meta.json` |
+| Check pull requests   | Write a workflow, install, fetch, script the gate | Add one action                                       |
+| Host it               | Run a server and a database                       | Upload a static folder to any host                   |
+| Brand it              | Fork a theme                                      | Drop your logo and colours in a folder               |
+
+Each team keeps its contracts with its code, as Zod, Pydantic, JSON Schema,
+OpenAPI, AsyncAPI, Avro or protobuf. autocatalog joins those repositories into
+one view:
 
 ```mermaid
 flowchart LR
@@ -19,25 +54,8 @@ flowchart LR
     notif[Notifications]
   end
   repos -- autocatalog site --> site["Company site: events, services, data models, owners, docs"]
-  repos -- autocatalog drift --> pr["Pull request check: names the services a change breaks"]
+  repos -- autocatalog check --> pr["Pull request check: names the services a change breaks"]
 ```
-
-Preview the site:
-
-```bash
-npx autocatalog site . --dev
-```
-
-Check a pull request:
-
-```bash
-npx autocatalog drift --base-ref origin/main --root .
-```
-
-With schemas in `contracts/` and Markdown in `docs/`, neither needs a
-config file, and neither writes to your repository.
-
-**[Documentation](https://jagreehal.github.io/autocatalog)**
 
 ## Catch the break before it ships
 
@@ -57,12 +75,22 @@ suspicious payments/payment.completed: schema changed but version stayed at 1.0.
 1 breaking · 1 suspicious · 0 additive
 ```
 
-Add it to CI and the pull request fails with that message:
+This is the whole workflow. It checks your documents, contracts and events, and
+compares them with the base branch:
 
 ```yaml
-- run: git fetch origin main
-- run: npx autocatalog drift --base-ref origin/main --root . --format github
+name: catalog
+on: pull_request
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: jagreehal/autocatalog/actions/check@v1
 ```
+
+The action finds what your repository publishes and skips the rest. Document
+and contract failures mark the files they name. On another CI, run
+`npx autocatalog check --base-ref origin/main`.
 
 A team in another repository declares what it reads in its own
 `autocatalog.consumes.json`. Pass the company site's index with
@@ -100,8 +128,8 @@ gets one view. One command builds a site across all of them:
 npx autocatalog site --topic catalog --owner acme
 ```
 
-A team joins by adding the `catalog` topic to its GitHub repository. The site
-gives you:
+A team joins by adding the `catalog` topic to its GitHub repository, and nobody
+edits a list or approves anything. The site gives you:
 
 - a page per event with its schema, examples, version history and the file that
   defines it
@@ -117,6 +145,31 @@ gives you:
 
 Search, navigation and dark mode come from
 [Starlight](https://starlight.astro.build).
+
+### Make it yours
+
+One file and one folder turn it into your company's site, and neither runs code:
+
+```json
+{
+  "title": "Acme Docs",
+  "topic": "catalog",
+  "owner": "acme",
+  "brand": "./brand",
+  "theme": "teal"
+}
+```
+
+Save that as `autocatalog.site.json` and `npx autocatalog site` needs no flags.
+`brand/` holds your logo, favicon and `theme.css`, and readers see your name on
+every page. Five accent themes ship built in, and custom themes cost nothing.
+
+A team names its own section with `docs/meta.json`: a label, a description, an
+owner for every page, and the order of its folders. Diagrams with `%% narrate`
+lines play step by step and read themselves aloud.
+
+To deploy, the `actions/site` action builds the site, skips the build when no
+repository changed, and hands you a folder for any host.
 
 ## Define an event once
 
@@ -210,6 +263,7 @@ servers and code generators.
 | Command                                    | Use it to                                              |
 | ------------------------------------------ | ------------------------------------------------------ |
 | `autocatalog site . --dev`                 | preview this repository's site                         |
+| `autocatalog check --base-ref origin/main` | run everything a pull request needs                    |
 | `autocatalog scan .`                       | build `events/` from the schemas in the repository     |
 | `autocatalog drift --base-ref origin/main` | fail a pull request that breaks a consumer             |
 | `autocatalog validate`                     | check the committed catalog                            |

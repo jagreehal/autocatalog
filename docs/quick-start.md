@@ -16,7 +16,11 @@ markdown in `docs/`. Then, from the repository root:
 npx autocatalog site . --dev
 ```
 
-That serves the site with live reload and writes nothing into your repository.
+That is the whole setup. You installed nothing and wrote no config, and the site
+serves with live reload without touching your repository. One JSON Schema and one
+page gave us 24 pages in 13 seconds, after `npx` spent under two minutes on its
+first download.
+
 Drop `--dev` to build it instead: it goes to `dist/`, which is build output, so
 add `dist/` to `.gitignore` rather than committing it.
 
@@ -50,23 +54,30 @@ scan whenever a contract changes; the folder is generated, so nobody edits it by
 hand. Pydantic models are extracted into `events/` by `autocatalog-py` instead:
 see [Zod](/docs/events/zod) and [Pydantic](/docs/events/pydantic).
 
-## Gate pull requests on drift
+## Check every pull request
 
-A contract nobody checks breaks a consumer eventually. One command in CI fails
-the pull request that does it, naming the consumers it breaks:
+Add this file and a pull request that breaks a consumer fails, naming the
+consumers it breaks:
 
-```bash
-git fetch origin main
-npx autocatalog drift --base-ref origin/main --root .
+```yaml
+# .github/workflows/catalog.yml
+name: catalog
+on: pull_request
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: jagreehal/autocatalog/actions/check@v1
 ```
 
-It scans both git states itself, so it needs no committed catalog. See
+It reads the base branch itself, so you commit no catalog. On another CI, run
+`npx autocatalog check --base-ref origin/main`. See
 [drift gating in CI](/docs/drift-ci).
 
 ## Then the company site
 
-To build one site across every repository your company enrols, see
-[the company site](/docs/site). Other paths in:
+To build one site across every repository your company enrols, with your logo
+and colours, see [the company site](/docs/site). Other paths in:
 
 | Your contracts live in                  | Read                                                                            |
 | --------------------------------------- | ------------------------------------------------------------------------------- |
