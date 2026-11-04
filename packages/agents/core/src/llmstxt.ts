@@ -10,6 +10,7 @@ const KIND_HEADINGS: Record<EntityKind, string> = {
   domain: 'Domains',
   eval: 'Evals',
   policy: 'Policies',
+  'mcp-server': 'MCP servers',
 };
 
 const formatTag = (k: string, v: string): string => `[${k}: ${v}]`;
@@ -51,7 +52,7 @@ export type LlmsTxtOptions = {
 export const buildLlmsTxt = (cat: Catalog, opts: LlmsTxtOptions = {}): string => {
   const {
     title = 'Catalog',
-    description = 'AI agent catalog: agents, tools, models, workflows, domains, evals, and policies.',
+    description = 'AI agent catalog: agents, tools, MCP servers, models, workflows, domains, evals, and policies.',
     baseUrl = '',
     includeBodies = true,
   } = opts;

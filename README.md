@@ -124,7 +124,7 @@ With Zod, `defineEvent` adds catalog metadata and returns the schema unchanged,
 so `z.infer` and `.parse()` keep working:
 
 ```ts
-import { defineEvent } from 'autocatalog-adapter-zod';
+import { defineEvent } from 'autocatalog-plugin-zod';
 import { z } from 'zod';
 
 export const PaymentCompleted = defineEvent(
@@ -140,8 +140,8 @@ export const PaymentCompleted = defineEvent(
 
 `npx autocatalog scan . --allow-code-execution` writes
 `events/payments/PaymentCompleted/` with `schema.json`, examples and metadata.
-The Zod adapter reads your TypeScript source and does not import your modules.
-`scan` asks for `--allow-code-execution` because it runs the adapter package
+The Zod plugin reads your TypeScript source and does not import your modules.
+`scan` asks for `--allow-code-execution` because it runs the plugin package
 installed in your repository's `node_modules`. Your own modules do not run.
 
 Commit `events/`, and the site and MCP server read it from there. Re-run the
@@ -222,17 +222,17 @@ servers and code generators.
 
 ## Packages
 
-| Package                   | What it does                                      |
-| ------------------------- | ------------------------------------------------- |
-| `autocatalog`             | the one to install: `npx autocatalog`             |
-| `autocatalog-cli`         | the `ac` command                                  |
-| `autocatalog-core`        | catalog model, scanners, drift rules              |
-| `autocatalog-adapter-zod` | `defineEvent` for Zod                             |
-| `autocatalog-mcp`         | MCP server for AI coding agents                   |
-| `autocatalog-docs-astro`  | the Starlight site                                |
-| `autocatalog-docs-core`   | docs aggregation and the frontmatter contract     |
-| `autocatalog-agents-*`    | a catalog for AI agents, their tools and policies |
-| `autocatalog-py`          | the Pydantic extractor                            |
+| Package                  | What it does                                      |
+| ------------------------ | ------------------------------------------------- |
+| `autocatalog`            | the one to install: `npx autocatalog`             |
+| `autocatalog-cli`        | the `ac` command                                  |
+| `autocatalog-core`       | catalog model, scanners, drift rules              |
+| `autocatalog-plugin-zod` | `defineEvent` for Zod                             |
+| `autocatalog-mcp`        | MCP server for AI coding agents                   |
+| `autocatalog-docs-astro` | the Starlight site                                |
+| `autocatalog-docs-core`  | docs aggregation and the frontmatter contract     |
+| `autocatalog-agents-*`   | a catalog for AI agents, their tools and policies |
+| `autocatalog-py`         | the Pydantic extractor                            |
 
 ## Contributing
 

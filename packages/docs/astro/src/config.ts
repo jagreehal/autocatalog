@@ -1,4 +1,5 @@
 import path from 'node:path';
+import { type SiteNavigation, siteNavigationSchema } from 'autocatalog-docs-core';
 /**
  * What the integration decided, read back by the parts Astro loads on their own.
  *
@@ -29,6 +30,7 @@ export interface DocsSiteConfig {
   exclude: string[];
   title: string;
   description: string;
+  navigation: SiteNavigation | undefined;
   /** A server-sent events feed the maps can follow live. */
   live: { url: string; event: string } | undefined;
 }
@@ -46,6 +48,9 @@ export function docsSiteConfig(): DocsSiteConfig {
     indexes: (process.env.AUTOCATALOG_DOCS_INDEXES ?? '').split(path.delimiter).filter(Boolean),
     exclude: (process.env.AUTOCATALOG_DOCS_EXCLUDE ?? '').split(path.delimiter).filter(Boolean),
     title: process.env.AUTOCATALOG_DOCS_TITLE ?? 'Documentation',
+    navigation: process.env.AUTOCATALOG_SITE_NAVIGATION
+      ? siteNavigationSchema.parse(JSON.parse(process.env.AUTOCATALOG_SITE_NAVIGATION))
+      : undefined,
     description:
       process.env.AUTOCATALOG_DOCS_DESCRIPTION ??
       'Documentation committed beside the code it describes, aggregated into one index.',

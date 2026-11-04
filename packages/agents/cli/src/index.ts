@@ -9,6 +9,7 @@ import { runAudit } from './commands/audit.js';
 import { runDrift } from './commands/drift.js';
 import { runSearch } from './commands/search.js';
 import { runDiscover } from './commands/discover.js';
+import { runSnapshot } from './commands/snapshot.js';
 
 const HELP = `ac agents — autocatalog agent catalog commands
 
@@ -27,8 +28,12 @@ Usage:
                                            Diff observed agent behaviour (OTLP JSON) against the declared catalog
   ac agents search <query> [--root <path>] [--json]
                                            Substring search across every entity's id, name, description, owner
-  ac agents discover --from pydantic-ai|ai-sdk <source-dir> [--root <catalog>] [--dry-run]
-                                           Infer draft catalog entries from framework source code
+  ac agents discover --from pydantic-ai|ai-sdk|mcp|mcp-snapshot [<source-dir>] [--root <catalog>] [--dry-run]
+                                           Infer draft entries from source, MCP servers, or snapshots
+                                           mcp also takes --home, --prune, --per-repository, --internal <hosts,@scopes>
+  ac agents snapshot [<server>...] [--root <path>] [--check] [--fail-on review|breaking]
+                     [--format text|github|json] [--executor <url>] [--allow-stdio]
+                                           Save each MCP server's tools and report what changed
   ac agents --help                         Show this message
 
 Examples:
@@ -90,6 +95,8 @@ const dispatch = async (argv: string[]): Promise<number> => {
       return runSearch(rest);
     case 'discover':
       return runDiscover(rest);
+    case 'snapshot':
+      return runSnapshot(rest);
     default:
       process.stderr.write(`Unknown command: ${cmd}\n\n${HELP}`);
 

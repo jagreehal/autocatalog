@@ -102,8 +102,8 @@ export function CatalogPage({ failures, datastores, map, explorer }: CatalogPage
             </EmptyMedia>
             <EmptyTitle>The catalog is empty</EmptyTitle>
             <EmptyDescription>
-              Nothing was found to list. Run <code>npx autocatalog .</code> in a repository with
-              event contracts, documentation or agents, then rebuild the site.
+              Nothing was found to list. Run <code>ac scan</code> in a repository with event
+              contracts, documentation or agents, then rebuild the site.
             </EmptyDescription>
           </EmptyHeader>
         </Empty>

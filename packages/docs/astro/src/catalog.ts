@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {
   createAgentsResourceGraph,
+  publishesAgentCatalog,
   loadCatalog as loadAgentsCatalog,
   type GraphEvent,
 } from 'autocatalog-agents-core';
@@ -406,7 +407,7 @@ export async function buildDocsCatalog(
       }
     }
 
-    if (fs.existsSync(path.join(repositoryRoot, 'agents'))) {
+    if (publishesAgentCatalog(repositoryRoot)) {
       await quarantine(name, 'agents', async () =>
         createAgentsResourceGraph(await loadAgentsCatalog(repositoryRoot), {
           repository: name,

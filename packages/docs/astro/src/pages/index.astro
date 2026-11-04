@@ -1,6 +1,7 @@
 ---
 import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
 import { getCollection } from 'astro:content';
+import { repositoryMetas } from 'autocatalog-docs-core';
 import { docsCatalog } from '../catalog';
 import { docsSiteConfig } from '../config';
 import { homePageProps } from '../page-models';
@@ -27,5 +28,12 @@ setPageHeader(Astro.locals, {
 <StarlightPage
   frontmatter={{ title: site.title, description: site.description, tableOfContents: false }}
 >
-  <HomePage {...homePageProps(catalog, items, base)} />
+  <HomePage
+    {...homePageProps(
+      catalog,
+      items,
+      base,
+      repositoryMetas(site.root, { repo: site.repo, repository: site.repository }),
+    )}
+  />
 </StarlightPage>

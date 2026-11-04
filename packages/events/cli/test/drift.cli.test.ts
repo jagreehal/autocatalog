@@ -17,7 +17,7 @@ describe('ac drift (executable story: the guardrail)', () => {
   let current: string;
 
   beforeAll(async () => {
-    const { scanRepo } = await import('autocatalog-adapter-zod');
+    const { scanRepo } = await import('autocatalog-plugin-zod');
     work = await fs.mkdtemp(path.join(os.tmpdir(), 'ac-drift-story-'));
     baseline = path.join(work, 'baseline-events');
     current = path.join(work, 'current-events');

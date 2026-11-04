@@ -4,6 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import { builtInDiscoveryAdapters } from './built-in-adapters';
+import { conventionDiscoveryAdapter, conventionFiles, CONVENTIONS_PATH } from './scan-convention';
 import { scanCatalog } from './scan-catalog';
 import { hasMessageContracts, messageContractDiscoveryAdapter } from './scan-message-contract';
 import { loadCatalogSnapshot, type LoadedEvent } from './load';
@@ -30,6 +31,7 @@ const PUBLISHED_ROOTS = [
   'docs',
   'events',
   'agents',
+  'mcp-servers',
   'flows',
   ...MODEL_ROOTS,
   CONTRACTS,
@@ -63,15 +65,29 @@ function isCatalogFolder(folder: string): boolean {
   if (fs.existsSync(path.join(folder, 'package.json'))) return false;
 
   try {
-    return !fs
-      .readdirSync(folder, { withFileTypes: true })
-      .some(
-        (entry) =>
-          entry.isDirectory() && fs.existsSync(path.join(folder, entry.name, 'package.json')),
-      );
+    return (
+      !holdsOnlyCode(folder) &&
+      !fs
+        .readdirSync(folder, { withFileTypes: true })
+        .some(
+          (entry) =>
+            entry.isDirectory() && fs.existsSync(path.join(folder, entry.name, 'package.json')),
+        )
+    );
   } catch {
     return true;
   }
+}
+
+const SOURCE_CODE = /\.(?:[cm]?[jt]sx?|css|py|go|rb|rs|java|kt|cs|php)$/;
+
+/** Whether a folder is an application's own, such as a web route named `events`. */
+function holdsOnlyCode(folder: string): boolean {
+  const files = fs
+    .readdirSync(folder, { withFileTypes: true, recursive: true })
+    .filter((entry) => entry.isFile());
+
+  return files.length > 0 && files.every(({ name }) => SOURCE_CODE.test(name));
 }
 
 /** Where Prisma looks for a schema, so a repository with one has data models to publish. */
@@ -120,7 +136,7 @@ function hasResourceGraph(dir: string): boolean {
 }
 
 /** Roots that make the directory holding them one repository, never a folder of them. */
-const SINGLE_ROOTS = ['docs', 'events', 'agents', 'flows', ...MODEL_ROOTS];
+const SINGLE_ROOTS = ['docs', 'events', 'agents', 'mcp-servers', 'flows', ...MODEL_ROOTS];
 
 /** What a repository's own root carries and a folder of checkouts does not. */
 const REPOSITORY_MARKERS = ['.git', 'package.json'];
@@ -225,6 +241,7 @@ const NOT_ROOTS = new Set([
   'docs',
   'events',
   'agents',
+  'mcp-servers',
   'flows',
   CONTRACTS,
   'models',
@@ -456,13 +473,18 @@ async function applyRuntimeSnapshot(
 /**
  * Only contracts/ is scanned, because the rest of a repository holds test
  * fixtures and tooling whose stray schemas are not anything it publishes. The
- * exception is autotel-message-contract's approved files, which live beside
+ * exceptions are autotel-message-contract's approved files, which live beside
  * their tests: `__contracts__/*.approved.txt` is narrow enough that nothing
- * stray matches it, and its walk skips node_modules, dist and dot-folders.
+ * stray matches it, and its walk skips node_modules, dist and dot-folders; and
+ * the files a conventions file names, which the repository chose to publish.
  */
 async function discoverContracts(
   repositoryRoot: string,
-  { ownersWithin, exclude }: LoadRepositoryEventsOptions = {},
+  {
+    ownersWithin,
+    exclude,
+    conventions,
+  }: LoadRepositoryEventsOptions & { conventions?: string } = {},
 ): Promise<LoadedEvent[]> {
   const outRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'autocatalog-repository-'));
   const hasContracts = isDirectory(path.join(repositoryRoot, CONTRACTS));
@@ -471,11 +493,14 @@ async function discoverContracts(
     const scan = await scanCatalog({
       root: repositoryRoot,
       discoverIn: CONTRACTS,
-      wholeRepository: [messageContractDiscoveryAdapter],
+      wholeRepository: [messageContractDiscoveryAdapter, conventionDiscoveryAdapter],
       outRoot,
-      adapters: hasContracts ? builtInDiscoveryAdapters : [messageContractDiscoveryAdapter],
+      adapters: hasContracts
+        ? builtInDiscoveryAdapters
+        : [messageContractDiscoveryAdapter, conventionDiscoveryAdapter],
       ownersWithin,
       exclude,
+      ...(conventions && { conventions }),
     });
 
     if (scan.errors.length > 0) throw new Error(scan.errors.join('; '));
@@ -488,7 +513,7 @@ async function discoverContracts(
 
 /**
  * Earlier versions of the events `current` holds, from the commits that touched
- * contracts/, newest first. A version is what the contract declares, and the
+ * contracts/ or a file a convention names, newest first. A version is what the contract declares, and the
  * last commit declaring it is what that version was. An event whose version is
  * not declared has no history: every commit would claim the same inferred one,
  * and a commit SHA is not a version a consumer can pin to.
@@ -498,6 +523,9 @@ async function discoverContracts(
  * and nothing in the repository runs. A commit whose contracts did not compile
  * is skipped: an old mistake must not quarantine today's catalog. Not a git
  * checkout, or no git at all: no history, quietly.
+ *
+ * Every commit is read through today's conventions, so one from before they
+ * were adopted still yields its events, under the ids they have now.
  */
 async function contractHistory(
   repositoryRoot: string,
@@ -514,12 +542,18 @@ async function contractHistory(
 
   if (today.size === 0) return [];
 
+  const sources = await conventionFiles(repositoryRoot);
+
+  const conventions =
+    sources.length > 0 ? { conventions: path.join(repositoryRoot, CONVENTIONS_PATH) } : {};
+
   const commits = await git(repositoryRoot, [
-    'log',
+    'rev-list',
     `-n${HISTORY_COMMITS}`,
-    '--format=%H',
+    'HEAD',
     '--',
     CONTRACTS,
+    ...sources,
   ])
     .then((out) => out.toString('utf8').split('\n').filter(Boolean))
     .catch(() => []);
@@ -532,9 +566,14 @@ async function contractHistory(
     const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'autocatalog-history-'));
 
     try {
-      await extractTree(repositoryRoot, commit, scratch);
+      const readable = await extractTree(repositoryRoot, commit, scratch, sources).then(
+        () => true,
+        () => false,
+      );
 
-      for (const event of await discoverContracts(scratch).catch(() => [])) {
+      if (!readable) continue;
+
+      for (const event of await discoverContracts(scratch, conventions).catch(() => [])) {
         const now = today.get(key(event));
         const version = `${key(event)}@${event.frontmatter.version}`;
         const count = kept.get(key(event)) ?? 0;
@@ -556,8 +595,13 @@ async function contractHistory(
   return history;
 }
 
-/** Write contracts/ and CODEOWNERS as they were at `commit` into `into`, skipping symlinks. */
-async function extractTree(repositoryRoot: string, commit: string, into: string): Promise<void> {
+/** Write contracts/, `sources` and CODEOWNERS as they were at `commit` into `into`, skipping symlinks. */
+async function extractTree(
+  repositoryRoot: string,
+  commit: string,
+  into: string,
+  sources: string[],
+): Promise<void> {
   const listing = await git(repositoryRoot, [
     'ls-tree',
     '-r',
@@ -565,13 +609,15 @@ async function extractTree(repositoryRoot: string, commit: string, into: string)
     commit,
     '--',
     CONTRACTS,
+    ...sources,
     ...CODEOWNERS,
   ]);
 
   for (const entry of listing.toString('utf8').split('\0').filter(Boolean)) {
-    // <mode> <type> <object>\t<path>
-    const [meta = '', file = ''] = entry.split('\t');
-    const [mode, type, object = ''] = meta.split(' ');
+    // <mode> <type> <object>\t<path>, and a path can hold a tab.
+    const tab = entry.indexOf('\t');
+    const file = entry.slice(tab + 1);
+    const [mode, type, object = ''] = entry.slice(0, tab).split(' ');
     const target = path.join(into, file);
 
     if (type !== 'blob' || mode === '120000' || !target.startsWith(into + path.sep)) continue;
@@ -580,11 +626,19 @@ async function extractTree(repositoryRoot: string, commit: string, into: string)
   }
 }
 
-/** Plumbing reads only: no hooks, filters or fsmonitor, so nothing the repository ships runs. */
+/**
+ * Plumbing reads only: no hooks, filters, fsmonitor or signature checks, so
+ * nothing the repository ships runs. A bare repository committed as plain files
+ * is not a repository here, its config is not read, and nothing is fetched.
+ * Paths are literal, because a conventions file supplies some of them.
+ */
+const SAFE_GIT = ['-c', 'core.fsmonitor=false', '-c', 'safe.bareRepository=explicit'];
+
 async function git(cwd: string, args: string[]): Promise<Buffer> {
-  const { stdout } = await execFileAsync('git', ['-c', 'core.fsmonitor=false', ...args], {
+  const { stdout } = await execFileAsync('git', [...SAFE_GIT, '--literal-pathspecs', ...args], {
     cwd,
     encoding: 'buffer',
+    env: { ...process.env, GIT_NO_LAZY_FETCH: '1' },
     maxBuffer: 64 * 1024 * 1024,
   });
 

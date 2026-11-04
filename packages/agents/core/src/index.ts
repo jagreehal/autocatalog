@@ -18,4 +18,10 @@ export * from './audit.js';
 
 export * from './discovery.js';
 
+export * from './mcp-code.js';
+
+export * from './mcp-config.js';
+
+export * from './mcp-snapshot.js';
+
 export * from './resource-graph.js';

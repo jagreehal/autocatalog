@@ -1,4 +1,4 @@
-import { defineEvent } from 'autocatalog-adapter-zod';
+import { defineEvent } from 'autocatalog-plugin-zod';
 import { z } from 'zod';
 
 // Wart: no example supplied — example generation (P4) should fill this in.

@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { isJsonObject, type JsonObject, type JsonValue } from './json';
+import { derefLocal } from './json-ref';
 
 /**
  * The scalar keywords the generator reads. A keyword of the wrong type is
@@ -42,13 +43,47 @@ const FORMAT_SAMPLES = new Map([
   ['ipv4', '192.0.2.1'],
 ]);
 
-/**
- * Deterministically generate a baseline example payload from a JSON Schema.
- * Not random and not clever — the point is that a generated example exists,
- * validates, and is obviously a placeholder until a real one replaces it.
- */
-export function generateExampleFromSchema(schema: JsonObject, depth = 0): JsonValue {
-  if (depth > 6) return null;
+/** Enough for any real contract, and a bound on references that fan out. */
+const MAX_NODES = 10_000;
+
+/** Deep enough for any real contract, and a bound on the stack: linked definitions recurse. */
+const MAX_DEPTH = 64;
+
+const reference = z.object({ $ref: z.string().optional().catch(undefined) });
+
+interface Walk {
+  /** The document local references point into. */
+  root: JsonObject;
+  /** References followed to reach this node, so a cycle stops. */
+  following: string[];
+  nodes: { left: number };
+  depth: number;
+}
+
+/** What a reference points at, or undefined when it cannot or should not be followed. */
+function followRef(ref: string, walk: Walk): JsonValue | undefined {
+  if (walk.following.includes(ref)) return undefined;
+
+  if (ref === '#') return walk.root;
+
+  try {
+    return derefLocal(walk.root, { $ref: ref });
+  } catch {
+    return undefined;
+  }
+}
+
+function sample(schema: JsonObject, walk: Walk): JsonValue {
+  if ((walk.nodes.left -= 1) < 0 || walk.depth > MAX_DEPTH) return null;
+
+  const { $ref: ref } = reference.parse(schema);
+
+  if (ref !== undefined) {
+    return sampleSubschema(followRef(ref, walk) ?? false, {
+      ...walk,
+      following: [...walk.following, ref],
+    });
+  }
 
   if (schema.const !== undefined) return schema.const;
 
@@ -57,6 +92,14 @@ export function generateExampleFromSchema(schema: JsonObject, depth = 0): JsonVa
   if (Array.isArray(schema.examples) && schema.examples.length > 0) return schema.examples[0]!;
 
   if (Array.isArray(schema.enum) && schema.enum.length > 0) return schema.enum[0]!;
+
+  // `.nullable()` writes the real type first, so the first branch is the useful
+  // one. Beside a type of its own, a branch only narrows it.
+  const [branch] = [schema.anyOf, schema.oneOf].find(Array.isArray) ?? [];
+
+  if (branch !== undefined && schema.type === undefined && schema.properties === undefined) {
+    return sampleSubschema(branch, walk);
+  }
 
   const type = Array.isArray(schema.type) ? schema.type[0] : schema.type;
 
@@ -67,12 +110,12 @@ export function generateExampleFromSchema(schema: JsonObject, depth = 0): JsonVa
       // include every property so the example shows the full shape,
       // but never omit a required one
       return Object.fromEntries(
-        Object.entries(props).map(([key, prop]) => [key, exampleFromSubschema(prop, depth + 1)]),
+        Object.entries(props).map(([key, prop]) => [key, sampleSubschema(prop, walk)]),
       );
     }
 
     case 'array': {
-      const item = schema.items ? exampleFromSubschema(schema.items, depth + 1) : 'sample';
+      const item = schema.items ? sampleSubschema(schema.items, walk) : 'sample';
 
       return [item];
     }
@@ -84,9 +127,9 @@ export function generateExampleFromSchema(schema: JsonObject, depth = 0): JsonVa
         maxLength: max = Infinity,
       } = scalarKeywords.parse(schema);
 
-      const sample = format ? FORMAT_SAMPLES.get(format) : undefined;
+      const sampled = format ? FORMAT_SAMPLES.get(format) : undefined;
 
-      if (sample) return sample;
+      if (sampled) return sampled;
       const target = Math.min(Math.max('string'.length, min), max);
 
       return 'string'.repeat(Math.ceil(target / 6)).slice(0, target) || 's'.repeat(min || 1);
@@ -102,13 +145,22 @@ export function generateExampleFromSchema(schema: JsonObject, depth = 0): JsonVa
       return null;
     default:
       // no type: prefer object-ish if properties exist
-      if (schema.properties) return generateExampleFromSchema({ ...schema, type: 'object' }, depth);
+      if (schema.properties) return sample({ ...schema, type: 'object' }, walk);
 
       return null;
   }
 }
 
 /** A boolean (or otherwise non-object) subschema constrains nothing we can sample. */
-function exampleFromSubschema(schema: JsonValue, depth: number): JsonValue {
-  return isJsonObject(schema) ? generateExampleFromSchema(schema, depth) : null;
+function sampleSubschema(schema: JsonValue, walk: Walk): JsonValue {
+  return isJsonObject(schema) ? sample(schema, { ...walk, depth: walk.depth + 1 }) : null;
+}
+
+/**
+ * Deterministically generate a baseline example payload from a JSON Schema.
+ * Not random and not clever — the point is that a generated example exists,
+ * validates, and is obviously a placeholder until a real one replaces it.
+ */
+export function generateExampleFromSchema(schema: JsonObject): JsonValue {
+  return sample(schema, { root: schema, following: [], nodes: { left: MAX_NODES }, depth: 0 });
 }

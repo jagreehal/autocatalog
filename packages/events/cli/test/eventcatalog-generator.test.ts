@@ -60,7 +60,7 @@ describe('the EventCatalog generator', () => {
 
   it('says which option allows code execution, in the words of the config file', async () => {
     await expect(autocatalogGenerator({}, { repositories: [zodRepo] })).rejects.toThrow(
-      /autocatalog-adapter-zod.*allowCodeExecution: true/,
+      /autocatalog-plugin-zod.*allowCodeExecution: true/,
     );
   });
 

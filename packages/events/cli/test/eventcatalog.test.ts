@@ -31,7 +31,7 @@ describe('ac to-eventcatalog', () => {
   let written: Awaited<ReturnType<typeof exportToEventCatalog>>['written'];
 
   beforeAll(async () => {
-    const { scanRepo } = await import('autocatalog-adapter-zod');
+    const { scanRepo } = await import('autocatalog-plugin-zod');
     work = await fs.mkdtemp(path.join(os.tmpdir(), 'ac-eventcatalog-'));
     const events = path.join(work, 'events');
     catalog = path.join(work, 'catalog');
@@ -122,7 +122,7 @@ describe('ac to-eventcatalog', () => {
     const repoCopy = path.join(work, 'repo');
     await fs.cp(demoRepo, repoCopy, { recursive: true });
     await fs.rm(path.join(repoCopy, 'src/shipping'), { recursive: true });
-    const { scanRepo } = await import('autocatalog-adapter-zod');
+    const { scanRepo } = await import('autocatalog-plugin-zod');
     const retired = path.join(work, 'events-after');
     await scanRepo({ root: repoCopy, out: retired });
 

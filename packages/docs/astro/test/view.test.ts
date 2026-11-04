@@ -56,6 +56,15 @@ describe('listItems', () => {
     expect(items[1]!.updated).toBeNull();
   });
 
+  it('takes the owner from the index, where a repository default has reached it', () => {
+    const items = listItems(
+      [{ id: 'payments-service/runbook', data: { title: 'Runbook' } }],
+      manifest,
+    );
+
+    expect(items[0]!.owner).toBe('Payments');
+  });
+
   it('survives a document the index does not know about', () => {
     // A build reading a checkout the manifest predates must still render.
     const items = listItems([{ id: 'new/thing', data: { title: 'New', owner: 'Ops' } }], manifest);

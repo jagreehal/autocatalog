@@ -33,11 +33,11 @@ node "$ROOT/packages/events/cli/dist/bin.js" validate --cwd "$ROOT/fixtures/even
 log "Zod flow: ac from-zod + validate"
 ZOD_PROJECT="$TMP_DIR/zod-project"
 mkdir -p "$ZOD_PROJECT/node_modules"
-ln -s "$ROOT/packages/events/adapter-zod" "$ZOD_PROJECT/node_modules/autocatalog-adapter-zod"
+ln -s "$ROOT/packages/events/plugin-zod" "$ZOD_PROJECT/node_modules/autocatalog-plugin-zod"
 (
   cd "$ZOD_PROJECT"
   node "$ROOT/packages/events/cli/dist/bin.js" from-zod \
-    "$ROOT/packages/events/adapter-zod/test/fixtures/compact-export.ts" \
+    "$ROOT/packages/events/plugin-zod/test/fixtures/compact-export.ts" \
     --out "$ZOD_PROJECT/events"
 )
 node "$ROOT/packages/events/cli/dist/bin.js" validate --cwd "$ZOD_PROJECT"

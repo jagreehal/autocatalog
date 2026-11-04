@@ -91,7 +91,14 @@ function catalogOf(input: Entity[] = entities): Catalog {
     });
   }
 
-  return { root: '/repo', entities: byKind, meta, issues: [] };
+  return {
+    root: '/repo',
+    entities: byKind,
+    meta,
+    snapshots: new Map(),
+    changes: new Map(),
+    issues: [],
+  };
 }
 
 describe('createAgentsResourceGraph', () => {

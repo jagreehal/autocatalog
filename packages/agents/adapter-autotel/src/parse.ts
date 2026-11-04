@@ -1,9 +1,18 @@
 import { z } from 'zod';
 
+/** One MCP tool call where the trace also says which server it went to. */
+export type McpCall = {
+  /** Absent when a gateway made the call and the trace does not say for whom. */
+  agent?: string | undefined;
+  server: string;
+  tool: string;
+};
+
 export type Observations = {
   agents: Set<string>;
   modelUsage: Map<string, Set<string>>;
   toolUsage: Map<string, Set<string>>;
+  mcpCalls: McpCall[];
   spanCount: number;
 };
 
@@ -62,7 +71,9 @@ const addToSet = <T>(map: Map<string, Set<T>>, key: string, value: T): void => {
   map.set(key, set);
 };
 
-const AGENT_ID_KEYS = ['agent.id', 'gen_ai.agent.id', 'service.name'] as const;
+const DECLARED_AGENT_KEYS = ['agent.id', 'gen_ai.agent.id'] as const;
+
+const AGENT_ID_KEYS = [...DECLARED_AGENT_KEYS, 'service.name'] as const;
 
 const MODEL_KEYS = [
   'gen_ai.request.model',
@@ -71,7 +82,31 @@ const MODEL_KEYS = [
   'model',
 ] as const;
 
-const TOOL_KEYS = ['tool.name', 'gen_ai.tool.name', 'function.name'] as const;
+const TOOL_KEYS = ['tool.name', 'gen_ai.tool.name', 'mcp.tool.name', 'function.name'] as const;
+
+const SERVER_KEYS = ['mcp.tool.integration', 'mcp.server.name', 'server.address'] as const;
+
+/** Executor names a tool by its full address: `tools.<integration>.<owner>.<connection>.<tool>`. */
+const ADDRESS = /^tools\.([^.]+)\.[^.]+\.[^.]+\.(.+)$/;
+
+/** Marks a span from a gateway, whose `service.name` is the gateway, never an agent. */
+const GATEWAY_KEY = 'executor.tenant';
+
+type McpToolRef = Pick<McpCall, 'tool'> & { server: string | undefined };
+
+/** The server and bare tool name a span records, from its address or its attributes. */
+const mcpCallOf = (span: OtlpSpan, raw: string): McpToolRef => {
+  const [, integration, name] = ADDRESS.exec(raw) ?? [];
+
+  if (integration && name) return { server: integration, tool: name };
+
+  const server = firstAttr(span.attributes, SERVER_KEYS);
+
+  return {
+    server,
+    tool: server && raw.startsWith(`${server}.`) ? raw.slice(server.length + 1) : raw,
+  };
+};
 
 const firstAttr = (
   attrs: OtlpAttribute[] | undefined,
@@ -109,16 +144,32 @@ export const parseOtlpJson = (raw: string): Observations => {
     agents: new Set(),
     modelUsage: new Map(),
     toolUsage: new Map(),
+    mcpCalls: [],
     spanCount: 0,
   };
 
+  const calls = new Map<string, McpCall>();
+
   for (const rs of data.resourceSpans ?? []) {
-    const resourceAgentId = firstAttr(rs.resource?.attributes, AGENT_ID_KEYS);
+    const spans = (rs.scopeSpans ?? []).flatMap((ss) => ss.spans ?? []);
+    const gateway = spans.some((span) => findAttr(span.attributes, GATEWAY_KEY) !== undefined);
+    const agentKeys = gateway ? DECLARED_AGENT_KEYS : AGENT_ID_KEYS;
+    const resourceAgentId = firstAttr(rs.resource?.attributes, agentKeys);
 
     for (const ss of rs.scopeSpans ?? []) {
       for (const span of ss.spans ?? []) {
         const spanAttrs = span.attributes;
-        const agentId = firstAttr(spanAttrs, AGENT_ID_KEYS) ?? resourceAgentId;
+        const agentId = firstAttr(spanAttrs, agentKeys) ?? resourceAgentId;
+
+        if (looksLikeToolSpan(span)) {
+          const raw = firstAttr(spanAttrs, TOOL_KEYS);
+          const call = raw ? mcpCallOf(span, raw) : undefined;
+
+          if (call?.server) {
+            const entry = { agent: agentId, server: call.server, tool: call.tool };
+            calls.set(JSON.stringify(entry), entry);
+          }
+        }
 
         if (!agentId) continue;
 
@@ -132,13 +183,15 @@ export const parseOtlpJson = (raw: string): Observations => {
         }
 
         if (looksLikeToolSpan(span)) {
-          const toolId = firstAttr(spanAttrs, TOOL_KEYS);
+          const raw = firstAttr(spanAttrs, TOOL_KEYS);
 
-          if (toolId) addToSet(obs.toolUsage, agentId, toolId);
+          if (raw) addToSet(obs.toolUsage, agentId, mcpCallOf(span, raw).tool);
         }
       }
     }
   }
+
+  obs.mcpCalls = [...calls.values()];
 
   return obs;
 };

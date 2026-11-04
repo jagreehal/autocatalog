@@ -46,6 +46,7 @@ export const RESERVED_SEGMENTS = new Set([
   'glossary',
   'llms-full.txt',
   'llms.txt',
+  'mcp-servers',
   'owners',
   'retirements',
   'schemas',

@@ -4,6 +4,7 @@ import { jsonSchemaDiscoveryAdapter } from './scan-json-schema';
 import { openApiDiscoveryAdapter } from './scan-openapi';
 import { messageContractDiscoveryAdapter } from './scan-message-contract';
 import { protobufDiscoveryAdapter } from './scan-protobuf';
+import { conventionDiscoveryAdapter } from './scan-convention';
 
 /**
  * The Adapters that need no installation and execute no repository code.
@@ -18,4 +19,5 @@ export const builtInDiscoveryAdapters: DiscoveryAdapter[] = [
   avroDiscoveryAdapter,
   protobufDiscoveryAdapter,
   messageContractDiscoveryAdapter,
+  conventionDiscoveryAdapter,
 ];

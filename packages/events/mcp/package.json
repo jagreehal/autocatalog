@@ -48,7 +48,7 @@
     "@types/node": "^26.6.4",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
-    "autocatalog-adapter-zod": "workspace:*",
+    "autocatalog-plugin-zod": "workspace:*",
     "esbuild": "0.28.2",
     "react": "19.3.0",
     "react-dom": "19.3.0",

@@ -1,11 +1,11 @@
 ---
 name: autocatalog-agents-add
-description: Add a new entity (Agent, Tool, Model, Workflow, Domain, Eval, or Policy) to the autocatalog-agents. Use when the user says "add an agent", "register a tool", "document a new policy", or similar. Walks the user through the right frontmatter, places the file in the right directory, and runs `ac-agents validate` afterward.
+description: Add a new entity (Agent, Tool, MCP server, Model, Workflow, Domain, Eval, or Policy) to the autocatalog-agents. Use when the user says "add an agent", "register a tool", "document a new policy", or similar. Walks the user through the right frontmatter, places the file in the right directory, and runs `ac-agents validate` afterward.
 ---
 
 # /autocatalog-agents-add
 
-Adds a new entity to the local autocatalog-agents catalog. The catalog root is typically `starters/agent-default` in development, or the directory containing top-level `agents/`, `tools/`, `models/`, `workflows/`, `domains/`, `evals/`, `policies/` in a user project.
+Adds a new entity to the local autocatalog-agents catalog. The catalog root is typically `starters/agent-default` in development, or the directory containing top-level `agents/`, `tools/`, `mcp-servers/`, `models/`, `workflows/`, `domains/`, `evals/`, `policies/` in a user project.
 
 ## Process
 
@@ -15,19 +15,22 @@ Look upward from the current working directory for a directory containing at lea
 
 ### 2. Ask which entity kind to add
 
-Use `AskUserQuestion` to offer the 7 kinds: Agent, Tool, Model, Workflow, Domain, Eval, Policy. Brief explainer per option (one line each — see `CONTEXT.md` in the catalog root for the canonical definitions if present).
+Use `AskUserQuestion` to offer the 8 kinds: Agent, Tool, MCP server, Model, Workflow, Domain, Eval, Policy. Brief explainer per option (one line each — see `CONTEXT.md` in the catalog root for the canonical definitions if present).
 
 ### 3. Gather the minimum required fields per kind
 
-| Kind     | Required                                    |
-| -------- | ------------------------------------------- |
-| Agent    | id, name, owner, model, tools[], policies[] |
-| Tool     | id, name, owner, side_effects               |
-| Model    | id, name, owner, provider, model_id         |
-| Workflow | id, name, owner, agents[]                   |
-| Domain   | id, name, owner                             |
-| Eval     | id, name, owner, target (Agent id)          |
-| Policy   | id, name, owner                             |
+| Kind       | Required                                    |
+| ---------- | ------------------------------------------- |
+| Agent      | id, name, owner, model, tools[], policies[] |
+| Tool       | id, name, owner, side_effects               |
+| MCP server | id, name, owner, transport (`stdio`/`http`) |
+| Model      | id, name, owner, provider, model_id         |
+| Workflow   | id, name, owner, agents[]                   |
+| Domain     | id, name, owner                             |
+| Eval       | id, name, owner, target (Agent id)          |
+| Policy     | id, name, owner                             |
+
+For an MCP server, offer discovery first: `ac agents discover --from mcp` drafts every server the repository configures or builds. An Agent names the servers it uses in `servers`, and a Tool names its server in `server` and the server's own tool name in `mcp_name`.
 
 Validate referenced IDs against the existing catalog _before_ writing — read the relevant subdirectory and confirm every referenced ID exists. If not, offer to either fix the reference or stub the missing entity.
 
@@ -36,6 +39,7 @@ For an Agent or Tool, also ask which events it **produces** or **consumes**, and
 ### 4. Write the file
 
 - For Models: a single YAML file at `models/<id>.yaml`.
+- For MCP servers: `mcp-servers/<id>/autocatalog.json`.
 - For everything else: `${kind}s/<id>/index.mdx` with frontmatter + an optional one-line description in the body.
 - For Agents: also offer to create `agents/<id>/prompts/system.md` and reference it via `prompts.system: ./prompts/system.md`.
 
@@ -50,6 +54,7 @@ Run `ac-agents validate <root>` from the repo root. If it exits non-zero, surfac
 
 ## Anti-patterns to refuse
 
-- Don't invent entity kinds. The seven are fixed (see CONTEXT.md if present).
-- Don't add `Skill`, `MCPServer`, or `KnowledgeBase` as first-class; fold them into existing tags/attributes.
+- Don't invent entity kinds. The eight are fixed (see CONTEXT.md if present).
+- Don't add `Skill` or `KnowledgeBase` as first-class; fold them into existing tags/attributes.
+- Don't write a credential into an MCP server's `snapshot`. Name it as `${NAME}`.
 - Don't write a file at the catalog root or into an unexpected directory.

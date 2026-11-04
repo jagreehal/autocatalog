@@ -1,0 +1,40 @@
+name: Autocatalog check
+description: Check the documents, events and contracts a repository publishes, on every pull request.
+branding:
+  icon: check-circle
+  color: blue
+inputs:
+  root:
+    description: The folder to check.
+    default: .
+  allow-code-execution:
+    description: Run the rules this repository commits. Leave off for pull requests from forks.
+    default: 'false'
+  version:
+    description: The autocatalog version to run.
+    default: latest
+  node-version:
+    description: The Node.js version to run it on.
+    default: '24'
+runs:
+  using: composite
+  steps:
+    # The whole history: drift reads the base branch from it.
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        fetch-depth: 0
+        persist-credentials: false
+    - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      with:
+        node-version: ${{ inputs.node-version }}
+    - shell: bash
+      env:
+        ROOT: ${{ inputs.root }}
+        VERSION: ${{ inputs.version }}
+        BASE_REF: ${{ github.base_ref }}
+        ALLOW_CODE: ${{ inputs.allow-code-execution }}
+      run: |
+        args=(check "$ROOT" --format github)
+        if [ -n "$BASE_REF" ]; then args+=(--base-ref "origin/$BASE_REF"); fi
+        if [ "$ALLOW_CODE" = "true" ]; then args+=(--allow-code-execution); fi
+        npx --yes "autocatalog@$VERSION" "${args[@]}"

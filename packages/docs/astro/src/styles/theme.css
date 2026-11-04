@@ -628,3 +628,9 @@ html[data-graph-fullscreen] body > :not([data-graph-fullscreen]) {
 html[data-graph-fullscreen] body > [data-graph-fullscreen] {
   visibility: visible;
 }
+
+/* A wordmark is wide and short; at Starlight's height it would crowd the header. */
+.site-title img {
+  height: 1.35rem;
+  width: auto;
+}

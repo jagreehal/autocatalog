@@ -20,6 +20,7 @@ const catalog: Catalog = {
             status: 'active',
             model: 'declared-model',
             tools: ['lookup-order'],
+            servers: [],
             policies: [],
             risk: 'medium',
           },
@@ -66,6 +67,8 @@ const catalog: Catalog = {
     ['policy', new Map()],
   ]),
   meta: new Map(),
+  snapshots: new Map(),
+  changes: new Map(),
   issues: [],
 };
 
@@ -154,6 +157,7 @@ describe('Production agent drift', () => {
             status: 'active',
             model: 'declared-model',
             tools: ['lookup-order'],
+            servers: [],
             policies: [],
             risk: 'medium',
           },

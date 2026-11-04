@@ -6,7 +6,8 @@ import { resolveAbout } from './about';
 import { DOCS_MANIFEST_PATH } from './manifest';
 import { frontmatterSchema, resolveFrontmatterContract } from './frontmatter';
 import { kindFailure, kindValidator, resolveDocKinds, supersession } from './kinds';
-import { readDocs, type ReadDocsOptions } from './read-docs';
+import { readDocs, type ReadDocsOptions, resolveDocsLayout } from './read-docs';
+import { readRepositoryMeta, REPOSITORY_META } from './repository-meta';
 
 export interface CheckDocsOptions extends ReadDocsOptions {
   /**
@@ -70,6 +71,33 @@ function readManifest(
   return publishedIndex.parse(JSON.parse(fs.readFileSync(resolved, 'utf8')));
 }
 
+/** Whether a sidebar entry is a folder directly under `docs/`, the only kind it can group. */
+function isDocsFolder(dir: string, directory: string): boolean {
+  if (directory !== path.basename(directory) || directory === '.' || directory === '..') {
+    return false;
+  }
+
+  const entry = fs.lstatSync(path.join(dir, 'docs', directory), { throwIfNoEntry: false });
+
+  return entry?.isDirectory() === true;
+}
+
+/** A `docs/meta.json` that does not read, or names something that is not a folder of `docs/`. */
+function repositoryMetaFailures(root: string, options: CheckDocsOptions): string[] {
+  return resolveDocsLayout(root, options).roots.flatMap(({ dir }) => {
+    const { meta, problem } = readRepositoryMeta(dir);
+    const file = path.relative(root, path.join(dir, REPOSITORY_META)).split(path.sep).join('/');
+
+    if (problem) return [`${file}: ${problem}`];
+
+    return (meta.sidebar ?? []).flatMap(({ directory }) =>
+      isDocsFolder(dir, directory)
+        ? []
+        : [`${file}: sidebar names "${directory}", which is not a folder directly under docs/`],
+    );
+  });
+}
+
 /**
  * The check a publishing repository runs against its own `docs/` in its own CI,
  * so a bad document fails the pull request that introduced it rather than a
@@ -86,7 +114,7 @@ export function checkDocs(root: string, options: CheckDocsOptions = {}): CheckDo
   // What this checkout is answerable for: derived from what is on disk, so no
   // caller has to declare it. One repo in its own CI, many in a combined index.
   const owned = new Set(docs.map((doc) => doc.repo));
-  const failures: string[] = [];
+  const failures: string[] = repositoryMetaFailures(root, options);
   const kinds = new Set<string>(options.resources?.map((resource) => resource.ref.kind));
 
   for (const doc of docs) {

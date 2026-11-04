@@ -30,6 +30,8 @@ export interface OwnedResource {
 /** What `teams/<id>.md` or `users/<id>.md` says of an owner. */
 export interface OwnerProfile {
   kind: 'team' | 'user';
+  /** What the directory calls this owner, in place of how a document wrote it. */
+  name?: string | undefined;
   summary?: string | undefined;
   role?: string | undefined;
   avatarUrl?: string | undefined;

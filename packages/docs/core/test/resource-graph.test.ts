@@ -88,6 +88,20 @@ describe('documentation resource graph Adapter', () => {
     expect(graph.relationships.filter((edge) => edge.type === 'publishes')).toHaveLength(2);
   });
 
+  it('gives an index document the address of its folder', () => {
+    const index = { ...docs[0]!, id: 'payments-service/index' };
+
+    const graph = createDocsResourceGraph([index], {
+      'payments-service/index': manifest['payments-service/runbook']!,
+    });
+
+    const page = graph.resources.find(
+      ({ ref }) => resourceKey(ref) === 'document:payments-service/index',
+    );
+
+    expect(page?.url).toBe('/payments-service');
+  });
+
   it('refuses to compile documents that did not pass into the validated manifest', () => {
     expect(() => createDocsResourceGraph(docs, {})).toThrow(DocsResourceGraphError);
   });

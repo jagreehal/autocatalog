@@ -42,7 +42,7 @@ export type DiscoveryResult = {
   warnings: string[];
 };
 
-type ScanFile = {
+export type ScanFile = {
   absPath: string;
   relPath: string;
   text: string;
@@ -60,25 +60,29 @@ const SKIP_DIRS = new Set([
   'test-results',
 ]);
 
-const toId = (value: string): string =>
+export const toId = (value: string): string =>
   value
     .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
     .replace(/[^a-zA-Z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
     .toLowerCase();
 
-const toName = (id: string): string =>
+export const toName = (id: string): string =>
   id
     .split('-')
     .filter(Boolean)
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(' ');
 
-const lineAt = (text: string, index: number): number => text.slice(0, index).split('\n').length;
+export const lineAt = (text: string, index: number): number =>
+  text.slice(0, index).split('\n').length;
 
-const listFiles = async (root: string, exts: Set<string>): Promise<ScanFile[]> => {
-  const out: ScanFile[] = [];
-
+/** Visit each accepted file in turn, so a large tree is never held in memory at once. */
+export const forEachFile = async (
+  root: string,
+  accept: (relPath: string) => boolean,
+  visit: (file: ScanFile) => void | Promise<void>,
+): Promise<void> => {
   const walk = async (dir: string): Promise<void> => {
     const entries = await readdir(dir, { withFileTypes: true });
 
@@ -88,17 +92,26 @@ const listFiles = async (root: string, exts: Set<string>): Promise<ScanFile[]> =
         continue;
       }
 
-      if (!entry.isFile() || !exts.has(extname(entry.name))) continue;
       const absPath = join(dir, entry.name);
-      out.push({
-        absPath,
-        relPath: relative(root, absPath),
-        text: await readFile(absPath, 'utf8'),
-      });
+      const relPath = relative(root, absPath);
+
+      if (!entry.isFile() || !accept(relPath)) continue;
+      await visit({ absPath, relPath, text: await readFile(absPath, 'utf8') });
     }
   };
 
   await walk(root);
+};
+
+export const listFiles = async (
+  root: string,
+  accept: (relPath: string) => boolean,
+): Promise<ScanFile[]> => {
+  const out: ScanFile[] = [];
+
+  await forEachFile(root, accept, (file) => {
+    out.push(file);
+  });
 
   return out;
 };
@@ -216,7 +229,7 @@ const firstPositionalStringLiteral = (args: string): string | undefined => {
 };
 
 export const discoverPydanticAi = async (root: string): Promise<DiscoveryResult> => {
-  const files = await listFiles(root, new Set(['.py']));
+  const files = await listFiles(root, (file) => extname(file) === '.py');
   const agents = new Map<string, DiscoveredAgent>();
   const tools = new Map<string, DiscoveredTool>();
   const models = new Map<string, DiscoveredModel>();
@@ -301,7 +314,10 @@ export const discoverPydanticAi = async (root: string): Promise<DiscoveryResult>
 };
 
 export const discoverAiSdk = async (root: string): Promise<DiscoveryResult> => {
-  const files = await listFiles(root, new Set(['.ts', '.tsx', '.mts', '.cts']));
+  const files = await listFiles(root, (file) =>
+    ['.ts', '.tsx', '.mts', '.cts'].includes(extname(file)),
+  );
+
   const agents = new Map<string, DiscoveredAgent>();
   const agentsUsingToolsIdentifier = new Set<string>();
   const tools = new Map<string, DiscoveredTool>();

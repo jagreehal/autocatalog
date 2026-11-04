@@ -23,6 +23,10 @@ export { ChannelsPage, type ChannelsPageProps } from './ChannelsPage';
 
 export { ChannelPage, type ChannelPageProps } from './ChannelPage';
 
+export { McpServersPage, type McpServersPageProps } from './McpServersPage';
+
+export { McpServerPage, type McpServerPageProps } from './McpServerPage';
+
 export { SystemsPage, type SystemsPageProps } from './SystemsPage';
 
 export { SystemPage, type SystemPageProps } from './SystemPage';

@@ -31,6 +31,8 @@ key lists in `parse.ts` for your own conventions.
 | `unused-declared-tool` | Agent declares a tool but never called it (in this trace window)                   |
 | `model-mismatch`       | Agent declared model X but called model Y; catalog `model_id` aliases are accepted |
 | `undeclared-model`     | Observed model id not in the catalog at all                                        |
+| `unknown-mcp-server`   | A call went to an MCP server the catalog does not have                             |
+| `tool-not-in-snapshot` | A call used a tool the server's last snapshot does not hold                        |
 
 ## API
 

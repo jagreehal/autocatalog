@@ -9,6 +9,7 @@
     "lint": "prettier --check . && oxlint --disable-nested-config",
     "lint:slop": "oxlint --disable-nested-config",
     "typecheck": "node scripts/typecheck.mjs",
+    "contracts": "node scripts/write-contracts.mjs",
     "test:python": "cd python/autocatalog-py && python3 -m pytest -q",
     "release:check": "pnpm lint && pnpm build && pnpm typecheck && pnpm test && pnpm smoke:product && pnpm validate:events",
     "validate:events": "tsx packages/events/cli/src/bin.ts validate --cwd fixtures/event-starter",

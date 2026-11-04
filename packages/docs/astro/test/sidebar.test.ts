@@ -1,9 +1,11 @@
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { buildDocsCatalog } from '../src/catalog';
-import { catalogSidebar, docsSidebar } from '../src/sidebar';
+import { docPaths } from '../src/paths';
+import { catalogSidebar, docsSidebar, navigationGroups } from '../src/sidebar';
+import { docHref } from '../src/ui/lib/docs';
 
 let root: string;
 
@@ -23,6 +25,57 @@ async function write(file: string, body: string): Promise<void> {
 
 const doc = (title: string): string => `---\ntitle: ${title}\nowner: Payments\n---\n\nBody.\n`;
 
+describe('navigationGroups', () => {
+  const pages = [
+    { label: 'Knowledge graph', link: '/catalog' },
+    { label: 'Owners', link: '/owners' },
+    { label: 'Domains', link: '/domains' },
+  ];
+
+  it('keeps the catalog group when nothing is configured', () => {
+    expect(navigationGroups(pages)).toEqual([{ label: 'Catalog', items: pages }]);
+  });
+
+  it('replaces it with the groups a site names, in their order, with its own links', () => {
+    expect(
+      navigationGroups(pages, {
+        groups: [
+          { label: 'People', items: [{ id: 'owners' }] },
+          {
+            label: 'Browse',
+            collapsed: true,
+            items: [
+              { id: 'catalog', label: 'Everything' },
+              { label: 'Status', href: 'https://status.example.com' },
+            ],
+          },
+        ],
+      }),
+    ).toEqual([
+      { label: 'People', items: [{ label: 'Owners', link: '/owners' }] },
+      {
+        label: 'Browse',
+        collapsed: true,
+        items: [
+          { label: 'Everything', link: '/catalog' },
+          { label: 'Status', link: 'https://status.example.com' },
+        ],
+      },
+    ]);
+  });
+
+  it('leaves out a page this catalog has nothing for, and a group left empty', () => {
+    expect(
+      navigationGroups(pages, {
+        groups: [
+          { label: 'Empty', items: [{ id: 'flows' }] },
+          { label: 'Browse', items: [{ id: 'flows' }, { id: 'domains' }] },
+        ],
+      }),
+    ).toEqual([{ label: 'Browse', items: [{ label: 'Domains', link: '/domains' }] }]);
+  });
+});
+
 describe('docsSidebar', () => {
   it('groups by repository, in name order, with each document titled', async () => {
     await write('reporter/docs/daily.md', doc('Daily reconciliation'));
@@ -32,13 +85,89 @@ describe('docsSidebar', () => {
     expect(docsSidebar(root)).toEqual([
       {
         label: 'payments-service',
+        collapsed: true,
         items: [
-          { label: 'Replaying captures', link: '/payments-service/ops/replay' },
           { label: 'Runbook', link: '/payments-service/runbook' },
+          {
+            label: 'Ops',
+            collapsed: true,
+            items: [{ label: 'Replaying captures', link: '/payments-service/ops/replay' }],
+          },
         ],
       },
-      { label: 'reporter', items: [{ label: 'Daily reconciliation', link: '/reporter/daily' }] },
+      {
+        label: 'reporter',
+        collapsed: true,
+        items: [{ label: 'Daily reconciliation', link: '/reporter/daily' }],
+      },
     ]);
+  });
+
+  it('opens with an index document, called Overview, at its folder', async () => {
+    await write('payments/docs/a.md', doc('A'));
+    await write('payments/docs/index.md', doc('Payments'));
+    await write('payments/docs/guide/index.md', doc('Guide'));
+
+    expect(docsSidebar(root)).toEqual([
+      {
+        label: 'payments',
+        items: [
+          { label: 'Overview', link: '/payments' },
+          { label: 'A', link: '/payments/a' },
+          { label: 'Guide', collapsed: true, items: [{ label: 'Guide', link: '/payments/guide' }] },
+        ],
+      },
+    ]);
+    expect(docHref('payments/index')).toBe('/payments');
+  });
+
+  it('takes the name and folder order a repository gives in docs/meta.json', async () => {
+    await write(
+      'tools/docs/meta.json',
+      JSON.stringify({
+        label: 'Internal Tools',
+        sidebar: [
+          { directory: 'runbooks', label: 'Runbooks', collapsed: true },
+          { directory: 'guide', label: 'Start here' },
+          { directory: 'gone', label: 'No pages' },
+        ],
+      }),
+    );
+    await write('tools/docs/guide/start.md', doc('Start'));
+    await write('tools/docs/runbooks/restart.md', doc('Restart'));
+    await write('tools/docs/stories/user-stories.md', doc('Stories'));
+
+    expect(docsSidebar(root)).toEqual([
+      {
+        label: 'Internal Tools',
+        items: [
+          {
+            label: 'Runbooks',
+            collapsed: true,
+            items: [{ label: 'Restart', link: '/tools/runbooks/restart' }],
+          },
+          {
+            label: 'Start here',
+            collapsed: false,
+            items: [{ label: 'Start', link: '/tools/guide/start' }],
+          },
+          // A folder nobody listed is never hidden for want of a label.
+          {
+            label: 'Stories',
+            collapsed: true,
+            items: [{ label: 'Stories', link: '/tools/stories/user-stories' }],
+          },
+        ],
+      },
+    ]);
+  });
+
+  it("publishes an index document's twin at its page's address too", async () => {
+    await write('payments/docs/index.md', doc('Payments'));
+    vi.stubEnv('AUTOCATALOG_DOCS_ROOT', root);
+
+    expect(docPaths().map(({ params }) => params.slug)).toEqual(['payments/index', 'payments']);
+    vi.unstubAllEnvs();
   });
 
   it('still lists a document with no usable title, so it can be navigated to and fixed', async () => {
@@ -92,7 +221,9 @@ describe('docsSidebar', () => {
 
     expect(catalog.docs.map(({ id }) => id)).toEqual(['platform/workspace']);
     expect(
-      docsSidebar(root, options).flatMap(({ items }) => items.map(({ link }) => link)),
+      docsSidebar(root, options).flatMap(({ items }) =>
+        items.map((item) => ('link' in item ? item.link : item.label)),
+      ),
     ).toEqual(['/platform/workspace']);
   });
 

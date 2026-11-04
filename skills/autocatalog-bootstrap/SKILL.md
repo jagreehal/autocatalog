@@ -18,15 +18,17 @@ ac scan . --out ./events
 ```
 
 Read the summary it prints: how many events, how many `needsReview`, which
-adapter found what. That number is the starting position, not a score.
+plugin found what. That number is the starting position, not a score.
 
 Nothing found? Check which formats are actually present before concluding the
 repo has no events — the scan reads JSON Schema, OpenAPI (`webhooks`,
 `callbacks`, and operations marked `x-autocatalog`), Avro `.avsc`, and protobuf
-`.proto` with no configuration. Zod and other runtime adapters need
+`.proto` with no configuration. Zod and other runtime plugins need
 `ac scan . --allow-code-execution`, which runs repository code, so only for
-source you have read and trust. A company format needs an adapter of its own:
-see `docs/adapters.md`.
+source you have read and trust. A team that keeps its events in a file of its
+own can describe it in `contracts/autocatalog.conventions.json`, with no code to
+write or run. A format that file cannot describe needs a plugin. `docs/plugins.md`
+covers both.
 
 No contracts at all, but the tests record an autotel snapshot? Start from what
 ran:

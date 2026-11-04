@@ -51,6 +51,8 @@ import { ARTIFACT_RESOURCES_FILE } from './resources';
 const execFileAsync = promisify(execFile);
 
 export interface RunDriftOptions {
+  /** Compare only what a repository publishes on purpose. */
+  onlyPublished?: boolean;
   base?: string; // baseline catalog directory (e.g. the default branch's events/)
   baseRef?: string; // Git ref whose source will be scanned as the baseline
   root?: string; // source tree to scan in Git-ref mode
@@ -62,6 +64,8 @@ export interface RunDriftOptions {
   quiet?: boolean;
   adapters?: DiscoveryAdapter[];
   allowCodeExecution?: boolean;
+  /** A shared conventions file, read in place of the repository's own. */
+  conventions?: string;
   /** A runtime architecture snapshot to check the current catalog against. */
   snapshot?: string;
   /**
@@ -176,22 +180,39 @@ async function catalogsForGitRef(opts: RunDriftOptions & { baseRef: string }): P
 
     const currentRevision = await gitOutput(gitRoot, ['rev-parse', 'HEAD']);
 
+    const conventions = opts.conventions && { conventions: path.resolve(opts.conventions) };
+
     const [baseline, current] = await Promise.all([
       scanCatalog({
         root: path.join(worktree, relativeRoot),
         outRoot: baseEvents,
         adapters,
+        ...conventions,
+        onlyPublished: opts.onlyPublished,
         repository: { revision: baselineRevision, requestedRef: opts.baseRef },
       }),
       scanCatalog({
         root: currentRoot,
         outRoot: currentEvents,
         adapters,
+        ...conventions,
+        onlyPublished: opts.onlyPublished,
         repository: { revision: currentRevision },
       }),
     ]);
 
-    const errors = [...baseline.errors, ...current.errors];
+    // A base that does not read must not block the change that repairs it.
+    if (opts.onlyPublished && baseline.errors.length > 0) {
+      console.warn(
+        kleur.yellow(
+          `${opts.baseRef} holds contracts that do not read, so nothing compares against it: ${baseline.errors.join('; ')}`,
+        ),
+      );
+    }
+
+    if (opts.onlyPublished) await fs.mkdir(baseEvents, { recursive: true });
+
+    const errors = [...(opts.onlyPublished ? [] : baseline.errors), ...current.errors];
 
     if (errors.length > 0) throw new Error(`Could not build drift snapshots: ${errors.join('; ')}`);
 

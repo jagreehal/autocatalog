@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+import { findCatalogRoots } from 'autocatalog-core';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { buildDocsManifest, DocsManifestError, invalidDocuments } from '../src/manifest';
 import { checkDocs } from '../src/check';
@@ -79,6 +80,16 @@ describe('resolveDocsLayout', () => {
     expect(layout.pattern).toBe('docs/**/*.{md,mdx}');
     expect(layout.idFor('docs/runbook.md')).toBe('payments-service/runbook');
     expect(layout.idFor('docs/overview.mdx')).toBe('payments-service/overview');
+  });
+
+  it('keeps an application route named events or docs out of the catalog', async () => {
+    await write('platform/package.json', '{}');
+    await write('platform/docs/workspace.md', doc('Workspace'));
+    await write('platform/apps/web/routes/events/index.ts', '');
+    await write('platform/apps/web/app/(site)/docs/events/page.tsx', '');
+
+    expect(resolveDocsLayout(root).roots.map(({ name }) => name)).toEqual(['platform']);
+    expect(findCatalogRoots(root).map(({ name }) => name)).toEqual(['platform']);
   });
 
   it('finds the docs of packages inside a monorepo, named for their folder', async () => {

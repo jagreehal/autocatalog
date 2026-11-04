@@ -17,6 +17,7 @@ import {
 import { type Catalog, refKey } from './loader.js';
 import { type Entity, type EntityKind, ENTITY_KINDS } from './schemas.js';
 import { linkEvents, type EventLink } from './events.js';
+import { mcpServerFacts } from './mcp-snapshot.js';
 import { validateEdges } from './validator.js';
 
 export class AgentsResourceGraphError extends Error {
@@ -124,8 +125,9 @@ function attributesOf(entity: Entity, eventEdges: boolean): AgentSystemResourceA
   const events = eventEdges ? ['produces', 'consumes'] : [];
 
   const relationshipFields: Partial<Record<EntityKind, string[]>> = {
-    agent: ['model', 'tools', 'policies', 'domain', ...events],
-    tool: ['domain', ...events],
+    agent: ['model', 'tools', 'servers', 'policies', 'domain', ...events],
+    tool: ['domain', 'server', ...events],
+    'mcp-server': ['snapshot'],
     workflow: ['agents', 'domain'],
     eval: ['target'],
   };
@@ -219,6 +221,26 @@ export function createAgentsResourceGraph(
     }
   }
 
+  const addRepositoryEdge = (
+    type: 'defines' | 'usesServer',
+    repository: string,
+    to: CatalogResource,
+    entity: Entity,
+  ) => {
+    const repositoryResource = createRepositoryResource(repository);
+    resources.set(resourceKey(repositoryResource.ref), repositoryResource);
+
+    const relationship: CatalogRelationship = {
+      type,
+      from: repositoryResource.ref,
+      to: to.ref,
+      ...evidenceFor(entity, 'repository'),
+      source: to.source,
+    };
+
+    relationships.set(relationshipKey(relationship), relationship);
+  };
+
   const addRelationship = (
     type: CatalogRelationshipType,
     from: Entity,
@@ -249,6 +271,10 @@ export function createAgentsResourceGraph(
 
     for (const entity of entities) {
       const provenance = provenanceOf(entity);
+      const attributes = attributesOf(entity, eventEdges !== undefined);
+
+      if (entity.kind === 'mcp-server')
+        Object.assign(attributes, mcpServerFacts(catalog, entity.id));
 
       const resource: AgentSystemCatalogResource = {
         ref: entityRef(entity),
@@ -269,7 +295,7 @@ export function createAgentsResourceGraph(
         },
         needsReview: (entity.discovery?.needs_review.length ?? 0) > 0,
         source: sourceOf(catalog, entity),
-        attributes: attributesOf(entity, eventEdges !== undefined),
+        attributes,
       };
 
       resources.set(resourceKey(resource.ref), resource);
@@ -280,6 +306,10 @@ export function createAgentsResourceGraph(
 
         for (const tool of [...new Set(agent.tools)].sort()) {
           addRelationship('usesTool', agent, 'tool', tool, 'tools');
+        }
+
+        for (const server of [...new Set(agent.servers)].sort()) {
+          addRelationship('usesServer', agent, 'mcp-server', server, 'servers');
         }
 
         for (const policy of [...new Set(agent.policies)].sort()) {
@@ -293,25 +323,25 @@ export function createAgentsResourceGraph(
         const repository =
           agent.repository?.id ?? (url ? repositoryId(url) : null) ?? options.repository;
 
-        if (repository) {
-          const repositoryResource = createRepositoryResource(repository);
-          resources.set(resourceKey(repositoryResource.ref), repositoryResource);
-          const evidence = evidenceFor(agent, 'repository');
-
-          const defines: CatalogRelationship<'defines'> = {
-            type: 'defines',
-            from: repositoryResource.ref,
-            to: resource.ref,
-            ...evidence,
-            source: resource.source,
-          };
-
-          relationships.set(relationshipKey(defines), defines);
-        }
+        if (repository) addRepositoryEdge('defines', repository, resource, agent);
       } else if (entity.kind === 'tool') {
         const tool = entity;
 
         if (tool.domain) addRelationship('belongsTo', tool, 'domain', tool.domain, 'domain');
+
+        if (tool.server) addRelationship('exposedBy', tool, 'mcp-server', tool.server, 'server');
+      } else if (entity.kind === 'mcp-server') {
+        const url = entity.repository?.url;
+        const declared = entity.repository?.id ?? (url ? repositoryId(url) : null);
+        // With `used_by`, this catalog gathers many repositories and defines none of them.
+        const local = entity.origin === 'built' && !entity.used_by ? options.repository : undefined;
+        const definedBy = declared ?? local;
+
+        if (definedBy) addRepositoryEdge('defines', definedBy, resource, entity);
+
+        const users = entity.used_by ?? (options.repository ? [options.repository] : []);
+
+        for (const user of users) addRepositoryEdge('usesServer', user, resource, entity);
       } else if (entity.kind === 'workflow') {
         const workflow = entity;
 

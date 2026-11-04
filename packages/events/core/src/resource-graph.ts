@@ -1,6 +1,13 @@
+import { z } from 'zod';
 import type { SourceLocation } from './adapter-event';
 import { deliveryEventOf } from './delivery-model';
-import { isJsonObject, jsonObjectSchema, type JsonObject, type JsonValue } from './json';
+import {
+  isJsonObject,
+  jsonObjectSchema,
+  jsonValueSchema,
+  type JsonObject,
+  type JsonValue,
+} from './json';
 import type { LoadedEvent } from './load';
 import type { EventFrontmatter, ProvenanceValue } from './schema';
 
@@ -108,7 +115,7 @@ export interface TermResourceAttributes {
 }
 
 export type AgentSystemResourceKind =
-  'agent' | 'domain' | 'eval' | 'model' | 'policy' | 'tool' | 'workflow';
+  'agent' | 'domain' | 'eval' | 'mcp-server' | 'model' | 'policy' | 'tool' | 'workflow';
 
 export type AgentSystemResourceAttributes = JsonObject;
 
@@ -167,6 +174,7 @@ const AGENT_SYSTEM_RESOURCE_KINDS = new Set<string>([
   'agent',
   'domain',
   'eval',
+  'mcp-server',
   'model',
   'policy',
   'tool',
@@ -190,6 +198,7 @@ export type CatalogRelationshipType =
   | 'defines'
   | 'describes'
   | 'evaluates'
+  | 'exposedBy'
   | 'governedBy'
   | 'orchestrates'
   | 'produces'
@@ -200,6 +209,7 @@ export type CatalogRelationshipType =
   | 'routesTo'
   | 'deadLettersTo'
   | 'usesModel'
+  | 'usesServer'
   | 'usesTool';
 
 export interface CatalogRelationship<Type extends string = CatalogRelationshipType> {
@@ -333,6 +343,10 @@ function mergeCompatibleResource(
 ): CatalogResource | null {
   if (stableValue(existing) === stableValue(incoming)) return existing;
 
+  if (isMcpServerResource(existing) && isMcpServerResource(incoming)) {
+    return mergeMcpServers(existing, incoming);
+  }
+
   if (!isServiceCatalogResource(existing) || !isServiceCatalogResource(incoming)) return null;
 
   const structural = (resource: ServiceCatalogResource) => ({
@@ -366,6 +380,119 @@ function mergeCompatibleResource(
         ...new Set([...existing.attributes.domains, ...incoming.attributes.domains]),
       ].sort(),
     },
+  };
+}
+
+const isMcpServerResource = (resource: CatalogResource): resource is AgentSystemCatalogResource =>
+  resource.ref.kind === 'mcp-server';
+
+/** What a discovered entry says before a person has named an owner. */
+const UNREVIEWED_OWNER = 'review-needed';
+
+const McpServerAttributes = z.looseObject({
+  transport: z.string().optional(),
+  url: z.string().optional(),
+  origin: z.string().default('unknown'),
+  owners: z.array(z.string()).default([]),
+  versions: z.array(z.string()).default([]),
+  connections: z.array(z.string()).default([]),
+  tools: z.array(z.looseObject({ name: z.string() })).default([]),
+  changes: z.array(z.looseObject({ at: z.string() })).default([]),
+  package: z
+    .looseObject({ registry: z.string(), name: z.string(), version: z.string().optional() })
+    .optional(),
+});
+
+/**
+ * Many repositories configure one server, each with its own team and file. An
+ * id comes from the endpoint, so a shared id with a different address or package
+ * is a real contradiction; owners, sources and versions add up.
+ */
+function mergeMcpServers(
+  existing: AgentSystemCatalogResource,
+  incoming: AgentSystemCatalogResource,
+): CatalogResource | null {
+  const [a, b] = [existing, incoming].map((resource) =>
+    McpServerAttributes.safeParse(resource.attributes),
+  );
+
+  if (!a?.success || !b?.success) return null;
+
+  const endpoint = ({ data }: typeof a) =>
+    JSON.stringify([data.transport, data.url, data.package?.registry, data.package?.name]);
+
+  if (endpoint(a) !== endpoint(b)) return null;
+
+  const [first] = [existing, incoming].sort((x, y) => x.title.localeCompare(y.title));
+
+  const everyOwner = [
+    ...[existing, incoming].flatMap(({ owner }) => (owner ? [owner.team] : [])),
+    ...a.data.owners,
+    ...b.data.owners,
+  ];
+
+  const named = everyOwner.filter((owner) => owner !== UNREVIEWED_OWNER);
+  const [team, ...owners] = [...new Set(named.length > 0 ? named : everyOwner)].sort();
+
+  const versions = [
+    ...new Set(
+      [a, b].flatMap(({ data }) => [
+        ...data.versions,
+        ...(data.package?.version ? [data.package.version] : []),
+      ]),
+    ),
+  ].sort();
+
+  const origins = [a.data.origin, b.data.origin];
+
+  const sources = [existing.source, incoming.source].filter(
+    (source): source is SourceLocation => source !== undefined,
+  );
+
+  sources.sort((x, y) => stableValue(x).localeCompare(stableValue(y)));
+
+  const attributes: JsonObject = {
+    ...first!.attributes,
+    origin: origins.includes('built')
+      ? 'built'
+      : (origins.find((origin) => origin !== 'unknown') ?? 'unknown'),
+  };
+
+  if (owners.length > 0) attributes.owners = owners;
+
+  const connections = [...new Set([...a.data.connections, ...b.data.connections])].sort();
+
+  if (connections.length > 0) attributes.connections = connections;
+
+  const tools = new Map([...a.data.tools, ...b.data.tools].map((tool) => [tool.name, tool]));
+
+  if (tools.size > 0) {
+    attributes.tools = jsonValueSchema.parse(
+      [...tools.values()].sort((x, y) => x.name.localeCompare(y.name)),
+    );
+  }
+
+  const changes = [...a.data.changes, ...b.data.changes];
+
+  if (changes.length > 0) {
+    attributes.changes = jsonValueSchema.parse(changes.sort((x, y) => y.at.localeCompare(x.at)));
+  }
+
+  if (versions.length > 1) attributes.versions = versions;
+
+  if (a.data.package) {
+    const { registry, name } = a.data.package;
+
+    attributes.package =
+      versions.length === 1 ? { registry, name, version: versions[0]! } : { registry, name };
+  }
+
+  return {
+    ...first!,
+    owner: team ? { team } : undefined,
+    needsReview: existing.needsReview || incoming.needsReview,
+    source: sources[0],
+    attributes,
   };
 }
 

@@ -3,7 +3,8 @@ import path from 'node:path';
 import type { AdapterEvent } from './adapter-event';
 import type { EventFrontmatter } from './schema';
 import { generateExampleFromSchema } from './example-gen';
-import { isJsonObject } from './json';
+import { jsonSchemaAjv, jsonSchemaDialect } from './json-schema-dialect';
+import { isJsonObject, type JsonObject, type JsonValue } from './json';
 import { ownerForPath, parseCodeowners, type CodeownersRule } from './codeowners';
 
 /**
@@ -42,12 +43,27 @@ export function inferOwnership(event: AdapterEvent, rules: CodeownersRule[]): vo
   };
 }
 
+/**
+ * A placeholder that fails its own schema, as a recursive type's must, is left
+ * out: an example nobody wrote should not stop the catalog publishing. A schema
+ * that will not compile says so at validation.
+ */
+function satisfies(schema: JsonObject, data: JsonValue): boolean {
+  try {
+    return jsonSchemaAjv(jsonSchemaDialect(schema)).validate(schema, data) === true;
+  } catch {
+    return true;
+  }
+}
+
 /** No example anywhere → generate a deterministic baseline from the schema. */
 export function generateMissingExample(event: AdapterEvent): void {
   if (event.examples.length > 0) return;
   const generated = generateExampleFromSchema(event.schema);
 
   if (!isJsonObject(generated) && !Array.isArray(generated)) return;
+
+  if (!satisfies(event.schema, generated)) return;
 
   const data =
     event.meta?.envelope?.mode === 'structured'

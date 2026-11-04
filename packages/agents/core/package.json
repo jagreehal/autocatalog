@@ -19,10 +19,12 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
-    }
+    },
+    "./contracts/*": "./contracts/*"
   },
   "files": [
     "dist",
+    "contracts",
     "README.md"
   ],
   "scripts": {
@@ -32,6 +34,8 @@
   "dependencies": {
     "autocatalog-core": "workspace:*",
     "js-yaml": "^5.4.3",
+    "jsonc-parser": "3.3.1",
+    "smol-toml": "1.9.1",
     "zod": "^4.6.5"
   },
   "devDependencies": {

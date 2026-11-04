@@ -38,9 +38,11 @@ const SKIP_BASENAMES = new Set([
   'project.json',
   'autocatalog.json',
   // The project's own contracts: JSON Schemas for event manifests and document
-  // frontmatter, committed under contracts/ beside the event contracts.
+  // frontmatter, and its conventions, committed under contracts/ beside the
+  // event contracts.
   'event-manifest.json',
   'docs-frontmatter.json',
+  'autocatalog.conventions.json',
   '.eslintrc.json',
   'components.json',
 ]);

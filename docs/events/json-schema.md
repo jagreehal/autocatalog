@@ -96,24 +96,24 @@ Keep it in a sidecar instead if you do not own the schema file:
 ## Passive by default
 
 `ac scan` reads data files and does not execute repository code. Runtime
-adapters — Zod, for instance — have to evaluate code to recover a schema, so
+plugins, such as Zod, have to evaluate code to recover a schema, so
 they only run when you say so:
 
 ```bash
 ac scan . --out ./events --allow-code-execution
 ```
 
-Candidates from every adapter merge by event id, and conflicts resolve by
+Candidates from every plugin merge by event id, and conflicts resolve by
 provenance and confidence: `extracted` beats `inferred` for the same id.
 
 ## One catalog, or none
 
-A scan publishes transactionally. A failing adapter or an invalid event leaves
+A scan publishes transactionally. A failing plugin or an invalid event leaves
 the previous catalog exactly as it was, rather than half-replacing it. The
 mechanics — staging, locks, backups, recovery — are in
 [production operation](/docs/production).
 
-## Writing your own adapter
+## Writing your own plugin
 
 The discovery interface is deliberately small:
 
@@ -128,13 +128,13 @@ export const protobufDiscoveryAdapter: DiscoveryAdapter = {
 };
 ```
 
-Advertise it from the adapter package and `ac` finds it in `node_modules`:
+Advertise it from the plugin package and `ac` finds it in `node_modules`:
 
 ```json
 {
-  "name": "autocatalog-adapter-protobuf",
+  "name": "autocatalog-plugin-protobuf",
   "autocatalog": {
-    "adapter": {
+    "plugin": {
       "discovery": {
         "entry": "./dist/index.js",
         "export": "protobufDiscoveryAdapter"
@@ -146,5 +146,5 @@ Advertise it from the adapter package and `ac` finds it in `node_modules`:
 
 Each candidate carries its event and the source evidence together. Core owns
 conflict resolution, enrichment, validation, stale cleanup and publication;
-an adapter only translates its source format into the shared JSON Schema
+a plugin only translates its source format into the shared JSON Schema
 representation.

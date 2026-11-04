@@ -67,20 +67,24 @@ export interface AdapterManifest {
 /** A package.json field the adapter contract reads; anything but a string counts as absent. */
 const field = z.string().optional().catch(undefined);
 
-/** The parts of an adapter's package.json that declare it. */
+const pluginBlock = z
+  .object({
+    command: field,
+    description: field,
+    entry: field,
+    discovery: z.object({ entry: field, export: field }).optional().catch(undefined),
+  })
+  .optional()
+  .catch(undefined);
+
+/** The parts of a plugin's package.json that declare it. */
 const adapterPackage = z.object({
   name: field,
   autocatalog: z
     .object({
-      adapter: z
-        .object({
-          command: field,
-          description: field,
-          entry: field,
-          discovery: z.object({ entry: field, export: field }).optional().catch(undefined),
-        })
-        .optional()
-        .catch(undefined),
+      plugin: pluginBlock,
+      // What a package published before plugins were called plugins declares.
+      adapter: pluginBlock,
     })
     .optional()
     .catch(undefined),
@@ -94,15 +98,20 @@ async function readAdapterPackage(p: string): Promise<z.infer<typeof adapterPack
   }
 }
 
-/** `autocatalog-adapter-<x>`, or the same under a scope: `@acme/autocatalog-adapter-<x>`. */
-const ADAPTER_NAME = /^(@[^/]+\/)?autocatalog-adapter-[^/]+$/;
+/**
+ * `autocatalog-plugin-<x>`, or the same under a scope: `@acme/autocatalog-plugin-<x>`.
+ * `autocatalog-adapter-<x>` is the name a package published before the rename has.
+ */
+const ADAPTER_NAME = /^(@[^/]+\/)?autocatalog-(plugin|adapter)-[^/]+$/;
+
+const renamed = (name: string) => name.replace('autocatalog-adapter-', 'autocatalog-plugin-');
 
 async function loadAdapterManifest(packageDir: string): Promise<AdapterManifest | null> {
   const pkg = await readAdapterPackage(path.join(packageDir, 'package.json'));
 
   if (!pkg) return null;
 
-  const meta = pkg.autocatalog?.adapter;
+  const meta = pkg.autocatalog?.plugin ?? pkg.autocatalog?.adapter;
   const packageName = pkg.name ?? null;
 
   if (!packageName || !ADAPTER_NAME.test(packageName)) return null;
@@ -116,7 +125,7 @@ async function loadAdapterManifest(packageDir: string): Promise<AdapterManifest 
   return {
     packageName,
     command: meta.command,
-    description: meta.description ?? `Adapter command from ${packageName}`,
+    description: meta.description ?? `Plugin command from ${packageName}`,
     entryAbs: meta.entry ? path.join(packageDir, meta.entry) : undefined,
     discoveryEntryAbs: meta.discovery?.entry
       ? path.join(packageDir, meta.discovery.entry)
@@ -137,7 +146,13 @@ export async function discoverAdapters(cwd: string): Promise<AdapterManifest[]> 
       ),
   );
 
-  const candidates = [...entries, ...scoped.flat()].filter((name) => ADAPTER_NAME.test(name));
+  const installed = [...entries, ...scoped.flat()].filter((name) => ADAPTER_NAME.test(name));
+
+  // With both installed mid-migration, the renamed package answers for the old one.
+  const candidates = installed.filter(
+    (name) => renamed(name) === name || !installed.includes(renamed(name)),
+  );
+
   const results: AdapterManifest[] = [];
 
   for (const name of candidates) {
@@ -400,7 +415,7 @@ export function createIsolatedDiscoveryAdapter(
   }
 
   return {
-    name: manifest.packageName.replace('autocatalog-adapter-', ''),
+    name: manifest.packageName.replace(/autocatalog-(plugin|adapter)-/, ''),
     discover: (context) =>
       executeDiscoveryAdapter({
         name: manifest.packageName,
@@ -427,7 +442,7 @@ export async function discoverDiscoveryAdapters(
   if (discovery.length > 0 && !options.allowCodeExecution) {
     throw new AdapterExecutionError(
       'code_execution_consent_required',
-      `runtime discovery is installed (${discovery.map((item) => item.packageName).join(', ')}); rerun with --allow-code-execution only for a repository you trust`,
+      `plugins that run code are installed (${discovery.map((item) => item.packageName).join(', ')}); rerun with --allow-code-execution only for a repository you trust`,
       discovery.map((item) => item.packageName),
     );
   }

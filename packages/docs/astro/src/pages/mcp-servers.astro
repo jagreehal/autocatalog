@@ -1,0 +1,20 @@
+---
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import { docsCatalog } from '../catalog';
+import { mcpServersPageProps } from '../page-models';
+import { McpServersPage } from '../ui/pages/McpServersPage';
+
+const catalog = await docsCatalog();
+
+const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+---
+
+<StarlightPage
+  frontmatter={{
+    title: 'MCP servers',
+    description: 'Every MCP server the company builds or uses, and who depends on it.',
+    tableOfContents: false,
+  }}
+>
+  <McpServersPage {...mcpServersPageProps(catalog, base)} />
+</StarlightPage>

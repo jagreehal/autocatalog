@@ -29,7 +29,7 @@ describe('MCP over a scanned catalog (executable story: the AI surface)', () => 
   let catalog: CatalogSnapshot;
 
   beforeAll(async () => {
-    const { scanRepo } = await import('autocatalog-adapter-zod');
+    const { scanRepo } = await import('autocatalog-plugin-zod');
     out = await fs.mkdtemp(path.join(os.tmpdir(), 'ac-mcp-demo-'));
     await scanRepo({ root: demoRepo, out });
     catalog = await loadCatalog(out);

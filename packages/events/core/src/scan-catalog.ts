@@ -38,6 +38,14 @@ export interface ScanCatalogOptions {
   files?: Array<{ name: string; content: string }>;
   /** How far above `root` to look for CODEOWNERS: a monorepo's root, for one of its packages. */
   ownersWithin?: string;
+  /** A shared conventions file, read in place of the repository's own. */
+  conventions?: string;
+  /**
+   * Keep to what a repository publishes on purpose: `contracts/`, `events/`, and
+   * the Adapters that read just the files named to them. Anything else is test
+   * data or a stranger's JSON, so it neither fails the scan nor joins the catalog.
+   */
+  onlyPublished?: boolean;
 }
 
 export interface ScanCatalogResult {
@@ -50,6 +58,16 @@ export interface ScanCatalogResult {
   publication?: PublishCatalogResult;
   /** Present when a runtime snapshot was supplied. */
   runtime?: SnapshotMergeResult;
+}
+
+/** Adapters whose files were named to them, so a file that does not read is always news. */
+const NAMED_FILE_ADAPTERS = new Set(['convention', 'message-contract']);
+
+const TEST_DATA = /(^|\/)(test|tests|fixtures|__fixtures__|examples)\//;
+
+/** Whether a file sits where a repository publishes from. */
+function isPublished(file: string): boolean {
+  return /(^|\/)(contracts|events)\//.test(file) && !TEST_DATA.test(file);
 }
 
 /** Orchestrate discovery, resolution, enrichment, validation, and one atomic publication. */
@@ -72,6 +90,7 @@ export async function scanCatalog(opts: ScanCatalogOptions): Promise<ScanCatalog
           exclude: opts.exclude,
           signal: opts.signal,
           limits: opts.limits,
+          ...(opts.conventions && { conventions: opts.conventions }),
         })
         .then((result) => {
           const valid = validateDiscoveryResult(adapter.name, result, opts.limits?.maxCandidates);
@@ -83,9 +102,19 @@ export async function scanCatalog(opts: ScanCatalogOptions): Promise<ScanCatalog
           }
 
           // Each error starts with the file it is about, named the same way.
-          return within
-            ? { ...valid, errors: valid.errors.map((error) => `${within}/${error}`) }
-            : valid;
+          const errors = valid.errors.map((error) => (within ? `${within}/${error}` : error));
+
+          if (!opts.onlyPublished || NAMED_FILE_ADAPTERS.has(adapter.name)) {
+            return { ...valid, errors };
+          }
+
+          return {
+            ...valid,
+            candidates: valid.candidates.filter(({ event }) =>
+              isPublished(event.source?.file ?? ''),
+            ),
+            errors: errors.filter((error) => isPublished(error.split(': ')[0] ?? '')),
+          };
         })
         .catch((error) => ({
           candidates: [],

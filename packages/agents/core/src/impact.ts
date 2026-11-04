@@ -23,9 +23,13 @@ const depsOf = (cat: Catalog, ref: EntityRef): EntityRef[] => {
 
     for (const t of entity.tools) deps.push({ kind: 'tool', id: t });
 
+    for (const id of entity.servers) deps.push({ kind: 'mcp-server', id });
+
     for (const p of entity.policies) deps.push({ kind: 'policy', id: p });
 
     if (entity.domain) deps.push({ kind: 'domain', id: entity.domain });
+  } else if (entity.kind === 'tool') {
+    if (entity.server) deps.push({ kind: 'mcp-server', id: entity.server });
   } else if (entity.kind === 'workflow') {
     for (const id of entity.agents) deps.push({ kind: 'agent', id });
   } else if (entity.kind === 'eval') {
@@ -38,10 +42,20 @@ const depsOf = (cat: Catalog, ref: EntityRef): EntityRef[] => {
 const dependentsOf = (cat: Catalog, ref: EntityRef): EntityRef[] => {
   const out: EntityRef[] = [];
 
+  // A server reaches agents through its tools, so changing it reaches them too.
+  const servedTools =
+    ref.kind === 'mcp-server'
+      ? entitiesOf(cat, 'tool').filter((tool) => tool.server === ref.id)
+      : [];
+
+  for (const tool of servedTools) out.push({ kind: 'tool', id: tool.id });
+
   for (const a of entitiesOf(cat, 'agent')) {
     const refsMe =
       (ref.kind === 'model' && a.model === ref.id) ||
       (ref.kind === 'tool' && a.tools.includes(ref.id)) ||
+      servedTools.some((tool) => a.tools.includes(tool.id)) ||
+      (ref.kind === 'mcp-server' && a.servers.includes(ref.id)) ||
       (ref.kind === 'policy' && a.policies.includes(ref.id)) ||
       (ref.kind === 'domain' && a.domain === ref.id);
 

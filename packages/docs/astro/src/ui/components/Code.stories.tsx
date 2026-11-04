@@ -32,7 +32,7 @@ export const TypeScript: Story = {
   args: {
     language: 'typescript',
     label: 'Event definition',
-    code: `import { defineEvent } from 'autocatalog-adapter-zod';
+    code: `import { defineEvent } from 'autocatalog-plugin-zod';
 import { z } from 'zod';
 
 // Captured once the acquirer confirms; never on authorisation.

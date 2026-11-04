@@ -17,7 +17,7 @@ async function adapter(source: string, timeoutMs = 2_000) {
   await fs.writeFile(entry, source);
 
   const manifest: AdapterManifest = {
-    packageName: 'autocatalog-adapter-test',
+    packageName: 'autocatalog-plugin-test',
     description: 'test',
     discoveryEntryAbs: entry,
     discoveryExport: 'testAdapter',

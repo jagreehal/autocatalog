@@ -10,10 +10,12 @@ const env = process.env;
 
 const base = env.AUTOCATALOG_SITE_BASE || '/';
 
+const title = env.AUTOCATALOG_DOCS_TITLE || 'Catalog';
+
 export default defineConfig({
   // `ac site` gives each run a root of its own; the sources stay here.
   srcDir: fileURLToPath(new URL('./src/', import.meta.url)),
-  publicDir: fileURLToPath(new URL('./public/', import.meta.url)),
+  publicDir: env.AUTOCATALOG_SITE_PUBLIC || fileURLToPath(new URL('./public/', import.meta.url)),
   // Starlight's sitemap needs an origin. Without one the site still builds.
   ...(env.AUTOCATALOG_SITE_URL && { site: env.AUTOCATALOG_SITE_URL }),
   base,
@@ -25,7 +27,16 @@ export default defineConfig({
   markdown: { processor: unified({ rehypePlugins: [rehypeDocsBase(base)] }) },
   integrations: [
     starlight({
-      title: env.AUTOCATALOG_DOCS_TITLE || 'Catalog',
+      title,
+      ...(env.AUTOCATALOG_SITE_LOGO && {
+        logo: {
+          light: env.AUTOCATALOG_SITE_LOGO,
+          dark: env.AUTOCATALOG_SITE_LOGO_DARK,
+          alt: title,
+          replacesTitle: true,
+        },
+      }),
+      ...(env.AUTOCATALOG_SITE_CSS && { customCss: [env.AUTOCATALOG_SITE_CSS] }),
       // Default lives in site/public/favicon.svg. Set AUTOCATALOG_SITE_FAVICON
       // (and put that file under public/) to replace it.
       favicon: env.AUTOCATALOG_SITE_FAVICON || '/favicon.svg',

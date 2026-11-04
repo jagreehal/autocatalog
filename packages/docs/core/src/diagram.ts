@@ -1,4 +1,5 @@
 import {
+  isAgentSystemCatalogResource,
   isEventCatalogResource,
   isServiceCatalogResource,
   normaliseEventId,
@@ -224,6 +225,7 @@ export const DIAGRAM_NODE_TYPES = new Map<string, DiagramNodeType>([
   ['service', 'service'],
   ['agent', 'agent'],
   ['tool', 'agentTool'],
+  ['mcp-server', 'service'],
   ['domain', 'domain'],
   ['channel', 'channel'],
   ['queue', 'channel'],
@@ -246,10 +248,20 @@ const EDGES = new Map<string, { type: DiagramEdgeType; label: string; reverse?: 
 ]);
 
 /** The visualiser draws a query as its own node; here a query is a command tagged `query`. */
-const nodeType = (resource: CatalogResource): DiagramNodeType | undefined =>
-  resource.ref.kind === 'command' && resource.tags.includes('query')
-    ? 'query'
-    : DIAGRAM_NODE_TYPES.get(resource.ref.kind);
+const nodeType = (resource: CatalogResource): DiagramNodeType | undefined => {
+  if (resource.ref.kind === 'command' && resource.tags.includes('query')) return 'query';
+
+  // A server someone else runs sits outside the company, as any vendor does.
+  if (
+    isAgentSystemCatalogResource(resource) &&
+    resource.ref.kind === 'mcp-server' &&
+    resource.attributes.origin === 'third-party'
+  ) {
+    return 'external-system';
+  }
+
+  return DIAGRAM_NODE_TYPES.get(resource.ref.kind);
+};
 
 export interface CatalogDiagramOptions {
   /** Draw only these resources, by key; every one when absent. */

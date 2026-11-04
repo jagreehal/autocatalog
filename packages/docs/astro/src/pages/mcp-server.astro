@@ -1,0 +1,47 @@
+---
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import type { InferGetStaticPropsType } from 'astro';
+import { docsCatalog } from '../catalog';
+import { buildMcpServers, mcpServerPath } from '../mcp-servers';
+import { mcpServerPageProps } from '../page-models';
+import { setResourceContext } from '../shell';
+import { McpServerPage } from '../ui/pages/McpServerPage';
+
+export async function getStaticPaths() {
+  const catalog = await docsCatalog();
+  const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+
+  return buildMcpServers(catalog.graph, base).flatMap(({ id }) =>
+    mcpServerPath(id) ? [{ params: { id }, props: { id } }] : [],
+  );
+}
+
+type Props = InferGetStaticPropsType<typeof getStaticPaths>;
+
+const { id } = Astro.props;
+
+const catalog = await docsCatalog();
+
+const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+
+const page = mcpServerPageProps(catalog, id, base);
+
+if (!page) throw new Error(`MCP server not found: ${id}`);
+
+setResourceContext(Astro.locals, {
+  kind: 'service',
+  name: page.server.title,
+  key: `mcp-server:${page.server.id}`,
+  pills: [{ text: page.server.origin, tone: 'quiet' }],
+});
+---
+
+<StarlightPage
+  frontmatter={{
+    title: page.server.title,
+    description: page.server.summary ?? 'MCP server',
+    tableOfContents: false,
+  }}
+>
+  <McpServerPage {...page} />
+</StarlightPage>

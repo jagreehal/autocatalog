@@ -256,8 +256,8 @@ export function RuntimeEvidence({ evidence }: RuntimeEvidenceProps) {
                     </EmptyMedia>
                     <EmptyTitle>No evidence attached</EmptyTitle>
                     <EmptyDescription>
-                      Run <code>ac scan --snapshot &lt;file&gt;</code> with an autotel architecture
-                      snapshot to record what this event did at runtime.
+                      Run <code>ac scan --snapshot &lt;file&gt;</code> with an architecture snapshot
+                      to record what this event did at runtime.
                     </EmptyDescription>
                   </EmptyHeader>
                 </Empty>
@@ -272,8 +272,8 @@ export function RuntimeEvidence({ evidence }: RuntimeEvidenceProps) {
           <div className="flex flex-col gap-2">
             <p className="m-0 text-xs text-muted-foreground">{evidence.caveat}</p>
             <p className="m-0 text-sm">
-              Ask your coding agent: “Investigate <code className="font-mono">{evidence.ref}</code>{' '}
-              using autocatalog and autotel.”
+              Ask your coding agent: “Investigate <code className="font-mono">{evidence.ref}</code>
+              .”
             </p>
           </div>
         </CardFooter>

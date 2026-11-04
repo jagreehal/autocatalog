@@ -1,8 +1,17 @@
+import { existsSync } from 'node:fs';
 import { readdir, readFile, stat } from 'node:fs/promises';
-import { isAbsolute, join, resolve } from 'node:path';
+import { dirname, isAbsolute, join, resolve } from 'node:path';
 import * as yaml from 'js-yaml';
 import { z } from 'zod';
 import { parseFrontmatter as splitFrontmatter } from 'autocatalog-core';
+import {
+  MCP_CHANGES_FILE,
+  MCP_SNAPSHOT_DIR,
+  McpChangeLogSchema,
+  McpSnapshotSchema,
+  type McpChangeRecord,
+  type McpSnapshot,
+} from './mcp-snapshot.js';
 import {
   AUTOCATALOG_ENTITY_FILE,
   DIR_BY_KIND,
@@ -13,6 +22,7 @@ import {
   type Entity,
   type EntityKind,
   type Eval,
+  type McpServer,
   type Model,
   type Policy,
   type Tool,
@@ -45,12 +55,17 @@ export type Catalog = {
   root: string;
   entities: Map<EntityKind, Map<string, Entity>>;
   meta: Map<string, EntityMeta>;
+  /** What each MCP server last returned, one snapshot per connection. */
+  snapshots: Map<string, McpSnapshot[]>;
+  /** What changed on each MCP server, newest first. */
+  changes: Map<string, McpChangeRecord[]>;
   issues: LoadIssue[];
 };
 
 export type EntityByKind = {
   agent: Agent;
   tool: Tool;
+  'mcp-server': McpServer;
   model: Model;
   workflow: Workflow;
   domain: Domain;
@@ -77,6 +92,14 @@ export const entityOf = <K extends EntityKind>(
 
   return entity && isOfKind(kind)(entity) ? entity : undefined;
 };
+
+/**
+ * Whether a repository publishes an agent catalog to the site. Stricter than
+ * `hasAgentCatalog`: `tools/` and `models/` are common folder names, and a
+ * repository holding one has not enrolled by having it.
+ */
+export const publishesAgentCatalog = (dir: string): boolean =>
+  [DIR_BY_KIND.agent, DIR_BY_KIND['mcp-server']].some((name) => existsSync(join(dir, name)));
 
 export const refKey = (kind: EntityKind, id: string): string => `${kind}/${id}`;
 
@@ -305,6 +328,58 @@ const loadKind = async (
   return out;
 };
 
+const loadSnapshots = async (
+  catalogRoot: string,
+  meta: Map<string, EntityMeta>,
+  servers: Iterable<string>,
+  issues: LoadIssue[],
+): Promise<Map<string, McpSnapshot[]>> => {
+  const out = new Map<string, McpSnapshot[]>();
+
+  for (const server of servers) {
+    const manifest = meta.get(refKey('mcp-server', server))?.path;
+    const dir = join(manifest ? dirname(manifest) : catalogRoot, MCP_SNAPSHOT_DIR);
+
+    if (!(await exists(dir))) continue;
+
+    for (const file of (await listFiles(dir, '.json')).sort()) {
+      const filePath = join(dir, file);
+
+      try {
+        const snapshot = McpSnapshotSchema.parse(await parseJson(filePath));
+        out.set(server, [...(out.get(server) ?? []), snapshot]);
+      } catch (e) {
+        issues.push({ kind: 'parse', path: filePath, message: errorMessage(e) });
+      }
+    }
+  }
+
+  return out;
+};
+
+const loadChanges = async (
+  meta: Map<string, EntityMeta>,
+  servers: Iterable<string>,
+  issues: LoadIssue[],
+): Promise<Map<string, McpChangeRecord[]>> => {
+  const out = new Map<string, McpChangeRecord[]>();
+
+  for (const server of servers) {
+    const manifest = meta.get(refKey('mcp-server', server))?.path;
+    const filePath = manifest && join(dirname(manifest), MCP_CHANGES_FILE);
+
+    if (!filePath || !(await exists(filePath))) continue;
+
+    try {
+      out.set(server, McpChangeLogSchema.parse(JSON.parse(await readFile(filePath, 'utf8'))));
+    } catch (e) {
+      issues.push({ kind: 'parse', path: filePath, message: errorMessage(e) });
+    }
+  }
+
+  return out;
+};
+
 export const loadCatalog = async (root: string): Promise<Catalog> => {
   const issues: LoadIssue[] = [];
   const meta = new Map<string, EntityMeta>();
@@ -327,5 +402,14 @@ export const loadCatalog = async (root: string): Promise<Catalog> => {
     entities.set(kind, await loadKind(root, kind, issues, meta));
   }
 
-  return { root, entities, meta, issues };
+  const snapshots = await loadSnapshots(
+    root,
+    meta,
+    entities.get('mcp-server')?.keys() ?? [],
+    issues,
+  );
+
+  const changes = await loadChanges(meta, entities.get('mcp-server')?.keys() ?? [], issues);
+
+  return { root, entities, meta, snapshots, changes, issues };
 };

@@ -64,6 +64,7 @@ const KIND_HEADINGS = new Map([
   ['event', 'Events'],
   ['agent', 'Agents'],
   ['tool', 'Tools'],
+  ['mcp-server', 'MCP servers'],
   ['model', 'Models'],
   ['workflow', 'Workflows'],
   ['domain', 'Domains'],
@@ -204,6 +205,8 @@ export function resourceHref(resource: CatalogResource): string {
   if (kind === 'document' && resource.url) return `${base}${resource.url}`;
 
   if (kind === 'event' && namespace) return `${base}/events/${namespace}/${id}/`;
+
+  if (kind === 'mcp-server') return `${base}/mcp-servers/${id}/`;
 
   return catalogHref(resource.ref);
 }

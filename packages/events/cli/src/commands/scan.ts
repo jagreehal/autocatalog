@@ -40,6 +40,8 @@ export interface RunScanOptions extends ResourceScanFlags {
   allowCodeExecution?: boolean;
   /** Path to a runtime architecture snapshot. */
   snapshot?: string;
+  /** A shared conventions file, read in place of the repository's own. */
+  conventions?: string;
 }
 
 async function repositoryMetadata(root: string): Promise<ArtifactRepository> {
@@ -161,6 +163,7 @@ export async function runScan(opts: RunScanOptions): Promise<number> {
   const result = await scanCatalog({
     root,
     outRoot: out,
+    ...(opts.conventions && { conventions: path.resolve(opts.conventions) }),
     files:
       declarations.length > 0
         ? [
@@ -333,12 +336,12 @@ export async function runScan(opts: RunScanOptions): Promise<number> {
       // claimed and which adapters were asked.
       if (summary.resources === 0) {
         console.warn(
-          kleur.yellow(`\n  no adapter claimed a file under ${root} — nothing was documented`),
+          kleur.yellow(`\n  no plugin claimed a file under ${root} — nothing was documented`),
         );
         console.warn(
           kleur.dim(
-            `  adapters run: ${adapters.map((adapter) => adapter.name).join(', ')}${
-              opts.allowCodeExecution ? '' : ' (runtime adapters need --allow-code-execution)'
+            `  plugins run: ${adapters.map((adapter) => adapter.name).join(', ')}${
+              opts.allowCodeExecution ? '' : ' (installed plugins need --allow-code-execution)'
             }`,
           ),
         );

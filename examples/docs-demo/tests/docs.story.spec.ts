@@ -54,6 +54,9 @@ test.describe('The company documentation index', () => {
     then('each is a navigation group, titled from its own frontmatter');
     const nav = page.getByRole('navigation').first();
     await expect(nav.getByText('acme-handbook', { exact: true })).toBeVisible();
+
+    // The open page's repository starts open, and a folder opens onto its documents.
+    await nav.getByText('Ops', { exact: true }).click();
     await expect(nav.getByRole('link', { name: 'Replaying failed captures' })).toBeVisible();
   });
 

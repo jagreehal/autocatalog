@@ -57,6 +57,10 @@ Navigation, search and the table of contents stay Starlight's. The look is a
 shadcn/ui preset and DESIGN.md at the repository root. A site that sets its own
 `customCss` or overrides `PageTitle` keeps its own.
 
+Pass `theme` for a built-in accent, `navigation` to arrange the sidebar, and
+Starlight's `logo` and `customCss` for your brand. `ac site` reads the same
+settings from `autocatalog.site.json`. See `docs/site.md`.
+
 Ids come from where the file is (`payments-service/docs/runbook.md` →
 `payments-service/runbook`), never from a declared id that can disagree with the
 filesystem.

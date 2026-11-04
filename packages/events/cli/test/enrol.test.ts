@@ -7,7 +7,7 @@ import type { JsonValue } from 'autocatalog-core';
 import {
   cloneRepositories,
   ignoredDirectory,
-  listRepositoriesByTopic,
+  listRepositories,
   repositoryName,
 } from '../src/enrol';
 
@@ -21,7 +21,25 @@ const repo = (name: string, topics: string[], archived = false) => ({
   archived,
 });
 
-describe('listRepositoriesByTopic', () => {
+describe('listRepositories', () => {
+  it('takes every repository of its own when no topic is given', async () => {
+    const found = await listRepositories({
+      owner: 'acme',
+      fetch: () =>
+        Promise.resolve(
+          new Response(
+            JSON.stringify([
+              { name: 'payments', clone_url: 'https://github.com/acme/payments.git' },
+              { name: 'old', clone_url: 'https://github.com/acme/old.git', archived: true },
+              { name: 'copied', clone_url: 'https://github.com/acme/copied.git', fork: true },
+            ]),
+          ),
+        ),
+    });
+
+    expect(found.map(({ name }) => name)).toEqual(['payments']);
+  });
+
   it('falls back from organisation to user, and keeps only live repositories with the topic', async () => {
     const seen: string[] = [];
 
@@ -39,7 +57,7 @@ describe('listRepositoriesByTopic', () => {
       ]);
     };
 
-    const found = await listRepositoriesByTopic({
+    const found = await listRepositories({
       owner: 'acme',
       topic: 'catalog-publisher',
       token: 't0ken',
@@ -57,7 +75,7 @@ describe('listRepositoriesByTopic', () => {
     const fetch = async (url: string) =>
       json(new URL(url).searchParams.get('page') === '1' ? full : [repo('last', ['t'])]);
 
-    const found = await listRepositoriesByTopic({
+    const found = await listRepositories({
       owner: 'acme',
       topic: 't',
       fetch,
@@ -68,7 +86,7 @@ describe('listRepositoriesByTopic', () => {
 
   it('says which owner could not be listed', async () => {
     const fetch = async () => json({ message: 'Bad credentials' }, 401);
-    await expect(listRepositoriesByTopic({ owner: 'acme', topic: 't', fetch })).rejects.toThrow(
+    await expect(listRepositories({ owner: 'acme', topic: 't', fetch })).rejects.toThrow(
       /401 listing acme/,
     );
   });

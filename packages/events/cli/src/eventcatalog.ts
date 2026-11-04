@@ -1169,7 +1169,7 @@ async function generate(options: AutocatalogGeneratorOptions): Promise<void> {
           error.code === 'code_execution_consent_required'
         ) {
           throw new Error(
-            `autocatalog: ${repository} installs adapters that run its code (${error.packages.join(', ')}); set allowCodeExecution: true only for a repository you trust`,
+            `autocatalog: ${repository} installs plugins that run its code (${error.packages.join(', ')}); set allowCodeExecution: true only for a repository you trust`,
             { cause: error },
           );
         }

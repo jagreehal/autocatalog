@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { type DocsLayout, resolveDocsLayout } from 'autocatalog-docs-core';
 import { docsSiteConfig } from './config';
+import { docPage } from './ui/lib/docs';
 
 /** The bits of hast this walk touches. Typing the whole tree would need a dep. */
 interface Node {
@@ -78,5 +79,5 @@ function documentUrl(url: string, from: string, layout: DocsLayout): string | un
     return undefined;
   }
 
-  return `/${layout.idFor(file)}${match[2] ?? ''}`;
+  return `/${docPage(layout.idFor(file))}${match[2] ?? ''}`;
 }

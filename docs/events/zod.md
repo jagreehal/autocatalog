@@ -11,15 +11,15 @@ related:
 ---
 
 The recommended path for TypeScript teams. You define the schema once in code,
-and the adapter converts it to JSON Schema and generates the event folder.
+and the plugin converts it to JSON Schema and generates the event folder.
 
 ```bash
-pnpm add -D autocatalog-adapter-zod
+pnpm add -D autocatalog-plugin-zod
 ```
 
 ```ts
 // src/events/payment.ts
-import { defineEvent } from 'autocatalog-adapter-zod';
+import { defineEvent } from 'autocatalog-plugin-zod';
 import { z } from 'zod';
 
 export default [
@@ -115,4 +115,4 @@ ac scan . --out ./events --allow-code-execution
 
 Results merge by event id, and extracted Zod wins over inferred JSON Schema for
 the same id. See [production operation](/docs/production) for the isolation
-model that runtime adapters execute under.
+model that runtime plugins execute under.

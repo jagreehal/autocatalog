@@ -7,7 +7,7 @@ export { day, docHref, type DocListItem };
 /** The shape a content-collection entry has to satisfy to be listed. */
 export interface DocEntry {
   id: string;
-  data: { title: string; owner: string; tags?: string[]; related?: string[] };
+  data: { title: string; owner?: string; tags?: string[]; related?: string[] };
 }
 
 /**
@@ -26,7 +26,7 @@ export function listItems(entries: DocEntry[], manifest: DocsManifest): DocListI
         id: entry.id,
         repo: entry.id.split('/')[0] ?? '',
         title: entry.data.title,
-        owner: entry.data.owner,
+        owner: record?.owner ?? entry.data.owner ?? '',
         updated: record?.updated ?? null,
         tags: entry.data.tags ?? [],
         ...(record?.kind && { kind: record.kind }),

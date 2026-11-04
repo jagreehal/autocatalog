@@ -253,6 +253,7 @@ export function ownerProfile(owner: Owner, people: Person[]): OwnerProfile | und
 
   return {
     kind: person.kind,
+    name: person.name,
     summary: person.summary,
     role: person.role,
     avatarUrl: person.avatarUrl ?? enrichment?.avatarUrl,

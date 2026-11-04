@@ -57,6 +57,8 @@ export interface ExplorerModel {
 const baseUrl = () => import.meta.env.BASE_URL.replace(/\/?$/, '/');
 
 function hrefOf(resource: CatalogResource): string {
+  if (resource.ref.kind === 'mcp-server') return `${baseUrl()}mcp-servers/${resource.ref.id}/`;
+
   if (!resource.url) return `#${catalogAnchor(resource.ref)}`;
 
   return `${baseUrl()}${resource.url.replace(/^\//, '')}`;

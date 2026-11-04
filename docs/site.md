@@ -33,6 +33,9 @@ repository, and the site's owners approve nothing.
 | `[root]`             | Build from checkouts already on disk, or from one repository    |
 | `--site`, `--base`   | Where the site is served, for links, the sitemap and `llms.txt` |
 | `--title`            | The site's title                                                |
+| `--description`      | One sentence for the home page and `llms.txt`                   |
+| `--brand`            | A folder with your logo, favicon and theme                      |
+| `--theme`            | An accent colour by name                                        |
 | `--out`              | Output directory, `dist` by default                             |
 | `--dev`              | Serve with live reload                                          |
 | `--eventcatalog`     | Draw diagrams with EventCatalog, inside this site               |
@@ -50,9 +53,7 @@ Set the flags once in `package.json` and reuse them for the dev server:
 ```
 
 The default favicon is the three provenance marks (declared, extracted,
-inferred). Replace it by putting your own `favicon.svg` in the site's `public/`
-folder, or set `AUTOCATALOG_SITE_FAVICON` (and Starlight's `favicon`) to another
-path under `public/`.
+inferred). `--brand` replaces it; see [Make it yours](#make-it-yours).
 
 The command prints how many repositories it cloned and whether it had a token.
 Private repositories need `GITHUB_TOKEN` or `GH_TOKEN`. The command sends the
@@ -73,6 +74,10 @@ fails and names the document. The contract is `--docs-schema` when given, else
 repository publishes there, such as a handbook. Copies other repositories keep
 with `ac docs sync-schema` are the same contract; two repositories publishing
 different ones fail the build, naming both, until `--docs-schema` picks one.
+
+A repository whose document breaks the contract is left out and the rest
+publish. When that leaves no documents at all, the build fails, so a deploy
+keeps the last good site.
 
 ## What each page shows
 
@@ -438,6 +443,94 @@ A focus, event or term that names nothing fails the build, with the nearest
 match. Import a component of your own as MDX always allows, and your import
 wins over one of the built-in names.
 
+## Make it yours
+
+The site carries your name, not ours. Keep one file beside your build and `ac
+site` reads it, so the command takes no flags:
+
+```json
+{
+  "$schema": "https://unpkg.com/autocatalog-docs-core/contracts/autocatalog.site.schema.json",
+  "title": "Acme Docs",
+  "description": "Documentation from every Acme team.",
+  "brand": "./brand",
+  "theme": "teal",
+  "navigation": {
+    "groups": [
+      {
+        "label": "Browse",
+        "items": [
+          "catalog",
+          "domains",
+          { "id": "owners", "label": "Teams" },
+          { "label": "Status", "href": "https://status.acme.com" }
+        ]
+      }
+    ]
+  }
+}
+```
+
+That is `autocatalog.site.json`: plain JSON, so reading it runs nothing, and it
+fails the build on a field it does not know. A flag of the same name wins over
+the file.
+
+`theme` is an accent colour: `teal`, `blue`, `orange`, `green` or `purple`.
+
+`navigation.groups` replaces the catalog's group in the sidebar. An item is a
+page by its path, optionally renamed, or a link of your own. A page your catalog
+has nothing for is left out, so a group can list everything you might want. Each
+repository's documents follow, arranged by its
+[`docs/meta.json`](/docs/docs-convention#a-repository-describes-itself).
+
+`brand` is a folder of your files. Each one is optional:
+
+```text
+brand/
+  logo.svg       # replaces the title in the header (svg, png, webp, jpg, avif)
+  logo-dark.svg  # the same for the dark theme
+  favicon.svg
+  theme.css
+```
+
+`theme.css` sets the [shadcn/ui tokens](https://ui.shadcn.com/docs/theming) the
+whole site reads, Starlight's pages included. Set each one for both themes:
+
+```css
+:root {
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --sl-font-mono: ui-monospace, Menlo, monospace;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.15 0 0);
+  --card: oklch(1 0 0);
+  --sidebar: oklch(1 0 0);
+  --secondary: oklch(0.97 0 0);
+  --muted: oklch(0.97 0 0);
+  --accent: oklch(0.96 0.02 300);
+  --primary: oklch(0.45 0.2 300);
+  --ring: oklch(0.45 0.2 300);
+  --border: oklch(0.9 0 0);
+  --input: oklch(0.9 0 0);
+}
+
+[data-theme='dark'] {
+  --background: oklch(0.16 0 0);
+  /* and the rest, for the dark theme */
+}
+```
+
+The provenance colours (declared, extracted, inferred) carry meaning on every
+page, so keep them.
+
+To replace the home page, add `index.astro` to `--pages`. For more, such as your
+own Markdown plugins or a replaced component, run the site as your own Astro
+project with `autocatalog-docs-astro`, which takes `theme` and `navigation` as
+options. Starlight's `logo`, `customCss`, `head` and `components` keep working,
+and your `customCss` loads after the theme. Use `unified()` as the Markdown
+processor, with `rehypeDocsBase` so links reach the right pages, as
+[the bundled site](https://github.com/jagreehal/autocatalog/blob/main/packages/docs/astro/site/astro.config.mjs)
+does.
+
 ## Your own pages and API routes
 
 A site you run as your own Astro project already takes pages and API routes in
@@ -480,37 +573,50 @@ ends with its kind, status and date.
 A ` ```mermaid ` fence in a document or an event's `index.mdx` renders as a
 diagram in both themes, and the twin keeps the source.
 
-## Deploy with GitHub Pages
+## Deploy
+
+The `site` action builds the site and leaves hosting to you. With `topic` and
+`owner` in `autocatalog.site.json`, it needs no other settings:
 
 ```yaml
 name: site
 on:
   push: { branches: [main] }
-  schedule: [{ cron: '17 * * * *' }]
+  schedule: [{ cron: '*/30 * * * *' }]
   workflow_dispatch:
 
 permissions: { contents: read, pages: write, id-token: write }
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/setup-node@v4
-        with: { node-version: 24 }
-      - run: npx autocatalog site --topic catalog --owner acme --site https://acme.github.io --base /catalog/
-        env: { GITHUB_TOKEN: '${{ github.token }}' }
-      - uses: actions/upload-pages-artifact@v3
-        with: { path: dist }
   deploy:
-    needs: build
     runs-on: ubuntu-latest
     environment: { name: github-pages }
     steps:
-      - uses: actions/deploy-pages@v4
+      - id: site
+        uses: jagreehal/autocatalog/actions/site@v1
+        with:
+          changed-only: true
+          site: https://acme.github.io
+          base: /catalog/
+      - if: steps.site.outputs.built == 'true'
+        uses: actions/upload-pages-artifact@v3
+        with: { path: dist }
+      - if: steps.site.outputs.built == 'true'
+        uses: actions/deploy-pages@v4
 ```
 
-The hourly schedule picks up a newly enrolled repository without anyone
-touching the site's repository.
+`changed-only` skips the build when no enrolled repository has a new commit and
+the site's own repository has not changed, so a frequent schedule costs almost
+nothing and a new repository still joins without anyone touching the site.
+Keep the deploy in the job that builds, as here, and the next run retries a
+failed deploy. Any host works: follow the action with `cloudflare/wrangler-action`
+or your own step, gated on `built`.
+
+To read private repositories, pass a `token` that can, such as one from a GitHub
+App. The token clones and stops there: `ac site` keeps it out of the build,
+where MDX from an enrolled repository runs. Enrol repositories you trust, and
+keep other secrets out of the build step. On another CI, run `ac site` yourself; `ac site --fingerprint` prints what
+the action compares.
 
 ## Narrative alongside generated state
 
@@ -519,6 +625,19 @@ without changing any generated field, so a runbook step or a caveat lives next
 to the contract. Regenerating the catalog leaves it alone.
 
 ## Diagrams
+
+A diagram can tell its story. Add `%% narrate <node>: <sentence>` lines and the
+page plays it step by step, reading each sentence aloud. Write
+` ```mermaid interactive ` and the reader clicks through its branches instead:
+
+````markdown
+```mermaid
+flowchart LR
+  A[Submit batch] --> B[Validate] --> C[Pay out]
+  %% narrate A: A client submits a batch of payments.
+  %% narrate B: Each row is checked against its payee.
+```
+````
 
 `--eventcatalog` has [EventCatalog](https://www.eventcatalog.dev) draw the
 diagrams, inside this site rather than beside it:
@@ -576,10 +695,10 @@ generators: [['autocatalog-cli/eventcatalog', { repositories: ['../payments-serv
 ```
 
 `eventcatalog generate` then scans each repository the way `ac scan` does and
-writes what it finds. The adapters a repository installs come with it: set
+writes what it finds. The plugins a repository installs come with it: set
 `allowCodeExecution: true` for one that defines its events in Zod, and the
-generator runs `autocatalog-adapter-zod` and any
-[adapter of your own](/docs/adapters) in its isolated process. `roots` reads
+generator runs `autocatalog-plugin-zod` and any
+[plugin of your own](/docs/plugins) in its isolated process. `roots` reads
 `events/` folders a repository already scanned and committed. When a scan
 fails, `eventcatalog generate` exits 1, and your CI stops before it publishes.
 

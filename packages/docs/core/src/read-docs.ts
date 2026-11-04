@@ -7,6 +7,7 @@ import {
   parseFrontmatter,
   stringifyFrontmatter,
 } from 'autocatalog-core';
+import { readRepositoryMeta, type RepositoryMeta } from './repository-meta';
 
 /**
  * One authored document, addressed by its path rather than a declared id.
@@ -129,6 +130,8 @@ export function readDocs(root: string, options: ReadDocsOptions = {}): Doc[] {
   // Nothing publishes documents, every repository excluded included.
   if (layout.roots.length === 0) return [];
 
+  const metas = new Map(layout.roots.map((root) => [root.name, readRepositoryMeta(root.dir).meta]));
+
   return fs
     .globSync(layout.pattern, { cwd: layout.root })
     .map((entry) => entry.split(path.sep).join('/'))
@@ -150,8 +153,24 @@ export function readDocs(root: string, options: ReadDocsOptions = {}): Doc[] {
         return [];
       }
 
-      return [{ id: layout.idFor(file), repo, file, data: parsed.data, body: parsed.content }];
+      const owner = metas.get(repo)?.owner;
+      const data = owner ? { owner, ...parsed.data } : parsed.data;
+
+      return [{ id: layout.idFor(file), repo, file, data, body: parsed.content }];
     });
+}
+
+/** What each repository says of itself in `docs/meta.json`, by name. */
+export function repositoryMetas(
+  root: string,
+  options: ReadDocsOptions = {},
+): Map<string, RepositoryMeta> {
+  return new Map(
+    resolveDocsLayout(root, options).roots.map((candidate) => [
+      candidate.name,
+      readRepositoryMeta(candidate.dir).meta,
+    ]),
+  );
 }
 
 /**
