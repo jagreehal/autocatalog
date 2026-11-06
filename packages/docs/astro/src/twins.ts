@@ -1,6 +1,7 @@
 import path from 'node:path';
 import { docToMarkdown, sourceUrl, type Doc, type DocsManifest } from 'autocatalog-docs-core';
 import type { CatalogEvent } from './catalog';
+import type { ComponentRow } from './components';
 import { docsSiteConfig } from './config';
 import { eventPath } from './event-path';
 
@@ -85,6 +86,50 @@ export function eventSource({ event }: CatalogEvent): string | null {
   const folder = path.relative(root, event.folder.path).split(path.sep).join('/');
 
   return folder.startsWith('..') ? null : sourceUrl(root, folder, 'tree');
+}
+
+/** A component as an agent reads it: how to import it, its props and each story. */
+export function componentTwin(component: ComponentRow, url?: string): string {
+  const body = [
+    `# ${component.name}`,
+    '',
+    ...(component.description ? [component.description, ''] : []),
+    ...(component.import ? ['```ts', component.import, '```', ''] : []),
+    ...(component.alsoIn.length > 0
+      ? [`A component of this name is also in ${component.alsoIn.join(', ')}.`, '']
+      : []),
+    ...(component.props.length > 0
+      ? [
+          '## Props',
+          '',
+          ...component.props.map(({ name, type, required, description }) => {
+            const facts = [`\`${name}\``, type && `(\`${type}\`)`, required && 'required'];
+
+            return `- ${facts.filter(Boolean).join(' ')}${description ? `: ${description}` : ''}`;
+          }),
+          '',
+        ]
+      : []),
+    '## Stories',
+    '',
+    ...component.stories.flatMap(({ name, description, snippet, href }) => [
+      `### ${name}`,
+      '',
+      ...(description ? [description, ''] : []),
+      ...(href ? [`[Open in ${component.viewer ?? 'viewer'}](${href})`, ''] : []),
+      ...(snippet ? ['```tsx', snippet, '```', ''] : []),
+    ]),
+  ].join('\n');
+
+  return docToMarkdown(
+    {
+      name: component.name,
+      repository: component.repository,
+      ...(component.owner && { owner: component.owner.team }),
+      ...(url && { url }),
+    },
+    body,
+  );
 }
 
 /**

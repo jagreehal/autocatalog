@@ -181,9 +181,17 @@ export default function autocatalogDocs(opts: AutocatalogDocsOptions = {}): Star
         });
 
         // A site with every document left out would replace the last good one.
-        if (sidebar.length === 0 && exclude.length > 0) {
+        // A repository publishing components still has something to show.
+        const onlyDocuments = exclude.filter(
+          (repository) =>
+            !catalog.graph.resources.some(
+              ({ ref }) => ref.kind === 'component' && ref.namespace === repository,
+            ),
+        );
+
+        if (sidebar.length === 0 && onlyDocuments.length > 0) {
           throw new Error(
-            `Every document was left out (${exclude.join(', ')}). The warnings above say why.`,
+            `Every document was left out (${onlyDocuments.join(', ')}). The warnings above say why.`,
           );
         }
 

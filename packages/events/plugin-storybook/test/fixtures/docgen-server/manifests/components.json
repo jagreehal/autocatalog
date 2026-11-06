@@ -1,0 +1,23 @@
+{
+  "v": 1,
+  "components": {
+    "checkout-errorbanner": {
+      "id": "checkout-errorbanner",
+      "name": "checkout-errorbanner",
+      "stories": {
+        "$ref": "../services/core/story-docs/checkout-errorbanner.json#/components/checkout-errorbanner"
+      }
+    },
+    "checkout-paybutton": {
+      "id": "checkout-paybutton",
+      "name": "checkout-paybutton",
+      "stories": {
+        "$ref": "../services/core/story-docs/checkout-paybutton.json#/components/checkout-paybutton"
+      }
+    }
+  },
+  "meta": {
+    "docgen": "react-component-meta",
+    "durationMs": 0
+  }
+}

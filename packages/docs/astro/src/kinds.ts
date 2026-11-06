@@ -37,6 +37,7 @@ export const RESERVED_SEGMENTS = new Set([
   'contracts',
   'data',
   'data-products',
+  'components',
   'domains',
   'entities',
   'events',

@@ -169,6 +169,11 @@ that produced it, so any runtime in any language emitting the
 installed. Plugins can add their own commands this way; `ac` discovers them
 from `node_modules`. See [Writing a plugin](/docs/plugins).
 
+**`ac from-storybook <build>`**: registered by `autocatalog-plugin-storybook`.
+Writes `autocatalog.components.json` from a Storybook build. `--url` says where
+the Storybook is deployed, `--owner` names the team, and `--check` fails when the
+committed file differs from the build. See [components](/docs/components).
+
 ## The site
 
 **`ac site [root]`** builds one Starlight site from every enrolled repository.
@@ -196,6 +201,14 @@ each, which `ac resources scan` writes, adds its commands and queries, its
 services' owners, repositories, systems and datastores, and the datastores themselves. Narrative stays out unless you pass
 `--narrative`: EventCatalog compiles each page as MDX, which runs any code in it,
 so only use it for repositories you trust to run code on your machine.
+
+**`ac federation lock`** pins each enrolled repository in
+`autocatalog.lock.json`. `--latest-tag` pins each one's newest release tag,
+`--ref <ref>` pins a tag, branch or full commit SHA, and `--only <name...>` moves
+the pins you name.
+
+**`ac federation status`** reports each source's pin, what it contributes, and the
+consumers behind the newest release. See [federation](/docs/federation).
 
 ## Documentation
 

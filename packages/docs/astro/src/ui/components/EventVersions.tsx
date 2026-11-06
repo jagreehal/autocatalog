@@ -4,14 +4,21 @@ import { Badge } from '#ui/components/ui/badge.tsx';
 import { Button } from '#ui/components/ui/button.tsx';
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from '#ui/components/ui/card.tsx';
 import { Collapsible, CollapsibleContent } from '#ui/components/ui/collapsible.tsx';
-import { Item, ItemActions, ItemContent, ItemTitle } from '#ui/components/ui/item.tsx';
+import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemTitle,
+} from '#ui/components/ui/item.tsx';
 
 export interface EventVersionsProps {
   /**
    * Newest first, each already linked to its own page. `changesHtml` is what
    * changed since the version before it: `ac changelog`'s Markdown rendered at
    * build time, so the site and the CLI cannot describe the same change two
-   * ways. Null for the oldest version.
+   * ways. Null for the oldest version. `readBy` names the services still on
+   * this version, and `upgradeHtml` is what moving to the newest release changes.
    */
   versions: Array<{
     href: string;
@@ -19,11 +26,32 @@ export interface EventVersionsProps {
     current: boolean;
     active: boolean;
     changesHtml?: string | null;
+    readBy?: string[];
+    upgradeHtml?: string | null;
   }>;
 }
 
 const PROSE =
   'prose prose-sm max-w-none text-foreground dark:prose-invert prose-headings:mt-0 prose-headings:mb-2 prose-headings:text-sm prose-headings:font-medium prose-headings:text-foreground prose-ul:my-0 prose-li:my-1 prose-li:text-foreground prose-li:marker:text-muted-foreground prose-code:text-foreground prose-code:before:content-none prose-code:after:content-none';
+
+/** Every release's changes are a click away. */
+function Changes({ label, html, open }: { label: string; html: string; open: boolean }) {
+  return (
+    <Collapsible defaultExpanded={open}>
+      <Button variant="ghost" size="xs" slot="trigger" className="ml-1">
+        <ChevronRightIcon className="transition-transform group-aria-expanded/button:rotate-90" />
+        {label}
+      </Button>
+      <CollapsibleContent>
+        <div
+          className={`${PROSE} px-3 pt-1 pb-2`}
+          data-changes=""
+          dangerouslySetInnerHTML={{ __html: html }}
+        />
+      </CollapsibleContent>
+    </Collapsible>
+  );
+}
 
 export function EventVersions({ versions }: EventVersionsProps) {
   return (
@@ -54,6 +82,9 @@ export function EventVersions({ versions }: EventVersionsProps) {
                       {entry.label}
                       {entry.current && <Badge variant="secondary">current</Badge>}
                     </ItemTitle>
+                    {entry.readBy?.length ? (
+                      <ItemDescription>{`Read by ${entry.readBy.join(', ')}`}</ItemDescription>
+                    ) : null}
                   </ItemContent>
                   {!entry.active && (
                     <ItemActions>
@@ -65,20 +96,11 @@ export function EventVersions({ versions }: EventVersionsProps) {
                   )}
                 </Item>
                 {entry.changesHtml && (
-                  // Every release's changes are a click away; the one being read starts open.
-                  <Collapsible defaultExpanded={entry.active}>
-                    <Button variant="ghost" size="xs" slot="trigger" className="ml-1">
-                      <ChevronRightIcon className="transition-transform group-aria-expanded/button:rotate-90" />
-                      What changed
-                    </Button>
-                    <CollapsibleContent>
-                      <div
-                        className={`${PROSE} px-3 pt-1 pb-2`}
-                        data-changes=""
-                        dangerouslySetInnerHTML={{ __html: entry.changesHtml }}
-                      />
-                    </CollapsibleContent>
-                  </Collapsible>
+                  // The one being read starts open.
+                  <Changes label="What changed" html={entry.changesHtml} open={entry.active} />
+                )}
+                {entry.upgradeHtml && (
+                  <Changes label="What upgrading changes" html={entry.upgradeHtml} open={false} />
                 )}
               </li>
             ))}

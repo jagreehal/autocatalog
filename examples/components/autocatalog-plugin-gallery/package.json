@@ -1,0 +1,17 @@
+{
+  "name": "@autocatalog-example/autocatalog-plugin-gallery",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "A plugin for a tool that is not Storybook: everything the catalog needs is one call to writeComponents.",
+  "autocatalog": {
+    "plugin": {
+      "command": "from-gallery",
+      "description": "List the components in gallery.json",
+      "entry": "./bin.js"
+    }
+  },
+  "dependencies": {
+    "autocatalog-core": "workspace:*"
+  }
+}

@@ -276,17 +276,18 @@ servers and code generators.
 
 ## Packages
 
-| Package                  | What it does                                      |
-| ------------------------ | ------------------------------------------------- |
-| `autocatalog`            | the one to install: `npx autocatalog`             |
-| `autocatalog-cli`        | the `ac` command                                  |
-| `autocatalog-core`       | catalog model, scanners, drift rules              |
-| `autocatalog-plugin-zod` | `defineEvent` for Zod                             |
-| `autocatalog-mcp`        | MCP server for AI coding agents                   |
-| `autocatalog-docs-astro` | the Starlight site                                |
-| `autocatalog-docs-core`  | docs aggregation and the frontmatter contract     |
-| `autocatalog-agents-*`   | a catalog for AI agents, their tools and policies |
-| `autocatalog-py`         | the Pydantic extractor                            |
+| Package                        | What it does                                          |
+| ------------------------------ | ----------------------------------------------------- |
+| `autocatalog`                  | the one to install: `npx autocatalog`                 |
+| `autocatalog-cli`              | the `ac` command                                      |
+| `autocatalog-core`             | catalog model, scanners, drift rules                  |
+| `autocatalog-plugin-zod`       | `defineEvent` for Zod                                 |
+| `autocatalog-plugin-storybook` | `ac from-storybook`: Storybook components on the site |
+| `autocatalog-mcp`              | MCP server for AI coding agents                       |
+| `autocatalog-docs-astro`       | the Starlight site                                    |
+| `autocatalog-docs-core`        | docs aggregation and the frontmatter contract         |
+| `autocatalog-agents-*`         | a catalog for AI agents, their tools and policies     |
+| `autocatalog-py`               | the Pydantic extractor                                |
 
 ## Contributing
 

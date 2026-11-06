@@ -11,7 +11,7 @@ import {
   repositoryMetaSchema,
   siteConfigSchema,
 } from '../packages/docs/core/dist/index.js';
-import { eventFrontmatter } from '../packages/events/core/dist/index.js';
+import { componentsFileSchema, eventFrontmatter } from '../packages/events/core/dist/index.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -28,6 +28,8 @@ const agentContract = (schema) => {
 
 const contracts = {
   'packages/events/core/contracts/event-manifest.schema.json': jsonSchema(eventFrontmatter),
+  'packages/events/core/contracts/autocatalog.components.schema.json':
+    jsonSchema(componentsFileSchema),
   'packages/docs/core/contracts/autocatalog.conventions.schema.json':
     jsonSchema(docsConventionsSchema),
   'packages/docs/core/contracts/docs-meta.schema.json': jsonSchema(repositoryMetaSchema),

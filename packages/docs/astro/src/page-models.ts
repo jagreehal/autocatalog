@@ -20,6 +20,7 @@ import {
   type LoadedExample,
   type ResourceGraph,
   type ResourceRef,
+  type BehindReference,
 } from 'autocatalog-core';
 import { attentionSnapshot } from './attention';
 import { buildChannels } from './channels';
@@ -51,6 +52,7 @@ import { type ShellLink, versionLabel } from './shell';
 import { remarkMermaid } from './mermaid';
 import { docKindIcon, documentsByKind, kindCounts, kindHref, kindNoun } from './kinds';
 import { explorerModel } from './ui/components/catalog-explorer-model';
+import { buildComponents, type ComponentRow } from './components';
 import { buildMcpServers } from './mcp-servers';
 import type { EventCatalogDiagramProps } from './ui/components/EventCatalogDiagram';
 import type { DeliveryView } from './ui/components/DeliveryFacts';
@@ -141,6 +143,16 @@ export function homePageProps(
             href: `${base}architecture/`,
             icon: 'architecture' as const,
             kind: 'channel',
+          },
+        ]
+      : []),
+    ...(catalog.graph.resources.some(({ ref }) => ref.kind === 'component')
+      ? [
+          {
+            title: 'Components',
+            text: 'Every UI component teams publish, who owns it, and where to see it.',
+            href: `${base}components/`,
+            icon: 'component' as const,
           },
         ]
       : []),
@@ -325,6 +337,11 @@ export function channelPageProps(catalog: DocsCatalog, id: string, base: string)
   );
 
   return channel ? { channel } : null;
+}
+
+/** Every component in the catalog, with its owner's page when it has one. */
+export function componentRows(catalog: DocsCatalog, base: string): ComponentRow[] {
+  return buildComponents(catalog.graph, base, graphOwners(catalog.graph));
 }
 
 export function mcpServersPageProps(catalog: DocsCatalog, base: string) {
@@ -906,7 +923,7 @@ export async function eventPageProps(
       }),
     ),
     examples: exampleViews(event.examples),
-    versions: await versionLinks(versions, entry, base),
+    versions: await versionLinks(versions, entry, base, catalog.behind),
     documents,
     records,
     facts,
@@ -997,11 +1014,12 @@ export async function eventVersionPageProps(
   entry: CatalogEvent,
   versions: CatalogEvent[],
   base: string,
+  behind: BehindReference[],
 ): Promise<EventVersionPageProps> {
   const { event } = entry;
 
   const current = versions.find(({ event: other }) => !other.folder.isVersioned);
-  const links = await versionLinks(versions, entry, base);
+  const links = await versionLinks(versions, entry, base, behind);
   const active = links.find((version) => version.active);
 
   return {

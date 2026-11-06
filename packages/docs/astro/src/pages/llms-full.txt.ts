@@ -4,7 +4,8 @@ import { docsSiteConfig } from '../config';
 import { modelMarkdown } from '../data-models';
 import { eventPath } from '../event-path';
 import { renderLlmsFullTxt } from '../llms';
-import { docTwin, eventSource, eventTwin, pageUrl } from '../twins';
+import { componentRows } from '../page-models';
+import { componentTwin, docTwin, eventSource, eventTwin, pageUrl } from '../twins';
 
 export const GET: APIRoute = async ({ site }) => {
   const config = docsSiteConfig();
@@ -24,11 +25,15 @@ export const GET: APIRoute = async ({ site }) => {
     modelMarkdown(catalog, model, { base, url: (page) => pageUrl(site, base, page) }),
   );
 
+  const components = componentRows(catalog, base).map((component) =>
+    componentTwin(component, pageUrl(site, base, component.path)),
+  );
+
   return new Response(
     renderLlmsFullTxt({
       title: config.title,
       description: config.description,
-      twins: [...docs, ...events, ...models],
+      twins: [...docs, ...events, ...components, ...models],
     }),
     { headers: { 'content-type': 'text/plain; charset=utf-8' } },
   );

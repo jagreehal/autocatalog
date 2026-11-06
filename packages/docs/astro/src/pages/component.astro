@@ -1,0 +1,46 @@
+---
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import type { InferGetStaticPropsType } from 'astro';
+import { docsCatalog } from '../catalog';
+import { componentRows } from '../page-models';
+import { setResourceContext, withMarkdownCopy } from '../shell';
+import { twinPath } from '../twins';
+import { ComponentPage } from '../ui/pages/ComponentPage';
+
+export async function getStaticPaths() {
+  const catalog = await docsCatalog();
+  const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+
+  return componentRows(catalog, base).map((component) => ({
+    params: { repository: component.repository, id: component.id },
+    props: { component },
+  }));
+}
+
+type Props = InferGetStaticPropsType<typeof getStaticPaths>;
+
+const { component } = Astro.props;
+
+const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+
+const markdownHref = `${base}${twinPath(component.path)}`;
+
+setResourceContext(Astro.locals, {
+  kind: 'service',
+  name: component.name,
+  key: `component:${component.repository}/${component.id}`,
+  actions: withMarkdownCopy(markdownHref),
+  pills: [{ text: component.repository, tone: 'quiet' }],
+});
+---
+
+<StarlightPage
+  frontmatter={{
+    title: component.name,
+    description: component.description ?? `A component in ${component.repository}`,
+    tableOfContents: false,
+    head: [{ tag: 'link', attrs: { rel: 'alternate', type: 'text/markdown', href: markdownHref } }],
+  }}
+>
+  <ComponentPage client:load component={component} />
+</StarlightPage>

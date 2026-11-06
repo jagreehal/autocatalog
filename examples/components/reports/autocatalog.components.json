@@ -1,0 +1,31 @@
+{
+  "viewer": {
+    "name": "Storybook"
+  },
+  "components": [
+    {
+      "id": "reports-reporttable",
+      "name": "ReportTable",
+      "description": "The settlement report: one row per payment.",
+      "import": "import { ReportTable } from '@autocatalog-example/storybook-reports';",
+      "source": "src/ReportTable.stories.tsx",
+      "props": [
+        {
+          "name": "rows",
+          "type": "Array<{ reference: string; amount: string }>",
+          "required": true,
+          "description": "The rows to show, one per settled payment."
+        }
+      ],
+      "stories": [
+        {
+          "id": "reports-reporttable--one-row",
+          "name": "One Row",
+          "description": "A day with one settled payment.",
+          "snippet": "const OneRow = () => <ReportTable rows={[{ reference: 'PAY-1', amount: '£42.00' }]} />;",
+          "link": "?path=/story/reports-reporttable--one-row"
+        }
+      ]
+    }
+  ]
+}

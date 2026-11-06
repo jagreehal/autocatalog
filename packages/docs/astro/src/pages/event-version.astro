@@ -31,7 +31,9 @@ const fm = entry.event.frontmatter;
 
 const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
 
-const page = await eventVersionPageProps(entry, versions, base);
+const { behind } = await docsCatalog();
+
+const page = await eventVersionPageProps(entry, versions, base, behind);
 
 setResourceContext(Astro.locals, {
   kind: 'event',

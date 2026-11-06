@@ -1,0 +1,12 @@
+{
+  "url": "https://gallery.acme.dev/",
+  "team": "Mobile",
+  "items": [
+    {
+      "slug": "receipt-card",
+      "name": "ReceiptCard",
+      "summary": "The receipt in the mobile app.",
+      "screens": ["paid", "refunded"]
+    }
+  ]
+}

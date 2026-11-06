@@ -9,10 +9,11 @@ related:
   - docs/events/zod
 ---
 
-A plugin is an npm package that teaches autocatalog a new event format: a
-company contract format, a registry export, a framework's decorators. Install
-it next to autocatalog, and `ac scan` and `ac drift` read your events the way
-they read JSON Schema, into the same catalog, site and breaking-change gate.
+A plugin is an npm package that teaches autocatalog a new format: a company
+contract format, a registry export, a framework's decorators, a component tool.
+Install it next to autocatalog, and `ac scan` and `ac drift` read your events the
+way they read JSON Schema, into the same catalog, site and breaking-change gate.
+A plugin can also [publish components](#publish-components).
 
 EventCatalog has plugins too, and its generators write into the catalog. A plugin
 here returns what it found and writes nothing, so `ac drift` can run it on two
@@ -86,6 +87,7 @@ generated from the code that reads the files:
 | --------------------------------------------------------------------- | ---------------------------------------------- |
 | `autocatalog-core/contracts/event-manifest.schema.json`               | An event's `autocatalog.json`                  |
 | `autocatalog-core/contracts/graph-v1.schema.json`                     | The resource graph at `/catalog.json`          |
+| `autocatalog-core/contracts/autocatalog.components.schema.json`       | A repository's `autocatalog.components.json`   |
 | `autocatalog-agents-core/contracts/<kind>.schema.json`                | An agent, tool, `mcp-server` or other manifest |
 | `autocatalog-docs-core/contracts/autocatalog.conventions.schema.json` | The conventions file                           |
 
@@ -186,6 +188,38 @@ export const ordersPlugin = {
 
 With TypeScript, type the export as `DiscoveryAdapter` from `autocatalog-core`
 and the compiler checks every field.
+
+## Publish components
+
+A plugin can list the UI components a tool holds, the way
+`autocatalog-plugin-storybook` does for Storybook. Add a `command`, read your
+format, and call `writeComponents` from `autocatalog-core`:
+
+```js
+import { writeComponents } from 'autocatalog-core';
+
+await writeComponents(process.cwd(), {
+  components: [
+    {
+      id: 'receipt-card',
+      name: 'ReceiptCard',
+      props: [],
+      stories: [{ id: 'receipt-card--paid', name: 'paid', link: '#receipt-card/paid' }],
+    },
+  ],
+  viewer: { name: 'Gallery', url: 'https://gallery.acme.dev/' },
+});
+```
+
+- `viewer` names the tool. The site says `Open in Gallery` and joins each story's
+  `link` onto `url`.
+- Pass `{ check: true }` to compare instead of write. It returns `current` or
+  `stale`, so CI can fail on a file that fell behind.
+- The site never loads your plugin. It reads the committed file, so anything that
+  writes that file publishes to the catalog, with or without a plugin.
+
+[`examples/components`](https://github.com/jagreehal/autocatalog/tree/main/examples/components)
+has a working one in `autocatalog-plugin-gallery`.
 
 ## Running it
 

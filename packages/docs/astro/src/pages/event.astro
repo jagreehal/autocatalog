@@ -2,6 +2,7 @@
 import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
 import type { InferGetStaticPropsType } from 'astro';
 import { docsCatalog, eventParticipants } from '../catalog';
+import { docsSiteConfig } from '../config';
 import { eventPageProps } from '../page-models';
 import { eventPath } from '../event-path';
 import { statusPills } from '../resource-status';
@@ -37,6 +38,8 @@ const page = await eventPageProps(catalog, Astro.props, agents, base);
 
 const markdownHref = `${base}${twinPath(eventPath(Astro.props))}`;
 
+const release = docsSiteConfig().releases[catalog.repositoryRoots[repository] ?? ''];
+
 setResourceContext(Astro.locals, {
   kind: 'event',
   name: fm.name,
@@ -52,6 +55,7 @@ setResourceContext(Astro.locals, {
       needsReview: fm.needsReview,
     }),
     ...(fm.classification ? [{ text: fm.classification }] : []),
+    ...(release ? [{ text: release }] : []),
     // The labels a team gave the event. Shown in the theme's colours rather
     // than the ones written beside them, so every badge reads the same way.
     ...fm.badges.map((badge) => ({ text: badge.content })),

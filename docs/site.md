@@ -392,6 +392,8 @@ keeps the last good site.
   supersedes or was superseded by.
 - Service and event pages list the decisions, runbooks and incidents that name
   them in `about:`, one card per kind, beside their other documents.
+- `/components` lists every UI component teams publish, with its owner and a
+  link into the team's tool. See [components](/docs/components).
 - `/channels` lists each queue and topic: the ones runtime evidence saw, with
   their messaging system, and the channels designs draw. `/systems` lists the
   systems and external systems designs name. Each has its own page.

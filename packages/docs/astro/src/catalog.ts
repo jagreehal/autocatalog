@@ -28,17 +28,20 @@ import {
   architectureConflicts,
   relationshipKey,
   isJsonObject,
+  COMPONENTS_FILE,
   CONSUMES_FILE,
   createConsumerResourceGraph,
   mergeConsumerGraph,
   readConsumerDeclarations,
   readDeclarationsFile,
+  createComponentResourceGraph,
   resolveReferences,
   parseResourceGraph,
   type RepositoryReferences,
   analyzeDelivery,
   deliveryEvents,
   scanDeliveryResources,
+  type BehindReference,
   type ConsumerDeclaration,
   type DeliveryReport,
   RESOURCE_GRAPH_FILE,
@@ -88,7 +91,7 @@ import { catalogHref } from './view';
 export interface RepositoryFailure {
   repository: string;
   /** Which convention failed to compile: the repository's events, agents or API specs, or its name. */
-  source: 'docs' | 'events' | 'agents' | 'resources' | 'consumers' | 'apis' | 'name';
+  source: 'docs' | 'events' | 'agents' | 'resources' | 'consumers' | 'components' | 'apis' | 'name';
   message: string;
 }
 
@@ -129,6 +132,8 @@ export interface DocsCatalog {
   summary: ResourceGraphSummary;
   /** Repositories quarantined from the graph, shown rather than swallowed. */
   failures: RepositoryFailure[];
+  /** Services that declare they read an earlier release than the newest. */
+  behind: BehindReference[];
   /** Repositories whose runtime snapshot was read, whatever it matched. */
   snapshots: string[];
   /** The workflow runs each repository's runtime snapshot recorded. */
@@ -407,6 +412,17 @@ export async function buildDocsCatalog(
       }
     }
 
+    await quarantine(
+      name,
+      'components',
+      async () =>
+        (await createComponentResourceGraph(name, repositoryRoot, { ownersWithin: root })) ?? {
+          spec: AUTOCATALOG_GRAPH_SPEC,
+          resources: [],
+          relationships: [],
+        },
+    );
+
     if (publishesAgentCatalog(repositoryRoot)) {
       await quarantine(name, 'agents', async () =>
         createAgentsResourceGraph(await loadAgentsCatalog(repositoryRoot), {
@@ -649,6 +665,7 @@ export async function buildDocsCatalog(
     graph,
     summary: summarizeResourceGraph(graph),
     failures,
+    behind: resolved.behind,
     snapshots,
     workflows,
     delivery: analyzeDelivery({
@@ -755,15 +772,17 @@ function modelScan(root: string, ownersWithin: string, nested: string[]): ModelS
 export const failureSource = (failure: RepositoryFailure) =>
   failure.source === 'resources'
     ? RESOURCE_GRAPH_FILE
-    : failure.source === 'consumers'
-      ? CONSUMES_FILE
-      : failure.source === 'apis'
-        ? 'contracts/'
-        : failure.source === 'name'
-          ? 'repository name'
-          : failure.source === 'docs'
-            ? 'docs/'
-            : `${failure.source}/ catalog`;
+    : failure.source === 'components'
+      ? COMPONENTS_FILE
+      : failure.source === 'consumers'
+        ? CONSUMES_FILE
+        : failure.source === 'apis'
+          ? 'contracts/'
+          : failure.source === 'name'
+            ? 'repository name'
+            : failure.source === 'docs'
+              ? 'docs/'
+              : `${failure.source}/ catalog`;
 
 /** An observation only adds evidence; a declaration or an owner says what the resource is. */
 const declares = (entry: CatalogResource | CatalogRelationship) => {

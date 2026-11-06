@@ -1,0 +1,82 @@
+{
+  "viewer": {
+    "name": "Storybook",
+    "url": "https://storybook.acme.dev/checkout/"
+  },
+  "components": [
+    {
+      "id": "checkout-errorbanner",
+      "name": "ErrorBanner",
+      "description": "Shown when a payment is declined. The basket keeps its contents so it can be retried.",
+      "import": "import { ErrorBanner } from '@autocatalog-example/storybook-checkout';",
+      "source": "src/ErrorBanner.stories.tsx",
+      "props": [
+        {
+          "name": "message",
+          "type": "string",
+          "required": true,
+          "description": "What went wrong, in words the customer can act on."
+        },
+        {
+          "name": "onRetry",
+          "type": "() => void",
+          "required": false,
+          "description": "Called when the customer asks to try the payment again."
+        }
+      ],
+      "stories": [
+        {
+          "id": "checkout-errorbanner--declined",
+          "name": "Declined",
+          "description": "The message for any declined card.",
+          "snippet": "const Declined = () => <ErrorBanner message=\"Your card was declined.\" />;",
+          "link": "?path=/story/checkout-errorbanner--declined"
+        },
+        {
+          "id": "checkout-errorbanner--retryable",
+          "name": "Retryable",
+          "description": "A retry button appears when the payment can be tried again.",
+          "snippet": "const Retryable = () => <ErrorBanner message=\"The bank timed out.\" onRetry={() => {}} />;",
+          "link": "?path=/story/checkout-errorbanner--retryable"
+        }
+      ]
+    },
+    {
+      "id": "checkout-paybutton",
+      "name": "PayButton",
+      "description": "Takes the payment. Disabled while one is in flight, so a double click cannot pay twice.",
+      "import": "import { PayButton } from '@autocatalog-example/storybook-checkout';",
+      "source": "src/PayButton.stories.tsx",
+      "props": [
+        {
+          "name": "amount",
+          "type": "string",
+          "required": true,
+          "description": "The amount shown on the button, already formatted."
+        },
+        {
+          "name": "busy",
+          "type": "boolean",
+          "required": false,
+          "description": "Disables the button while a payment is in flight."
+        }
+      ],
+      "stories": [
+        {
+          "id": "checkout-paybutton--ready",
+          "name": "Ready",
+          "description": "Ready to take the payment.",
+          "snippet": "const Ready = () => <PayButton amount=\"£42.00\" />;",
+          "link": "?path=/story/checkout-paybutton--ready"
+        },
+        {
+          "id": "checkout-paybutton--busy",
+          "name": "Busy",
+          "description": "A payment is in flight.",
+          "snippet": "const Busy = () => <PayButton amount=\"£42.00\" busy />;",
+          "link": "?path=/story/checkout-paybutton--busy"
+        }
+      ]
+    }
+  ]
+}

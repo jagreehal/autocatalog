@@ -5,6 +5,7 @@ import { promisify } from 'node:util';
 import kleur from 'kleur';
 import { z } from 'zod';
 import {
+  compareSemverish,
   composeResourceGraphs,
   createEventResourceGraph,
   earlierVersions,
@@ -57,6 +58,8 @@ const lockEntry = z.strictObject({
   commit: z.string().regex(/^[0-9a-f]{40,64}$/),
   /** The commit's tree: what was locked, checked again when it is built. */
   tree: z.string().regex(/^[0-9a-f]{40,64}$/),
+  /** The tag `--ref` named, or the newest release tag on the commit: the repository's release. */
+  tag: z.string().min(1).optional(),
   lockedAt: z.string(),
 });
 
@@ -139,6 +142,74 @@ async function git(
     // oxlint-disable-next-line preserve-caught-error
     throw new Error(gitStderr(error instanceof Error ? error : new Error('git failed')));
   }
+}
+
+/** A release, `v1.2.3` or `1.2.3`. A prerelease tag is never the latest release. */
+const RELEASE_TAG = /^v?\d+\.\d+\.\d+$/;
+
+/** The newest release tag in a clone, or on one commit of it. */
+async function latestReleaseTag(dir: string, commit?: string): Promise<string | undefined> {
+  const on = commit ? ['--points-at', commit] : [];
+  const tags = (await git(dir, ['tag', '--list', ...on])).split('\n');
+
+  return tags
+    .filter((tag) => RELEASE_TAG.test(tag))
+    .sort(compareSemverish)
+    .at(-1);
+}
+
+/**
+ * The commit `ref` names in a clone. A full commit id is only ever that commit,
+ * so a tag spelt the same cannot move a reviewed pin, and a name that is a tag
+ * and a branch at different commits is refused rather than guessed.
+ */
+async function resolveRef(dir: string, ref: string): Promise<{ commit: string; tag?: string }> {
+  const commitOf = (name: string) =>
+    git(dir, ['rev-parse', '--verify', '--quiet', `${name}^{commit}`]).catch(() => undefined);
+
+  if (/^[0-9a-f]{40,64}$/.test(ref)) {
+    if ((await commitOf(ref)) === ref) return { commit: ref };
+
+    throw new Error(`no commit ${ref}`);
+  }
+
+  const tagged = await commitOf(`refs/tags/${ref}`);
+  const branch = await commitOf(`refs/remotes/origin/${ref}`);
+
+  if (tagged && branch && tagged !== branch)
+    throw new Error(`${ref} is a tag and a branch at different commits`);
+
+  if (tagged) return { commit: tagged, tag: ref };
+
+  if (branch) return { commit: branch };
+
+  throw new Error(`no tag or branch ${ref}`);
+}
+
+/**
+ * The clone a source sits in. A source inside a pinned repository (an
+ * EventCatalog project in a monorepo, a package) carries that repository's pin,
+ * whatever its own name.
+ */
+const holdingRepository = (root: string, origins: Map<string, string>, dir: string) =>
+  path.relative(root, origins.get(dir) ?? dir).split(path.sep)[0] ?? '';
+
+/** Each catalog's release, as `platform v1.0.0`, by the directory it is read from. */
+export function catalogReleases(
+  pins: LockEntry[],
+  root: string,
+  imported: { sources: string[]; origins: Map<string, string> },
+): Record<string, string> {
+  const pinned = new Map(pins.map((pin) => [pin.name, pin]));
+  const dirs = [...findCatalogRoots(root).map(({ dir }) => dir), ...imported.sources];
+
+  return Object.fromEntries(
+    dirs.flatMap((dir) => {
+      const pin = pinned.get(holdingRepository(root, imported.origins, dir));
+
+      return pin?.tag ? [[dir, `${pin.name} ${pin.tag}`]] : [];
+    }),
+  );
 }
 
 export interface EnrolmentFlags {
@@ -283,8 +354,24 @@ export async function runFederationLock(
     lock: string;
     cache: string;
     only?: string[];
+    /** A tag, branch or commit to pin instead of the latest commit. */
+    ref?: string;
+    /** Pin each repository's newest release tag. */
+    latestTag?: boolean;
   },
 ): Promise<number> {
+  if (opts.ref && opts.latestTag) {
+    console.error(kleur.red('--ref and --latest-tag each choose the commit: pass one.'));
+
+    return 1;
+  }
+
+  if (opts.ref?.startsWith('-')) {
+    console.error(kleur.red(`--ref ${opts.ref}: not a tag, branch or commit.`));
+
+    return 1;
+  }
+
   const token = process.env.GITHUB_TOKEN ?? process.env.GH_TOKEN;
   const lock = path.resolve(opts.lock);
   const previous = (await readLock(lock)) ?? [];
@@ -328,6 +415,7 @@ export async function runFederationLock(
 
   const now = new Date().toISOString();
   const entries: LockEntry[] = [];
+  let found = false;
 
   for (const repo of repositories) {
     const kept = previous.find((entry) => entry.name === repo.name);
@@ -344,16 +432,51 @@ export async function runFederationLock(
     }
 
     const dir = path.join(cloned.root, repo.name);
-    const commit = await git(dir, ['rev-parse', 'HEAD']);
-    const tree = await git(dir, ['rev-parse', 'HEAD^{tree}']);
+    const wanted = opts.ref ?? (opts.latestTag ? await latestReleaseTag(dir) : undefined);
 
-    // The URL follows enrolment even when the commit is the same: a repository
-    // moved to a new home with shared history is pinned where it now lives.
-    entries.push(
-      kept?.commit === commit
-        ? { ...kept, url: repo.cloneUrl }
-        : { name: repo.name, url: repo.cloneUrl, commit, tree, lockedAt: now },
+    if (opts.latestTag && !wanted)
+      console.warn(kleur.yellow(`${repo.name} has no release tag: pinned at its latest commit`));
+
+    const pin = wanted
+      ? await resolveRef(dir, wanted).catch((error: Error) => error)
+      : { commit: await git(dir, ['rev-parse', 'HEAD']) };
+
+    if (pin instanceof Error) {
+      console.warn(
+        kleur.yellow(`${repo.name}: ${pin.message}, so ${kept ? 'its pin stays' : 'left out'}`),
+      );
+
+      if (kept) entries.push(kept);
+      continue;
+    }
+
+    found = true;
+
+    const { commit } = pin;
+    const tag = pin.tag ?? (await latestReleaseTag(dir, commit));
+    const tree = await git(dir, ['rev-parse', `${commit}^{tree}`]);
+
+    // The URL and tag follow this lock even when the commit is the same: a
+    // repository moved to a new home with shared history is pinned where it
+    // now lives, and a deleted tag is not kept.
+    entries.push({
+      name: repo.name,
+      url: repo.cloneUrl,
+      commit,
+      tree,
+      ...(tag && { tag }),
+      lockedAt: kept?.commit === commit ? kept.lockedAt : now,
+    });
+  }
+
+  if (opts.ref && !found) {
+    console.error(
+      kleur.red(
+        `No repository could pin ${opts.ref}, so ${path.basename(lock)} was left as it was.`,
+      ),
     );
+
+    return 1;
   }
 
   await writeLock(lock, entries);
@@ -367,7 +490,9 @@ export async function runFederationLock(
         ? kleur.dim('unchanged')
         : kleur.yellow(`${before.commit.slice(0, 7)} → ${entry.commit.slice(0, 7)}`);
 
-    console.log(`${entry.name.padEnd(28)} ${entry.commit.slice(0, 12)}  ${change}`);
+    console.log(
+      `${entry.name.padEnd(28)} ${entry.commit.slice(0, 12)}  ${entry.tag ? `${entry.tag} ` : ''}${change}`,
+    );
   }
 
   for (const gone of previous.filter((p) => !entries.some((e) => e.name === p.name)))
@@ -389,6 +514,7 @@ interface SourceStatus {
   repository: string;
   kind: 'autocatalog' | 'eventcatalog';
   commit?: string;
+  tag?: string;
   lockedAt?: string;
   events: number;
   commands: number;
@@ -402,6 +528,8 @@ export interface FederationStatus {
   /** Resources more than one repository defines: each id has one owner. */
   duplicates: string[];
   unresolved: string[];
+  /** Services reading an earlier release than the newest their publisher has. */
+  behind: string[];
   failures: PreparedSources['failures'];
 }
 
@@ -477,17 +605,16 @@ export async function federationStatus(prepared: PreparedSources): Promise<Feder
       owners.set(key, (owners.get(key) ?? new Set()).add(repository));
     }
 
-    // A source inside a pinned repository (an EventCatalog project in a
-    // monorepo, a package) carries that repository's pin.
-    const within =
-      path.relative(prepared.root, prepared.origins.get(dir) ?? dir).split(path.sep)[0] ?? '';
-
-    const pin = prepared.pinned.get(repository) ?? prepared.pinned.get(within);
+    const pin = prepared.pinned.get(holdingRepository(prepared.root, prepared.origins, dir));
 
     sources.push({
       repository,
       kind,
-      ...(pin && { commit: pin.commit, lockedAt: pin.lockedAt }),
+      ...(pin && {
+        commit: pin.commit,
+        lockedAt: pin.lockedAt,
+        ...(pin.tag && { tag: pin.tag }),
+      }),
       events: events.length,
       commands: kindCount(resources, 'command'),
       services: kindCount(mergeArchitectureGraphs(eventGraph, resources), 'service'),
@@ -527,7 +654,14 @@ export async function federationStatus(prepared: PreparedSources): Promise<Feder
     )
     .sort();
 
-  return { sources, duplicates, unresolved: resolved.unresolved, failures };
+  const behind = resolved.behind
+    .map(
+      ({ repository, service, resource, current }) =>
+        `${repository}: ${service} reads ${resource.id} ${resource.version ?? ''}, and ${current} is out`,
+    )
+    .sort();
+
+  return { sources, duplicates, unresolved: resolved.unresolved, behind, failures };
 }
 
 const age = (iso: string | undefined) => {
@@ -545,7 +679,7 @@ export function renderFederationStatus(status: FederationStatus): string {
 
   for (const s of status.sources)
     lines.push(
-      `${s.repository.padEnd(26)} ${s.kind.padEnd(13)} ${(s.commit ? `${s.commit.slice(0, 7)} ${age(s.lockedAt)}` : 'not locked').padEnd(22)} ${String(s.events).padStart(6)} ${String(s.commands).padStart(8)} ${String(s.services).padStart(8)} ${`${s.references - s.unresolved.length}/${s.references}`.padStart(10)}`,
+      `${s.repository.padEnd(26)} ${s.kind.padEnd(13)} ${(s.commit ? `${s.tag ?? s.commit.slice(0, 7)} ${age(s.lockedAt)}` : 'not locked').padEnd(22)} ${String(s.events).padStart(6)} ${String(s.commands).padStart(8)} ${String(s.services).padStart(8)} ${`${s.references - s.unresolved.length}/${s.references}`.padStart(10)}`,
     );
 
   if (status.failures.length) {
@@ -564,6 +698,12 @@ export function renderFederationStatus(status: FederationStatus): string {
     lines.push('', kleur.yellow('References that do not resolve:'));
 
     for (const u of status.unresolved) lines.push(`  ${u}`);
+  }
+
+  if (status.behind.length) {
+    lines.push('', kleur.yellow('Behind the newest release:'));
+
+    for (const b of status.behind) lines.push(`  ${b}`);
   }
 
   if (!status.failures.length && !status.duplicates.length && !status.unresolved.length)

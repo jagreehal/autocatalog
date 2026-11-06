@@ -4,6 +4,7 @@ import { docsCatalog } from '../catalog';
 import { eventPath } from '../event-path';
 import { docsSiteConfig } from '../config';
 import { renderLlmsTxt } from '../llms';
+import { componentRows } from '../page-models';
 import { listItems } from '../view';
 
 export const GET: APIRoute = async ({ site }) => {
@@ -25,6 +26,7 @@ export const GET: APIRoute = async ({ site }) => {
         summary: entry.event.frontmatter.summary,
         owner: entry.event.frontmatter.owner?.team,
       })),
+      components: componentRows(catalog, ''),
       model: catalog.model,
     }),
     { headers: { 'content-type': 'text/plain; charset=utf-8' } },

@@ -1,0 +1,27 @@
+{
+  "viewer": {
+    "name": "Gallery",
+    "url": "https://gallery.acme.dev/"
+  },
+  "owner": "Mobile",
+  "components": [
+    {
+      "id": "receipt-card",
+      "name": "ReceiptCard",
+      "description": "The receipt in the mobile app.",
+      "props": [],
+      "stories": [
+        {
+          "id": "receipt-card--paid",
+          "name": "paid",
+          "link": "#receipt-card/paid"
+        },
+        {
+          "id": "receipt-card--refunded",
+          "name": "refunded",
+          "link": "#receipt-card/refunded"
+        }
+      ]
+    }
+  ]
+}

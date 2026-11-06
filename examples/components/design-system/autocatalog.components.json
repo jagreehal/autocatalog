@@ -1,0 +1,76 @@
+{
+  "viewer": {
+    "name": "Storybook",
+    "url": "https://storybook.acme.dev/design-system/"
+  },
+  "owner": "Design Systems",
+  "components": [
+    {
+      "id": "design-system-button",
+      "name": "Button",
+      "description": "The one button every product uses.",
+      "import": "import { Button } from '@autocatalog-example/storybook-design-system';",
+      "source": "src/Button.stories.tsx",
+      "props": [
+        {
+          "name": "label",
+          "type": "string",
+          "required": true,
+          "description": "What the button says."
+        },
+        {
+          "name": "variant",
+          "type": "'primary' | 'secondary'",
+          "required": false,
+          "description": "How much attention it asks for."
+        }
+      ],
+      "stories": [
+        {
+          "id": "design-system-button--primary",
+          "name": "Primary",
+          "description": "The main action on a page.",
+          "snippet": "const Primary = () => <Button label=\"Continue\" />;",
+          "link": "?path=/story/design-system-button--primary"
+        },
+        {
+          "id": "design-system-button--secondary",
+          "name": "Secondary",
+          "description": "Every other action.",
+          "snippet": "const Secondary = () => <Button label=\"Cancel\" variant=\"secondary\" />;",
+          "link": "?path=/story/design-system-button--secondary"
+        }
+      ]
+    },
+    {
+      "id": "design-system-errorbanner",
+      "name": "ErrorBanner",
+      "description": "The shared banner for a failed action.",
+      "import": "import { ErrorBanner } from '@autocatalog-example/storybook-design-system';",
+      "source": "src/ErrorBanner.stories.tsx",
+      "props": [
+        {
+          "name": "title",
+          "type": "string",
+          "required": true,
+          "description": "What went wrong."
+        },
+        {
+          "name": "detail",
+          "type": "string",
+          "required": false,
+          "description": "How to put it right."
+        }
+      ],
+      "stories": [
+        {
+          "id": "design-system-errorbanner--with-detail",
+          "name": "With Detail",
+          "description": "A title and how to fix it.",
+          "snippet": "const WithDetail = () => <ErrorBanner title=\"Could not save\" detail=\"Check your connection and try again.\" />;",
+          "link": "?path=/story/design-system-errorbanner--with-detail"
+        }
+      ]
+    }
+  ]
+}

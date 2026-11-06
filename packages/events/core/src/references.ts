@@ -25,10 +25,22 @@ export interface RepositoryReferences {
   sends: CatalogReference[];
 }
 
+/** A service receiving an earlier release than the newest its publisher has. */
+export interface BehindReference {
+  /** The repository that declared the reference. */
+  repository: string;
+  service: string;
+  /** The release the service reads. */
+  resource: ResourceRef;
+  /** The newest release, which a prerelease never is. */
+  current: string;
+}
+
 export interface ResolvedReferences {
   graph: ResourceGraph;
   /** References that name nothing, more than one thing, or no matching version: said, never guessed. */
   unresolved: string[];
+  behind: BehindReference[];
 }
 
 // ---------------------------------------------------------------------------
@@ -256,6 +268,7 @@ export function resolveReferences(
   const added = new Map<string, CatalogResource>();
   const relationships = new Map<string, CatalogRelationship>();
   const unresolved: string[] = [];
+  const behind: BehindReference[] = [];
 
   for (const { repository, receives, sends } of repositories) {
     for (const [direction, list] of [
@@ -331,6 +344,25 @@ export function resolveReferences(
           continue;
         }
 
+        const [newest] = named
+          .filter((c) => parseVersion(c.ref.version ?? '')?.pre === undefined)
+          .sort((a, b) => compareVersions(b.ref.version ?? '', a.ref.version ?? ''));
+
+        const current = newest?.ref.version;
+
+        if (
+          direction === 'receives' &&
+          current &&
+          compareVersions(current, target.ref.version ?? '') > 0
+        ) {
+          behind.push({
+            repository,
+            service: reference.service,
+            resource: target.ref,
+            current,
+          });
+        }
+
         const service = architectureService(reference.service);
         services.set(resourceKey(service.ref), service);
 
@@ -386,6 +418,7 @@ export function resolveReferences(
       relationships: [...relationships.values()],
     },
     unresolved: unresolved.sort(),
+    behind,
   };
 }
 

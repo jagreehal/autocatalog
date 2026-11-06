@@ -11,3 +11,4 @@ packages:
   - 'starters/*'
   - 'fixtures/*'
   - 'examples/*'
+  - 'examples/components/*'
