@@ -117,6 +117,47 @@ To move one pin and keep the rest, pass `--only payments`. A repository that
 moved to a new URL keeps its pin and takes the new URL. When no enrolled
 repository can be cloned, `lock` fails and leaves the lock as it was.
 
+### Pin releases
+
+`lock` takes each repository's latest commit, which can hold a contract no
+consumer has yet. Pin what teams released instead:
+
+```bash
+# Each repository's newest release tag
+npx autocatalog federation lock --topic catalog --owner acme --latest-tag
+
+# One tag, branch or commit
+npx autocatalog federation lock --topic catalog --owner acme --only payments --ref v1.1.0
+```
+
+`--latest-tag` compares tags such as `v1.2.3` or `1.2.3` by number and skips
+prereleases, so `v2.0.0-beta.1` never wins. A repository with no release tag is
+named and pinned at its latest commit. `--ref` takes a tag, a branch or a full
+commit SHA. A full SHA names that commit, whatever tags exist, and `lock` refuses
+a name that is a tag and a branch at different commits. A repository without that ref keeps its pin, and `lock` fails when no
+repository can pin it.
+
+The lock records the commit and tree as usual, plus the tag:
+
+```json
+{
+  "name": "payments",
+  "url": "https://github.com/acme/payments.git",
+  "commit": "a4c68dc7ae8115f3b971b32bb00112db0a41b620",
+  "tree": "8f27448fa2e2ab4753954d89dd595ac49d6486cc",
+  "tag": "v1.1.0",
+  "lockedAt": "2026-11-03T08:46:05.360Z"
+}
+```
+
+The tag follows the commit. Every `lock` records the tag `--ref` named, or else
+the newest release tag on the pinned commit, so a plain `lock` of a released
+commit keeps its label and a deleted tag loses it. Event pages show that release beside the event's own version, and
+`federation status` shows it in place of the commit. A catalog inside a monorepo
+shows the release of the repository that holds it, as `platform v1.0.0`. A moved
+tag cannot change what the site builds: the commit stays pinned until you lock
+again.
+
 Private repositories need `GITHUB_TOKEN` or `GH_TOKEN`. The command sends the
 token as a header, over HTTPS to `github.com` or the host in
 `GITHUB_SERVER_URL`, and to no other host a lock or `--repo` names. It never
@@ -144,6 +185,22 @@ references resolve. It then lists sources left out and why, ids two
 repositories both define, and references that don't resolve. It exits 1 when a
 source is left out or an id has two owners. `--format json` gives the same
 report for scripts.
+
+## See who is behind
+
+A consumer says which release it reads with `version` in
+`autocatalog.consumes.json`. When that resolves to an earlier release than the
+newest, `federation status` names it. Being behind doesn't change the exit
+code:
+
+```text
+Behind the newest release:
+  orders: OrderService reads payment.completed 1.1.0, and 2.0.0 is out
+```
+
+The event's Versions card shows the same thing on the release the service
+reads: "Read by OrderService", with what upgrading to the newest release
+changes. A prerelease ahead of a consumer leaves it current.
 
 ## Views and federations of federations
 
@@ -176,7 +233,8 @@ compile. `pnpm verify:federation` runs `lock`, `status`, `site`, `--index` and
 | Licence                  | Enterprise (Scale)          | MIT                                                                                                                                       |
 | Sources                  | EventCatalog projects       | autocatalog repositories and EventCatalog projects, side by side                                                                          |
 | Enrolment                | `federation add` per source | a GitHub topic, `--repo`, or checkouts on disk; a monorepo's catalogs are found without paths                                             |
-| Pinning                  | `eventcatalog.lock`         | `autocatalog.lock.json`, with each tree verified at build                                                                                 |
+| Pinning                  | `ref` per source            | `autocatalog.lock.json`, at the latest commit, a tag, a branch or each repository's newest release, with each tree verified at build      |
+| Consumer versions        | references by version       | the same, plus who reads an earlier release and what upgrading changes                                                                    |
 | Cross-catalog references | by id, with versions        | by id or `domain/id`, with versions and ranges; events and commands                                                                       |
 | Unresolved references    | reported                    | reported with what does exist; ambiguity named                                                                                            |
 | Ownership conflicts      | block the build             | `federation status` exits 1 and names both repositories; the site still builds, and a repository that doesn't compile is left out by name |

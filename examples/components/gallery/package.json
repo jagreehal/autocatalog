@@ -1,0 +1,10 @@
+{
+  "name": "@autocatalog-example/components-gallery",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "devDependencies": {
+    "@autocatalog-example/autocatalog-plugin-gallery": "workspace:*",
+    "autocatalog-cli": "workspace:*"
+  }
+}

@@ -1,3 +1,4 @@
+import { COMPONENTS_FILE } from './components';
 import { execFile } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -108,6 +109,7 @@ export function publishesCatalogContent(dir: string): boolean {
     (REPOSITORY_MARKERS.some((name) => fs.existsSync(path.join(dir, name))) &&
       hasMessageContracts(dir)) ||
     hasResourceGraph(dir) ||
+    fs.existsSync(path.join(dir, COMPONENTS_FILE)) ||
     PRISMA_SCHEMAS.some((name) => fs.existsSync(path.join(dir, name)))
   );
 }
@@ -168,7 +170,8 @@ export function isSingleRepository(root: string): boolean {
     (hasMessageContracts(root) ||
       hasResourceGraph(root) ||
       isCatalogFolder(path.join(root, CONTRACTS)) ||
-      fs.existsSync(path.join(root, CONSUMES_FILE)))
+      fs.existsSync(path.join(root, CONSUMES_FILE)) ||
+      fs.existsSync(path.join(root, COMPONENTS_FILE)))
   );
 }
 

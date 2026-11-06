@@ -106,7 +106,11 @@ ac federation lock --topic catalog --owner acme
 ac federation status
 ```
 
-`status` exits 1 when a repository is left out or two repositories define one event. See `docs/federation.md`.
+Add `--latest-tag` to pin each repository's newest release tag, or `--ref <ref>` for one tag, branch or full commit SHA.
+
+A repository lists its UI components by committing `autocatalog.components.json`. With Storybook, install `autocatalog-plugin-storybook` and run `autocatalog-from-storybook storybook-static`. See `docs/components.md`.
+
+`status` exits 1 when a repository is left out or two repositories define one event, and names consumers behind the newest release. See `docs/federation.md`.
 
 ### 3. Publish the index other repositories check against
 

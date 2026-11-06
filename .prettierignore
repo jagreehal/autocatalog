@@ -29,3 +29,4 @@ examples/federation/notifications/
 packages/agents/core/contracts/
 packages/docs/core/contracts/
 packages/events/core/contracts/event-manifest.schema.json
+packages/events/core/contracts/autocatalog.components.schema.json

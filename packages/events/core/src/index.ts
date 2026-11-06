@@ -373,3 +373,5 @@ export * from './delivery';
 export * from './references';
 
 export * from './consumes';
+
+export * from './components';

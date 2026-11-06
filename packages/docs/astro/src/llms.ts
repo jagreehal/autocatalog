@@ -11,6 +11,14 @@ export interface LlmsTxtInput {
   items: DocListItem[];
   /** Current events, each linked to its Markdown twin. */
   events?: Array<{ path: string; name: string; summary: string; owner?: string }>;
+  /** Components, each linked to its Markdown twin. */
+  components?: Array<{
+    path: string;
+    name: string;
+    description?: string | undefined;
+    repository: string;
+    owner?: { team: string } | undefined;
+  }>;
   /** The domain model: each term with its meaning, and the entities and data products with their pages. */
   model?: DomainModel;
 }
@@ -30,6 +38,7 @@ export function renderLlmsTxt({
   base,
   items,
   events = [],
+  components = [],
   model,
 }: LlmsTxtInput): string {
   const lines = [
@@ -65,6 +74,22 @@ export function renderLlmsTxt({
       const owner = event.owner ? `; owned by ${event.owner}` : '';
       const summary = event.summary.replace(/\.$/, '');
       lines.push(`- [${event.name}](${base}/${twinPath(event.path)}): ${summary}${owner}`);
+    }
+
+    lines.push('');
+  }
+
+  if (components.length > 0) {
+    lines.push('## Components', '');
+
+    for (const { path, name, description, repository, owner } of components) {
+      const notes = [
+        description?.replace(/\s+/g, ' ').replace(/\.$/, ''),
+        `in ${repository}`,
+        owner && `owned by ${owner.team}`,
+      ];
+
+      lines.push(`- [${name}](${base}/${twinPath(path)}): ${notes.filter(Boolean).join('; ')}`);
     }
 
     lines.push('');

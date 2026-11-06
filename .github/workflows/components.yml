@@ -1,0 +1,46 @@
+name: Components
+
+# Publishes examples/components/ through two plugins: each committed components
+# file matches its source, and one site lists them with owners, links into each
+# viewer, Markdown for agents, and a second site joining over --index.
+on:
+  pull_request:
+    paths:
+      - 'examples/components/**'
+      - 'packages/events/**'
+      - 'packages/docs/**'
+      - 'scripts/verify-components.mjs'
+      - '.github/workflows/components.yml'
+      - '.github/actions/**'
+      - 'pnpm-lock.yaml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'examples/components/**'
+      - 'packages/events/**'
+      - 'packages/docs/**'
+      - 'scripts/verify-components.mjs'
+      - '.github/workflows/components.yml'
+      - '.github/actions/**'
+      - 'pnpm-lock.yaml'
+
+permissions:
+  contents: read
+
+# A newer push to the same pull request cancels the run it replaces.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: ./.github/actions/setup-pnpm
+
+      - run: pnpm turbo run build --filter=autocatalog-cli... --filter=autocatalog-plugin-storybook...
+
+      - run: pnpm verify:components

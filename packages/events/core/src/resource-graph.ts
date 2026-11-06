@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import type { SourceLocation } from './adapter-event';
+import type { ComponentCatalogResource } from './components';
 import { deliveryEventOf } from './delivery-model';
 import {
   isJsonObject,
@@ -140,6 +141,7 @@ export type AgentSystemCatalogResource = TypedCatalogResource<
 export type CatalogResource =
   | ArchitectureCatalogResource
   | AgentSystemCatalogResource
+  | ComponentCatalogResource
   | DocumentCatalogResource
   | EventCatalogResource
   | RepositoryCatalogResource

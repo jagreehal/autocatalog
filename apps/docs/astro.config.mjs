@@ -85,6 +85,7 @@ export default defineConfig({
           items: [
             { label: 'The company site', slug: 'docs/site' },
             { label: 'Federation', slug: 'docs/federation' },
+            { label: 'Components', slug: 'docs/components' },
             { label: 'MCP for coding agents', slug: 'docs/mcp' },
             { label: 'Agent catalogs', slug: 'docs/agents' },
             { label: 'The docs convention', slug: 'docs/docs-convention' },

@@ -1,0 +1,24 @@
+{
+  "components": {
+    "checkout-paybutton": {
+      "id": "checkout-paybutton",
+      "name": "PayButton",
+      "path": "./src/PayButton.stories.tsx",
+      "import": "import { PayButton } from '@autocatalog-example/storybook-checkout';",
+      "stories": {
+        "checkout-paybutton--ready": {
+          "id": "checkout-paybutton--ready",
+          "name": "Ready",
+          "snippet": "const Ready = () => <PayButton amount=\"£42.00\" />;",
+          "description": "Ready to take the payment."
+        },
+        "checkout-paybutton--busy": {
+          "id": "checkout-paybutton--busy",
+          "name": "Busy",
+          "snippet": "const Busy = () => <PayButton amount=\"£42.00\" busy />;",
+          "description": "A payment is in flight."
+        }
+      }
+    }
+  }
+}

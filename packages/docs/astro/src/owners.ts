@@ -65,6 +65,7 @@ const KIND_HEADINGS = new Map([
   ['agent', 'Agents'],
   ['tool', 'Tools'],
   ['mcp-server', 'MCP servers'],
+  ['component', 'Components'],
   ['model', 'Models'],
   ['workflow', 'Workflows'],
   ['domain', 'Domains'],

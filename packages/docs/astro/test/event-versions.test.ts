@@ -107,6 +107,70 @@ describe('EventVersions states', () => {
     expect(links[1]!.changesHtml).toContain('V0 → 1.0.0-beta');
   });
 
+  it('names the services still on a version, with what upgrading changes', async () => {
+    const behind = [
+      {
+        repository: 'reporter',
+        service: 'Reporter',
+        resource: {
+          kind: 'event' as const,
+          namespace: 'payments/payment',
+          id: 'payment.completed',
+          version: 'V0',
+        },
+        current: '1.0.0',
+      },
+    ];
+
+    const links = await versionLinks(eventVersions(catalog, current), current, '/', behind);
+
+    expect(links.map(({ readBy }) => readBy)).toEqual([[], [], ['Reporter']]);
+    expect(links[2]!.upgradeHtml).toContain('V0 → 1.0.0');
+    expect(links[0]!.upgradeHtml).toBeNull();
+
+    const html = renderToStaticMarkup(createElement(EventVersions, { versions: links }));
+
+    expect(html).toContain('Read by Reporter');
+    expect(html).toContain('What upgrading changes');
+  });
+
+  it('leaves out a service reading the same id from another repository', async () => {
+    const behind = [
+      {
+        repository: 'reporter',
+        service: 'Reporter',
+        resource: {
+          kind: 'event' as const,
+          namespace: 'legacy-billing/payment',
+          id: 'payment.completed',
+          version: 'V0',
+        },
+        current: '1.0.0',
+      },
+    ];
+
+    const links = await versionLinks(eventVersions(catalog, current), current, '/', behind);
+
+    expect(links.every(({ readBy }) => readBy?.length === 0)).toBe(true);
+  });
+
+  it('renders nothing but text from what a schema or version says', async () => {
+    const evil = '<img src=x onerror=alert(1)>';
+    const older = version('payments', `1 ${evil}`, 'string');
+    const newer = version('payments', '[c](javascript:alert(2))', 'number', false);
+
+    newer.event.schema = {
+      type: 'object',
+      properties: { [evil]: { type: 'string' }, 'b`<svg onload=alert(3)>': { type: 'string' } },
+    };
+
+    const links = await versionLinks([newer, older], newer, '/');
+    const html = links[0]!.changesHtml!;
+
+    expect(html).not.toMatch(/<img|<svg|<a[\s>]|onerror="|href=/);
+    expect(html).toContain('<code>');
+  });
+
   it("renders each version's changes, whichever version is being read", async () => {
     const html = await render(first);
 

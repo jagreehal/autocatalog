@@ -722,6 +722,8 @@ export function buildProgram(): Command {
     .option('--owner <owner>', 'GitHub user or organisation that owns them')
     .option('--repo <url...>', 'these repositories as well')
     .option('--only <name...>', 'move only these pins, keeping every other as it is')
+    .option('--ref <ref>', 'pin this tag, branch or full commit SHA instead of the latest commit')
+    .option('--latest-tag', "pin each repository's newest release tag, skipping prereleases")
     .option('--lock <file>', 'the lock file', 'autocatalog.lock.json')
     .option('--cache <dir>', 'where clones go', '.autocatalog/repos')
     .action(
@@ -730,6 +732,8 @@ export function buildProgram(): Command {
         owner?: string;
         repo?: string[];
         only?: string[];
+        ref?: string;
+        latestTag?: boolean;
         lock: string;
         cache: string;
       }) => {

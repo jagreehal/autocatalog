@@ -114,6 +114,83 @@ describe('resolveReferences', () => {
     );
   });
 
+  it('names a service reading an earlier release than the newest', () => {
+    const { behind } = resolveReferences(
+      graph(event('payments', 'payment.completed', '2.0.0', 'payments')),
+      [
+        {
+          repository: 'reporter',
+          receives: [{ service: 'Reporter', id: 'payment.completed', version: '^1' }],
+          sends: [],
+        },
+      ],
+      graph(event('payments', 'payment.completed', '1.0.0', 'payments')),
+    );
+
+    expect(behind).toEqual([
+      {
+        repository: 'reporter',
+        service: 'Reporter',
+        resource: expect.objectContaining({ id: 'payment.completed', version: '1.0.0' }),
+        current: '2.0.0',
+      },
+    ]);
+  });
+
+  it('counts a service on the newest release as current, whatever prerelease is ahead', () => {
+    const { behind } = resolveReferences(composed, [
+      {
+        repository: 'fulfillment',
+        receives: [{ service: 'Warehouse', id: 'order-completed', version: '^1' }],
+        sends: [],
+      },
+    ]);
+
+    expect(behind).toEqual([]);
+  });
+
+  it('compares against the newest release in history when the current one is a prerelease', () => {
+    const { behind } = resolveReferences(
+      graph(event('payments', 'payment.completed', '3.0.0-beta.1', 'payments')),
+      [
+        {
+          repository: 'reporter',
+          receives: [{ service: 'Reporter', id: 'payment.completed', version: '1.0.0' }],
+          sends: [],
+        },
+      ],
+      graph(
+        event('payments', 'payment.completed', '1.0.0', 'payments'),
+        event('payments', 'payment.completed', '2.0.0', 'payments'),
+      ),
+    );
+
+    expect(behind).toEqual([
+      expect.objectContaining({
+        resource: expect.objectContaining({ version: '1.0.0' }),
+        current: '2.0.0',
+      }),
+    ]);
+  });
+
+  it('does not count a service that sends an earlier release', () => {
+    const { behind } = resolveReferences(
+      graph(
+        event('orders', 'order-completed', '1.0.0', 'orders'),
+        event('orders', 'order-completed', '2.0.0', 'orders'),
+      ),
+      [
+        {
+          repository: 'fulfillment',
+          receives: [],
+          sends: [{ service: 'Warehouse', id: 'order-completed', version: '^1' }],
+        },
+      ],
+    );
+
+    expect(behind).toEqual([]);
+  });
+
   it('resolves a range to an earlier version, and adds only that version to the graph', () => {
     const current = graph(event('payments', 'payment.completed', '2.0.0-beta.1', 'payments'));
 

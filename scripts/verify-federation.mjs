@@ -8,10 +8,19 @@
 // payments repository gets three commits, so its event has versions 1.0.0,
 // 1.1.0 and 2.0.0-beta.1. Then: lock, move one pin with --only, check the
 // federation, build the site from the pins, gate a producer change and a
-// broker change on consumers in other repositories, and build a
-// business-unit site that joins the company's catalog.json.
+// broker change on consumers in other repositories, build a
+// business-unit site that joins the company's catalog.json, and lock a
+// release tag that leaves a consumer behind.
 import { spawn, spawnSync } from 'node:child_process';
-import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  cpSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { isDeepStrictEqual } from 'node:util';
@@ -381,6 +390,89 @@ const steps = {
     );
 
     check(/breaks .*LedgerService/.test(result2.out), 'LedgerService not named', result2.out);
+  },
+
+  'a release tag pins the site and shows who is behind'() {
+    // Payments releases 2.0.0 and carries on; orders stays on ^1.
+    const payments = remote('payments');
+
+    setVersion(payments, '2.0.0');
+
+    const release = commit(payments, 'payment.completed 2.0.0');
+
+    git(payments, 'tag', 'v2.0.0');
+    git(payments, 'tag', 'v3.0.0-beta.1');
+    writeFileSync(path.join(payments, 'UNRELEASED'), '');
+    commit(payments, 'unreleased');
+
+    const lock = ['--lock', 'release.lock.json'];
+
+    must(company, 'federation', 'lock', ...repositories(...TEAMS), ...lock, '--latest-tag');
+
+    const entry = json(path.join(company, 'release.lock.json')).repositories.find(
+      ({ name }) => name === 'payments',
+    );
+
+    check(entry.commit === release, 'payments is not pinned at its release', JSON.stringify(entry));
+    check(entry.tag === 'v2.0.0', 'the lock does not record the tag', JSON.stringify(entry));
+
+    const report = JSON.parse(
+      ac(company, 'federation', 'status', ...repositories(...TEAMS), ...lock, '--format', 'json')
+        .out,
+    );
+
+    const behind = report.behind.join('\n');
+
+    check(
+      report.sources.find((s) => s.repository === 'payments').tag === 'v2.0.0',
+      'status does not show the tag',
+    );
+    check(
+      /OrderService reads payment\.completed 1\.1\.0, and 2\.0\.0 is out/.test(behind),
+      'status does not name OrderService',
+      behind,
+    );
+
+    must(company, 'site', ...repositories(...TEAMS), ...lock, '--out', 'dist-release');
+
+    const page = readFileSync(
+      path.join(company, 'dist-release/events/payments/payments/payment.completed/index.html'),
+      'utf8',
+    );
+
+    check(page.includes('payments v2.0.0'), 'the event page does not show the release');
+    check(page.includes('Read by OrderService'), 'the Versions card does not name OrderService');
+    check(page.includes('What upgrading changes'), 'the Versions card has no upgrade changes');
+  },
+
+  "a nested catalog shows its repository's release"() {
+    const platform = remote('platform');
+    const contract = path.join(platform, 'packages/billing/contracts/events');
+
+    mkdirSync(contract, { recursive: true });
+    writeFileSync(
+      path.join(contract, 'invoice.sent.json'),
+      JSON.stringify({
+        type: 'object',
+        properties: { invoiceId: { type: 'string' } },
+        'x-autocatalog': { id: 'invoice.sent', domain: 'billing', version: '1.0.0' },
+      }),
+    );
+    git(platform, 'init', '-q', '-b', 'main');
+    commit(platform, 'billing');
+    git(platform, 'tag', 'v1.0.0');
+
+    const lock = ['--lock', 'platform.lock.json'];
+
+    must(company, 'federation', 'lock', ...repositories('platform'), ...lock, '--latest-tag');
+    must(company, 'site', ...repositories('platform'), ...lock, '--out', 'dist-platform');
+
+    const page = readFileSync(
+      path.join(company, 'dist-platform/events/billing/billing/invoice.sent/index.html'),
+      'utf8',
+    );
+
+    check(page.includes('platform v1.0.0'), 'the nested event page does not show the release');
   },
 };
 

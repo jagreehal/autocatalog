@@ -28,6 +28,8 @@ export interface DocsSiteConfig {
   indexes: string[];
   /** Repositories whose documents are left out because one breaks the contract. */
   exclude: string[];
+  /** The release each catalog is locked at, as `platform v1.0.0`, by its directory. */
+  releases: Record<string, string | undefined>;
   title: string;
   description: string;
   navigation: SiteNavigation | undefined;
@@ -47,6 +49,7 @@ export function docsSiteConfig(): DocsSiteConfig {
     sources: (process.env.AUTOCATALOG_DOCS_SOURCES ?? '').split(path.delimiter).filter(Boolean),
     indexes: (process.env.AUTOCATALOG_DOCS_INDEXES ?? '').split(path.delimiter).filter(Boolean),
     exclude: (process.env.AUTOCATALOG_DOCS_EXCLUDE ?? '').split(path.delimiter).filter(Boolean),
+    releases: JSON.parse(process.env.AUTOCATALOG_DOCS_RELEASES ?? '{}'),
     title: process.env.AUTOCATALOG_DOCS_TITLE ?? 'Documentation',
     navigation: process.env.AUTOCATALOG_SITE_NAVIGATION
       ? siteNavigationSchema.parse(JSON.parse(process.env.AUTOCATALOG_SITE_NAVIGATION))

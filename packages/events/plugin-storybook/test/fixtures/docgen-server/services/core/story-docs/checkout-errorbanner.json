@@ -1,0 +1,24 @@
+{
+  "components": {
+    "checkout-errorbanner": {
+      "id": "checkout-errorbanner",
+      "name": "ErrorBanner",
+      "path": "./src/ErrorBanner.stories.tsx",
+      "import": "import { ErrorBanner } from '@autocatalog-example/storybook-checkout';",
+      "stories": {
+        "checkout-errorbanner--declined": {
+          "id": "checkout-errorbanner--declined",
+          "name": "Declined",
+          "snippet": "const Declined = () => <ErrorBanner message=\"Your card was declined.\" />;",
+          "description": "The message for any declined card."
+        },
+        "checkout-errorbanner--retryable": {
+          "id": "checkout-errorbanner--retryable",
+          "name": "Retryable",
+          "snippet": "const Retryable = () => <ErrorBanner message=\"The bank timed out.\" onRetry={() => {}} />;",
+          "description": "A retry button appears when the payment can be tried again."
+        }
+      }
+    }
+  }
+}

@@ -20,6 +20,7 @@ import {
   enrolled,
   enrolledSinceLock,
   type EnrolmentFlags,
+  catalogReleases,
   importEventCatalogSources,
   LOCK_FILE,
   type LockEntry,
@@ -314,6 +315,8 @@ export async function runSite(input: RunSiteOptions): Promise<number> {
     path.join(path.dirname(path.resolve(opts.cache)), 'eventcatalog-sources'),
   );
 
+  const releases = catalogReleases(pins ?? [], root, imported);
+
   for (const failure of imported.failures)
     console.warn(kleur.yellow(`Left out ${failure.name}: ${failure.reason}`));
 
@@ -484,6 +487,9 @@ export async function runSite(input: RunSiteOptions): Promise<number> {
             AUTOCATALOG_DOCS_SOURCES: imported.sources.join(path.delimiter),
           }),
           ...(indexFiles.length && { AUTOCATALOG_DOCS_INDEXES: indexFiles.join(path.delimiter) }),
+          ...(Object.keys(releases).length && {
+            AUTOCATALOG_DOCS_RELEASES: JSON.stringify(releases),
+          }),
           AUTOCATALOG_REACT_FROM: import.meta.resolve('autocatalog-docs-astro'),
           ...(opts.site && { AUTOCATALOG_SITE_URL: opts.site }),
           ...(opts.base && { AUTOCATALOG_SITE_BASE: opts.base }),
