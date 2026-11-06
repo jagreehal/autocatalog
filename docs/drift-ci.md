@@ -17,6 +17,25 @@ to remember to update a spec.
 
 ## GitHub Actions
 
+One step covers it, and this is the whole workflow:
+
+```yaml
+name: catalog
+on: pull_request
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: jagreehal/autocatalog/actions/check@v1
+```
+
+The action checks out your history, runs `ac check` and compares your contracts
+with the base branch. Its failures mark the files they name. Set
+`allow-code-execution: true` to run [catalog rules](/docs/rules) in a repository
+you trust.
+
+To run the steps yourself, with Zod or another installed plugin:
+
 ```yaml
 name: contract-drift
 on: pull_request
@@ -233,10 +252,11 @@ an open pull request counts once it merges and the site rebuilds. Drift prints
 when the index it read was published, from the site's `Last-Modified` header or
 the file's time, and how long ago:
 
-````text
+```text
   consumers from https://catalog.acme.dev/catalog.json, published 2026-10-12T21:30:00Z (2 hour(s) ago)
-``` If the index
-cannot be read, drift says so and runs without it: an outage on the site does
+```
+
+If the index cannot be read, drift says so and runs without it: an outage on the site does
 not block pull requests across the company.
 
 The consumer checks its side too. In the consumer's own pull request,
@@ -278,7 +298,7 @@ command, report, formats and gates:
 ```yaml
 - run: npm test # autotel's ArchitectureSnapshotSubscriber writes .autotel/snapshot.json
 - run: pnpm exec ac drift --base-ref origin/main --root . --format github --snapshot .autotel/snapshot.json
-````
+```
 
 It reads the `autotel-architecture/*` snapshot autotel's
 `ArchitectureSnapshotSubscriber` writes, and works with `--base-ref` and with

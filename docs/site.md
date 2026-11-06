@@ -445,7 +445,7 @@ wins over one of the built-in names.
 
 ## Make it yours
 
-The site carries your name, not ours. Keep one file beside your build and `ac
+Your company's name goes on every page. Keep one file beside your build and `ac
 site` reads it, so the command takes no flags:
 
 ```json

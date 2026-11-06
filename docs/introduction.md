@@ -1,7 +1,7 @@
 ---
 title: Introduction
 owner: Maintainers
-summary: One provenance-aware catalog, discovered by convention from the repositories you already have.
+summary: A catalog of your events, services and docs, read from the repositories you have, with nothing to set up.
 tags:
   - overview
 related:
@@ -9,13 +9,20 @@ related:
   - docs/comparison
 ---
 
-The knowledge that describes your systems already exists. It is in the schemas
-your services validate against, the producers and consumers named in that
-metadata, and the markdown someone committed next to the code. What is missing is
-not documentation — it is one place that reads all of it, and can say where every
-statement came from.
+You already wrote the catalog. It sits in the schemas your services validate
+against, the producers and consumers those schemas name, the owners in
+CODEOWNERS and the Markdown beside your code. autocatalog reads all of it where
+it lives, so you skip the setup a catalog usually asks for:
 
-That is what autocatalog is. You point it at a repository, not at a docs folder.
+- **Setup:** one JSON Schema and one Markdown page gave us a 24-page site in 13
+  seconds, from one command and no config file, once `npx` has downloaded it.
+- **Install:** `npx autocatalog site . --dev` runs it and leaves your repository
+  as it was.
+- **Upkeep:** you write no service definitions or catalog entries. Each build
+  reads your contracts again, so the site follows them.
+- **Hosting:** the site is a static folder that any host can serve.
+- **Joining:** a team adds a GitHub topic, and one action checks its pull
+  requests.
 
 ## The bet
 
@@ -77,6 +84,6 @@ Node.js 24 or newer. Python 3.11 or newer for the Pydantic extractor.
 
 ## Next
 
-- [Quick start](/docs/quick-start) — a running catalog in under a minute
+- [Quick start](/docs/quick-start) — a running catalog from one command
 - [Zod](/docs/events/zod) · [Pydantic](/docs/events/pydantic) · [JSON Schema](/docs/events/json-schema) — the three ways in
 - [Drift gating in CI](/docs/drift-ci) — where the catalog starts paying for itself

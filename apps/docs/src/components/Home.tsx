@@ -349,6 +349,10 @@ export function HomeHero({ base }: HomeProps) {
           , each with its owner. It reads the code and Markdown your teams already commit, so the
           site stays current without anyone keeping it up to date.
         </p>
+        <p className="m-0 max-w-prose font-semibold text-foreground">
+          One command, no config files, no server. Two files became a 24-page site in 13 seconds,
+          once npx had downloaded it.
+        </p>
         <div className="flex flex-wrap items-center gap-3">
           <LinkButton href={href('docs/quick-start')} size="lg">
             Quick start
@@ -622,10 +626,8 @@ export function HomeSections({ base }: HomeProps) {
                 tabIndex={0}
                 className="m-0 overflow-x-auto rounded-none border-0 border-t bg-muted px-4.5 py-4 text-xs leading-relaxed text-muted-foreground"
               >
-                <span className="italic"># .github/workflows/ci.yml</span>
-                {
-                  '\n- run: git fetch origin main\n- run: npx autocatalog drift --base-ref origin/main --root . --format github'
-                }
+                <span className="italic"># .github/workflows/catalog.yml</span>
+                {'\n- uses: jagreehal/autocatalog/actions/check@v1'}
               </pre>
             </figure>
             <div>
