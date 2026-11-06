@@ -1,5 +1,12 @@
 # autocatalog-docs-core
 
+## 0.8.1
+
+### Patch Changes
+
+- Updated dependencies [95f623d]
+  - autocatalog-core@0.9.0
+
 ## 0.8.0
 
 ### Minor Changes

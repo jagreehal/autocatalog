@@ -1,5 +1,14 @@
 # autocatalog-mcp
 
+## 0.4.3
+
+### Patch Changes
+
+- Updated dependencies [95f623d]
+  - autocatalog-core@0.9.0
+  - autocatalog-agents-core@0.3.1
+  - autocatalog-docs-core@0.8.1
+
 ## 0.4.2
 
 ### Patch Changes
