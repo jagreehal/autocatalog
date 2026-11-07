@@ -1,0 +1,15 @@
+{
+  "name": "autocatalog-ask-benchmark",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "retrieval": "node run.mjs --tier retrieval",
+    "agent": "node run.mjs --tier agent"
+  },
+  "dependencies": {
+    "@ai-sdk/mcp": "latest",
+    "@ai-sdk/openai-compatible": "latest",
+    "@modelcontextprotocol/sdk": "^1.32.1",
+    "ai": "latest"
+  }
+}

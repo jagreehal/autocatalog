@@ -60,7 +60,8 @@ export interface RuntimeResourceEvidence {
   exports?: { id: string; count: number }[];
 }
 
-export type ArchitectureResourceKind = 'collection' | 'table' | 'command' | 'queue' | 'endpoint';
+export type ArchitectureResourceKind =
+  'collection' | 'table' | 'command' | 'queue' | 'endpoint' | 'gateway';
 
 export type ArchitectureCatalogResource = TypedCatalogResource<
   ArchitectureResourceKind,
@@ -70,7 +71,9 @@ export type ArchitectureCatalogResource = TypedCatalogResource<
 export function isArchitectureCatalogResource(
   resource: CatalogResource,
 ): resource is ArchitectureCatalogResource {
-  return ['collection', 'table', 'command', 'queue', 'endpoint'].includes(resource.ref.kind);
+  return ['collection', 'table', 'command', 'queue', 'endpoint', 'gateway'].includes(
+    resource.ref.kind,
+  );
 }
 
 export interface EventResourceAttributes {

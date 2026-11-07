@@ -1,0 +1,214 @@
+{
+  "note": "Written before any fix, against a made-up company. The holdout set stays out of tuning. `answer` is any of these strings, case-insensitive; `source` is a file the answer must cite.",
+  "questions": [
+    {
+      "id": "holiday-days",
+      "set": "dev",
+      "q": "How many days of holiday do I get a year?",
+      "answer": ["28"],
+      "source": "people/holiday.md"
+    },
+    {
+      "id": "carry-over",
+      "set": "dev",
+      "q": "How many unused holiday days carry over?",
+      "answer": ["five", "5"],
+      "source": "people/holiday.md"
+    },
+    {
+      "id": "sick-note",
+      "set": "dev",
+      "q": "When do I need a doctor's note for sickness?",
+      "answer": ["seven", "7"],
+      "source": "people/sick-leave.md"
+    },
+    {
+      "id": "expense-window",
+      "set": "dev",
+      "q": "How long do I have to submit expenses?",
+      "answer": ["30"],
+      "source": "people/expenses.md"
+    },
+    {
+      "id": "laptop-stolen",
+      "set": "dev",
+      "q": "What should I do if my laptop is stolen?",
+      "answer": ["one hour", "1 hour", "within an hour"],
+      "source": "it/laptops.md"
+    },
+    {
+      "id": "invoice-po",
+      "set": "dev",
+      "q": "What does a supplier invoice need to get paid?",
+      "answer": ["purchase order"],
+      "source": "finance/invoices.md"
+    },
+    {
+      "id": "nda-sign",
+      "set": "dev",
+      "q": "Who can sign contracts?",
+      "answer": ["director"],
+      "source": "legal/nda.md"
+    },
+    {
+      "id": "brand-colour",
+      "set": "dev",
+      "q": "What is the primary brand colour?",
+      "answer": ["teal"],
+      "source": "marketing/brand.md"
+    },
+    {
+      "id": "discount",
+      "set": "dev",
+      "q": "What discount can sales offer without approval?",
+      "answer": ["15"],
+      "source": "product/pricing.md"
+    },
+    {
+      "id": "incident-updates",
+      "set": "dev",
+      "q": "How often do we post updates during an incident?",
+      "answer": ["thirty", "30"],
+      "source": "incident-communications.md"
+    },
+    {
+      "id": "replay-window",
+      "set": "dev",
+      "q": "What is the acquirer's idempotency window for replaying captures?",
+      "answer": ["24"],
+      "source": "ops/replay.md"
+    },
+    {
+      "id": "recon-time",
+      "set": "dev",
+      "q": "What time does the daily reconciliation report run?",
+      "answer": ["06:00", "6am", "6 am"],
+      "source": "daily-reconciliation.md"
+    },
+    {
+      "id": "stuck-capture",
+      "set": "dev",
+      "q": "Why does a payment get stuck in capturing?",
+      "answer": [
+        "not yet known",
+        "not known",
+        "unknown",
+        "unclear",
+        "hypothesis",
+        "draft",
+        "worker"
+      ],
+      "source": "capture-stuck",
+      "mustFlag": [
+        "draft",
+        "hypothesis",
+        "unconfirmed",
+        "not confirmed",
+        "not established",
+        "not yet known"
+      ]
+    },
+    {
+      "id": "gap-parental",
+      "set": "dev",
+      "q": "How much parental leave do I get?",
+      "abstain": true
+    },
+    {
+      "id": "gap-pension",
+      "set": "dev",
+      "q": "What is the company pension contribution?",
+      "abstain": true
+    },
+    {
+      "id": "gap-salary",
+      "set": "dev",
+      "q": "What are the salary bands for engineers?",
+      "abstain": true
+    },
+    { "id": "gap-wifi", "set": "dev", "q": "What is the guest wifi password?", "abstain": true },
+    { "id": "gap-ceo", "set": "dev", "q": "What was last year's revenue?", "abstain": true },
+
+    {
+      "id": "h-vacation",
+      "set": "holdout",
+      "q": "How much vacation am I entitled to?",
+      "answer": ["28"],
+      "source": "people/holiday.md"
+    },
+    {
+      "id": "h-pto",
+      "set": "holdout",
+      "q": "How far ahead should I request PTO?",
+      "answer": ["two weeks", "2 weeks"],
+      "source": "people/holiday.md"
+    },
+    {
+      "id": "h-unwell",
+      "set": "holdout",
+      "q": "I feel unwell today, who do I tell and by when?",
+      "answer": ["10:00", "10am", "10 am"],
+      "source": "people/sick-leave.md"
+    },
+    {
+      "id": "h-dinner",
+      "set": "holdout",
+      "q": "What's the daily limit for food on a work trip?",
+      "answer": ["40"],
+      "source": "people/expenses.md"
+    },
+    {
+      "id": "h-remote",
+      "set": "holdout",
+      "q": "How do I get on the network when I work remotely?",
+      "answer": ["wirecloud"],
+      "source": "it/vpn.md"
+    },
+    {
+      "id": "h-reporter",
+      "set": "holdout",
+      "q": "A reporter emailed me asking about us. Can I reply?",
+      "answer": ["marketing lead", "forward"],
+      "source": "marketing/press.md"
+    },
+    {
+      "id": "h-guest",
+      "set": "holdout",
+      "q": "A client is visiting tomorrow, what do I need to do?",
+      "answer": ["reception", "day ahead", "name"],
+      "source": "office/london.md"
+    },
+    {
+      "id": "h-new-starter",
+      "set": "holdout",
+      "q": "What happens if a new starter skips the security course?",
+      "answer": ["paused"],
+      "source": "people/onboarding.md"
+    },
+    {
+      "id": "h-payment-run",
+      "set": "holdout",
+      "q": "When do we pay our vendors?",
+      "answer": ["last working day"],
+      "source": "finance/invoices.md"
+    },
+    {
+      "id": "h-gap-gym",
+      "set": "holdout",
+      "q": "Is there a gym membership perk?",
+      "abstain": true
+    },
+    {
+      "id": "h-gap-dog",
+      "set": "holdout",
+      "q": "Can I bring my dog to the office?",
+      "abstain": true
+    },
+    {
+      "id": "h-gap-visa",
+      "set": "holdout",
+      "q": "Does the company sponsor work visas?",
+      "abstain": true
+    }
+  ]
+}

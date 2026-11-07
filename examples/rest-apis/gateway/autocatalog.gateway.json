@@ -1,0 +1,20 @@
+{
+  "gateway": "kong",
+  "source": "kong.yml",
+  "routes": [
+    {
+      "name": "customers-read",
+      "service": "customers-service",
+      "patterns": [
+        "/customers/[^/]+$"
+      ],
+      "methods": [
+        "GET"
+      ],
+      "stripPath": false,
+      "auth": [
+        "key-auth"
+      ]
+    }
+  ]
+}

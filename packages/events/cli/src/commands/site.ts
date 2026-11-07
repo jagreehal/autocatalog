@@ -24,7 +24,7 @@ import {
   importEventCatalogSources,
   LOCK_FILE,
   type LockEntry,
-  readLock,
+  readLockFile,
 } from '../federation';
 import {
   buildEventCatalog,
@@ -181,15 +181,17 @@ export async function runSite(input: RunSiteOptions): Promise<number> {
   let root = path.resolve(opts.root);
   const lockPath = path.resolve(opts.lock ?? LOCK_FILE);
 
-  const pins = opts.unlocked
+  const lock = opts.unlocked
     ? undefined
-    : await readLock(lockPath, { required: Boolean(opts.lock) }).catch((error: Error) => error);
+    : await readLockFile(lockPath, { required: Boolean(opts.lock) }).catch((error: Error) => error);
 
-  if (pins instanceof Error) {
-    console.error(kleur.red(pins.message));
+  if (lock instanceof Error) {
+    console.error(kleur.red(lock.message));
 
     return 1;
   }
+
+  const pins = lock?.repositories;
 
   if (opts.fingerprint) {
     const printed = await siteFingerprint(pins, opts, token).catch((error: Error) => error);
@@ -487,6 +489,8 @@ export async function runSite(input: RunSiteOptions): Promise<number> {
             AUTOCATALOG_DOCS_SOURCES: imported.sources.join(path.delimiter),
           }),
           ...(indexFiles.length && { AUTOCATALOG_DOCS_INDEXES: indexFiles.join(path.delimiter) }),
+          // With a lock, it alone says who owns each service, an empty one included.
+          ...(lock && { AUTOCATALOG_DOCS_SERVICE_OWNERS: JSON.stringify(lock.services) }),
           ...(Object.keys(releases).length && {
             AUTOCATALOG_DOCS_RELEASES: JSON.stringify(releases),
           }),

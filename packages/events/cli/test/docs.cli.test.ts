@@ -158,7 +158,7 @@ describe('ac docs init-conventions', () => {
       .object({ kinds: z.record(z.string(), z.object({ folder: z.string() })) })
       .parse(JSON.parse(await fs.readFile(conventionsFile(), 'utf8')));
 
-    expect(Object.keys(written.kinds)).toEqual(['adr', 'runbook', 'incident']);
+    expect(Object.keys(written.kinds)).toEqual(['adr', 'runbook', 'incident', 'finding']);
     expect(written.kinds.adr?.folder).toBe('adr');
     expect(await runDocsInitConventions({ root, quiet: true })).toBe(1);
   });

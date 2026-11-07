@@ -137,8 +137,10 @@ keeps the last good site.
 - `/apis/<repository>/<name>/` renders each OpenAPI 3 spec a repository commits
   under `contracts/` with [Scalar](https://scalar.com), and publishes the spec
   beside it as `openapi.json`. Without JavaScript the page lists the operations.
-  A service links to the API whose title names it or whose webhooks it
-  produces.
+  A service links to the API that names it in a top-level
+  `x-autocatalog.service`. Failing that, it links to the API whose title names
+  it or whose webhooks it produces, and the link is marked `inferred`. Each
+  operation is also an `endpoint` in `/catalog.json`, exposed by that service.
 - `/specs/<repository>/<name>/` shows any other specification a repository
   commits under `contracts/`, as written and highlighted, with the file beside
   it under its own name. A WSDL, XML Schema, XML, GraphQL or RAML file counts by
@@ -544,7 +546,9 @@ ac site --pages ./site-pages
 ```
 
 `site-pages/team.astro` publishes `/team/`, and `site-pages/api/glossary.json.ts`
-publishes `/api/glossary.json`. An `index.astro` replaces the home page. Files
+publishes `/api/glossary.json`. An `index.astro` replaces the home page. A `.md`
+or `.mdx` page takes the site's layout and needs a `title` in its frontmatter,
+which accepts what Starlight's does. Files
 and folders that start with `_` are left out, so a layout can sit beside the
 pages. A page at a path the catalog publishes fails the build with the file to
 rename. In your own project, pass the folder as `autocatalogDocs({ pages })`.

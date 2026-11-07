@@ -4,6 +4,7 @@ import path from 'node:path';
 import { afterEach, beforeEach, expect, it } from 'vitest';
 import { apiOperations, servicesForApi } from '../src/apis';
 import { buildDocsCatalog } from '../src/catalog';
+import { servicePages } from '../src/page-models';
 import { schemaFormat } from '../src/schemas';
 
 let root: string;
@@ -106,4 +107,165 @@ it('gives specs that share a name a page each', async () => {
   const catalog = await buildDocsCatalog(root, { includeDates: false });
 
   expect(catalog.apis.map((api) => api.name)).toEqual(['openapi-json', 'openapi-yaml']);
+});
+
+it('puts each operation in the graph, exposed by the service the spec declares', async () => {
+  await fs.mkdir(path.join(root, 'shop/contracts'), { recursive: true });
+  await fs.writeFile(
+    path.join(root, 'shop/contracts/billing.yaml'),
+    `openapi: 3.1.0
+info: { title: Billing API, version: 2.0.0 }
+x-autocatalog: { service: invoicing }
+paths:
+  /invoices/{id}:
+    get:
+      operationId: getInvoice
+      summary: Read an invoice
+`,
+  );
+
+  const { graph } = await buildDocsCatalog(root, { includeDates: false });
+
+  const ref = { kind: 'endpoint', namespace: 'shop/billing', id: 'GET /invoices/{id}' };
+
+  expect(graph.resources.find((resource) => resource.ref.kind === 'endpoint')).toMatchObject({
+    ref,
+    title: 'GET /invoices/{id}',
+    summary: 'Read an invoice',
+    url: 'apis/shop/billing/',
+    source: { repo: 'shop', file: 'contracts/billing.yaml', symbol: 'getInvoice' },
+    attributes: { method: 'GET', path: '/invoices/{id}', apiVersion: '2.0.0' },
+  });
+  expect(graph.relationships.filter(({ type }) => type === 'exposedBy')).toMatchObject([
+    { from: ref, to: { kind: 'service', id: 'invoicing' }, provenance: 'declared' },
+  ]);
+  expect(
+    graph.resources.some(({ ref: { kind, id } }) => kind === 'service' && id === 'invoicing'),
+  ).toBe(true);
+});
+
+it('infers the service from the spec title, and says it inferred it', async () => {
+  await fs.mkdir(path.join(root, 'shop/contracts'), { recursive: true });
+  await fs.mkdir(path.join(root, 'shop/contracts/events'), { recursive: true });
+  await fs.writeFile(
+    path.join(root, 'shop/contracts/events/invoice.json'),
+    JSON.stringify({
+      $schema: 'https://json-schema.org/draft/2020-12/schema',
+      title: 'InvoiceSent',
+      type: 'object',
+      'x-autocatalog': {
+        id: 'invoice.sent',
+        version: '1.0.0',
+        domain: 'billing',
+        producers: ['billing'],
+      },
+    }),
+  );
+  await fs.writeFile(
+    path.join(root, 'shop/contracts/billing.yaml'),
+    `openapi: 3.1.0
+info: { title: Billing API, version: 2.0.0 }
+paths:
+  /invoices:
+    get:
+      summary: List invoices
+`,
+  );
+
+  const { graph } = await buildDocsCatalog(root, { includeDates: false });
+
+  expect(graph.relationships.filter(({ type }) => type === 'exposedBy')).toMatchObject([
+    { to: { kind: 'service', id: 'billing' }, provenance: 'inferred', needsReview: false },
+  ]);
+});
+
+it('reports a path whose $ref does not resolve, and keeps the rest of the catalog', async () => {
+  await fs.mkdir(path.join(root, 'shop/contracts'), { recursive: true });
+  await fs.mkdir(path.join(root, 'shop/events'), { recursive: true });
+  await fs.writeFile(
+    path.join(root, 'shop/contracts/billing.yaml'),
+    `openapi: 3.1.0
+info: { title: Billing API, version: 2.0.0 }
+paths:
+  /invoices:
+    get: { summary: List invoices }
+  /broken:
+    $ref: '#/components/pathItems/missing'
+`,
+  );
+
+  const catalog = await buildDocsCatalog(root, { includeDates: false });
+
+  expect(catalog.failures).toMatchObject([
+    { repository: 'shop', source: 'apis', message: expect.stringContaining('/broken') },
+  ]);
+  expect(
+    catalog.graph.resources.flatMap(({ ref }) => (ref.kind === 'endpoint' ? [ref.id] : [])),
+  ).toEqual(['GET /invoices']);
+  expect(apiOperations(catalog.apis[0]!).map(({ path: route }) => route)).toEqual(['/invoices']);
+});
+
+it('gives a service only a spec names a page', async () => {
+  await fs.mkdir(path.join(root, 'shop/contracts'), { recursive: true });
+  await fs.writeFile(
+    path.join(root, 'shop/contracts/billing.yaml'),
+    `openapi: 3.1.0
+info: { title: Billing API, version: 2.0.0 }
+x-autocatalog: { service: invoicing }
+paths: {}
+`,
+  );
+
+  const catalog = await buildDocsCatalog(root, { includeDates: false });
+
+  expect(servicePages(catalog)).toEqual(new Set(['invoicing']));
+});
+
+it('refuses a declared service name that cannot be a page', async () => {
+  await fs.mkdir(path.join(root, 'shop/contracts'), { recursive: true });
+  await fs.writeFile(
+    path.join(root, 'shop/contracts/billing.yaml'),
+    `openapi: 3.1.0
+info: { title: Billing API, version: 2.0.0 }
+x-autocatalog: { service: ../../etc }
+paths: {}
+`,
+  );
+
+  const catalog = await buildDocsCatalog(root, { includeDates: false });
+
+  expect(catalog.failures).toMatchObject([{ repository: 'shop', source: 'apis' }]);
+  expect(servicePages(catalog).size).toBe(0);
+});
+
+it('gives no page to a service the lock pins to another repository', async () => {
+  await fs.mkdir(path.join(root, 'shop/contracts'), { recursive: true });
+  await fs.writeFile(
+    path.join(root, 'shop/contracts/billing.yaml'),
+    `openapi: 3.1.0
+info: { title: Billing API, version: 2.0.0 }
+x-autocatalog: { service: invoicing }
+paths:
+  /invoices:
+    get: { summary: List invoices }
+`,
+  );
+
+  process.env.AUTOCATALOG_DOCS_SERVICE_OWNERS = JSON.stringify({ invoicing: 'billing' });
+
+  try {
+    const catalog = await buildDocsCatalog(root, { includeDates: false });
+
+    expect(servicePages(catalog).size).toBe(0);
+    expect(catalog.graph.relationships.filter(({ type }) => type === 'exposedBy')).toEqual([]);
+    expect(catalog.failures).toMatchObject([
+      {
+        repository: 'shop',
+        source: 'apis',
+        message: expect.stringContaining('does not pin to shop'),
+      },
+    ]);
+  } finally {
+    delete process.env.AUTOCATALOG_DOCS_SERVICE_OWNERS;
+  }
 });

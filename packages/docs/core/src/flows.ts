@@ -34,6 +34,32 @@ export interface FlowStep {
   lane?: StepLane | undefined;
   /** The step that undoes this one when a later step fails, such as a refund for a charge. */
   compensatedBy?: { id: string; label?: string | undefined } | undefined;
+  /** The state change this step records, when it makes one. A failure may make none. */
+  transition?: FlowTransition | undefined;
+  /** The business rules that hold here. */
+  rules: FlowRule[];
+  /** How to tell this step has stalled, and what to do. Prose: nothing times it. */
+  stuck?: { signs: string; recovery?: string | undefined } | undefined;
+  /** The code that implements it, checked by `ac flows verify`. */
+  code: Array<{ file: string; contains?: string | undefined }>;
+}
+
+/**
+ * What the model expects to change. Two steps can share one and mean different
+ * things, which `via` tells apart when the application says which it was.
+ */
+export interface FlowTransition {
+  entity: string;
+  field: string;
+  from: string[];
+  to: string;
+  via?: string | undefined;
+}
+
+/** A rule in prose, and the test that exercises it, if one does. */
+export interface FlowRule {
+  text: string;
+  test?: string | undefined;
 }
 
 /** What a flow's steps can be grouped by, as EventCatalog's visualiser names them. */
@@ -62,6 +88,9 @@ export interface Flow {
   lanes?: { by: FlowGroupBy; style: 'lanes' | 'boxes' } | undefined;
   /** The workflow that runs it, as autotel names it, when that is not its id or title. */
   workflow?: string | undefined;
+  /** What its steps change, unless a step says otherwise. */
+  entity?: string | undefined;
+  field?: string | undefined;
 }
 
 const text = z.string().trim().min(1);
@@ -75,6 +104,13 @@ const stepId = z.union([text, z.number().transform(String)]);
 const target = z.union([
   stepId.transform((id) => ({ id })),
   z.object({ id: stepId, label: text.optional() }).strict(),
+]);
+
+const states = z.union([text.transform((state) => [state]), z.array(text).min(1)]);
+
+const rule = z.union([
+  text.transform((value) => ({ text: value, test: undefined })),
+  z.object({ text, test: text.optional() }).strict(),
 ]);
 
 // A step names an event as `domain/id`, the form `about:` and consumers use.
@@ -103,6 +139,19 @@ const stepSchema = z
       .strict()
       .refine((lane) => Object.keys(lane).length > 0, 'name a domain, system or team')
       .optional(),
+    entity: text.optional(),
+    field: text.optional(),
+    transition: z.object({ from: states, to: text, via: text.optional() }).strict().optional(),
+    rules: z.array(rule).default([]),
+    stuck: z.object({ signs: text, recovery: text.optional() }).strict().optional(),
+    code: z
+      .array(
+        z.union([
+          text.transform((file) => ({ file, contains: undefined })),
+          z.object({ file: text, contains: text.optional() }).strict(),
+        ]),
+      )
+      .default([]),
   })
   .strict();
 
@@ -120,6 +169,8 @@ const flowSchema = z
     summary: text.optional(),
     lanes: lanesSchema.optional(),
     workflow: text.optional(),
+    entity: text.optional(),
+    field: text.optional(),
     steps: z.array(stepSchema).min(1),
   })
   .strict();
@@ -249,8 +300,10 @@ function readFlow(
     ids.add(step.id);
   }
 
+  const { entity, field } = parsed.data;
+
   const steps = parsed.data.steps.map((step) =>
-    resolveStep(step, ids, resources, repository, options),
+    resolveStep(step, ids, resources, repository, options, { entity, field }),
   );
 
   return {
@@ -263,6 +316,8 @@ function readFlow(
     steps,
     lanes: parsed.data.lanes,
     workflow: parsed.data.workflow,
+    entity,
+    field,
   };
 }
 
@@ -331,6 +386,7 @@ function resolveStep(
   resources: CatalogResource[],
   repository: string,
   options: ReadFlowsOptions,
+  defaults: { entity?: string | undefined; field?: string | undefined },
 ): FlowStep {
   const named = POINTERS.filter((pointer) => step[pointer] !== undefined);
 
@@ -359,7 +415,24 @@ function resolveStep(
     throw new Error(`step '${step.id}' cannot compensate itself`);
   }
 
-  const base = { id: step.id, summary: step.summary, next, lane: step.lane, compensatedBy };
+  const entity = step.entity ?? defaults.entity;
+  const field = step.field ?? defaults.field;
+
+  if (step.transition && !(entity && field)) {
+    throw new Error(`step '${step.id}' has a transition, and no entity and field to apply it to`);
+  }
+
+  const base = {
+    id: step.id,
+    summary: step.summary,
+    next,
+    lane: step.lane,
+    compensatedBy,
+    transition: step.transition && { entity: entity!, field: field!, ...step.transition },
+    rules: step.rules,
+    stuck: step.stuck,
+    code: step.code,
+  };
 
   if (step.event ?? step.service ?? step.agent) {
     const kind = step.event ? 'event' : step.service ? 'service' : 'agent';

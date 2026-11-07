@@ -32,7 +32,11 @@ describe('attentionSnapshot', () => {
         },
       ],
       graph: {
-        resources: [{}, { owner: { team: 'Pay' } }],
+        resources: [
+          { ref: { kind: 'service', id: 'a' } },
+          { ref: { kind: 'service', id: 'b' }, owner: { team: 'Pay' } },
+          { ref: { kind: 'endpoint', id: 'GET /a' } },
+        ],
       },
     };
 

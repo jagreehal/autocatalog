@@ -1,4 +1,6 @@
+import { realpathSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { loadCatalog } from 'autocatalog-agents-core';
 import { createServer } from './server.js';
@@ -31,8 +33,10 @@ export const startMcpServer = async (argv: string[] = process.argv.slice(2)): Pr
   await server.connect(transport);
 };
 
+// npm starts a bin through a symlink, so compare the real file.
 const isEntry =
-  import.meta.url === `file://${process.argv[1]}` || process.argv[1]?.endsWith('mcp/src/index.ts');
+  (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) ||
+  process.argv[1]?.endsWith('mcp/src/index.ts');
 
 if (isEntry) {
   startMcpServer().catch((err) => {

@@ -204,7 +204,7 @@ export default function autocatalogDocs(opts: AutocatalogDocsOptions = {}): Star
         const contentSidebar = config.sidebar ?? sidebar;
 
         // Starlight opens the group holding the current page.
-        const eventsSidebar = catalogSidebar(catalog.events).map((group) => ({
+        const eventsSidebar = catalogSidebar(catalog.events, catalog.apis).map((group) => ({
           ...group,
           collapsed: true,
         }));

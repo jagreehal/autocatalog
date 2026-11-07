@@ -26,6 +26,16 @@ import {
   type CompanySite,
 } from './tools.js';
 import { designSchema } from 'autocatalog-docs-core';
+import { flowContext } from './flows.js';
+import {
+  answerGraph,
+  ask,
+  endpointImpact,
+  FIELD_NAME,
+  proposeFinding,
+  readDocument,
+  searchCompany,
+} from './knowledge.js';
 import { catalogMap, describeMap, draftMap } from './map.js';
 import { define } from './model.js';
 
@@ -43,7 +53,22 @@ const asError = (cause: unknown) => ({
   ],
 });
 
-export function createServer(catalog: CatalogSnapshot, site?: CompanySite): McpServer {
+export interface ServerOptions {
+  /** A folder of checked-out repositories to answer for, instead of this one. */
+  company?: string | undefined;
+  /** Let an agent save draft findings. Off unless asked for: everything else only reads. */
+  allowWrites?: boolean | undefined;
+  /** Who this server answers for: the groups whose restricted documents it may read. */
+  audience?: readonly string[] | undefined;
+  /** The one group that reads saved drafts. Required when `audience` names several. */
+  writeAudience?: string | undefined;
+}
+
+export function createServer(
+  catalog: CatalogSnapshot,
+  site?: CompanySite,
+  { company, allowWrites = false, audience = [], writeAudience }: ServerOptions = {},
+): McpServer {
   const server = new McpServer({ name: 'autocatalog', version: '0.0.1' });
 
   server.registerTool(
@@ -116,7 +141,11 @@ export function createServer(catalog: CatalogSnapshot, site?: CompanySite): McpS
     },
     async ({ query }) => {
       try {
-        return asText(searchEvents(catalog, query));
+        return asText(
+          company
+            ? await searchCompany(catalog, query, { company, audience })
+            : searchEvents(catalog, query),
+        );
       } catch (e) {
         return asError(e);
       }
@@ -235,9 +264,9 @@ export function createServer(catalog: CatalogSnapshot, site?: CompanySite): McpS
   server.registerTool(
     'assess_impact',
     {
-      title: 'Who a change to this event reaches',
+      title: 'Who a change to this event or operation reaches',
       description:
-        'Before editing a contract, find out who receives this event, whether the field travels through other events to other consumers, whether any of those events disagree about its type, and whether the catalog is guessing. Pass a field path to narrow to one field. Returns a deduplicated notify list.',
+        'Before editing a contract, find out who receives this event, whether the field travels through other events to other consumers, whether any of those events disagree about its type, and whether the catalog is guessing. Pass a field path to narrow to one field. Returns a deduplicated notify list. Pass an API operation as `GET /customers/{id}` to get its callers.',
       inputSchema: {
         ref: z.string().min(1),
         field: z.string().optional(),
@@ -245,7 +274,12 @@ export function createServer(catalog: CatalogSnapshot, site?: CompanySite): McpS
     },
     async ({ ref, field }) => {
       try {
-        return asText(assessImpact(catalog, ref, field));
+        // An operation is written `GET /customers/{id}`; an event never has a space.
+        return asText(
+          ref.includes(' ')
+            ? await endpointImpact(catalog, ref, field, company)
+            : assessImpact(catalog, ref, field),
+        );
       } catch (e) {
         return asError(e);
       }
@@ -317,6 +351,103 @@ export function createServer(catalog: CatalogSnapshot, site?: CompanySite): McpS
   );
 
   server.registerTool(
+    'ask',
+    {
+      title: 'Ask anything about how this company works',
+      description:
+        'The first place to look for any question, technical or not: handbooks, policies, teams, people, decisions, runbooks, findings, flows, entities and glossary terms, across every repository. Each result gives its source and a trust line to pass on. `answered: false` means nothing here covers it: retry with other words, then say so rather than guessing.',
+      annotations: { readOnlyHint: true, openWorldHint: false },
+      inputSchema: {
+        question: z.string().min(1),
+        limit: z.number().int().positive().optional(),
+      },
+    },
+    async ({ question, limit }) => {
+      try {
+        return asText(await ask(catalog, question, { company, audience }, limit));
+      } catch (e) {
+        return asError(e);
+      }
+    },
+  );
+
+  server.registerTool(
+    'read_document',
+    {
+      title: 'Read one document whole',
+      description:
+        'The full text of something `ask` returned, by its repository and source. Use it when an excerpt is not enough, or to open a page from `contents`.',
+      annotations: { readOnlyHint: true, openWorldHint: false },
+      inputSchema: { repository: z.string().min(1), source: z.string().min(1) },
+    },
+    async ({ repository, source }) => {
+      try {
+        return asText(await readDocument(catalog, repository, source, { company, audience }));
+      } catch (e) {
+        return asError(e);
+      }
+    },
+  );
+
+  if (allowWrites) {
+    server.registerTool(
+      'propose_finding',
+      {
+        title: 'Save what was learned, or a gap, as a draft',
+        description:
+          'Writes a new draft in docs/findings/ for a person to review in a pull request. Use it for something learned, or with nature `question` for a gap `ask` could not answer. It is always a draft and never changes an existing file. Never include a customer, client or person name, an email, a bank detail, a real transaction value or a pasted record.',
+        annotations: {
+          readOnlyHint: false,
+          destructiveHint: false,
+          idempotentHint: false,
+          openWorldHint: false,
+        },
+        inputSchema: {
+          repository: z.string().min(1).optional(),
+          title: z.string().min(1),
+          nature: z.enum(['behaviour', 'defect', 'question']),
+          details: z.string().min(1),
+          owner: z.string().min(1).optional(),
+          ticket: z.string().min(1).optional(),
+          flow: z.string().min(1).optional(),
+          step: z.string().min(1).optional(),
+          fields: z
+            .record(FIELD_NAME, z.string())
+            .optional()
+            .describe('Other fields the contract requires, as `stillNeeds` names them'),
+        },
+      },
+      async (input) => {
+        try {
+          return asText(proposeFinding(catalog, input, { company, audience, writeAudience }));
+        } catch (e) {
+          return asError(e);
+        }
+      },
+    );
+  }
+
+  server.registerTool(
+    'flow_context',
+    {
+      title: 'What a flow expects, and what backs it',
+      description:
+        'A process as support needs it: each step with its state transition, business rules, stuck signs and recovery, the findings attached to it with their nature and status, and the evidence last recorded. Omit id to list flows. Read counts for each transition with the `observe` hints. Treat draft findings and questions as hypotheses.',
+      annotations: { readOnlyHint: true, openWorldHint: false },
+      inputSchema: { id: z.string().min(1).optional() },
+    },
+    async ({ id }) => {
+      try {
+        return asText(
+          flowContext(catalog, id, company, audience, await answerGraph(catalog, company)),
+        );
+      } catch (e) {
+        return asError(e);
+      }
+    },
+  );
+
+  server.registerTool(
     'define',
     {
       title: 'What a word means in this domain',
@@ -327,7 +458,7 @@ export function createServer(catalog: CatalogSnapshot, site?: CompanySite): McpS
     },
     async ({ query }) => {
       try {
-        return asText(define(catalog, query));
+        return asText(define(catalog, query, company));
       } catch (e) {
         return asError(e);
       }
@@ -358,7 +489,9 @@ export function createServer(catalog: CatalogSnapshot, site?: CompanySite): McpS
         : '';
 
       try {
-        const map = design ? draftMap(catalog, design) : catalogMap(catalog, focus);
+        const map = design
+          ? draftMap(catalog, design)
+          : catalogMap(catalog, focus, company, await answerGraph(catalog, company));
 
         // JSON is YAML, so the design as given is frontmatter a reader can commit.
         const save = design

@@ -186,6 +186,17 @@ export function buildProgram(): Command {
     });
 
   docs
+    .command('import <from>')
+    .description('Bring a folder of exported pages into docs/, such as a Notion or Google export')
+    .requiredOption('--owner <team>', 'the team that owns these pages')
+    .option('--into <dir>', 'where they go', 'docs/imported')
+    .option('-q, --quiet', 'suppress non-error output', false)
+    .action(async (from: string, opts: { owner: string; into: string; quiet: boolean }) => {
+      const { runDocsImport } = await import('./commands/docs');
+      process.exit(await runDocsImport({ from, ...opts }));
+    });
+
+  docs
     .command('init-conventions [root]')
     .description('Write the default document kinds (ADRs, runbooks, incidents) to edit')
     .option(
@@ -197,6 +208,27 @@ export function buildProgram(): Command {
       const { runDocsInitConventions } = await import('./commands/docs');
       process.exit(await runDocsInitConventions({ root: root ?? process.cwd(), ...opts }));
     });
+
+  program
+    .command('flows')
+    .description('Compare declared flows with code and runtime evidence')
+    .command('verify [root]')
+    .description(
+      'Write what each transition is backed by: lifecycle, schema, code, runtime and rules',
+    )
+    .option('--observed <file>', 'runtime counts, as autotel-mcp get_state_transitions returns')
+    .option('--repo <name>', 'name for a single repository publishing its own flows')
+    .option('--write', 'save flows/evidence.json in each repository', false)
+    .option('--json', 'print the evidence as JSON', false)
+    .action(
+      async (
+        root: string | undefined,
+        opts: { observed?: string; repo?: string; write: boolean; json: boolean },
+      ) => {
+        const { runFlowsVerify } = await import('./commands/flows');
+        process.exit(await runFlowsVerify({ root: root ?? process.cwd(), ...opts }));
+      },
+    );
 
   program
     .command('drift')
@@ -724,6 +756,10 @@ export function buildProgram(): Command {
     .option('--only <name...>', 'move only these pins, keeping every other as it is')
     .option('--ref <ref>', 'pin this tag, branch or full commit SHA instead of the latest commit')
     .option('--latest-tag', "pin each repository's newest release tag, skipping prereleases")
+    .option(
+      '--service <service=repository...>',
+      'who owns a service more than one repository claims, or a pin to move',
+    )
     .option('--lock <file>', 'the lock file', 'autocatalog.lock.json')
     .option('--cache <dir>', 'where clones go', '.autocatalog/repos')
     .action(
@@ -734,6 +770,7 @@ export function buildProgram(): Command {
         only?: string[];
         ref?: string;
         latestTag?: boolean;
+        service?: string[];
         lock: string;
         cache: string;
       }) => {

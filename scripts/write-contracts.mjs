@@ -11,7 +11,12 @@ import {
   repositoryMetaSchema,
   siteConfigSchema,
 } from '../packages/docs/core/dist/index.js';
-import { componentsFileSchema, eventFrontmatter } from '../packages/events/core/dist/index.js';
+import {
+  componentsFileSchema,
+  eventFrontmatter,
+  gatewayFileSchema,
+  networkFileSchema,
+} from '../packages/events/core/dist/index.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -30,6 +35,8 @@ const contracts = {
   'packages/events/core/contracts/event-manifest.schema.json': jsonSchema(eventFrontmatter),
   'packages/events/core/contracts/autocatalog.components.schema.json':
     jsonSchema(componentsFileSchema),
+  'packages/events/core/contracts/autocatalog.gateway.schema.json': jsonSchema(gatewayFileSchema),
+  'packages/events/core/contracts/autocatalog.network.schema.json': jsonSchema(networkFileSchema),
   'packages/docs/core/contracts/autocatalog.conventions.schema.json':
     jsonSchema(docsConventionsSchema),
   'packages/docs/core/contracts/docs-meta.schema.json': jsonSchema(repositoryMetaSchema),

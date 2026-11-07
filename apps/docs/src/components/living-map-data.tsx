@@ -148,8 +148,8 @@ function port(id: string, side: Side, offset = 0): [number, number, number, numb
   return [node.x + offset, node.y - halfH, 0, -1];
 }
 
-/** A straight line when the ports align, otherwise a curve leaving each port square. */
-function curve(from: ReturnType<typeof port>, to: ReturnType<typeof port>) {
+/** A straight line when the ports align, otherwise an arc leaving each port square. */
+function arc(from: ReturnType<typeof port>, to: ReturnType<typeof port>) {
   const [x1, y1, dx1, dy1] = from;
   const [x2, y2, dx2, dy2] = to;
 
@@ -171,7 +171,7 @@ const link = (
   to,
   provenance,
   ...(options.breaking && { breaking: true }),
-  path: curve(port(from, fromSide, options.fromOffset), port(to, toSide, options.toOffset)),
+  path: arc(port(from, fromSide, options.fromOffset), port(to, toSide, options.toOffset)),
 });
 
 /** What hangs off a service: a spine down its left edge, one stub per attachment. */

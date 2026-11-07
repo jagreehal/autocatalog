@@ -107,6 +107,8 @@ it('reads a flow, resolving each step against the catalog', async () => {
           title: 'Customer',
           summary: undefined,
           next: [{ id: 'place' }],
+          rules: [],
+          code: [],
         },
         {
           id: 'place',
@@ -115,6 +117,8 @@ it('reads a flow, resolving each step against the catalog', async () => {
           title: 'OrderService',
           summary: undefined,
           next: [{ id: 'placed' }],
+          rules: [],
+          code: [],
         },
         {
           id: 'placed',
@@ -126,6 +130,8 @@ it('reads a flow, resolving each step against the catalog', async () => {
             { id: 'ship', label: 'Paid' },
             { id: '2', label: 'Payment declined' },
           ],
+          rules: [],
+          code: [],
         },
         {
           id: 'ship',
@@ -134,6 +140,8 @@ it('reads a flow, resolving each step against the catalog', async () => {
           title: 'ShippingService',
           summary: undefined,
           next: [],
+          rules: [],
+          code: [],
         },
         {
           id: '2',
@@ -142,6 +150,8 @@ it('reads a flow, resolving each step against the catalog', async () => {
           summary: undefined,
           url: undefined,
           next: [],
+          rules: [],
+          code: [],
         },
       ],
     },

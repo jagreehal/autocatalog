@@ -1,0 +1,54 @@
+{
+  "name": "autocatalog-plugin-kubernetes",
+  "version": "0.0.0",
+  "description": "ac from-kubernetes: check calls against who a cluster lets reach whom.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jagreehal/autocatalog.git",
+    "directory": "packages/events/plugin-kubernetes"
+  },
+  "homepage": "https://jagreehal.github.io/autocatalog",
+  "bugs": {
+    "url": "https://github.com/jagreehal/autocatalog/issues"
+  },
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "autocatalog-from-kubernetes": "./dist/bin.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "autocatalog": {
+    "plugin": {
+      "command": "from-kubernetes",
+      "description": "Read the network policies of Kubernetes manifests",
+      "entry": "./dist/bin.js"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "autocatalog-core": "workspace:*",
+    "commander": "^15.0.0",
+    "kleur": "^4.1.5",
+    "yaml": "^2.9.1",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.4",
+    "tsup": "^8.5.1",
+    "typescript": "^6.0.3",
+    "vitest": "^5.0.3"
+  }
+}

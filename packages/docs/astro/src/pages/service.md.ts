@@ -1,7 +1,7 @@
 // The service page as Markdown: what it produces and consumes, each event
 // linked to its own twin.
 import type { APIRoute, InferGetStaticPropsType } from 'astro';
-import { buildServices } from 'autocatalog-core';
+import { catalogServices } from '../apis';
 import { docsCatalog } from '../catalog';
 import { eventsForService } from '../event-path';
 import { serviceFacts } from '../page-models';
@@ -9,7 +9,7 @@ import { pageUrl, serviceTwin } from '../twins';
 
 export async function getStaticPaths() {
   const catalog = await docsCatalog();
-  const services = buildServices(catalog.events.map(({ event }) => event));
+  const services = catalogServices(catalog);
 
   return [...services.values()].map(({ name }) => ({ params: { name }, props: { name } }));
 }

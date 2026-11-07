@@ -5,26 +5,61 @@
   "type": "object",
   "required": ["title", "owner", "tier"],
   "properties": {
-    "title": { "type": "string", "minLength": 1 },
+    "title": {
+      "type": "string",
+      "minLength": 1
+    },
     "owner": {
       "description": "A team, not a person. People change teams; documents outlive them.",
-      "enum": ["Reliability", "Payments", "Data Platform", "Platform"]
+      "enum": [
+        "Reliability",
+        "Payments",
+        "Data Platform",
+        "Platform",
+        "Marketing",
+        "People",
+        "IT",
+        "Finance",
+        "Legal",
+        "Office",
+        "Product"
+      ]
     },
-    "summary": { "type": "string" },
+    "summary": {
+      "type": "string"
+    },
     "tier": {
       "description": "critical means somebody may be paged while reading this.",
       "enum": ["critical", "standard"]
     },
     "related": {
       "type": "array",
-      "items": { "type": "string", "pattern": "^[^./][^/]*/.+$" }
+      "items": {
+        "type": "string",
+        "pattern": "^[^./][^/]*/.+$"
+      }
     },
     "about": {
       "description": "Resources this document is about, as kind/id: event/<domain>/<id>, service/<name>, agent/<id>.",
       "type": "array",
-      "items": { "type": "string", "pattern": "^[a-z]+/.+$" }
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z]+/.+$"
+      }
     },
-    "tags": { "type": "array", "items": { "type": "string" } }
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "audience": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Who may read this. Left out of the site and of any reader not in one of these groups."
+    }
   },
   "additionalProperties": false
 }

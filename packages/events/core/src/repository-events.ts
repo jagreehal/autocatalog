@@ -18,6 +18,8 @@ import {
 } from './snapshot';
 import { RESOURCE_GRAPH_FILE } from './resource-store';
 import { CONSUMES_FILE } from './consumes';
+import { GATEWAY_FILE } from './gateways';
+import { NETWORK_FILE } from './network';
 
 const execFileAsync = promisify(execFile);
 
@@ -63,6 +65,9 @@ export const RUNTIME_SNAPSHOT = '.autotel/snapshot.json';
 function isCatalogFolder(folder: string): boolean {
   if (!fs.existsSync(folder)) return false;
 
+  // These hold Markdown and nothing else: a gateway's `teams/` of YAML is not one.
+  if (MARKDOWN_ROOTS.has(path.basename(folder))) return holdsMarkdown(folder);
+
   if (fs.existsSync(path.join(folder, 'package.json'))) return false;
 
   try {
@@ -83,6 +88,18 @@ function isCatalogFolder(folder: string): boolean {
 const SOURCE_CODE = /\.(?:[cm]?[jt]sx?|css|py|go|rb|rs|java|kt|cs|php)$/;
 
 /** Whether a folder is an application's own, such as a web route named `events`. */
+const MARKDOWN_ROOTS = new Set([...MODEL_ROOTS, 'flows']);
+
+function holdsMarkdown(folder: string): boolean {
+  try {
+    return fs
+      .readdirSync(folder, { withFileTypes: true, recursive: true })
+      .some((entry) => entry.isFile() && /\.mdx?$/i.test(entry.name));
+  } catch {
+    return true;
+  }
+}
+
 function holdsOnlyCode(folder: string): boolean {
   const files = fs
     .readdirSync(folder, { withFileTypes: true, recursive: true })
@@ -110,6 +127,8 @@ export function publishesCatalogContent(dir: string): boolean {
       hasMessageContracts(dir)) ||
     hasResourceGraph(dir) ||
     fs.existsSync(path.join(dir, COMPONENTS_FILE)) ||
+    fs.existsSync(path.join(dir, GATEWAY_FILE)) ||
+    fs.existsSync(path.join(dir, NETWORK_FILE)) ||
     PRISMA_SCHEMAS.some((name) => fs.existsSync(path.join(dir, name)))
   );
 }
@@ -171,6 +190,8 @@ export function isSingleRepository(root: string): boolean {
       hasResourceGraph(root) ||
       isCatalogFolder(path.join(root, CONTRACTS)) ||
       fs.existsSync(path.join(root, CONSUMES_FILE)) ||
+      fs.existsSync(path.join(root, GATEWAY_FILE)) ||
+      fs.existsSync(path.join(root, NETWORK_FILE)) ||
       fs.existsSync(path.join(root, COMPONENTS_FILE)))
   );
 }

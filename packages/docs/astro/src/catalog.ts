@@ -10,6 +10,9 @@ import {
   AUTOCATALOG_GRAPH_SPEC,
   assertPathSegment,
   buildServices,
+  apiServiceProblem,
+  createEndpointGraph,
+  declaredApiService,
   createEventResourceGraph,
   createResourceGraphComposer,
   isEventCatalogResource,
@@ -19,6 +22,7 @@ import {
   type LoadedEvent,
   summarizeResourceGraph,
   type CatalogResource,
+  type RepositoryCalls,
   type ResourceGraph,
   type ResourceGraphSummary,
   type ResourceRef,
@@ -31,7 +35,12 @@ import {
   COMPONENTS_FILE,
   CONSUMES_FILE,
   createConsumerResourceGraph,
+  linkEndpointCalls,
   mergeConsumerGraph,
+  withGateways,
+  withNetworkPolicies,
+  withoutCallerFields,
+  withLinkedCalls,
   readConsumerDeclarations,
   readDeclarationsFile,
   createComponentResourceGraph,
@@ -74,10 +83,15 @@ import {
   glossaryGraph,
   readDomainModel,
   flowWorkflow,
+  checkLifecycles,
+  type FlowEvidence,
+  type FlowNote,
+  flowNotes,
+  readFlowEvidence,
   readFlows,
   type WorkflowRuns,
 } from 'autocatalog-docs-core';
-import { repositoryApis, type CatalogApi } from './apis';
+import { apiPath, repositoryApis, servicesForApi, type CatalogApi } from './apis';
 import { designsChangedAt } from './dev-signals';
 import { repositorySpecifications, type CatalogSpecification } from './specifications';
 import { publishedKinds, RESERVED_SEGMENTS } from './kinds';
@@ -119,6 +133,10 @@ export interface DocsCatalog {
   models: CatalogModel[];
   /** The business processes each repository declares under flows/, each with a page. */
   flows: Flow[];
+  /** Documents attached to a flow or one of its steps, whatever their kind. */
+  flowNotes: FlowNote[];
+  /** Each repository's committed comparison of its flows with code and runtime. */
+  flowEvidence: Map<string, FlowEvidence>;
   /** The architecture each repository proposes under designs/, each with a page. */
   designs: Design[];
   /** Where each repository in the graph is on disk, by name: where `ac site` dev saves a design. */
@@ -244,7 +262,7 @@ export async function buildDocsCatalog(
 
   // Repositories from outside the root, such as EventCatalog projects `ac site`
   // imported into its cache: each one repository, named by its folder.
-  const { sources, indexes } = docsSiteConfig();
+  const { sources, indexes, serviceOwners } = docsSiteConfig();
   const taken = new Set(roots.map(({ repository }) => repository));
 
   const extra = sources.map((dir) => {
@@ -504,6 +522,53 @@ export async function buildDocsCatalog(
     }
   }
 
+  for (const api of apis) {
+    const failed = (message: string) =>
+      failures.push({
+        repository: api.repository,
+        source: 'apis',
+        message: `${api.file}: ${message}`,
+      });
+
+    try {
+      const problem = apiServiceProblem(api.document);
+
+      if (problem) failed(problem);
+
+      const declared = declaredApiService(api.document);
+
+      // With a lock, a spec serves only a service the lock pins to its repository.
+      const unpinned = Boolean(
+        declared && serviceOwners && serviceOwners.get(declared) !== api.repository,
+      );
+
+      if (unpinned)
+        failed(
+          `x-autocatalog.service names ${declared}, which the lock does not pin to ${api.repository}, so no service exposes its operations`,
+        );
+
+      // A service guessed from the title or webhooks is held to the lock the same way.
+      const services = unpinned
+        ? []
+        : servicesForApi(api, events).filter(
+            (service) => !serviceOwners || serviceOwners.get(service) === api.repository,
+          );
+
+      // A service a spec names gets a page, so its name is a path too.
+      for (const service of services) assertPathSegment(api.file, 'service', service);
+
+      // Pages show what the graph holds, the lock applied.
+      api.services = services;
+
+      composed = mergeConsumerGraph(
+        composed,
+        createEndpointGraph({ ...api, services, url: apiPath(api) }, failed),
+      );
+    } catch (error) {
+      failed(error instanceof Error ? error.message : String(error));
+    }
+  }
+
   // Last, so a declaration only fills gaps: every repository's own resources
   // and events are in place first, and none of them can be pre-empted by
   // another repository naming the same service as a consumer.
@@ -533,6 +598,7 @@ export async function buildDocsCatalog(
   // and `receives`), resolved once against everything composed, the indexes
   // included. One that names nothing, or more than one thing, is said and left out.
   const references: RepositoryReferences[] = [];
+  const calls: RepositoryCalls[] = [];
 
   for (const { name, repositoryRoot } of repositories) {
     if (quarantined.has(name)) continue;
@@ -541,12 +607,32 @@ export async function buildDocsCatalog(
 
     if (declared && declared.receives.length + declared.sends.length > 0)
       references.push({ repository: name, receives: declared.receives, sends: declared.sends });
+
+    if (declared?.calls.length) calls.push({ repository: name, calls: declared.calls });
   }
 
   const resolved = resolveReferences(composed, references, mergeArchitectureGraphs(...earlier));
 
   notes.push(...resolved.unresolved);
   composed = mergeConsumerGraph(composed, resolved.graph);
+
+  // Fields on a call to an endpoint count only from a declaration its owner made.
+  composed = withoutCallerFields(composed);
+
+  const called = linkEndpointCalls(composed, calls, { owners: serviceOwners });
+
+  notes.push(...called.unresolved, ...called.unverified);
+  composed = withLinkedCalls(composed, called.graph);
+
+  const composedRepositories = repositories.flatMap(({ name, repositoryRoot }) =>
+    quarantined.has(name) ? [] : [{ repository: name, dir: repositoryRoot }],
+  );
+
+  // Gateways last: they expose endpoints, which must all be in place.
+  composed = await withGateways(composed, composedRepositories, (message) => notes.push(message));
+
+  // Calls and gateway exposure, checked against who the network lets reach whom.
+  await withNetworkPolicies(composed, composedRepositories, (message) => notes.push(message));
 
   const about = createDescribesRelationships(docs, composed.resources, {
     repositories: identities,
@@ -589,6 +675,9 @@ export async function buildDocsCatalog(
     glossaryGraph(model.glossaries, (domain, term) => `/glossary/#${termAnchor(domain, term)}`),
   );
 
+  const lifecycleCheck = checkLifecycles(flows.flows, model.entities);
+  const notesOnFlows = flowNotes(docs, flows.flows);
+
   failures.sort((a, b) =>
     `${a.repository}/${a.source}`.localeCompare(`${b.repository}/${b.source}`),
   );
@@ -612,6 +701,9 @@ export async function buildDocsCatalog(
         : [];
     }),
     ...modelWarnings,
+    ...lifecycleCheck.failures,
+    ...lifecycleCheck.warnings,
+    ...notesOnFlows.warnings,
     ...failures.map((failure) =>
       failure.source === 'name'
         ? `${failure.repository} is missing from the graph — ${failure.message}`
@@ -653,6 +745,14 @@ export async function buildDocsCatalog(
     apis,
     specifications,
     flows: flows.flows,
+    flowNotes: notesOnFlows.notes,
+    flowEvidence: new Map(
+      enrolled.flatMap(({ repository, dir }) => {
+        const evidence = readFlowEvidence(dir);
+
+        return evidence ? [[repository, evidence] as const] : [];
+      }),
+    ),
     designs: designs.designs,
     repositoryRoots: Object.fromEntries(enrolled.map(({ repository, dir }) => [repository, dir])),
     model,

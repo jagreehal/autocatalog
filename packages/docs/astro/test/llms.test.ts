@@ -62,6 +62,7 @@ describe('renderLlmsTxt', () => {
             ...authored,
             id: 'payment',
             file: 'entities/payment.md',
+            lifecycles: {},
             name: 'Payment',
             domains: [],
             services: [],

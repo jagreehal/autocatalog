@@ -1,5 +1,4 @@
 import {
-  buildServices,
   isJsonObject,
   resourceKey,
   type JsonObject,
@@ -17,6 +16,7 @@ import type { ResourceLink } from './about';
 import type { DocsCatalog } from './catalog';
 import type { IconName } from './icons';
 import { graphOwners, ownerFor, ownerHref } from './owners';
+import { catalogServices } from './apis';
 import type { ResourceLinksProps } from './ui/components/ResourceLinks';
 import { fieldHeading } from './ui/lib/status';
 import type { KindCell, KindChainLink, KindIndexPageProps, KindRow } from './ui/pages';
@@ -351,7 +351,7 @@ function appliesTo(
     catalog.graph.resources.map((resource) => [resourceKey(resource.ref), resource]),
   );
 
-  const services = buildServices(catalog.events.map(({ event }) => event));
+  const services = catalogServices(catalog);
 
   return catalog.graph.relationships.flatMap(({ type, from: source, to }) => {
     if (type !== 'describes' || resourceKey(source) !== resourceKey(from)) return [];

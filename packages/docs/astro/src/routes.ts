@@ -8,7 +8,7 @@ import { DESIGN_CHANGED } from './ui/lib/canvas-model';
 import { markDesignsChanged, savedBy } from './dev-signals';
 import { eventCatalogEmbeds } from './eventcatalog';
 import { brokenLinks, formatBrokenLinks } from './link-check';
-import { ownPageImports, ownPageRoutes } from './own-pages';
+import { ownPageEntrypoint, ownPageImports, ownPageRoutes } from './own-pages';
 
 const fullReload = z.object({ type: z.literal('full-reload') });
 
@@ -138,9 +138,17 @@ export function autocatalogDocsRoutes(root: string, ownPages?: string): AstroInt
 
         // The site's own pages and API routes, beside the catalog's.
         if (ownPages) {
-          pages.push(...ownPageRoutes(ownPages, new Set(pages.map(([pattern]) => pattern))));
+          const routes = ownPageRoutes(ownPages, new Set(pages.map(([pattern]) => pattern)));
+          const markdownPage = path.join(here, 'pages/own-markdown.astro');
+
+          pages.push(
+            ...routes.map(([pattern, file]): [string, string] => [
+              pattern,
+              ownPageEntrypoint(file, markdownPage),
+            ]),
+          );
           updateConfig({
-            vite: { plugins: [ownPageImports(ownPages, fileURLToPath(config.root))] },
+            vite: { plugins: [ownPageImports(ownPages, fileURLToPath(config.root), routes)] },
           });
         }
 

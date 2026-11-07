@@ -114,6 +114,13 @@ export function invalidDocuments(
   return validateDocs(root, options).invalid;
 }
 
+/** The documents that keep to the contract, and how many were left out for breaking it. */
+export function validDocuments(root: string, options: BuildDocsManifestOptions = {}) {
+  const { valid, invalid } = validateDocs(root, options);
+
+  return { valid, leftOut: [...invalid.values()].flat().length };
+}
+
 type ValidDoc = Doc & { front: Frontmatter; kind: DocKind | null };
 
 /** The documents that keep to the contract, and what is wrong with the rest, by repository. */

@@ -2,6 +2,8 @@ import { existsSync } from 'node:fs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import kleur from 'kleur';
+import { parse } from 'yaml';
+import { z } from 'zod';
 import {
   createAgentsResourceGraph,
   publishesAgentCatalog,
@@ -25,6 +27,9 @@ import {
   DocsManifestError,
   readDesigns,
   readDomainModel,
+  checkLifecycles,
+  flowNotes,
+  readDocs,
   readFlows,
   syncFrontmatterContract,
 } from 'autocatalog-docs-core';
@@ -61,7 +66,7 @@ export interface DocsCommandOptions {
  * catalog that will not load is `ac validate`'s failure to report, so here it
  * contributes nothing rather than failing the docs check twice.
  */
-async function checkoutResources(root: string, repo?: string): Promise<CatalogResource[]> {
+export async function checkoutResources(root: string, repo?: string): Promise<CatalogResource[]> {
   const resources: CatalogResource[] = [];
 
   for (const { name, dir, nested, duplicateOf } of findCatalogRoots(root, { name: repo })) {
@@ -118,7 +123,17 @@ export async function runDocsCheck(opts: DocsCommandOptions): Promise<number> {
   // Glossaries, entities, data products, teams and users, held to the same bar.
   const model = readDomainModel(checkouts, { resources }, { deferMissing: true });
 
-  const failures = [...result.failures, ...flows.failures, ...designs.failures, ...model.failures];
+  const lifecycles = checkLifecycles(flows.flows, model.entities, { deferMissing: true });
+
+  const notes = flowNotes(readDocs(opts.root, { repo: opts.repo }), flows.flows);
+
+  const failures = [
+    ...result.failures,
+    ...flows.failures,
+    ...designs.failures,
+    ...model.failures,
+    ...lifecycles.failures,
+  ];
 
   // Which rules were applied is the first question a failure raises, so it is
   // reported on both paths — a reader fixing a failing check needs the contract
@@ -129,7 +144,7 @@ export async function runDocsCheck(opts: DocsCommandOptions): Promise<number> {
       : `  contract: built-in default — run 'ac docs init-schema' to own it`,
     result.conventionsFile
       ? `  kinds: ${displayPath(result.conventionsFile)}`
-      : `  kinds: built-in adr, runbook, incident — run 'ac docs init-conventions' to own them`,
+      : `  kinds: built-in adr, runbook, incident, finding — run 'ac docs init-conventions' to own them`,
   ].join('\n');
 
   if (failures.length > 0) {
@@ -147,7 +162,9 @@ export async function runDocsCheck(opts: DocsCommandOptions): Promise<number> {
   }
 
   if (!opts.quiet) {
-    for (const warning of model.warnings) console.warn(`${kleur.yellow('!')} ${warning}`);
+    for (const warning of [...model.warnings, ...lifecycles.warnings, ...notes.warnings]) {
+      console.warn(`${kleur.yellow('!')} ${warning}`);
+    }
 
     const scope = result.checkedCrossRepoLinks
       ? 'schema + links'
@@ -349,6 +366,87 @@ export async function runDocsManifest(opts: DocsCommandOptions): Promise<number>
       kleur.dim('  Publish it where other repositories’ ac docs check --manifest can fetch it.'),
     );
   }
+
+  return 0;
+}
+
+export interface DocsImportOptions {
+  from: string;
+  owner: string;
+  into: string;
+  quiet: boolean;
+}
+
+const IMPORTABLE = /\.(md|markdown|txt)$/i;
+
+const titleOf = (text: string, file: string) =>
+  /^#\s+(.+)$/m.exec(text)?.[1]?.trim() ??
+  path.basename(file, path.extname(file)).replace(/[-_]+/g, ' ');
+
+/** A page's frontmatter and body. A leading `---` can also be a horizontal rule. */
+function splitFrontmatter(text: string) {
+  const block = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/.exec(text);
+
+  try {
+    const fields = z.record(z.string(), z.unknown()).safeParse(parse(block?.[1] ?? ''));
+
+    if (block && fields.success) {
+      return { data: fields.data, body: text.slice(block[0].length).trimStart() };
+    }
+  } catch {
+    // Text that is not YAML is the page's own.
+  }
+
+  return { data: {}, body: text };
+}
+
+/**
+ * Bring in a folder of exported pages, so content kept outside git can join the
+ * catalog. Writes new files only: an edited page is never overwritten.
+ */
+export async function runDocsImport(opts: DocsImportOptions): Promise<number> {
+  if (!existsSync(opts.from)) {
+    console.error(kleur.red(`docs import: no folder at ${opts.from}`));
+
+    return 1;
+  }
+
+  const entries = await fs.readdir(opts.from, { recursive: true, withFileTypes: true });
+  let written = 0;
+  let skipped = 0;
+
+  for (const entry of entries) {
+    // Regular files only: an export is a folder of pages, and a link could be anything.
+    if (!entry.isFile()) continue;
+
+    if (!IMPORTABLE.test(entry.name)) {
+      skipped += 1;
+      continue;
+    }
+
+    const source = path.join(entry.parentPath, entry.name);
+    const relative = path.relative(opts.from, source);
+    const text = await fs.readFile(source, 'utf8');
+    const target = path.join(opts.into, relative.replace(IMPORTABLE, '.md'));
+
+    const { data, body } = splitFrontmatter(text);
+
+    const front = Object.entries({ title: titleOf(body, relative), owner: opts.owner, ...data })
+      .map(([field, value]) => `${field}: ${JSON.stringify(value)}\n`)
+      .join('');
+
+    await fs.mkdir(path.dirname(target), { recursive: true });
+
+    const saved = await fs.writeFile(target, `---\n${front}---\n\n${body}`, { flag: 'wx' }).then(
+      () => true,
+      () => false,
+    );
+
+    if (saved) written += 1;
+    else skipped += 1;
+  }
+
+  if (!opts.quiet) console.log(kleur.green(`✓ imported ${written}, skipped ${skipped}`));
 
   return 0;
 }

@@ -3,10 +3,14 @@ import {
   adviseBreaking,
   assessEventChange,
   compatibilityViolations,
+  consumerUsage,
   findingPointer,
   placeFinding,
   type DriftFinding,
 } from './drift';
+import { endpointId } from './api-resources';
+import type { EventConsumers } from './consumes';
+import { fieldPaths } from './fields';
 import { isJsonObject, type JsonObject, type JsonValue } from './json';
 import { derefLocal } from './json-ref';
 import { findOpenApiDocuments, METHODS } from './scan-openapi';
@@ -17,6 +21,10 @@ type Side = 'request' | 'response';
 interface Operation {
   relFile: string;
   label: string;
+  /** Its name in the catalog, as `GET /customers/{id}`. */
+  endpoint: string;
+  /** The response statuses it documents. */
+  statuses: string[];
   request: JsonObject;
   response: JsonObject;
   /** Where the operation sits in its document, as pointer steps. */
@@ -133,6 +141,8 @@ function operationsOf(relFile: string, doc: JsonObject): Map<string, Operation> 
       operations.set(`${relFile} ${method} ${route}`, {
         relFile,
         label: `${method.toUpperCase()} ${route}${id}`,
+        endpoint: endpointId({ method: method.toUpperCase(), path: route }),
+        statuses: Object.keys(responses),
         request: rehome({ type: 'object', properties, required: [...required], $defs }),
         response: rehome({ type: 'object', properties: responses, $defs }),
         at,
@@ -194,12 +204,18 @@ function onSide(side: Side, finding: DriftFinding): DriftFinding {
 /**
  * Compare the OpenAPI documents two source trees publish, per operation.
  *
- * Nothing in OpenAPI names an API's consumers, so these findings carry none.
+ * Nothing in OpenAPI names an API's consumers: `consumersOf` says who calls an
+ * operation, by the spec's file and the operation's name. A caller's fields are
+ * paths in the response body, so they narrow response changes only; whatever
+ * changes in a request reaches everyone who sends one.
  */
 export async function driftOpenApi(
   baselineRoot: string,
   currentRoot: string,
-  options: { exclude?: string[] } = {},
+  options: {
+    exclude?: string[];
+    consumersOf?: (file: string, operation: string) => EventConsumers | undefined;
+  } = {},
 ): Promise<DriftFinding[]> {
   const [baseScan, currScan] = await Promise.all([
     findOpenApiDocuments({ root: baselineRoot, exclude: options.exclude }),
@@ -250,6 +266,30 @@ export async function driftOpenApi(
 
   const findings: DriftFinding[] = [];
 
+  const callersOf = (op: Operation) => options.consumersOf?.(op.relFile, op.endpoint);
+
+  /**
+   * Each caller's body paths as the synthesised response names them: under the
+   * statuses that have the field. One no status has stays, so a typo still
+   * reads as a caller that has not said, never as one that is safe.
+   */
+  const responseFields = (was: Operation, now: Operation): Record<string, string[]> => {
+    const known = new Set([...fieldPaths(was.response), ...fieldPaths(now.response)]);
+    const statuses = [...new Set([...was.statuses, ...now.statuses])];
+
+    return Object.fromEntries(
+      Object.entries(callersOf(now)?.fields ?? {}).map(([caller, fields]) => [
+        caller,
+        fields.flatMap((field) => {
+          const paths = statuses.map((status) => `${status}.${field}`);
+          const real = paths.filter((candidate) => known.has(candidate));
+
+          return real.length > 0 ? real : paths;
+        }),
+      ]),
+    );
+  };
+
   const finding = (
     op: Operation,
     kind: DriftFinding['kind'],
@@ -270,25 +310,57 @@ export async function driftOpenApi(
 
     if (!now) {
       findings.push(
-        ...advise(was, [finding(was, 'operation_removed', 'breaking', 'operation was removed')]),
+        ...advise(was, [
+          {
+            ...finding(was, 'operation_removed', 'breaking', 'operation was removed'),
+            consumers: callersOf(was)?.consumers ?? [],
+          },
+        ]),
       );
       continue;
     }
 
     for (const side of ['request', 'response'] as const) {
+      const callers = callersOf(now)?.consumers ?? [];
+      const fields = side === 'response' ? responseFields(was, now) : undefined;
+      const known = new Set([...fieldPaths(was[side]), ...fieldPaths(now[side])]);
+
       const changes = assessEventChange({
         domain: now.relFile,
         eventId: now.label,
-        consumers: [],
+        consumers: callers,
+        ...(fields && { consumerFields: fields }),
         source: { file: now.relFile },
         previous: was[side],
         proposed: now[side],
       });
 
+      // Who a change reaches is decided once its API compatibility is: a response
+      // change the event diff calls additive, such as a widened enum, breaks clients.
+      const attributed = (change: DriftFinding): DriftFinding => {
+        const reaches = change.severity === 'breaking' || change.severity === 'suspicious';
+
+        if (!reaches) {
+          const { usage: _usage, ...rest } = change;
+
+          return { ...rest, consumers: [] };
+        }
+
+        if (change.consumers.length > 0 || !change.diff) return change;
+
+        const usage = consumerUsage(callers, fields, change.diff.path, known);
+
+        return {
+          ...change,
+          consumers: usage ? [...usage.reads, ...usage.unspecified] : callers,
+          ...(usage && { usage }),
+        };
+      };
+
       findings.push(
         ...advise(
           now,
-          changes.map((change) => onSide(side, change)),
+          changes.map((change) => attributed(onSide(side, change))),
         ).map((change) => place(now, side, change)),
       );
     }

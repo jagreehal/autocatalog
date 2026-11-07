@@ -1,0 +1,14 @@
+_format_version: '3.0'
+
+plugins:
+  - name: key-auth
+
+services:
+  - name: customers
+    url: http://customers-service:8080
+    routes:
+      - name: customers-read
+        paths:
+          - ~/customers/[^/]+$
+        methods: [GET]
+        strip_path: false

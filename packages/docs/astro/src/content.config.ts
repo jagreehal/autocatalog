@@ -5,6 +5,7 @@ import {
   resolveDocKinds,
   resolveDocsLayout,
   resolveFrontmatterContract,
+  unreadableDocs,
 } from 'autocatalog-docs-core';
 import { docsSiteConfig } from './config';
 import { docsLoader } from './loader';
@@ -80,7 +81,7 @@ export const collections = {
   // is the same glob somewhere else, so pages, search and navigation are
   // Starlight's and only the source of the documents is ours.
   docs: defineCollection({
-    loader: docsLoader(layout),
+    loader: docsLoader(layout, () => unreadableDocs(root, { repo, repository, exclude })),
     // Everything is optional here, including `owner`, which the contract
     // requires. Enforcement belongs to the company's JSON Schema — checked when
     // the index is built and by `ac docs check` in the repository that owns the

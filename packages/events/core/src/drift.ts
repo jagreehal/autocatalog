@@ -281,7 +281,7 @@ export function overlaps(changed: string, declared: string): boolean {
 }
 
 /** Sort consumers by whether they said they read the changed field. */
-function consumerUsage(
+export function consumerUsage(
   consumers: string[],
   consumerFields: Record<string, string[]> | undefined,
   diffPath: string,

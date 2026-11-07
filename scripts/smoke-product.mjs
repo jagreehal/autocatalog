@@ -86,7 +86,29 @@ try {
 
   await ac(['docs', 'check', root]);
   const out = path.join(work, 'site');
-  await ac(['site', root, '--out', out, '--base', '/catalog/']);
+  const ownPages = path.join(work, 'site-pages');
+  await fs.mkdir(ownPages);
+  await fs.writeFile(
+    path.join(ownPages, 'notes.md'),
+    '---\ntitle: Own notes\n---\n\nWritten here.\n',
+  );
+  await fs.writeFile(
+    path.join(ownPages, 'more.mdx'),
+    '---\ntitle: Own MDX\n---\n\nWritten here.\n',
+  );
+  await ac(['site', root, '--out', out, '--base', '/catalog/', '--pages', ownPages]);
+
+  for (const [route, title] of [
+    ['notes', 'Own notes'],
+    ['more', 'Own MDX'],
+  ]) {
+    const own = await fs.readFile(path.join(out, route, 'index.html'), 'utf8');
+    assert.ok(
+      own.includes(`<title>${title}`) && own.includes('Written here.'),
+      'A Markdown page in --pages must publish in the site layout',
+    );
+  }
+
   const graph = JSON.parse(await fs.readFile(path.join(out, 'catalog.json'), 'utf8'));
   const event = graph.resources.find((resource) => resource.ref.id === 'refund.requested');
   assert.ok(event, 'Contracts-only repositories must appear in the shipped site');

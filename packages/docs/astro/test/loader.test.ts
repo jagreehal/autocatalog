@@ -4,7 +4,7 @@ import path from 'node:path';
 import type { LoaderContext } from 'astro/loaders';
 import { resolveDocsLayout } from 'autocatalog-docs-core';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-import { docsLoader } from '../src/loader';
+import { docsLoader, keepOut } from '../src/loader';
 
 let root: string;
 
@@ -41,4 +41,28 @@ it('loads nothing when every repository with documents is excluded', async () =>
   await docsLoader(layout).load(context as LoaderContext);
 
   expect(clear).toHaveBeenCalled();
+});
+
+it('removes what a later update hides, and stores the rest', () => {
+  const entries = new Map<string, unknown>([['open', {}]]);
+  const hidden = new Set<string>();
+
+  const store: Pick<LoaderContext['store'], 'set' | 'delete'> = {
+    set: ({ id }) => {
+      entries.set(id, {});
+
+      return true;
+    },
+    delete: (id) => void entries.delete(id),
+  };
+
+  keepOut(store, (id) => hidden.has(id));
+
+  store.set({ id: 'public', data: {} });
+  expect([...entries.keys()]).toEqual(['open', 'public']);
+
+  // The page was public, and an edit restricts it.
+  hidden.add('open');
+  store.set({ id: 'open', data: {} });
+  expect([...entries.keys()]).toEqual(['public']);
 });

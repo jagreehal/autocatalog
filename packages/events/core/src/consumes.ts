@@ -101,12 +101,34 @@ const reference = z.strictObject({
 
 export type CatalogReference = z.infer<typeof reference>;
 
+/** An operation as a spec writes it: `GET /customers/{id}`. */
+// Printable ASCII only: it is printed in build output and pull request comments.
+const OPERATION = /^(GET|PUT|POST|DELETE|PATCH|OPTIONS|HEAD|TRACE) \/[!-~]{0,400}$/;
+
+/**
+ * A service calling another's HTTP API. Without an operation it may call any of
+ * them, and without fields it may read anything, so every change reaches it.
+ * Only the repository that owns the service can narrow what it reads.
+ */
+const call = z.strictObject({
+  service: z.string().regex(SAFE_NAME, 'use letters, digits, spaces and . _ : / - $'),
+  /** The service that exposes the API. */
+  target: z.string().regex(SAFE_NAME, 'use letters, digits, spaces and . _ : / - $'),
+  operation: z.string().regex(OPERATION, 'an operation such as GET /customers/{id}').optional(),
+  /** Response body paths the service reads, such as `tier` or `items[].sku`. */
+  fields: z.array(z.string().regex(FIELD_PATH, 'a payload path such as items[].sku')).optional(),
+});
+
+export type CallDeclaration = z.infer<typeof call>;
+
 const consumesFile = z.strictObject({
   consumes: z.array(consumerDeclaration).default([]),
   /** Events the service consumes and commands it handles, owned elsewhere. */
   receives: z.array(reference).default([]),
   /** Commands the service sends and events it produces, owned elsewhere. */
   sends: z.array(reference).default([]),
+  /** HTTP APIs the service calls, owned elsewhere. */
+  calls: z.array(call).default([]),
 });
 
 export type ConsumerDeclaration = z.infer<typeof consumerDeclaration>;
@@ -122,7 +144,7 @@ export async function readConsumerDeclarations(root: string): Promise<ConsumerDe
 export async function readDeclarationsFile(root: string): Promise<DeclarationsFile> {
   const value = await readOptionalResourceJson(path.join(root, CONSUMES_FILE), { root });
 
-  if (value === undefined) return { consumes: [], receives: [], sends: [] };
+  if (value === undefined) return { consumes: [], receives: [], sends: [], calls: [] };
 
   const parsed = consumesFile.safeParse(value);
 
@@ -243,6 +265,8 @@ export function createConsumerResourceGraph(
 export interface GraphConsumers {
   /** By `domain/id`. */
   consumers: Map<string, EventConsumers>;
+  /** Who calls each endpoint, by its spec's file and operation: {@link endpointConsumerKey}. */
+  endpoints: Map<string, EventConsumers>;
   /** Events two repositories publish, when it could not tell which is ours, escaped; every copy's consumers count. */
   ambiguous: string[];
   /** Names not safe to print, escaped; each consumer is counted as {@link UNSAFE_CONSUMER}. */
@@ -263,7 +287,10 @@ const ownFields = z
  * add up; one that names none says it may read anything, so the edge then
  * names none, and every change to the event reaches it.
  */
-function withFields(earlier: CatalogRelationship, later: CatalogRelationship): CatalogRelationship {
+export function withFields(
+  earlier: CatalogRelationship,
+  later: CatalogRelationship,
+): CatalogRelationship {
   const before = declaredFields(earlier);
   const after = declaredFields(later);
   const { attributes: _attributes, ...edge } = earlier;
@@ -422,6 +449,39 @@ function publishedEvents(graph: ResourceGraph): Map<string, GraphEventEntry> {
   return events;
 }
 
+/** How {@link GraphConsumers} files an endpoint: its spec, and the operation in it. */
+export const endpointConsumerKey = (file: string, operation: string) => `${file} ${operation}`;
+
+type Reads = Map<string, Set<string> | 'anything'>;
+
+/**
+ * One consumer's reads, added to what is known. No fields, or a path that
+ * cannot be trusted, means it may read anything, and that wins over fields
+ * another edge names: a filtered list would read as "reads none of these", and
+ * the gate would pass a break.
+ */
+function addReads(usage: Reads, name: string, fields: string[] | undefined, safeName: boolean) {
+  const before = usage.get(name);
+
+  usage.set(
+    name,
+    !safeName ||
+      !fields ||
+      !fields.every((field) => FIELD_PATH.test(field)) ||
+      before === 'anything'
+      ? 'anything'
+      : new Set([...(before ?? []), ...fields]),
+  );
+}
+
+const asConsumers = (usage: Reads, own: EventConsumers['own']): EventConsumers => ({
+  consumers: [...usage.keys()].sort(),
+  fields: Object.fromEntries(
+    [...usage].flatMap(([name, read]) => (read === 'anything' ? [] : [[name, [...read]]])),
+  ),
+  own,
+});
+
 /**
  * Who consumes each event, by `domain/id`, from a company graph such as the
  * site's `/catalog.json`. The graph names its events per repository; when two
@@ -442,7 +502,7 @@ export function consumersFromGraph(
 
   const consumers = new Map<string, EventConsumers>();
   // What each consumer of each event reads, by `domain/id`, as edges arrive.
-  const reads = new Map<string, Map<string, Set<string> | 'anything'>>();
+  const reads = new Map<string, Reads>();
   const said = new Map<string, Map<string, string[]>>();
   const ambiguous = new Set<string>();
   const rejected = new Set<string>();
@@ -476,35 +536,66 @@ export function consumersFromGraph(
       said.set(event.key, (said.get(event.key) ?? new Map()).set(name, consumerFields));
     }
 
-    const usage = reads.get(event.key) ?? new Map<string, Set<string> | 'anything'>();
-    const before = usage.get(name);
+    const usage: Reads = reads.get(event.key) ?? new Map();
 
-    // No fields, or a path that cannot be trusted, means it may read anything,
-    // and that wins over fields another edge names: a filtered list would read
-    // as "reads none of these", and the gate would pass a break.
-    usage.set(
-      name,
-      !safeName ||
-        !fields ||
-        !fields.every((field) => FIELD_PATH.test(field)) ||
-        before === 'anything'
-        ? 'anything'
-        : new Set([...(before ?? []), ...fields]),
-    );
+    addReads(usage, name, fields, safeName);
     reads.set(event.key, usage);
   }
 
   for (const [key, usage] of reads)
-    consumers.set(key, {
-      consumers: [...usage.keys()].sort(),
-      fields: Object.fromEntries(
-        [...usage].flatMap(([name, read]) => (read === 'anything' ? [] : [[name, [...read]]])),
-      ),
-      own: Object.fromEntries(said.get(key) ?? []),
-    });
+    consumers.set(key, asConsumers(usage, Object.fromEntries(said.get(key) ?? [])));
+
+  // Endpoints the same way: this repository's copy of a spec, else every copy.
+  const specs = new Map<string, { key: string; repository: string | undefined }>();
+
+  for (const { ref, source } of graph.resources)
+    if (ref.kind === 'endpoint' && source?.file)
+      specs.set(resourceKey(ref), {
+        key: endpointConsumerKey(source.file, ref.id),
+        repository: source.repo,
+      });
+
+  const servers = new Map<string, Set<string | undefined>>();
+
+  for (const { key, repository } of specs.values())
+    servers.set(key, (servers.get(key) ?? new Set()).add(repository));
+
+  const callers = new Map<string, Reads>();
+
+  for (const edge of graph.relationships) {
+    const spec = edge.type === 'calls' ? specs.get(resourceKey(edge.to)) : undefined;
+
+    if (!spec) continue;
+
+    const all = servers.get(spec.key) ?? new Set();
+    const pinned = Boolean(options.repository && all.has(options.repository));
+
+    if (pinned && spec.repository !== options.repository) continue;
+
+    if (!pinned && all.size > 1) ambiguous.add(spec.key);
+
+    const safeName = isSafeName(edge.from.id);
+
+    if (!safeName) rejected.add(shownName(edge.from.id));
+
+    const usage: Reads = callers.get(spec.key) ?? new Map();
+
+    addReads(
+      usage,
+      safeName ? edge.from.id : UNSAFE_CONSUMER,
+      edgeFields.parse(edge.attributes).fields,
+      safeName,
+    );
+    callers.set(spec.key, usage);
+  }
+
+  const endpoints = new Map(
+    [...callers].map(([key, usage]) => [key, asConsumers(usage, {})] as const),
+  );
 
   return {
     consumers,
+    endpoints,
     ambiguous: [...ambiguous].map(shownName).sort(),
     rejected: [...rejected].sort(),
   };

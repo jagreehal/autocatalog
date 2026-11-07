@@ -1,0 +1,25 @@
+{
+  "source": "k8s.yaml",
+  "workloads": [
+    {
+      "service": "billing-service",
+      "namespace": "billing"
+    },
+    {
+      "service": "checkout-service",
+      "namespace": "checkout"
+    },
+    {
+      "service": "customers-service",
+      "namespace": "customers",
+      "ingress": [
+        {
+          "namespace": "kong"
+        },
+        {
+          "service": "checkout-service"
+        }
+      ]
+    }
+  ]
+}

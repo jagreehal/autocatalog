@@ -103,6 +103,23 @@ ac validate --catalog https://catalog.example.com/catalog.json
 
 Leave `fields` out when the service may read any field: every change to the event then reaches it.
 
+For another team's HTTP API, declare the calls in the same file, with the response fields your service reads:
+
+```json
+{
+  "calls": [
+    {
+      "service": "checkout-service",
+      "target": "customers-service",
+      "operation": "GET /customers/{id}",
+      "fields": ["email"]
+    }
+  ]
+}
+```
+
+A change to an operation in their OpenAPI spec then names your service in their pull request, unless it touches only fields you do not read. Only the repository that owns `service` can narrow it with `fields`; the company lock says who that is.
+
 To name an event or command by id with a version, as EventCatalog does, add `receives` or `sends`: `{ "service": "OrderService", "id": "payments/payment.completed", "version": "^1" }`. Write `domain/id` when two domains use the id. `ac federation status` on the company site lists each reference that does not resolve.
 
 ## 4. Make it a gate, not a habit

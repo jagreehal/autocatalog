@@ -4,6 +4,7 @@ import path from 'node:path';
 import { afterEach, beforeEach, expect, it } from 'vitest';
 import { buildDocsCatalog } from '../src/catalog';
 import { flowPageProps, flowRecords, flowVisualiser } from '../src/flows';
+import { eventPages, servicePages } from '../src/page-models';
 
 let root: string;
 
@@ -196,4 +197,134 @@ it('shows how the saga that runs a flow went, from the snapshot of the repositor
     'Ran 3 times: 1 compensated.',
   );
   expect(props.steps.find((step) => step.id === 'customer')?.runtime).toBeUndefined();
+});
+
+it('shows a transition, its evidence and an open finding on the flow page', async () => {
+  await write(
+    'orders/entities/order.md',
+    '---\nname: Order\nlifecycles:\n  status:\n    states: [new, working, done]\n    initial: new\n---\n',
+  );
+  await write(
+    'orders/flows/fulfil.md',
+    `---
+title: Fulfilling an order
+entity: order
+field: status
+steps:
+  - id: started
+    title: Work started
+    transition: { from: new, to: working }
+    rules: [Stock is reserved first]
+    stuck: { signs: no task is running }
+    next_step: finished
+  - id: finished
+    title: Work finished
+    transition: { from: working, to: done, via: worker }
+---
+`,
+  );
+  await write(
+    'orders/docs/findings/stuck.md',
+    `---
+title: Stuck in working
+owner: Ops
+nature: question
+status: draft
+date: 2026-11-06
+flow: fulfil
+step: started
+---
+`,
+  );
+  await write(
+    'orders/docs/findings/known.md',
+    `---
+title: Retries are normal
+owner: Ops
+nature: behaviour
+status: confirmed
+date: 2026-11-06
+flow: fulfil
+step: finished
+---
+`,
+  );
+  await write(
+    'orders/flows/evidence.json',
+    JSON.stringify({
+      spec: 'autocatalog-flow-evidence/v0.1.0',
+      checkedAt: '2026-11-01',
+      commit: 'abcdef1234',
+      transitions: [
+        {
+          flow: 'fulfil',
+          step: 'finished',
+          entity: 'order',
+          field: 'status',
+          from: ['working'],
+          to: 'done',
+          via: 'worker',
+          declared: 'yes',
+          schema: 'not checked',
+          code: 'no',
+          observed: 'yes',
+          rules: 'none',
+          count: 9,
+          otherVia: { operator: 2 },
+        },
+      ],
+      undeclared: [
+        { entity: 'order', field: 'status', from: 'done', to: 'new', via: 'x', count: 1 },
+      ],
+    }),
+  );
+
+  const catalog = await buildDocsCatalog(root, { includeDates: false });
+  const pages = { servicePages: servicePages(catalog), eventPages: eventPages(catalog) };
+
+  const page = await flowPageProps(
+    catalog.flows[0]!,
+    catalog,
+    '/',
+    pages,
+    Date.parse('2026-12-20'),
+  );
+
+  const [started, finished] = page.steps;
+
+  expect(started).toMatchObject({
+    transition: { field: 'order.status', change: 'new → working' },
+    rules: ['Stock is reserved first'],
+    stuck: { signs: 'no task is running' },
+    notes: [{ title: 'Stuck in working', nature: 'question', status: 'draft', hotspot: true }],
+  });
+  expect(finished!.notes).toMatchObject([{ title: 'Retries are normal', hotspot: false }]);
+  expect(finished!.evidence).toContainEqual({
+    label: 'Observed',
+    value: 'yes, 9; also 2 via operator',
+  });
+
+  // The first step has no record, so it reads unchecked rather than blank.
+  expect(started!.evidence).toContainEqual({ label: 'Observed', value: 'not checked' });
+
+  const moved = await flowPageProps(
+    {
+      ...catalog.flows[0]!,
+      steps: catalog.flows[0]!.steps.map((step) =>
+        step.id === 'finished' ? { ...step, transition: { ...step.transition!, to: 'new' } } : step,
+      ),
+    },
+    catalog,
+    '/',
+    pages,
+  );
+
+  expect(moved.steps[1]!.evidence).toContainEqual({ label: 'Observed', value: 'not checked' });
+  expect(moved.steps[1]!.evidence).toContainEqual({ label: 'Code linked', value: 'not checked' });
+  expect(page.evidence).toMatchObject({ stale: true, commit: 'abcdef1234' });
+  expect(page.evidence!.undeclared[0]).toContain('done → new');
+
+  const labels = page.visualiser.graph.nodes.map((node) => node.label);
+
+  expect(labels).toEqual(['Work started (1 open)', 'Work finished']);
 });

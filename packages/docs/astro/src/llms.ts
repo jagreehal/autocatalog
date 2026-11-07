@@ -1,4 +1,4 @@
-import type { DomainModel } from 'autocatalog-docs-core';
+import type { DomainModel, FlowNote } from 'autocatalog-docs-core';
 import { dataProductPath, entityPath } from './model';
 import { twinPath } from './twins';
 import { groupByRepo, type DocListItem } from './view';
@@ -11,6 +11,8 @@ export interface LlmsTxtInput {
   items: DocListItem[];
   /** Current events, each linked to its Markdown twin. */
   events?: Array<{ path: string; name: string; summary: string; owner?: string }>;
+  /** Documents attached to flows, which an agent must not read as settled fact. */
+  notes?: FlowNote[];
   /** Components, each linked to its Markdown twin. */
   components?: Array<{
     path: string;
@@ -40,6 +42,7 @@ export function renderLlmsTxt({
   events = [],
   components = [],
   model,
+  notes = [],
 }: LlmsTxtInput): string {
   const lines = [
     `# ${title}`,
@@ -131,6 +134,20 @@ export function renderLlmsTxt({
       lines.push(
         `- [${resource.name}](${base}/${page})${resource.summary ? `: ${resource.summary}` : ''}`,
       );
+    }
+
+    lines.push('');
+  }
+
+  if (notes.length > 0) {
+    lines.push('## Notes on flows', '');
+    lines.push('A draft or a question is a hypothesis, not established behaviour.', '');
+
+    for (const note of notes) {
+      const facts = [note.nature, note.status, note.hotspot && 'open'].filter(Boolean).join(', ');
+      const where = note.step ? `${note.flow}, step ${note.step}` : note.flow;
+
+      lines.push(`- [${note.title}](${base}/${note.id}.md): ${where}${facts && `; ${facts}`}`);
     }
 
     lines.push('');

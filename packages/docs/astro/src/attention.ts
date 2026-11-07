@@ -20,7 +20,7 @@ type Frontmatter = DocsCatalog['events'][number]['event']['frontmatter'];
 /** The parts of the catalog the attention strip counts. */
 export interface AttentionSource {
   events: Array<{ event: { frontmatter: Pick<Frontmatter, 'producers' | 'consumers'> } }>;
-  graph: { resources: Array<Pick<DocsCatalog['graph']['resources'][number], 'owner'>> };
+  graph: { resources: Array<Pick<DocsCatalog['graph']['resources'][number], 'owner' | 'ref'>> };
   summary: Pick<DocsCatalog['summary'], 'needsReview'>;
   failures: Array<Pick<DocsCatalog['failures'][number], 'repository' | 'message'>>;
 }
@@ -31,7 +31,10 @@ export function attentionSnapshot(catalog: AttentionSource, base: string): Atten
   const orphanProducers = events.filter((event) => event.producers.length === 0).length;
   const orphanConsumers = events.filter((event) => event.consumers.length === 0).length;
 
-  const unowned = catalog.graph.resources.filter((resource) => !resource.owner?.team).length;
+  // An endpoint's owner is its service's: counting each would bury the service.
+  const unowned = catalog.graph.resources.filter(
+    (resource) => resource.ref.kind !== 'endpoint' && !resource.owner?.team,
+  ).length;
 
   return {
     needsReview: catalog.summary.needsReview,

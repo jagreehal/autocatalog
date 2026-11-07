@@ -10,6 +10,7 @@ import {
   federationStatus,
   prepareSources,
   readLock,
+  readLockFile,
   runFederationLock,
   runFederationStatus,
 } from '../src/federation';
@@ -54,6 +55,67 @@ afterEach(async () => {
 });
 
 describe('ac federation lock', () => {
+  describe('who owns each service', () => {
+    /** A repository whose spec says it serves `service`. */
+    const serving = async (name: string, service: string) => {
+      const dir = path.join(work, 'remotes', name);
+
+      await fs.mkdir(path.join(dir, 'contracts'), { recursive: true });
+      await fs.writeFile(
+        path.join(dir, 'contracts/api.json'),
+        JSON.stringify({
+          openapi: '3.1.0',
+          info: { title: name, version: '1.0.0' },
+          'x-autocatalog': { service },
+          paths: { '/a': { get: {} } },
+        }),
+      );
+      git(dir, 'init', '-q');
+      git(dir, 'add', '-A');
+      git(dir, 'commit', '-qm', 'init');
+
+      return `file://${dir}`;
+    };
+
+    const lockWith = async (repos: string[], service?: string[]) => {
+      quiet();
+
+      return runFederationLock({
+        repos,
+        lock: path.join(work, 'autocatalog.lock.json'),
+        cache: path.join(work, 'cache'),
+        ...(service && { service }),
+      });
+    };
+
+    const owners = async () =>
+      (await readLockFile(path.join(work, 'autocatalog.lock.json')))?.services;
+
+    it('pins each service to the one repository that claims it', async () => {
+      expect(await lockWith([await serving('users', 'users-api')])).toBe(0);
+      expect(await owners()).toEqual({ 'users-api': 'users' });
+    });
+
+    it('refuses to choose between two claims, and takes the one --service names', async () => {
+      const repos = [await serving('users', 'users-api'), await serving('copy', 'users-api')];
+
+      expect(await lockWith(repos)).toBe(1);
+      expect(await owners()).toBeUndefined();
+
+      expect(await lockWith(repos, ['users-api=users'])).toBe(0);
+      expect(await owners()).toEqual({ 'users-api': 'users' });
+    });
+
+    it('keeps a pin when a newcomer claims the service too', async () => {
+      const users = await serving('users', 'users-api');
+
+      await lockWith([users]);
+
+      expect(await lockWith([users, await serving('newcomer', 'users-api')])).toBe(0);
+      expect(await owners()).toEqual({ 'users-api': 'users' });
+    });
+  });
+
   it('pins each repository to its commit and tree', async () => {
     const remote = await repository('payments');
     const lock = path.join(work, 'autocatalog.lock.json');
@@ -285,6 +347,12 @@ describe('ac federation lock', () => {
     it('keeps the pin of a repository without the ref, and moves the rest', async () => {
       const remote = await released('v1.0.0');
       const other = await repository('ledger');
+
+      // Another copy of the fixture would claim PaymentService too, and the lock refuses that.
+      await fs.rm(path.join(other, 'contracts'), { recursive: true });
+      git(other, 'add', '-A');
+      git(other, 'commit', '-qm', 'publishes no events');
+
       const lock = path.join(work, 'autocatalog.lock.json');
       const repos = [`file://${remote}`, `file://${other}`];
       const cache = path.join(work, 'cache');

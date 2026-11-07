@@ -13,7 +13,7 @@ import {
 import type { DocsCatalog } from './catalog';
 import { githubDirectoryEnrichment } from './directory';
 import { domainHref } from './domains';
-import { renderNarrative } from './flows';
+import { flowPath, renderNarrative } from './flows';
 import { ownerKey, type Owner } from './owners';
 import type {
   DataProductPageProps,
@@ -95,7 +95,7 @@ export function entitiesPageProps(model: DomainModel, base: string): EntitiesPag
 
 export async function entityPageProps(
   entity: Entity,
-  catalog: Pick<DocsCatalog, 'events' | 'graph' | 'model'>,
+  catalog: Pick<DocsCatalog, 'events' | 'graph' | 'model'> & Partial<Pick<DocsCatalog, 'flows'>>,
   base: string,
   pages: Pages,
 ): Promise<EntityPageProps> {
@@ -117,6 +117,17 @@ export async function entityPageProps(
     file: entity.file,
     aggregateRoot: entity.aggregateRoot,
     identifier: entity.identifier,
+    lifecycles: Object.entries(entity.lifecycles).map(([field, lifecycle]) => ({
+      field,
+      ...lifecycle,
+      flows: (catalog.flows ?? []).flatMap((flow) =>
+        flow.steps.some(
+          ({ transition }) => transition?.entity === entity.id && transition.field === field,
+        )
+          ? [{ name: flow.title, href: `${base}${flowPath(flow)}` }]
+          : [],
+      ),
+    })),
     domains: entity.domains.map((name) => ({
       name,
       href: domains.has(name) ? domainHref(base, name) : undefined,

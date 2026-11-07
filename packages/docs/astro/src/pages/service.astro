@@ -1,7 +1,7 @@
 ---
 import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
 import type { InferGetStaticPropsType } from 'astro';
-import { buildServices } from 'autocatalog-core';
+import { catalogServices } from '../apis';
 import { docsCatalog } from '../catalog';
 import { serviceFacts, servicePageProps } from '../page-models';
 import { setResourceContext, withMarkdownCopy } from '../shell';
@@ -9,10 +9,10 @@ import { twinPath } from '../twins';
 import { ServicePage } from '../ui/pages/ServicePage';
 
 // A service has no page of its own to author: it is whatever the events say
-// produces and consumes them.
+// produces and consumes them, and the APIs that name it.
 export async function getStaticPaths() {
   const catalog = await docsCatalog();
-  const services = buildServices(catalog.events.map(({ event }) => event));
+  const services = catalogServices(catalog);
 
   return [...services.values()].map((service) => ({
     params: { name: service.name },

@@ -1,11 +1,35 @@
-import { glob, type Loader } from 'astro/loaders';
+import { glob, type Loader, type LoaderContext } from 'astro/loaders';
 import type { DocsLayout } from 'autocatalog-docs-core';
 
-/** Keep cached document and image paths tied to the checkout they came from. */
-export function docsLoader(layout: DocsLayout): Loader {
+type DataStore = LoaderContext['store'];
+
+const escapeGlob = (file: string) => file.replace(/[\\*?[\]{}()!+@|]/g, '\\$&');
+
+/** From now on, a write of something hidden removes it instead. */
+export function keepOut(store: Pick<DataStore, 'set' | 'delete'>, hidden: (id: string) => boolean) {
+  const write = store.set.bind(store);
+
+  store.set = (entry) => {
+    if (!hidden(entry.id)) return write(entry);
+
+    store.delete(entry.id);
+
+    return false;
+  };
+}
+
+/**
+ * Keep cached document and image paths tied to the checkout they came from.
+ * `unreadable` lists what a reader must not get. It is asked again for each
+ * update the dev server's watcher sends, because the glob only knows what was
+ * true at startup: a page can be added restricted, or restricted by an edit.
+ */
+export function docsLoader(layout: DocsLayout, unreadable: () => string[] = () => []): Loader {
+  const leftOut = unreadable();
+
   const loader = glob({
     base: layout.root,
-    pattern: layout.pattern,
+    pattern: [layout.pattern, ...leftOut.map((file) => `!${escapeGlob(file)}`)],
     generateId: ({ entry }) => layout.idFor(entry),
   });
 
@@ -20,7 +44,13 @@ export function docsLoader(layout: DocsLayout): Loader {
 
       // Nothing publishes documents, every repository excluded included.
       if (layout.roots.length === 0) context.store.clear();
-      else await loader.load(context);
+      else {
+        await loader.load(context);
+        keepOut(context.store, (id) => unreadable().some((file) => layout.idFor(file) === id));
+      }
+
+      // By exact id as well: this must not rest on how a file name reads as a glob.
+      for (const file of leftOut) context.store.delete(layout.idFor(file));
 
       context.meta.set('autocatalog-source', identity);
     },

@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "InvoiceIssued",
+  "description": "An invoice went to a customer.",
+  "type": "object",
+  "properties": {
+    "invoiceId": {
+      "type": "string"
+    }
+  },
+  "required": ["invoiceId"],
+  "x-autocatalog": {
+    "id": "invoice.issued",
+    "version": "1.0.0",
+    "domain": "billing",
+    "producers": ["billing-service"]
+  }
+}

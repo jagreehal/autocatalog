@@ -137,6 +137,7 @@ it('finds the directory’s profile for an owner however CODEOWNERS spells it', 
 
 it('refuses a map of a service the catalog does not have, with the nearest match', async () => {
   const catalog: Parameters<typeof mdxMap>[0] = {
+    apis: [],
     graph: {
       spec: 'autocatalog/graph-v1',
       resources: [
