@@ -104,7 +104,8 @@ function repositoryMetaFailures(root: string, options: CheckDocsOptions): string
  * nightly build nobody watches.
  */
 export function checkDocs(root: string, options: CheckDocsOptions = {}): CheckDocsResult {
-  const docs = readDocs(root, options);
+  // Everything in the checkout, restricted documents included: this is the check.
+  const docs = readDocs(root, { ...options, audience: 'all' });
   const contract = resolveFrontmatterContract(root, options.schemaPath);
   const conventions = resolveDocKinds(root, options.conventionsPath);
   const validate = kindValidator(contract.schema, conventions.kinds);

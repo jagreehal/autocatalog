@@ -12,3 +12,4 @@ packages:
   - 'fixtures/*'
   - 'examples/*'
   - 'examples/components/*'
+  - 'tools/ask-benchmark'

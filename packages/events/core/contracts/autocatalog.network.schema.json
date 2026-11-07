@@ -1,0 +1,164 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "source": {
+      "type": "string"
+    },
+    "workloads": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "service": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][\\w.-]{0,199}$"
+          },
+          "namespace": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][\\w.:-]{0,199}$"
+          },
+          "ingress": {
+            "type": "array",
+            "items": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "service": {
+                      "type": "string",
+                      "pattern": "^[A-Za-z0-9][\\w.-]{0,199}$"
+                    }
+                  },
+                  "required": [
+                    "service"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "namespace": {
+                      "type": "string",
+                      "pattern": "^[A-Za-z0-9][\\w.:-]{0,199}$"
+                    }
+                  },
+                  "required": [
+                    "namespace"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "namespace": {
+                      "type": "string",
+                      "pattern": "^[A-Za-z0-9][\\w.:-]{0,199}$"
+                    },
+                    "some": {
+                      "type": "boolean",
+                      "const": true
+                    }
+                  },
+                  "required": [
+                    "namespace",
+                    "some"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "external": {
+                      "type": "boolean",
+                      "const": true
+                    }
+                  },
+                  "required": [
+                    "external"
+                  ],
+                  "additionalProperties": false
+                }
+              ]
+            }
+          },
+          "egress": {
+            "type": "array",
+            "items": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "service": {
+                      "type": "string",
+                      "pattern": "^[A-Za-z0-9][\\w.-]{0,199}$"
+                    }
+                  },
+                  "required": [
+                    "service"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "namespace": {
+                      "type": "string",
+                      "pattern": "^[A-Za-z0-9][\\w.:-]{0,199}$"
+                    }
+                  },
+                  "required": [
+                    "namespace"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "namespace": {
+                      "type": "string",
+                      "pattern": "^[A-Za-z0-9][\\w.:-]{0,199}$"
+                    },
+                    "some": {
+                      "type": "boolean",
+                      "const": true
+                    }
+                  },
+                  "required": [
+                    "namespace",
+                    "some"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "external": {
+                      "type": "boolean",
+                      "const": true
+                    }
+                  },
+                  "required": [
+                    "external"
+                  ],
+                  "additionalProperties": false
+                }
+              ]
+            }
+          }
+        },
+        "required": [
+          "service"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "workloads"
+  ],
+  "additionalProperties": false
+}

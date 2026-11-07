@@ -480,6 +480,11 @@ export function discoverTraceResources(
 
     // Cross-service parentage establishes a call only for a server span.
     if (item.kind !== 2 && item.kind !== 'SPAN_KIND_SERVER') continue;
+
+    const attrs = attributesOf(item.attributes);
+    const method = attrs.get('http.request.method') ?? attrs.get('http.method');
+    const route = attrs.get('http.route');
+
     addEdge({
       type: 'calls',
       from: { kind: 'service', id: parent.service },
@@ -492,6 +497,7 @@ export function discoverTraceResources(
         firstSeen: timestamp(item.startTimeUnixNano),
         lastSeen: timestamp(item.endTimeUnixNano),
         environment: options.environment,
+        ...(method && route && { operations: [`${method.toUpperCase()} ${route}`] }),
         coverage: 'unknown',
       },
     });

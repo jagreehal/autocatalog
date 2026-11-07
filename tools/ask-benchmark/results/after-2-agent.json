@@ -1,0 +1,284 @@
+{
+  "summary": {
+    "tier": "agent",
+    "model": "beam-free",
+    "all": {
+      "correct": "19/19",
+      "missed": 0,
+      "wrong": 0,
+      "uncited": 0,
+      "unflagged": 0,
+      "madeUp": 0,
+      "noAnswer": 0,
+      "errors": 11
+    },
+    "dev": {
+      "correct": "18/18",
+      "missed": 0,
+      "wrong": 0,
+      "uncited": 0,
+      "unflagged": 0,
+      "madeUp": 0,
+      "noAnswer": 0,
+      "errors": 0
+    },
+    "holdout": {
+      "correct": "1/1",
+      "missed": 0,
+      "wrong": 0,
+      "uncited": 0,
+      "unflagged": 0,
+      "madeUp": 0,
+      "noAnswer": 0,
+      "errors": 11
+    }
+  },
+  "rows": [
+    {
+      "id": "holiday-days",
+      "set": "dev",
+      "abstain": false,
+      "outcome": "correct",
+      "calls": ["ask"],
+      "text": "According to the company handbook, everyone gets **28 days of holiday a year, plus public holidays**.\n\nSOURCE: acme-handbook/docs/people/holiday.md (trust: Written by its owner. Not checked against anything.)"
+    },
+    {
+      "id": "carry-over",
+      "set": "dev",
+      "abstain": false,
+      "outcome": "correct",
+      "calls": ["ask"],
+      "text": "Up to five unused holiday days carry over to the next year.\n\nSOURCE: acme-handbook/docs/people/holiday.md"
+    },
+    {
+      "id": "sick-note",
+      "set": "dev",
+      "abstain": false,
+      "outcome": "correct",
+      "calls": ["ask", "read_document"],
+      "text": "You need a doctor's note after seven calendar days of sickness absence. (Full pay continues for 20 working days in any rolling year.)\n\nSource: `acme-handbook/docs/people/sick-leave.md` (People), trust: \"Written by its owner. Not checked against anything.\"\n\nSOURCE: acme-handbook/docs/people/sick-leave.md"
+    },
+    {
+      "id": "expense-window",
+      "set": "dev",
+      "abstain": false,
+      "outcome": "correct",
+      "calls": ["ask"],
+      "text": "You have **30 days** from the date you spent the money to submit your expense claim in the expenses tool.\n\nSOURCE: acme-handbook/docs/people/expenses.md"
+    },
+    {
+      "id": "laptop-stolen",
+      "set": "dev",
+      "abstain": false,
+      "outcome": "correct",
+      "calls": ["ask", "read_document", "ask", "search"],
+      "text": "According to the company handbook (acme-handbook, `docs/it/laptops.md`, owned by IT, trust: \"Written by its owner. Not checked against anything.\"):\n\nIf your laptop is lost or stolen, **tell the IT desk within one hour** so it can be wiped. Other equipment requests should be raised through the IT portal.\n\nSOURCE: acme-handbook/docs/it/laptops.md"
+    },
+    {
+      "id": "invoice-po",
+      "set": "dev",
+      "abstain": false,
+      "outcome": "correct",
+      "calls": ["ask", "read_document"],
+      "text": "According to the \"Paying suppliers\" handbook (acme-handbook/docs/finance/invoices.md, owner: Finance, trust: written by its owner, not checked against anything), a supplier invoice needs the following to get paid:\n\n- A **purchase order number** — invoices must be sent to the finance inbox with one; without it they are returned.\n- **30-day terms** — Finance pays on the last working day of the month.\n- For **new suppliers**, a **completed vendor form** is required before the first payment.\n\nSOURCE: acme-handbook/docs/finance/invoices.md"
+    },
+    {
+      "id": "nda-sign",
+      "set": "dev",
+      "abstain": false,
+      "outcome": "correct",
+      "calls": ["ask"],
+      "text": "According to the handbook (Legal, `docs/legal/nda.md`): only directors can sign contracts, and anything worth more than £50,000 also needs legal review.\n\nSOURCE: acme-handbook/docs/legal/nda.md"
+    },
+    {
+      "id": "brand-colour",
+      "set": "dev",
+      "abstain": false,
+      "outcome": "correct",
+      "calls": ["ask", "read_document"],
+      "text": "The primary brand colour is **Acme teal** (per `docs/marketing/brand.md` in the `acme-handbook` repository, owned by Marketing). The document doesn't specify a hex/RGB value — only the name. It also notes that Acme teal never sits on a red background.\n\nSOURCE: acme-handbook/docs/marketing/brand.md"
+    },
+    {
+      "id": "discount",
+      "set": "dev",
+      "abstain": false,
+      "outcome": "correct",
+      "calls": ["ask"],
+      "text": "Sales can offer up to **15 percent** without approval. Anything deeper requires sign-off from the head of sales.\n\nSOURCE: acme-handbook/docs/product/pricing.md"
+    },
+    {
+      "id": "incident-updates",
+      "set": "dev",
+      "abstain": false,
+      "outcome": "correct",
+      "calls": ["ask", "read_document"],
+      "text": "According to the company's incident communications policy (`acme-handbook/docs/incident-communications.md`, owned by Reliability), updates are posted **every thirty minutes** during a customer-visible incident — even when the update is \"no change.\" Silence gets read as progress.\n\nSOURCE: acme-handbook/docs/incident-communications.md"
+    },
+    {
+      "id": "replay-window",
+      "set": "dev",
+      "abstain": false,
+      "outcome": "correct",
+      "calls": ["ask", "read_document"],
+      "text": "The acquirer's idempotency window for replaying captures is **24 hours**. Captures older than that are re-authorised rather than replayed, and re-authorisation requires a customer-facing decision.\n\nSOURCE: payments-service/docs/ops/replay.md"
+    },
+    {
+      "id": "recon-time",
+      "set": "dev",
+      "abstain": false,
+      "outcome": "correct",
+      "calls": ["ask", "read_document"],
+      "text": "The daily reconciliation report runs at **06:00 UTC**.\n\nSource: `reporter/docs/daily-reconciliation.md` (owner: Data Platform). Trust: \"Written by its owner. Not checked against anything.\"\n\nSOURCE: reporter/docs/daily-reconciliation.md"
+    },
+    {
+      "id": "stuck-capture",
+      "set": "dev",
+      "abstain": false,
+      "outcome": "correct",
+      "calls": [
+        "ask",
+        "flow_context",
+        "flow_context",
+        "read_document",
+        "flow_context",
+        "read_document",
+        "read_document"
+      ],
+      "text": "Based on the catalog, here's what's known about payments getting stuck in `capturing`:\n\n**Hypothesized cause (draft finding, not established fact):** A payment can stay in `capturing` after the capture worker restarts. The finding \"Investigating a capture potentially stuck in capturing\" (payments-service, `docs/findings/capture-stuck-after-worker-restart.md`) states: \"Nothing writes a status if the worker dies mid-capture.\" So the suspected mechanism is that the worker dies mid-capture and no code path updates the payment's status, leaving it stranded in `capturing`. This is explicitly a draft/open question, not confirmed behaviour.\n\n**How to spot it:** `status` is `capturing` and no capture task is running (from the \"Capture started\" step of the \"Capturing a payment\" flow).\n\n**Evidence consistent with it:** In the observed window (2026-10-01 to 2026-11-01), 1,204 payments entered `capturing`, but only 1,187 reached `captured` via the worker (plus 3 via operator). The \"failed\" transition count is 0, so the gap isn't explained by recorded failures.\n\n**Recovery:** Follow the replay runbook. An operator can re-run the stuck capture by setting the status from `capturing` to `captured` (via operator), which lets a new capture task start. Note: \"Re-running sets `captured`, which does not mean money moved.\" The replay procedure (`docs/ops/replay.md`) requires two preconditions: the original failure is fixed and confirmed fixed, and the replay window is inside the acquirer's 24-hour idempotency window.\n\n**Caveat:** The finding is a draft hypothesis. The runbook (`docs/runbook.md`) covers capture failures more broadly (acquirer health, queue depth, rollback) but does not specifically address the stuck-in-capturing case beyond pointing to the replay runbook.\n\nSOURCE: payments-service/docs/findings/capture-stuck-after-worker-restart.md (draft finding) and payments-service/flows/capturing-a-payment.md"
+    },
+    {
+      "id": "gap-parental",
+      "set": "dev",
+      "abstain": true,
+      "outcome": "correct",
+      "calls": ["ask", "ask", "ask", "read_document", "read_document"],
+      "text": "Based on the company handbook, there is no documented parental leave policy. The only leave-related documents are:\n\n- **Holiday and time off** (`docs/people/holiday.md`): 28 days of holiday a year plus public holidays, with up to 5 unused days carrying over.\n- **Sickness absence** (`docs/people/sick-leave.md`): Full pay for 20 working days in any rolling year, doctor's note after 7 calendar days.\n\nNeither mentions parental leave, and no other document in the handbook covers it. So: nobody has written this down.\n\nNOT FOUND"
+    },
+    {
+      "id": "gap-pension",
+      "set": "dev",
+      "abstain": true,
+      "outcome": "correct",
+      "calls": ["ask", "ask", "ask", "search", "search"],
+      "text": "Based on my searches, there is no information about a company pension contribution in the available company documents.\n\nNOT FOUND"
+    },
+    {
+      "id": "gap-salary",
+      "set": "dev",
+      "abstain": true,
+      "outcome": "correct",
+      "calls": [
+        "ask",
+        "ask",
+        "search",
+        "search",
+        "search",
+        "search",
+        "search",
+        "read_document",
+        "read_document"
+      ],
+      "text": "I searched the company docs and tools for \"salary bands\", \"compensation\", \"pay\", \"grade\", and \"level\" for engineers, and read the people-related documents (expenses, onboarding). Nothing in the available company content covers salary bands for engineers.\n\nNOT FOUND"
+    },
+    {
+      "id": "gap-wifi",
+      "set": "dev",
+      "abstain": true,
+      "outcome": "correct",
+      "calls": ["ask", "read_document", "search", "search", "search", "search", "read_document"],
+      "text": "Nobody has written down a guest wifi password in the company docs I could find.\n\nSOURCE: NOT FOUND"
+    },
+    {
+      "id": "gap-ceo",
+      "set": "dev",
+      "abstain": true,
+      "outcome": "correct",
+      "calls": [
+        "ask",
+        "ask",
+        "search_fields",
+        "read_document",
+        "ask",
+        "read_document",
+        "show_map",
+        "search",
+        "ask_architecture"
+      ],
+      "text": "I couldn't find a specific revenue figure in the company docs. The closest references are the `daily-revenue` data product (fed by `payment.captured` events, published to `LedgerService`) and the daily reconciliation report, but neither contains an actual annual revenue number.\n\nNOT FOUND"
+    },
+    {
+      "id": "h-vacation",
+      "set": "holdout",
+      "abstain": false,
+      "outcome": "correct",
+      "calls": ["ask", "read_document"],
+      "text": "According to the company handbook (\"Holiday and time off\", `acme-handbook/docs/people/holiday.md`, owner: People, trust: \"Written by its owner. Not checked against anything.\"):\n\n- Everyone gets **28 days of holiday a year**, plus public holidays.\n- Book time off with your manager at least two weeks ahead.\n- Up to five unused days carry over to the next year.\n\nSOURCE: acme-handbook/docs/people/holiday.md"
+    },
+    {
+      "id": "h-pto",
+      "set": "holdout",
+      "outcome": "error",
+      "error": "AI_RetryError: Failed after 5 attempts. Last error: AI_APICallError: Rate limit exceeded. Please try again later."
+    },
+    {
+      "id": "h-unwell",
+      "set": "holdout",
+      "outcome": "error",
+      "error": "AI_RetryError: Failed after 5 attempts. Last error: AI_APICallError: Rate limit exceeded. Please try again later."
+    },
+    {
+      "id": "h-dinner",
+      "set": "holdout",
+      "outcome": "error",
+      "error": "AI_RetryError: Failed after 5 attempts. Last error: AI_APICallError: Rate limit exceeded. Please try again later."
+    },
+    {
+      "id": "h-remote",
+      "set": "holdout",
+      "outcome": "error",
+      "error": "AI_RetryError: Failed after 5 attempts. Last error: AI_APICallError: Rate limit exceeded. Please try again later."
+    },
+    {
+      "id": "h-reporter",
+      "set": "holdout",
+      "outcome": "error",
+      "error": "AI_RetryError: Failed after 5 attempts. Last error: AI_APICallError: Rate limit exceeded. Please try again later."
+    },
+    {
+      "id": "h-guest",
+      "set": "holdout",
+      "outcome": "error",
+      "error": "AI_RetryError: Failed after 5 attempts. Last error: AI_APICallError: Rate limit exceeded. Please try again later."
+    },
+    {
+      "id": "h-new-starter",
+      "set": "holdout",
+      "outcome": "error",
+      "error": "AI_RetryError: Failed after 5 attempts. Last error: AI_APICallError: Rate limit exceeded. Please try again later."
+    },
+    {
+      "id": "h-payment-run",
+      "set": "holdout",
+      "outcome": "error",
+      "error": "AI_RetryError: Failed after 5 attempts. Last error: AI_APICallError: Rate limit exceeded. Please try again later."
+    },
+    {
+      "id": "h-gap-gym",
+      "set": "holdout",
+      "outcome": "error",
+      "error": "AI_RetryError: Failed after 5 attempts. Last error: AI_APICallError: Rate limit exceeded. Please try again later."
+    },
+    {
+      "id": "h-gap-dog",
+      "set": "holdout",
+      "outcome": "error",
+      "error": "AI_RetryError: Failed after 5 attempts. Last error: AI_APICallError: Rate limit exceeded. Please try again later."
+    },
+    {
+      "id": "h-gap-visa",
+      "set": "holdout",
+      "outcome": "error",
+      "error": "AI_RetryError: Failed after 5 attempts. Last error: AI_APICallError: Rate limit exceeded. Please try again later."
+    }
+  ]
+}

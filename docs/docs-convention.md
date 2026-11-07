@@ -105,11 +105,12 @@ the deepest matching folder wins when two kinds nest. A folder's `index.md` or
 
 Each kind adds fields to the base contract:
 
-| Kind       | Folder       | Fields                                                                                                                                            |
-| ---------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `adr`      | `adr/`       | `status` (proposed, accepted, rejected, deprecated, superseded) and `date`, both required; `supersedes` and `supersededBy`, lists of document ids |
-| `runbook`  | `runbooks/`  | `severity` (sev1 to sev4) and `lastTested`, a date; both optional                                                                                 |
-| `incident` | `incidents/` | `date`, `severity` and `status` (open, mitigated, resolved), required; `rootCause` and `solution`, one sentence each, written once it is resolved |
+| Kind       | Folder       | Fields                                                                                                                                                                                                   |
+| ---------- | ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `adr`      | `adr/`       | `status` (proposed, accepted, rejected, deprecated, superseded) and `date`, both required; `supersedes` and `supersededBy`, lists of document ids                                                        |
+| `runbook`  | `runbooks/`  | `severity` (sev1 to sev4) and `lastTested`, a date; both optional                                                                                                                                        |
+| `finding`  | `findings/`  | `nature` (behaviour, defect, question), `status` (draft, confirmed, superseded) and `date`, required; `ticket`, `entity`, `flow`, `step` and `resolved`, optional; see [Flows and evidence](/docs/flows) |
+| `incident` | `incidents/` | `date`, `severity` and `status` (open, mitigated, resolved), required; `rootCause` and `solution`, one sentence each, written once it is resolved                                                        |
 
 The ADR states match EventCatalog's. What a document applies to is `about:`,
 the same field every document has, so a decision about a service is listed on

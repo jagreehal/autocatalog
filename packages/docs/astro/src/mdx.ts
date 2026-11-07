@@ -98,7 +98,7 @@ function importedNames(code: string): Set<string> {
  * nearest match.
  */
 export async function mdxMap(
-  catalog: Pick<DocsCatalog, 'events' | 'flows' | 'graph' | 'model'>,
+  catalog: Pick<DocsCatalog, 'apis' | 'events' | 'flows' | 'graph' | 'model'>,
   base: string,
   focus: string | undefined,
   repository?: string,

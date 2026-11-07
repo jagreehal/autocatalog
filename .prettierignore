@@ -2,6 +2,11 @@
 starters/agent-default/
 
 # Generated artifacts and test reports.
+# Written by `ac from-kong`, `ac from-kubernetes` and scripts/write-contracts.mjs, and checked byte for byte.
+**/autocatalog.gateway.json
+**/autocatalog.network.json
+packages/events/core/contracts/autocatalog.gateway.schema.json
+packages/events/core/contracts/autocatalog.network.schema.json
 pnpm-lock.yaml
 **/dist/
 **/.astro/

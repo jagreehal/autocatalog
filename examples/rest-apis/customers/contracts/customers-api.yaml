@@ -1,0 +1,62 @@
+openapi: 3.1.0
+info:
+  title: Customers Service API
+  version: 1.0.0
+  description: Who a customer is, for the services that sell to them and bill them.
+x-autocatalog:
+  service: customers-service
+paths:
+  /customers:
+    post:
+      operationId: createCustomer
+      summary: Create a customer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewCustomer'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Customer'
+  /customers/{id}:
+    get:
+      operationId: getCustomer
+      summary: Read a customer
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The customer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Customer'
+        '404':
+          description: No such customer
+components:
+  schemas:
+    NewCustomer:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+    Customer:
+      type: object
+      required: [id, email, tier]
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+        tier:
+          type: string

@@ -1,3 +1,4 @@
+import { constants as fsConstants } from 'node:fs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { type JsonValue, jsonValueSchema } from './json';
@@ -150,5 +151,25 @@ export async function readOptionalResourceJson(
   } catch (error) {
     if (error instanceof ResourceReadError && error.reason === 'missing') return undefined;
     throw error;
+  }
+}
+
+/**
+ * Writes a file a command owns in a repository, refusing to follow a link: a
+ * checkout could point one anywhere on the machine that runs the command.
+ * Windows has no O_NOFOLLOW, so the link is looked for first as well.
+ */
+export async function writeResourceFile(file: string, text: string): Promise<void> {
+  const existing = await fs.lstat(file).catch(() => undefined);
+
+  if (existing?.isSymbolicLink()) throw new Error(`${path.basename(file)} is a link`);
+
+  const { O_WRONLY, O_CREAT, O_TRUNC, O_NOFOLLOW = 0 } = fsConstants;
+  const handle = await fs.open(file, O_WRONLY | O_CREAT | O_TRUNC | O_NOFOLLOW, 0o644);
+
+  try {
+    await handle.writeFile(text);
+  } finally {
+    await handle.close();
   }
 }

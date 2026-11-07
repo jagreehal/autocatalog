@@ -3,7 +3,6 @@ import path from 'node:path';
 import { createMarkdownProcessor } from '@astrojs/markdown-remark';
 import { schemaTree } from './ui/lib/schema-tree';
 import {
-  buildServices,
   datastoreOwnership,
   correlationPath,
   deadLetterOf,
@@ -30,7 +29,7 @@ import { buildSystems } from './systems';
 import { z } from 'zod';
 import { type RepositoryMeta, sourceUrl } from 'autocatalog-docs-core';
 import { documentsAbout } from './about';
-import { apiPath, apisForService, apiTitle } from './apis';
+import { apiPath, apisForService, apiTitle, catalogServices } from './apis';
 import { specificationPath, specificationsForService } from './specifications';
 import { flowRecords } from './flows';
 import { failureSource, type CatalogEvent, type DocsCatalog } from './catalog';
@@ -177,7 +176,7 @@ export function homePageProps(
           },
         ]
       : []),
-    ...(buildServices(catalog.events.map(({ event }) => event)).size > 0
+    ...(catalogServices(catalog).size > 0
       ? [
           {
             title: 'Services',
@@ -546,8 +545,8 @@ const mapEvidence = (catalog: DocsCatalog) => ({
 });
 
 /** The services with a page: every one an event names as producer or consumer. */
-export const servicePages = (catalog: Pick<DocsCatalog, 'events'>) =>
-  new Set(buildServices(catalog.events.map(({ event }) => event)).keys());
+export const servicePages = (catalog: Pick<DocsCatalog, 'events' | 'apis'>) =>
+  new Set(catalogServices(catalog).keys());
 
 /** EventCatalog's drawing of one resource, or undefined when `ac site --eventcatalog` made none. */
 export function diagramProps(

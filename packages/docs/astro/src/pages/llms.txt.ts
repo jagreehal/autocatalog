@@ -28,6 +28,7 @@ export const GET: APIRoute = async ({ site }) => {
       })),
       components: componentRows(catalog, ''),
       model: catalog.model,
+      notes: catalog.flowNotes,
     }),
     { headers: { 'content-type': 'text/plain; charset=utf-8' } },
   );

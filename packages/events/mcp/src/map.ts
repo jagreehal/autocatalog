@@ -17,6 +17,7 @@ import {
   serviceNeighbourhood,
   type Diagram,
 } from 'autocatalog-docs-core';
+import { checkouts, pickOne } from './knowledge.js';
 import { domainModel } from './model.js';
 import type { CatalogSnapshot } from './tools.js';
 
@@ -73,9 +74,12 @@ export function draftMap(catalog: CatalogSnapshot, authored: DesignInput): Catal
  * flow this repository declares under `flows/`, or `design/<id>` for one it
  * proposes under `designs/`.
  */
-export function catalogMap(catalog: CatalogSnapshot, focus?: string): CatalogMap {
-  const graph = catalog.mapGraph;
-
+export function catalogMap(
+  catalog: CatalogSnapshot,
+  focus?: string,
+  company?: string,
+  graph = catalog.mapGraph,
+): CatalogMap {
   // An event a snapshot covered says so in its manifest; this checkout is the only repository.
   const runtime = runtimeByEvent(
     catalog.events.map((event) => ({ event })),
@@ -85,9 +89,11 @@ export function catalogMap(catalog: CatalogSnapshot, focus?: string): CatalogMap
   if (focus?.startsWith('design/')) {
     const id = focus.slice('design/'.length);
 
-    const { designs, failures } = readDesigns([repoOf(catalog)], graph);
+    const { designs, failures } = readDesigns(checkouts(catalog, company), graph, {
+      deferMissing: company !== undefined,
+    });
 
-    const design = designs.find((candidate) => candidate.id === id);
+    const design = pickOne(designs, id);
 
     if (!design) {
       const failure = failures.find((line) => line.includes(`/designs/${id}.md:`));
@@ -104,9 +110,11 @@ export function catalogMap(catalog: CatalogSnapshot, focus?: string): CatalogMap
   if (focus?.startsWith('flow/')) {
     const id = focus.slice('flow/'.length);
 
-    const { flows, failures } = readFlows([repoOf(catalog)], graph);
+    const { flows, failures } = readFlows(checkouts(catalog, company), graph, {
+      deferMissing: company !== undefined,
+    });
 
-    const flow = flows.find((candidate) => candidate.id === id);
+    const flow = pickOne(flows, id);
 
     if (!flow) {
       const failure = failures.find((line) => line.includes(`/flows/${id}.md:`));
@@ -125,9 +133,9 @@ export function catalogMap(catalog: CatalogSnapshot, focus?: string): CatalogMap
   if (focus?.startsWith('data-product/')) {
     const id = focus.slice('data-product/'.length);
 
-    const { dataProducts, failures } = domainModel(catalog);
+    const { dataProducts, failures } = domainModel(catalog, company, graph);
 
-    const product = dataProducts.find((candidate) => candidate.id === id);
+    const product = pickOne(dataProducts, id);
 
     if (!product) {
       const failure = failures.find((line) => line.includes(`/data-products/${id}.md:`));

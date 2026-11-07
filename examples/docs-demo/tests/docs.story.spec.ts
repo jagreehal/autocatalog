@@ -67,7 +67,7 @@ test.describe('The company documentation index', () => {
     await page.goto('/');
 
     then('the index reports what it aggregated');
-    await expect(page.getByText('9 documents from 6 repositories')).toBeVisible();
+    await expect(page.getByText('23 documents from 6 repositories')).toBeVisible();
 
     when('a repository section is read');
     then('its documents are listed under its own name');

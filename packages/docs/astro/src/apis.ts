@@ -1,77 +1,33 @@
-import fs from 'node:fs';
-import path from 'node:path';
 import {
+  apiOperations as operationsOf,
   buildServices,
-  findOpenApiDocuments,
+  declaredApiService,
   isJsonObject,
-  METHODS,
-  type JsonObject,
+  publishedApis,
   type JsonValue,
+  type RepositoryApi,
+  type ServiceSummary,
 } from 'autocatalog-core';
 import { z } from 'zod';
 import type { CatalogEvent } from './catalog';
 import type { ApiPageProps, ApisPageProps } from './ui/pages';
 
 /** An OpenAPI document a repository commits, with the page it gets. */
-export interface CatalogApi {
-  repository: string;
-  /** Its page's segment: the spec's path under contracts/, as one slug. */
-  name: string;
-  /** Where the repository keeps it, from the repository's root. */
-  file: string;
-  document: JsonObject;
+export interface CatalogApi extends RepositoryApi {
+  /**
+   * The services that serve it, as the catalog settled them against the lock.
+   * Pages read this once it is set, so they show what the graph holds.
+   */
+  services?: string[];
 }
+
+export const repositoryApis = publishedApis;
 
 const slug = (value: string) =>
   value
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
-
-/** Where the scan looks for contracts, and so where a published spec lives. */
-const CONTRACTS = 'contracts';
-
-/**
- * The OpenAPI 3 documents a repository commits under contracts/, read by the
- * same scan that turns their webhooks into events. A spec that fails to parse
- * becomes a build warning, and the rest of the repository still publishes.
- */
-export async function repositoryApis(
-  repository: string,
-  repositoryRoot: string,
-  warn: (message: string) => void,
-): Promise<CatalogApi[]> {
-  const root = path.join(repositoryRoot, CONTRACTS);
-
-  // A real directory only: a symlink could point anywhere on the build machine,
-  // and the spec gets published.
-  if (!fs.lstatSync(root, { throwIfNoEntry: false })?.isDirectory()) return [];
-
-  const { documents, errors } = await findOpenApiDocuments({ root });
-
-  for (const error of errors) warn(`${repository}: ${CONTRACTS}/${error}`);
-
-  // Named from the path without its extension; specs that share that name keep
-  // the extension, then a number, so each one gets its own page.
-  const bare = (relFile: string) => slug(relFile.replace(/\.(ya?ml|json)$/i, ''));
-
-  const shared = new Set(
-    documents.map(({ relFile }) => bare(relFile)).filter((name, i, all) => all.indexOf(name) !== i),
-  );
-
-  const taken = new Set<string>();
-
-  return [...documents]
-    .sort((a, b) => a.relFile.localeCompare(b.relFile))
-    .map(({ relFile, doc }) => {
-      let name = shared.has(bare(relFile)) ? slug(relFile) : bare(relFile);
-
-      for (let n = 2; taken.has(name); n += 1) name = `${slug(relFile)}-${n}`;
-      taken.add(name);
-
-      return { repository, name, file: `${CONTRACTS}/${relFile}`, document: doc };
-    });
-}
 
 /** Where an API's page lives on the site, relative to its base. */
 export const apiPath = (api: CatalogApi) => `apis/${api.repository}/${api.name}/`;
@@ -86,28 +42,63 @@ export const apiTitle = (api: CatalogApi) => text(info(api).title) ?? api.file;
 export const apiDescription = (api: CatalogApi) => text(info(api).description);
 
 /**
- * The APIs a service serves: one whose title names it ("Payments Service API"
- * for payments-service), or one whose webhooks are events the service produces.
+ * The APIs a service serves: one whose spec names it in `x-autocatalog.service`.
+ * Failing that, one whose title names it ("Payments Service API" for
+ * payments-service), or whose webhooks are events the service produces.
  */
 export function apisForService(
   apis: CatalogApi[],
   events: CatalogEvent[],
   service: string,
 ): CatalogApi[] {
-  return apis.filter(
-    (api) =>
+  return apis.filter((api) => {
+    if (api.services) return api.services.includes(service);
+
+    const declared = declaredApiService(api.document);
+
+    if (declared) return declared === service;
+
+    return (
       slug(apiTitle(api)).replace(/-api$/, '') === slug(service) ||
       events.some(
         ({ repository, event }) =>
           repository === api.repository &&
           event.frontmatter.source?.file === api.file &&
           event.frontmatter.producers.includes(service),
-      ),
-  );
+      )
+    );
+  });
+}
+
+/** Every service with a page: those the events name, then those only a spec names. */
+export function catalogServices({
+  events,
+  apis,
+}: {
+  events: CatalogEvent[];
+  apis: CatalogApi[];
+}): Map<string, ServiceSummary> {
+  const services = buildServices(events.map(({ event }) => event));
+
+  for (const api of apis) {
+    const declared = declaredApiService(api.document);
+
+    for (const name of api.services ?? (declared ? [declared] : []))
+      if (!services.has(name))
+        services.set(name, { name, domains: [], produces: [], consumes: [] });
+  }
+
+  return services;
 }
 
 /** The services that serve one API, by the same rule. */
 export function servicesForApi(api: CatalogApi, events: CatalogEvent[]): string[] {
+  if (api.services) return api.services;
+
+  const declared = declaredApiService(api.document);
+
+  if (declared) return [declared];
+
   return [...buildServices(events.map(({ event }) => event)).keys()].filter(
     (name) => apisForService([api], events, name).length > 0,
   );
@@ -115,24 +106,12 @@ export function servicesForApi(api: CatalogApi, events: CatalogEvent[]): string[
 
 /** Each operation in path order, as the reference lists them. */
 export function apiOperations(api: CatalogApi): ApiPageProps['operations'] {
-  const paths = isJsonObject(api.document.paths) ? api.document.paths : {};
-
-  return Object.entries(paths).flatMap(([route, item]) =>
-    METHODS.flatMap((method) => {
-      const operation = isJsonObject(item) ? item[method] : undefined;
-
-      if (!isJsonObject(operation)) return [];
-
-      return [
-        {
-          method: method.toUpperCase(),
-          path: route,
-          summary: text(operation.summary) ?? text(operation.operationId),
-          deprecated: operation.deprecated === true,
-        },
-      ];
-    }),
-  );
+  return operationsOf(api.document).map(({ method, path, summary, operationId, deprecated }) => ({
+    method,
+    path,
+    summary: summary ?? operationId,
+    deprecated,
+  }));
 }
 
 export function apiPageProps(api: CatalogApi, services: string[], base: string): ApiPageProps {

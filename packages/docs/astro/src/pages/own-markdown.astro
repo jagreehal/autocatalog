@@ -1,0 +1,10 @@
+---
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import pages from 'virtual:autocatalog-docs-own-markdown';
+
+const { Content, frontmatter, getHeadings } = await pages[Astro.routePattern]();
+---
+
+<StarlightPage frontmatter={frontmatter} headings={getHeadings()}>
+  <Content />
+</StarlightPage>

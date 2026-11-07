@@ -49,8 +49,61 @@ status to stderr, and speaks over stdio. No network access is involved.
 | `catalog_status`           | Catalog revision, working-tree freshness and review state             |
 | `get_investigation_bundle` | Impact, compatibility and a handoff to autotel-mcp                    |
 | `define`                   | What a word means here: glossary terms and the entities named for it  |
+| `flow_context`             | A flow's transitions, rules, stuck signs, findings and evidence       |
+| `ask`                      | Any question, across every kind of document, with source and trust    |
+| `propose_finding`          | Save a draft finding or a gap, with `--allow-writes`                  |
 | `show_map`                 | The catalog, a flow, a design or a data product as a diagram          |
 | `task_context`             | What to read before a task: matches, owners, decisions, gaps          |
+
+## For the whole company
+
+Point the server at a folder of checked-out repositories, and it answers for all of
+them. That includes anything a company keeps in a repository, not only engineering's:
+a handbook, a holiday policy, a marketing team's intranet page.
+
+```bash
+autocatalog-mcp --root ./handbook --company ./repos
+```
+
+`ask` is the first place to look. It searches documents, events, teams, people,
+findings, flows, entities and glossary terms. Each result gives its source and how far
+to trust it. `answered: false` means nothing matched, and the answer then lists the
+`contents`, so an agent can spot a page that uses other words and open it with
+`read_document`. `search`, `define`, `flow_context` and `show_map` cover every
+repository too. Where two repositories share an id, name one as `<repository>/<id>`.
+
+Matching is by word and stem, plus your glossary: give a term `aliases`, and a search
+for `vacation` finds a page about holiday. A document that breaks the contract is left
+out, and the answer says so.
+
+`--allow-writes` adds `propose_finding`, which saves what was learned, or a gap, as a
+new draft in `docs/findings/` for a person to review in a pull request. It is always a
+draft and never changes an existing file, and it lists any field your contract still
+needs in `stillNeeds`. Without the flag, every tool only reads.
+
+### Who can read what
+
+A document with an `audience` is left out of the site, `llms.txt` and any reader not in
+one of its groups:
+
+```yaml
+audience: [people-team]
+```
+
+```bash
+autocatalog-mcp --root ./handbook --company ./repos --audience people-team
+```
+
+The server trusts `--audience`: whoever starts it chooses the groups, and anyone who can
+read the folder can read the files. So run one server per group, on a machine people
+cannot log in to. Access works per server, so each group gets its own.
+
+A draft from a server with one group stays with that group. A server with several groups
+saves no drafts until `--write-audience <group>` names one, because a draft may repeat what
+only one group can read. That flag is the operator's call: a draft sent to Engineering can
+still repeat a People document, so prefer one server per group.
+
+`audience` covers documents only, not flows, entities or events. A closed frontmatter contract needs `audience` added to it.
 
 `define` reads the glossary and entities the checkout keeps. Ask it before
 naming a field or an event, and the agent uses the word the domain already
@@ -111,6 +164,10 @@ map it drew.
 
 The lookup tools answer _what is in the catalog_. `assess_impact` and
 `check_change` answer the questions an agent has before it edits a contract.
+
+`assess_impact` also takes an API operation, `GET /customers/{id}`, and returns
+the service that exposes it and its callers, declared and traced. `ask`, `search`
+and `show_map` read APIs the same way.
 
 `assess_impact` takes an event and optionally a field, and returns the consumers
 that receive it, the other events carrying the same field path, the consumers

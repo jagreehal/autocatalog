@@ -10,6 +10,7 @@ import {
   driftCatalogs,
   driftEventLabel,
   driftOpenApi,
+  endpointConsumerKey,
   renderDriftGitHub,
   renderDriftMarkdown,
   readSnapshot,
@@ -285,13 +286,20 @@ async function artifactResources(events: string): Promise<ResourceGraph | undefi
 async function companyConsumers(
   source: string,
   options: { tokenEnv?: string; repository?: string; quiet?: boolean },
-): Promise<{ consumers: Map<string, EventConsumers>; graph: ResourceGraph } | undefined> {
+): Promise<
+  | {
+      consumers: Map<string, EventConsumers>;
+      endpoints: Map<string, EventConsumers>;
+      graph: ResourceGraph;
+    }
+  | undefined
+> {
   try {
     const { graph, publishedAt } = await readCompanyIndex(source, { tokenEnv: options.tokenEnv });
 
     if (!options.quiet) console.warn(`  ${publishedLine('consumers', source, publishedAt)}`);
 
-    const { consumers, ambiguous, rejected } = consumersFromGraph(graph, {
+    const { consumers, endpoints, ambiguous, rejected } = consumersFromGraph(graph, {
       repository: options.repository,
     });
 
@@ -305,7 +313,7 @@ async function companyConsumers(
         `! ${ambiguous.join(', ')}: more than one repository publishes it, so the consumers of every copy count. Pass --repository with this repository's name on the company site to count only its own.`,
       );
 
-    return { consumers, graph };
+    return { consumers, endpoints, graph };
   } catch (error) {
     if (!options.quiet)
       console.warn(
@@ -411,7 +419,13 @@ export async function runDrift(opts: RunDriftOptions): Promise<number> {
     // An API published beside the events breaks its clients the same way, but
     // only the Git-ref mode has the source trees its OpenAPI documents live in.
     const eventReport = generated
-      ? summariseDrift([...events.findings, ...(await driftOpenApi(...generated.sources))])
+      ? summariseDrift([
+          ...events.findings,
+          ...(await driftOpenApi(...generated.sources, {
+            consumersOf: (file, operation) =>
+              elsewhere?.endpoints.get(endpointConsumerKey(file, operation)),
+          })),
+        ])
       : events;
 
     const resourceGraphs = generated

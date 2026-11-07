@@ -163,6 +163,35 @@ token as a header, over HTTPS to `github.com` or the host in
 `GITHUB_SERVER_URL`, and to no other host a lock or `--repo` names. It never
 writes the token into a URL or `.git/config`, or prints it in an error.
 
+## Who owns a service
+
+A caller can say which fields of an API it reads, and drift then leaves it out
+of a change to a field it does not read. Only the repository that owns the
+service may say that, or any team could quiet another's drift gate. The lock is
+where ownership is decided:
+
+```json
+"services": {
+  "orders-api": "orders",
+  "users-api": "users"
+}
+```
+
+`ac federation lock` reads what each repository claims at the commit it pins:
+the services its events produce and the services its OpenAPI specs name in
+`x-autocatalog.service`. A service one repository claims is pinned to it. A pin
+stays while its repository still claims the service, so a repository that
+starts claiming it too does not take it over; the lock warns and keeps the pin.
+A new service two repositories claim stops the lock until you choose:
+
+```bash
+ac federation lock --service orders-api=orders
+```
+
+The same flag moves a pin. Every change shows in the lock's diff, beside the
+commits, where it is reviewed. A service the lock does not pin gets no narrowing,
+and without a lock none does: its callers may read anything.
+
 ## Check the federation
 
 ```bash

@@ -1,0 +1,101 @@
+{
+  "spec": "autocatalog-flow-evidence/v0.1.0",
+  "checkedAt": "2026-11-06",
+  "commit": "95f623d4c64d0bac515a62e9a9c48006148dc7cf",
+  "window": {
+    "from": "2026-10-01",
+    "to": "2026-11-01"
+  },
+  "source": "fixture",
+  "transitions": [
+    {
+      "flow": "capturing-a-payment",
+      "step": "started",
+      "entity": "payment",
+      "field": "status",
+      "from": ["authorised"],
+      "to": "capturing",
+      "declared": "yes",
+      "schema": "yes",
+      "code": "yes",
+      "rules": "not checked",
+      "observed": "yes",
+      "count": 1204
+    },
+    {
+      "flow": "capturing-a-payment",
+      "step": "captured",
+      "entity": "payment",
+      "field": "status",
+      "from": ["capturing"],
+      "to": "captured",
+      "via": "worker",
+      "declared": "yes",
+      "schema": "yes",
+      "code": "not checked",
+      "rules": "none",
+      "observed": "yes",
+      "count": 1187,
+      "otherVia": {
+        "operator": 3
+      }
+    },
+    {
+      "flow": "capturing-a-payment",
+      "step": "failed",
+      "entity": "payment",
+      "field": "status",
+      "from": ["capturing"],
+      "to": "failed",
+      "via": "worker",
+      "declared": "yes",
+      "schema": "yes",
+      "code": "not checked",
+      "rules": "none",
+      "observed": "not observed",
+      "count": 0
+    },
+    {
+      "flow": "capturing-a-payment",
+      "step": "refunded",
+      "entity": "payment",
+      "field": "status",
+      "from": ["captured"],
+      "to": "refunded",
+      "declared": "yes",
+      "schema": "yes",
+      "code": "not checked",
+      "rules": "none",
+      "observed": "not observed",
+      "count": 0
+    },
+    {
+      "flow": "re-running-a-capture",
+      "step": "rerun",
+      "entity": "payment",
+      "field": "status",
+      "from": ["capturing"],
+      "to": "captured",
+      "via": "operator",
+      "declared": "yes",
+      "schema": "yes",
+      "code": "not checked",
+      "rules": "none",
+      "observed": "yes",
+      "count": 3,
+      "otherVia": {
+        "worker": 1187
+      }
+    }
+  ],
+  "undeclared": [
+    {
+      "entity": "payment",
+      "field": "status",
+      "from": "captured",
+      "to": "authorised",
+      "via": "unknown",
+      "count": 2
+    }
+  ]
+}

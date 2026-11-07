@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CheckoutCompleted",
+  "description": "A customer finished checking out.",
+  "type": "object",
+  "properties": {
+    "checkoutId": {
+      "type": "string"
+    }
+  },
+  "required": ["checkoutId"],
+  "x-autocatalog": {
+    "id": "checkout.completed",
+    "version": "1.0.0",
+    "domain": "checkout",
+    "producers": ["checkout-service"]
+  }
+}

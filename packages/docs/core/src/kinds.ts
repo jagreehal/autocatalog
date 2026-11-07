@@ -120,6 +120,37 @@ export const DEFAULT_DOC_KINDS = {
     statusField: 'status',
     dateField: 'date',
   },
+  finding: {
+    label: 'Findings',
+    folder: 'findings',
+    path: 'findings',
+    description: 'What an investigation taught us about how the system behaves.',
+    schema: {
+      type: 'object',
+      required: ['nature', 'status', 'date'],
+      properties: {
+        ticket: { type: 'string', description: 'The investigation this came from.' },
+        entity: { type: 'string' },
+        nature: {
+          enum: ['behaviour', 'defect', 'question'],
+          description: 'Only defects and open questions show as hotspots.',
+        },
+        status: {
+          enum: ['draft', 'confirmed', 'superseded'],
+          description: 'The state of the knowledge. A defect keeps its own tracker.',
+        },
+        date: isoDate,
+        flow: { type: 'string', description: 'A flow id, or <repository>/<id>.' },
+        step: { type: 'string' },
+        resolved: { type: 'string', description: 'The fix or answer, so the map stops warning.' },
+        supersedes: documentIds,
+        supersededBy: documentIds,
+      },
+    },
+    columns: ['ticket', 'nature', 'status', 'date'],
+    statusField: 'status',
+    dateField: 'date',
+  },
 } satisfies Record<string, Omit<DocKind, 'id'>>;
 
 const urlSegment = z

@@ -1,0 +1,262 @@
+{
+  "summary": {
+    "tier": "agent",
+    "model": "beam-free",
+    "all": {
+      "correct": "13/17",
+      "missed": 3,
+      "wrong": 0,
+      "uncited": 1,
+      "unflagged": 0,
+      "madeUp": 0,
+      "noAnswer": 0,
+      "errors": 13
+    },
+    "dev": {
+      "correct": "13/17",
+      "missed": 3,
+      "wrong": 0,
+      "uncited": 1,
+      "unflagged": 0,
+      "madeUp": 0,
+      "noAnswer": 0,
+      "errors": 1
+    },
+    "holdout": {
+      "correct": "0/0",
+      "missed": 0,
+      "wrong": 0,
+      "uncited": 0,
+      "unflagged": 0,
+      "madeUp": 0,
+      "noAnswer": 0,
+      "errors": 12
+    }
+  },
+  "rows": [
+    {
+      "id": "holiday-days",
+      "set": "dev",
+      "abstain": false,
+      "outcome": "correct",
+      "calls": ["ask"],
+      "text": "You get **28 days of holiday a year, plus public holidays**.\n\nSource: `docs/people/holiday.md` (People team) — \"Written by its owner. Not checked against anything.\"\n\nSOURCE: docs/people/holiday.md"
+    },
+    {
+      "id": "carry-over",
+      "set": "dev",
+      "abstain": false,
+      "outcome": "correct",
+      "calls": ["ask"],
+      "text": "Up to five unused holiday days carry over to the next year.\n\nSOURCE: docs/people/holiday.md"
+    },
+    {
+      "id": "sick-note",
+      "set": "dev",
+      "abstain": false,
+      "outcome": "correct",
+      "calls": ["ask"],
+      "text": "You need a doctor's note after **seven calendar days** of sickness absence. Full pay continues for 20 working days in any rolling year.\n\nSOURCE: docs/people/sick-leave.md"
+    },
+    {
+      "id": "expense-window",
+      "set": "dev",
+      "abstain": false,
+      "outcome": "correct",
+      "calls": ["ask"],
+      "text": "You have **30 days** from the date you spent the money to submit your expense claim in the expenses tool.\n\nSOURCE: docs/people/expenses.md (acme-handbook)"
+    },
+    {
+      "id": "laptop-stolen",
+      "set": "dev",
+      "abstain": false,
+      "outcome": "correct",
+      "calls": ["ask", "ask_architecture"],
+      "text": "If your laptop is lost or stolen, tell the IT desk within one hour so it can be wiped. Raise every other equipment request through the IT portal.\n\nSOURCE: docs/it/laptops.md (acme-handbook)"
+    },
+    {
+      "id": "invoice-po",
+      "set": "dev",
+      "abstain": false,
+      "outcome": "missed",
+      "calls": ["ask", "ask_architecture", "get_llm_text", "search", "ask"],
+      "text": "The available tools only returned a title and excerpt (\"How supplier invoices get paid.\") for the relevant document, not its actual contents, so I can't state the specific requirements.\n\nNOT FOUND"
+    },
+    {
+      "id": "nda-sign",
+      "set": "dev",
+      "abstain": false,
+      "outcome": "correct",
+      "calls": ["ask"],
+      "text": "According to the handbook (`docs/legal/nda.md`, owned by Legal): only directors can sign contracts, and anything worth more than £50,000 also needs legal review.\n\nSOURCE: docs/legal/nda.md"
+    },
+    {
+      "id": "brand-colour",
+      "set": "dev",
+      "abstain": false,
+      "outcome": "correct",
+      "calls": ["ask", "search"],
+      "text": "The primary brand colour is **Acme teal** (per the brand handbook; no hex value is recorded in the catalog).\n\nSOURCE: docs/marketing/brand.md (acme-handbook)"
+    },
+    {
+      "id": "discount",
+      "set": "dev",
+      "abstain": false,
+      "outcome": "correct",
+      "calls": ["ask"],
+      "text": "Sales can offer up to **15 percent** without approval. Anything deeper requires sign-off from the head of sales.\n\nSOURCE: docs/product/pricing.md (acme-handbook)"
+    },
+    {
+      "id": "incident-updates",
+      "set": "dev",
+      "abstain": false,
+      "outcome": "missed",
+      "calls": ["ask", "ask_architecture", "get_llm_text", "search", "ask"],
+      "text": "The available excerpts from `docs/incident-communications.md` (acme-handbook, owner Reliability) cover who owns communication during a customer-visible incident (open an incident channel, name an incident lead; the lead owns communication) but do not state how often updates are posted. No other retrieved document addresses update cadence either.\n\nNOT FOUND"
+    },
+    {
+      "id": "replay-window",
+      "set": "dev",
+      "abstain": false,
+      "outcome": "correct",
+      "calls": ["ask"],
+      "text": "The acquirer's idempotency window for replaying captures is **24 hours**. Captures older than that are re-authorised rather than replayed, and re-authorisation requires a customer-facing decision.\n\nSOURCE: docs/ops/replay.md (payments-service)"
+    },
+    {
+      "id": "recon-time",
+      "set": "dev",
+      "abstain": false,
+      "outcome": "missed",
+      "calls": ["ask", "ask_architecture", "get_llm_text", "search", "ask"],
+      "text": "The catalog only surfaces the title of `docs/daily-reconciliation.md` (owned by Data Platform) — no run time or schedule is included in the excerpt, and no other document mentions it.\n\nNOT FOUND"
+    },
+    {
+      "id": "stuck-capture",
+      "set": "dev",
+      "abstain": false,
+      "outcome": "uncited",
+      "calls": [
+        "ask",
+        "flow_context",
+        "flow_context",
+        "flow_context",
+        "ask",
+        "ask_architecture",
+        "get_llm_text",
+        "ask",
+        "search"
+      ],
+      "text": "A payment gets stuck in `capturing` when its status is `capturing` but no capture task is running (per the declared \"Capturing a payment\" flow, evidence checked 2026-11-06). A draft finding (hypothesis, not established fact) notes a payment stayed in `capturing` after the worker restarted. Recovery is via the runbook / \"Re-running a stuck capture\" flow, where an operator releases the payment (sets status to `captured`) so a new capture task can start — no money has moved.\n\nSOURCE: flows/capturing-a-payment.md (payments-service)"
+    },
+    {
+      "id": "gap-parental",
+      "set": "dev",
+      "abstain": true,
+      "outcome": "correct",
+      "calls": ["ask", "ask", "ask", "ask", "ask"],
+      "text": "Based on my searches, there is no documentation about parental leave in the company's handbook or other repositories. The closest related documents are \"Holiday and time off\" (docs/people/holiday.md) and \"Sickness absence\" (docs/people/sick-leave.md), but neither covers parental leave.\n\nNobody has written this down. I'd recommend proposing a finding to the People team to document a parental leave policy.\n\nNOT FOUND"
+    },
+    {
+      "id": "gap-pension",
+      "set": "dev",
+      "abstain": true,
+      "outcome": "correct",
+      "calls": ["ask", "ask", "search", "ask", "search", "ask", "search", "ask"],
+      "text": "Nothing in the available documents covers the company pension contribution. The People team's onboarding doc and other handbook pages don't mention pensions, retirement, or benefits contributions.\n\nNOT FOUND"
+    },
+    {
+      "id": "gap-salary",
+      "set": "dev",
+      "abstain": true,
+      "outcome": "correct",
+      "calls": ["ask", "ask", "ask", "ask", "ask", "ask", "ask", "ask", "ask"],
+      "text": "Nobody has written down salary bands for engineers in the company's knowledge base. I searched across the handbook and service repositories using several phrasings (salary bands, compensation bands, pay grades, salary ranges, remuneration, job grades, career ladder, HR compensation) and found no document covering engineer compensation bands.\n\nSOURCE: NOT FOUND"
+    },
+    {
+      "id": "gap-wifi",
+      "set": "dev",
+      "abstain": true,
+      "outcome": "correct",
+      "calls": ["ask", "ask", "ask", "ask", "ask", "ask", "ask", "search", "search"],
+      "text": "Nobody has written down the guest wifi password in the company's documentation. The searches I ran returned no results for \"wifi\" or \"network password,\" and the closest matches (the London office doc and the VPN doc) don't mention a guest wifi password.\n\nSOURCE: NOT FOUND"
+    },
+    {
+      "id": "gap-ceo",
+      "set": "dev",
+      "outcome": "error",
+      "error": "AI_RetryError: Failed after 5 attempts. Last error: AI_APICallError: Rate limit exceeded. Please try again later."
+    },
+    {
+      "id": "h-vacation",
+      "set": "holdout",
+      "outcome": "error",
+      "error": "AI_RetryError: Failed after 5 attempts. Last error: AI_APICallError: Rate limit exceeded. Please try again later."
+    },
+    {
+      "id": "h-pto",
+      "set": "holdout",
+      "outcome": "error",
+      "error": "AI_RetryError: Failed after 5 attempts. Last error: AI_APICallError: Rate limit exceeded. Please try again later."
+    },
+    {
+      "id": "h-unwell",
+      "set": "holdout",
+      "outcome": "error",
+      "error": "AI_RetryError: Failed after 5 attempts. Last error: AI_APICallError: Rate limit exceeded. Please try again later."
+    },
+    {
+      "id": "h-dinner",
+      "set": "holdout",
+      "outcome": "error",
+      "error": "AI_RetryError: Failed after 5 attempts. Last error: AI_APICallError: Rate limit exceeded. Please try again later."
+    },
+    {
+      "id": "h-remote",
+      "set": "holdout",
+      "outcome": "error",
+      "error": "AI_RetryError: Failed after 5 attempts. Last error: AI_APICallError: Rate limit exceeded. Please try again later."
+    },
+    {
+      "id": "h-reporter",
+      "set": "holdout",
+      "outcome": "error",
+      "error": "AI_RetryError: Failed after 5 attempts. Last error: AI_APICallError: Rate limit exceeded. Please try again later."
+    },
+    {
+      "id": "h-guest",
+      "set": "holdout",
+      "outcome": "error",
+      "error": "AI_RetryError: Failed after 5 attempts. Last error: AI_APICallError: Rate limit exceeded. Please try again later."
+    },
+    {
+      "id": "h-new-starter",
+      "set": "holdout",
+      "outcome": "error",
+      "error": "AI_RetryError: Failed after 5 attempts. Last error: AI_APICallError: Rate limit exceeded. Please try again later."
+    },
+    {
+      "id": "h-payment-run",
+      "set": "holdout",
+      "outcome": "error",
+      "error": "AI_RetryError: Failed after 5 attempts. Last error: AI_APICallError: Rate limit exceeded. Please try again later."
+    },
+    {
+      "id": "h-gap-gym",
+      "set": "holdout",
+      "outcome": "error",
+      "error": "AI_RetryError: Failed after 5 attempts. Last error: AI_APICallError: Rate limit exceeded. Please try again later."
+    },
+    {
+      "id": "h-gap-dog",
+      "set": "holdout",
+      "outcome": "error",
+      "error": "AI_RetryError: Failed after 5 attempts. Last error: AI_APICallError: Rate limit exceeded. Please try again later."
+    },
+    {
+      "id": "h-gap-visa",
+      "set": "holdout",
+      "outcome": "error",
+      "error": "AI_RetryError: Failed after 5 attempts. Last error: AI_APICallError: Rate limit exceeded. Please try again later."
+    }
+  ]
+}

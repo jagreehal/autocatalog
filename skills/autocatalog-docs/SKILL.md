@@ -68,6 +68,14 @@ Put architecture you have not built yet in `designs/<id>.md`: `title`, `status` 
 
 Write the steps from the code and the event declarations. A hop you write that no producer or consumer declaration backs shows as a warning on the site; fix the declaration or the flow, whichever is wrong.
 
+### Flows of state
+
+When a process moves a status, give the entity `lifecycles:` keyed by field, and give each step a `transition: { from, to, via? }`, with `rules`, `stuck` and `code` where you know them. Then run `ac flows verify --write` and commit `flows/evidence.json`. Report each evidence dimension on its own: `not observed` and `not instrumented` are gaps in evidence.
+
+After an investigation, write what you learned in `docs/findings/`: `nature` (behaviour, defect, question), `status` (draft, confirmed, superseded), and `flow:` and `step:` to attach it to the map. Any document can attach this way. Leave out customer names, emails and pasted records. `docs/flows.md` has the full format.
+
+Add `audience: [group]` to a page only some groups may read. The site, `llms.txt` and other readers leave it out.
+
 ### The domain model
 
 These sit beside `docs/`, in the repository that owns the domain, and `ac docs check` checks each one.

@@ -84,6 +84,7 @@ export default defineConfig({
           label: 'Surfaces',
           items: [
             { label: 'The company site', slug: 'docs/site' },
+            { label: 'Flows and evidence', slug: 'docs/flows' },
             { label: 'Federation', slug: 'docs/federation' },
             { label: 'Components', slug: 'docs/components' },
             { label: 'MCP for coding agents', slug: 'docs/mcp' },

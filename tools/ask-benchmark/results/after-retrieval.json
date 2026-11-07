@@ -1,0 +1,240 @@
+{
+  "summary": {
+    "tier": "retrieval",
+    "all": {
+      "correct": "23/30",
+      "missed": 4,
+      "wrong": 3,
+      "uncited": 0,
+      "unflagged": 0,
+      "madeUp": 0,
+      "errors": 0
+    },
+    "dev": {
+      "correct": "18/18",
+      "missed": 0,
+      "wrong": 0,
+      "uncited": 0,
+      "unflagged": 0,
+      "madeUp": 0,
+      "errors": 0
+    },
+    "holdout": {
+      "correct": "5/12",
+      "missed": 4,
+      "wrong": 3,
+      "uncited": 0,
+      "unflagged": 0,
+      "madeUp": 0,
+      "errors": 0
+    }
+  },
+  "rows": [
+    {
+      "id": "holiday-days",
+      "set": "dev",
+      "abstain": false,
+      "outcome": "correct",
+      "found": ["docs/people/holiday.md", "docs/people/sick-leave.md", "docs/it/laptops.md"]
+    },
+    {
+      "id": "carry-over",
+      "set": "dev",
+      "abstain": false,
+      "outcome": "correct",
+      "found": [
+        "docs/people/holiday.md",
+        "docs/people/expenses.md",
+        "docs/findings/capture-stuck-after-worker-restart.md"
+      ]
+    },
+    {
+      "id": "sick-note",
+      "set": "dev",
+      "abstain": false,
+      "outcome": "correct",
+      "found": ["docs/people/sick-leave.md", "docs/finance/invoices.md", "docs/legal/nda.md"]
+    },
+    {
+      "id": "expense-window",
+      "set": "dev",
+      "abstain": false,
+      "outcome": "correct",
+      "found": ["docs/people/expenses.md", "docs/daily-reconciliation.md", "docs/ops/replay.md"]
+    },
+    {
+      "id": "laptop-stolen",
+      "set": "dev",
+      "abstain": false,
+      "outcome": "correct",
+      "found": ["docs/it/laptops.md", "docs/people/onboarding.md"]
+    },
+    {
+      "id": "invoice-po",
+      "set": "dev",
+      "abstain": false,
+      "outcome": "correct",
+      "found": ["docs/finance/invoices.md", "docs/legal/nda.md", "docs/office/london.md"]
+    },
+    {
+      "id": "nda-sign",
+      "set": "dev",
+      "abstain": false,
+      "outcome": "correct",
+      "found": ["docs/legal/nda.md", "docs/product/pricing.md", "docs/it/vpn.md"]
+    },
+    {
+      "id": "brand-colour",
+      "set": "dev",
+      "abstain": false,
+      "outcome": "correct",
+      "found": ["docs/marketing/brand.md", "docs/marketing/team.md"]
+    },
+    {
+      "id": "discount",
+      "set": "dev",
+      "abstain": false,
+      "outcome": "correct",
+      "found": ["docs/product/pricing.md", "docs/finance/invoices.md", "docs/it/vpn.md"]
+    },
+    {
+      "id": "incident-updates",
+      "set": "dev",
+      "abstain": false,
+      "outcome": "correct",
+      "found": ["docs/incident-communications.md", "docs/ops/replay.md", "docs/runbook.md"]
+    },
+    {
+      "id": "replay-window",
+      "set": "dev",
+      "abstain": false,
+      "outcome": "correct",
+      "found": ["docs/ops/replay.md", "docs/runbook.md", "docs/daily-reconciliation.md"]
+    },
+    {
+      "id": "recon-time",
+      "set": "dev",
+      "abstain": false,
+      "outcome": "correct",
+      "found": ["docs/daily-reconciliation.md", "docs/ops/replay.md", "docs/people/holiday.md"]
+    },
+    {
+      "id": "stuck-capture",
+      "set": "dev",
+      "abstain": false,
+      "outcome": "correct",
+      "found": [
+        "docs/findings/capture-stuck-after-worker-restart.md",
+        "flows/re-running-a-capture.md",
+        "docs/ops/replay.md"
+      ]
+    },
+    {
+      "id": "gap-parental",
+      "set": "dev",
+      "abstain": true,
+      "outcome": "correct"
+    },
+    {
+      "id": "gap-pension",
+      "set": "dev",
+      "abstain": true,
+      "outcome": "correct"
+    },
+    {
+      "id": "gap-salary",
+      "set": "dev",
+      "abstain": true,
+      "outcome": "correct"
+    },
+    {
+      "id": "gap-wifi",
+      "set": "dev",
+      "abstain": true,
+      "outcome": "correct"
+    },
+    {
+      "id": "gap-ceo",
+      "set": "dev",
+      "abstain": true,
+      "outcome": "correct"
+    },
+    {
+      "id": "h-vacation",
+      "set": "holdout",
+      "abstain": false,
+      "outcome": "missed"
+    },
+    {
+      "id": "h-pto",
+      "set": "holdout",
+      "abstain": false,
+      "outcome": "wrong",
+      "found": ["docs/it/laptops.md", "docs/it/vpn.md", "docs/marketing/brand.md"]
+    },
+    {
+      "id": "h-unwell",
+      "set": "holdout",
+      "abstain": false,
+      "outcome": "missed"
+    },
+    {
+      "id": "h-dinner",
+      "set": "holdout",
+      "abstain": false,
+      "outcome": "wrong",
+      "found": ["docs/overview.mdx", "docs/workspace.md", "docs/daily-reconciliation.md"]
+    },
+    {
+      "id": "h-remote",
+      "set": "holdout",
+      "abstain": false,
+      "outcome": "wrong",
+      "found": ["docs/overview.mdx", "docs/workspace.md", "flows/capturing-a-payment.md"]
+    },
+    {
+      "id": "h-reporter",
+      "set": "holdout",
+      "abstain": false,
+      "outcome": "missed"
+    },
+    {
+      "id": "h-guest",
+      "set": "holdout",
+      "abstain": false,
+      "outcome": "correct",
+      "found": ["docs/office/london.md", "docs/finance/invoices.md", "docs/it/vpn.md"]
+    },
+    {
+      "id": "h-new-starter",
+      "set": "holdout",
+      "abstain": false,
+      "outcome": "missed"
+    },
+    {
+      "id": "h-payment-run",
+      "set": "holdout",
+      "abstain": false,
+      "outcome": "correct",
+      "found": ["docs/finance/invoices.md", "docs/overview.mdx", "docs/runbook.md"]
+    },
+    {
+      "id": "h-gap-gym",
+      "set": "holdout",
+      "abstain": true,
+      "outcome": "correct"
+    },
+    {
+      "id": "h-gap-dog",
+      "set": "holdout",
+      "abstain": true,
+      "outcome": "correct"
+    },
+    {
+      "id": "h-gap-visa",
+      "set": "holdout",
+      "abstain": true,
+      "outcome": "correct"
+    }
+  ]
+}

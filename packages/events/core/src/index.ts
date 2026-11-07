@@ -102,6 +102,26 @@ export {
 export { driftOpenApi } from './openapi-drift';
 
 export {
+  apiOperations,
+  apiServiceProblem,
+  createEndpointGraph,
+  declaredApiService,
+  endpointId,
+  linkEndpointCalls,
+  publishedApis,
+  withEndpoints,
+  withoutCallerFields,
+  withLinkedCalls,
+  endpointsByService,
+  type ApiOperation,
+  type EndpointCallOptions,
+  type LinkedEndpointCalls,
+  type PublishedApi,
+  type RepositoryApi,
+  type RepositoryCalls,
+} from './api-resources';
+
+export {
   type CompanyIndex,
   type CompanyIndexOptions,
   publishedLine,
@@ -373,5 +393,11 @@ export * from './delivery';
 export * from './references';
 
 export * from './consumes';
+
+export * from './gateways';
+
+export * from './network';
+
+export * from './service-owners';
 
 export * from './components';

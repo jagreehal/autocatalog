@@ -26,6 +26,14 @@ export interface EntityProperty {
   properties: EntityProperty[];
 }
 
+export interface EntityLifecycle {
+  field: string;
+  states: string[];
+  initial: string[];
+  terminal: string[];
+  flows: Link[];
+}
+
 export interface EntityPageProps {
   repository: string;
   file: string;
@@ -36,6 +44,8 @@ export interface EntityPageProps {
   properties: EntityProperty[];
   /** The events whose schema carries the identifier. */
   carriedBy: Link[];
+  /** The states each field moves through, and the flows that move it. */
+  lifecycles?: EntityLifecycle[] | undefined;
   /** This entity and the ones it shares a reference with, as Mermaid. */
   diagram: string | null;
   narrativeHtml?: string | null | undefined;
@@ -100,6 +110,7 @@ export function EntityPage({
   services,
   properties,
   carriedBy,
+  lifecycles = [],
   diagram,
   narrativeHtml,
 }: EntityPageProps) {
@@ -152,6 +163,28 @@ export function EntityPage({
             </CardContent>
           </Card>
         )}
+
+        {lifecycles.map(({ field, states, initial, terminal, flows }) => (
+          <Card id={`lifecycle-${field}`} key={field}>
+            <CardHeader>
+              <CardTitle role="heading" aria-level={2}>
+                Lifecycle of {field}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col gap-2 text-sm">
+                <p className="m-0">{states.join(', ')}</p>
+                {initial.length > 0 && <p className="m-0">Starts at {initial.join(' or ')}.</p>}
+                {terminal.length > 0 && <p className="m-0">Ends at {terminal.join(' or ')}.</p>}
+                {flows.length > 0 && (
+                  <p className="m-0">
+                    Moved by <Links links={flows} />
+                  </p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        ))}
 
         {identifier && (
           <Card id="events">

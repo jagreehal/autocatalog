@@ -106,7 +106,9 @@ ac federation lock --topic catalog --owner acme
 ac federation status
 ```
 
-Add `--latest-tag` to pin each repository's newest release tag, or `--ref <ref>` for one tag, branch or full commit SHA.
+Add `--latest-tag` to pin each repository's newest release tag, or `--ref <ref>` for one tag, branch or full commit SHA. The lock also pins each service to the one repository that claims it; when two repositories claim one, pass `--service <service>=<repository>`.
+
+A repository's OpenAPI specs under `contracts/` publish each operation as an endpoint. Have each spec name its service with a top-level `x-autocatalog: { service: <name> }`. A gateway repository commits `autocatalog.gateway.json` (install `autocatalog-plugin-kong`, then `autocatalog-from-kong kong.yml`; see `docs/gateways.md`), and a platform repository commits `autocatalog.network.json` (install `autocatalog-plugin-kubernetes`, then `autocatalog-from-kubernetes k8s/`; see `docs/network.md`).
 
 A repository lists its UI components by committing `autocatalog.components.json`. With Storybook, install `autocatalog-plugin-storybook` and run `autocatalog-from-storybook storybook-static`. See `docs/components.md`.
 

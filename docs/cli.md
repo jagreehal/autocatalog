@@ -174,6 +174,10 @@ Writes `autocatalog.components.json` from a Storybook build. `--url` says where
 the Storybook is deployed, `--owner` names the team, and `--check` fails when the
 committed file differs from the build. See [components](/docs/components).
 
+**`ac from-kong <config...>`**: registered by `autocatalog-plugin-kong`. Reads a Kong declarative configuration, several files as one, or the Kong Ingress Controller's Kubernetes manifests, files or folders, into `autocatalog.gateway.json`. `--service kong=catalog` maps a name, `--check` fails on a stale file. See [Gateways](./gateways.md). `--same-as <config...>` checks that another configuration of the gateway lets through the same routes.
+
+**`ac from-kubernetes <manifests...>`**: registered by `autocatalog-plugin-kubernetes`. Reads NetworkPolicies into `autocatalog.network.json`, which the site checks calls against. See [Network policy](./network.md).
+
 ## The site
 
 **`ac site [root]`** builds one Starlight site from every enrolled repository.
@@ -229,6 +233,17 @@ the same file at `/contracts/docs-manifest.json`.
 
 **`ac docs init-schema`** — writes the default frontmatter contract into
 `contracts/` so the organisation owns its copy from the start.
+
+**`ac docs import <from>`**: brings a folder of exported pages into `docs/imported`,
+such as a Notion or Google Docs export saved as Markdown, adding a title and the
+`--owner` you give. `.md`, `.markdown` and `.txt` only. It never overwrites a page, so
+an edited one stays edited.
+
+**`ac flows verify [root]`**: compares each flow's transitions with the entity's
+lifecycle, its schema, the code a step links to and, with `--observed <file>`, what
+ran. `--write` saves `flows/evidence.json`. Exits 1 when a claim is contradicted;
+something unobserved or unchecked is reported and passes. See
+[Flows and evidence](/docs/flows).
 
 **`ac docs init-conventions`** — writes the built-in document kinds (ADRs,
 runbooks, incidents) into `contracts/autocatalog.conventions.json` for the

@@ -68,3 +68,39 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {};
+
+export const WithEvidence: Story = {
+  args: {
+    steps: [
+      {
+        id: 'started',
+        title: 'Capture started',
+        kind: 'custom',
+        next: [],
+        transition: { field: 'payment.status', change: 'authorised → capturing' },
+        rules: ['A payment is captured once'],
+        stuck: { signs: 'no capture task is running' },
+        evidence: [
+          { label: 'Declared in model', value: 'yes' },
+          { label: 'Observed', value: 'not instrumented' },
+          { label: 'Business rules', value: 'not checked' },
+        ],
+        notes: [
+          {
+            title: 'Investigating a stuck capture',
+            href: '#',
+            nature: 'question',
+            status: 'draft',
+            hotspot: true,
+          },
+        ],
+      },
+    ],
+    evidence: {
+      checkedAt: '2026-11-06',
+      commit: 'abc1234',
+      stale: true,
+      undeclared: ['captured → authorised, recorded 2 times via unknown, is in no flow.'],
+    },
+  },
+};

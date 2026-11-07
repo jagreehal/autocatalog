@@ -1,5 +1,5 @@
 import { z } from 'astro/zod';
-import { buildServices } from 'autocatalog-core';
+import { catalogServices, type CatalogApi } from './apis';
 import {
   frontmatterSchema,
   readDocs,
@@ -159,7 +159,7 @@ const starlightSidebar = z
  * the catalog's validated events, so a repository quarantined for a broken
  * catalog has no entries here either, and every link has a page behind it.
  */
-export function catalogSidebar(events: CatalogEvent[]): CatalogGroup[] {
+export function catalogSidebar(events: CatalogEvent[], apis: CatalogApi[] = []): CatalogGroup[] {
   if (events.length === 0) return [];
 
   const domains = new Map<string, SidebarLink[]>();
@@ -172,7 +172,7 @@ export function catalogSidebar(events: CatalogEvent[]): CatalogGroup[] {
     ]);
   }
 
-  const services = [...buildServices(events.map(({ event }) => event)).keys()].sort();
+  const services = [...catalogServices({ events, apis }).keys()].sort();
 
   const byLabel = (a: { label: string }, b: { label: string }) => a.label.localeCompare(b.label);
 

@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: customers-service, namespace: customers }
+spec: { template: { metadata: { labels: { app: customers-service } } } }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: checkout-service, namespace: checkout }
+spec: { template: { metadata: { labels: { app: checkout-service } } } }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: billing-service, namespace: billing }
+spec: { template: { metadata: { labels: { app: billing-service } } } }
+---
+# Only the gateway and checkout may reach customers. Billing's traced calls
+# to it are what the site should say this policy blocks.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: { name: customers-service, namespace: customers }
+spec:
+  podSelector: {}
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: kong } }
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: checkout } }
+          podSelector: { matchLabels: { app: checkout-service } }

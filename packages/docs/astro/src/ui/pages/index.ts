@@ -65,7 +65,14 @@ export { SpecificationPage, type SpecificationPageProps } from './SpecificationP
 
 export { SpecificationsPage, type SpecificationsPageProps } from './SpecificationsPage';
 
-export { FlowPage, type FlowPageProps, type FlowPageStep } from './FlowPage';
+export {
+  FlowPage,
+  type FlowPageEvidence,
+  type FlowPageEvidenceSummary,
+  type FlowPageNote,
+  type FlowPageProps,
+  type FlowPageStep,
+} from './FlowPage';
 
 export { FlowsPage, type FlowsPageProps } from './FlowsPage';
 

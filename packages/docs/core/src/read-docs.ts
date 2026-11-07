@@ -4,9 +4,12 @@ import {
   type CatalogRoot,
   findCatalogRoots,
   type JsonObject,
+  type JsonValue,
   parseFrontmatter,
   stringifyFrontmatter,
 } from 'autocatalog-core';
+import { z } from 'zod';
+import { inside } from './inside';
 import { readRepositoryMeta, type RepositoryMeta } from './repository-meta';
 
 /**
@@ -50,6 +53,12 @@ export interface ReadDocsOptions {
    * out. Without it, such a document throws.
    */
   onUnreadable?: (doc: Pick<Doc, 'file' | 'repo'>, message: string) => void;
+  /**
+   * Who is reading. A document naming an `audience:` is left out unless one of
+   * these is in it, so a reader that says nothing sees only what is open to all.
+   * `'all'` is for checks, which validate what they would not publish.
+   */
+  audience?: readonly string[] | 'all';
 }
 
 /** Where the documents are and how a matched path becomes an id. */
@@ -132,10 +141,22 @@ export function readDocs(root: string, options: ReadDocsOptions = {}): Doc[] {
 
   const metas = new Map(layout.roots.map((root) => [root.name, readRepositoryMeta(root.dir).meta]));
 
+  const readable = (file: string) => {
+    const dir = layout.rootFor(file)?.dir ?? layout.root;
+
+    try {
+      // A checkout could commit a link that points anywhere on the build machine.
+      return fs.statSync(inside(dir, path.relative(dir, path.join(layout.root, file)))).isFile();
+    } catch {
+      return false;
+    }
+  };
+
   return fs
     .globSync(layout.pattern, { cwd: layout.root })
     .map((entry) => entry.split(path.sep).join('/'))
     .sort()
+    .filter(readable)
     .flatMap((file) => {
       const repo = layout.repoFor(file);
       let parsed: ReturnType<typeof parseFrontmatter>;
@@ -156,8 +177,40 @@ export function readDocs(root: string, options: ReadDocsOptions = {}): Doc[] {
       const owner = metas.get(repo)?.owner;
       const data = owner ? { owner, ...parsed.data } : parsed.data;
 
+      if (!mayRead(data.audience, options.audience)) return [];
+
       return [{ id: layout.idFor(file), repo, file, data, body: parsed.content }];
     });
+}
+
+const audienceOf = z.union([z.string().transform((one) => [one]), z.array(z.string())]);
+
+function mayRead(named: JsonValue | undefined, reader: ReadDocsOptions['audience'] = []): boolean {
+  if (named === undefined || reader === 'all') return true;
+
+  const parsed = audienceOf.safeParse(named);
+
+  // An audience nobody can read is safer than a malformed one read by everyone.
+  return parsed.success && parsed.data.some((group) => reader.includes(group));
+}
+
+/**
+ * Files the docs glob matches that a reader must not get: restricted, or a link
+ * out of the repository. A loader that globs for itself has to leave these out.
+ */
+export function unreadableDocs(root: string, options: ReadDocsOptions = {}): string[] {
+  const layout = resolveDocsLayout(root, options);
+
+  if (layout.roots.length === 0) return [];
+
+  const kept = new Set(
+    readDocs(root, { ...options, onUnreadable: () => undefined }).map((doc) => doc.file),
+  );
+
+  return fs
+    .globSync(layout.pattern, { cwd: layout.root })
+    .map((entry) => entry.split(path.sep).join('/'))
+    .filter((file) => !kept.has(file));
 }
 
 /** What each repository says of itself in `docs/meta.json`, by name. */

@@ -1,0 +1,275 @@
+{
+  "summary": {
+    "tier": "agent",
+    "model": "beam-free",
+    "all": {
+      "correct": "13/16",
+      "missed": 3,
+      "wrong": 0,
+      "uncited": 0,
+      "unflagged": 0,
+      "madeUp": 0,
+      "noAnswer": 0,
+      "errors": 14
+    },
+    "dev": {
+      "correct": "13/16",
+      "missed": 3,
+      "wrong": 0,
+      "uncited": 0,
+      "unflagged": 0,
+      "madeUp": 0,
+      "noAnswer": 0,
+      "errors": 2
+    },
+    "holdout": {
+      "correct": "0/0",
+      "missed": 0,
+      "wrong": 0,
+      "uncited": 0,
+      "unflagged": 0,
+      "madeUp": 0,
+      "noAnswer": 0,
+      "errors": 12
+    }
+  },
+  "rows": [
+    {
+      "id": "holiday-days",
+      "set": "dev",
+      "abstain": false,
+      "outcome": "correct",
+      "calls": ["ask"],
+      "text": "Everyone gets **28 days of holiday a year, plus public holidays**.\n\nSOURCE: docs/people/holiday.md"
+    },
+    {
+      "id": "carry-over",
+      "set": "dev",
+      "abstain": false,
+      "outcome": "correct",
+      "calls": ["ask"],
+      "text": "Up to five unused holiday days carry over to the next year.\n\nSOURCE: docs/people/holiday.md"
+    },
+    {
+      "id": "sick-note",
+      "set": "dev",
+      "abstain": false,
+      "outcome": "correct",
+      "calls": ["ask"],
+      "text": "According to the company handbook (`docs/people/sick-leave.md`, owned by People), you need a doctor's note after **seven calendar days** of sickness. Full pay continues for 20 working days in any rolling year.\n\nSOURCE: docs/people/sick-leave.md"
+    },
+    {
+      "id": "expense-window",
+      "set": "dev",
+      "abstain": false,
+      "outcome": "correct",
+      "calls": ["ask"],
+      "text": "You have **30 days** from the date you spent the money to submit your expense claim in the expenses tool.\n\nSOURCE: docs/people/expenses.md (acme-handbook)"
+    },
+    {
+      "id": "laptop-stolen",
+      "set": "dev",
+      "abstain": false,
+      "outcome": "correct",
+      "calls": ["ask", "ask_architecture", "get_llm_text", "search", "ask"],
+      "text": "If your laptop is lost or stolen, tell the IT desk within one hour so it can be wiped. Raise every other equipment request through the IT portal.\n\nSOURCE: docs/it/laptops.md"
+    },
+    {
+      "id": "invoice-po",
+      "set": "dev",
+      "abstain": false,
+      "outcome": "missed",
+      "calls": ["ask", "ask_architecture", "ask", "search", "get_llm_text"],
+      "text": "Based on the available tools, the only relevant document found is \"Paying suppliers\" (`docs/finance/invoices.md`, owned by Finance, trust: \"Written by its owner. Not checked against anything.\"). However, the only information returned was its excerpt — \"How supplier invoices get paid.\" — which does not specify what a supplier invoice actually needs in order to get paid. The full document content was not retrievable through the available tools.\n\nNOT FOUND"
+    },
+    {
+      "id": "nda-sign",
+      "set": "dev",
+      "abstain": false,
+      "outcome": "correct",
+      "calls": ["ask"],
+      "text": "According to the handbook (docs/legal/nda.md, owner: Legal), only directors can sign contracts. Additionally, anything worth more than £50,000 also needs legal review.\n\nSOURCE: docs/legal/nda.md"
+    },
+    {
+      "id": "brand-colour",
+      "set": "dev",
+      "abstain": false,
+      "outcome": "correct",
+      "calls": ["ask"],
+      "text": "The primary brand colour is **Acme teal** (per `docs/marketing/brand.md` in the `acme-handbook` repository, owned by Marketing).\n\nSOURCE: docs/marketing/brand.md"
+    },
+    {
+      "id": "discount",
+      "set": "dev",
+      "abstain": false,
+      "outcome": "correct",
+      "calls": ["ask"],
+      "text": "Sales can offer up to **15 percent** without approval. Anything deeper needs sign-off from the head of sales.\n\nSOURCE: docs/product/pricing.md (acme-handbook)"
+    },
+    {
+      "id": "incident-updates",
+      "set": "dev",
+      "abstain": false,
+      "outcome": "missed",
+      "calls": ["ask", "ask_architecture", "get_llm_text", "search", "ask"],
+      "text": "The available excerpts from the incident communications policy (acme-handbook, docs/incident-communications.md) describe opening an incident channel and naming an incident lead who owns communication, but they do not state how often updates are posted during an incident. No other retrieved document specifies an update cadence either.\n\nNOT FOUND"
+    },
+    {
+      "id": "replay-window",
+      "set": "dev",
+      "abstain": false,
+      "outcome": "correct",
+      "calls": ["ask"],
+      "text": "The acquirer's idempotency window for replaying captures is **24 hours**. Captures older than that are re-authorised rather than replayed, and re-authorisation requires a customer-facing decision.\n\nSOURCE: docs/ops/replay.md (payments-service)"
+    },
+    {
+      "id": "recon-time",
+      "set": "dev",
+      "abstain": false,
+      "outcome": "missed",
+      "calls": ["ask", "ask_architecture", "search", "ask", "flow_context"],
+      "text": "The catalog lists a \"Daily reconciliation report\" document in the `reporter` repository (`docs/daily-reconciliation.md`, owned by Data Platform), but the only content returned is its title — no schedule or run time is included. The tools do not contain the answer.\n\nNOT FOUND"
+    },
+    {
+      "id": "stuck-capture",
+      "set": "dev",
+      "abstain": false,
+      "outcome": "correct",
+      "calls": [
+        "ask",
+        "flow_context",
+        "search",
+        "flow_context",
+        "flow_context",
+        "ask",
+        "ask_architecture",
+        "get_llm_text",
+        "ask",
+        "ask",
+        "ask"
+      ],
+      "text": "A payment gets stuck in `capturing` when its status is `capturing` but no capture task is running — i.e., the capture was started (status moved from `authorised` → `capturing`) but never completed to `captured` or `failed`. The flow \"Capturing a payment\" lists this as the stuck sign for the \"Capture started\" step, with recovery pointing to the runbook (`docs/runbook.md`).\n\nA draft finding (hypothesis, not established fact) — \"Investigating a capture potentially stuck in capturing\" (`docs/findings/capture-stuck-after-worker-restart.md`) — suggests one observed case: a payment stayed in `capturing` after the worker restarted. That cause is not confirmed.\n\nRecovery: the \"Re-running a stuck capture\" flow lets an operator set the status from `capturing` → `captured` (via operator) so a new capture task can start; this does not mean money moved. The runbook also warns not to replay captures during an incident (replay is safe only once the underlying failure is fixed).\n\nSOURCE: flows/capturing-a-payment.md (stuck signs); docs/findings/capture-stuck-after-worker-restart.md (draft hypothesis); flows/re-running-a-capture.md; docs/runbook.md"
+    },
+    {
+      "id": "gap-parental",
+      "set": "dev",
+      "abstain": true,
+      "outcome": "correct",
+      "calls": ["ask", "ask", "ask", "ask", "ask"],
+      "text": "Nobody has written down a parental leave policy in the company's documentation. The closest related documents are \"Holiday and time off\" (docs/people/holiday.md) and \"Sickness absence\" (docs/people/sick-leave.md), both in the acme-handbook repository, but neither covers parental leave.\n\nSOURCE: NOT FOUND"
+    },
+    {
+      "id": "gap-pension",
+      "set": "dev",
+      "abstain": true,
+      "outcome": "correct",
+      "calls": [
+        "ask",
+        "ask",
+        "search",
+        "ask",
+        "search",
+        "search",
+        "ask",
+        "search",
+        "search",
+        "search",
+        "search",
+        "search"
+      ],
+      "text": "Based on my searches across the available knowledge base, nothing covers the company pension contribution. Nobody has written this down.\n\nSOURCE: NOT FOUND"
+    },
+    {
+      "id": "gap-salary",
+      "set": "dev",
+      "abstain": true,
+      "outcome": "correct",
+      "calls": ["ask", "ask", "ask", "ask", "ask"],
+      "text": "Nobody has written down salary bands for engineers in the available materials.\n\nNOT FOUND"
+    },
+    {
+      "id": "gap-wifi",
+      "set": "dev",
+      "outcome": "error",
+      "error": "AI_RetryError: Failed after 5 attempts. Last error: AI_APICallError: Rate limit exceeded. Please try again later."
+    },
+    {
+      "id": "gap-ceo",
+      "set": "dev",
+      "outcome": "error",
+      "error": "AI_RetryError: Failed after 5 attempts. Last error: AI_APICallError: Rate limit exceeded. Please try again later."
+    },
+    {
+      "id": "h-vacation",
+      "set": "holdout",
+      "outcome": "error",
+      "error": "AI_RetryError: Failed after 5 attempts. Last error: AI_APICallError: Rate limit exceeded. Please try again later."
+    },
+    {
+      "id": "h-pto",
+      "set": "holdout",
+      "outcome": "error",
+      "error": "AI_RetryError: Failed after 5 attempts. Last error: AI_APICallError: Rate limit exceeded. Please try again later."
+    },
+    {
+      "id": "h-unwell",
+      "set": "holdout",
+      "outcome": "error",
+      "error": "AI_RetryError: Failed after 5 attempts. Last error: AI_APICallError: Rate limit exceeded. Please try again later."
+    },
+    {
+      "id": "h-dinner",
+      "set": "holdout",
+      "outcome": "error",
+      "error": "AI_RetryError: Failed after 5 attempts. Last error: AI_APICallError: Rate limit exceeded. Please try again later."
+    },
+    {
+      "id": "h-remote",
+      "set": "holdout",
+      "outcome": "error",
+      "error": "AI_RetryError: Failed after 5 attempts. Last error: AI_APICallError: Rate limit exceeded. Please try again later."
+    },
+    {
+      "id": "h-reporter",
+      "set": "holdout",
+      "outcome": "error",
+      "error": "AI_RetryError: Failed after 5 attempts. Last error: AI_APICallError: Rate limit exceeded. Please try again later."
+    },
+    {
+      "id": "h-guest",
+      "set": "holdout",
+      "outcome": "error",
+      "error": "AI_RetryError: Failed after 5 attempts. Last error: AI_APICallError: Rate limit exceeded. Please try again later."
+    },
+    {
+      "id": "h-new-starter",
+      "set": "holdout",
+      "outcome": "error",
+      "error": "AI_RetryError: Failed after 5 attempts. Last error: AI_APICallError: Rate limit exceeded. Please try again later."
+    },
+    {
+      "id": "h-payment-run",
+      "set": "holdout",
+      "outcome": "error",
+      "error": "AI_RetryError: Failed after 5 attempts. Last error: AI_APICallError: Rate limit exceeded. Please try again later."
+    },
+    {
+      "id": "h-gap-gym",
+      "set": "holdout",
+      "outcome": "error",
+      "error": "AI_RetryError: Failed after 5 attempts. Last error: AI_APICallError: Rate limit exceeded. Please try again later."
+    },
+    {
+      "id": "h-gap-dog",
+      "set": "holdout",
+      "outcome": "error",
+      "error": "AI_RetryError: Failed after 5 attempts. Last error: AI_APICallError: Rate limit exceeded. Please try again later."
+    },
+    {
+      "id": "h-gap-visa",
+      "set": "holdout",
+      "outcome": "error",
+      "error": "AI_RetryError: Failed after 5 attempts. Last error: AI_APICallError: Rate limit exceeded. Please try again later."
+    }
+  ]
+}

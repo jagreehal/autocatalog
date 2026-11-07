@@ -4,6 +4,7 @@ export {
   type DocsLayout,
   readDocs,
   repositoryMetas,
+  unreadableDocs,
   type ReadDocsOptions,
   resolveDocsLayout,
 } from './read-docs';
@@ -51,6 +52,7 @@ export {
   type BuildDocsManifestOptions,
   buildDocsManifest,
   invalidDocuments,
+  validDocuments,
   type DocsManifest,
   type DocsManifestEntry,
   DocsManifestError,
@@ -84,8 +86,10 @@ export {
 export {
   type Flow,
   type FlowGroupBy,
+  type FlowRule,
   FLOWS_DIR,
   type FlowStep,
+  type FlowTransition,
   type FlowStepKind,
   flowStepRuns,
   flowWorkflow,
@@ -95,6 +99,31 @@ export {
   type StepLane,
   type WorkflowRuns,
 } from './flows';
+
+export {
+  checkLifecycles,
+  FLOW_EVIDENCE_FILE,
+  FLOW_EVIDENCE_SPEC,
+  type FlowEvidence,
+  type FlowNote,
+  type FlowNotes,
+  flowNotes,
+  type Lifecycle,
+  type LifecycleCheck,
+  type LifecycleEntity,
+  lifecycleKey,
+  type NoteNature,
+  parseTransitionObservations,
+  readFlowEvidence,
+  stepEvidence,
+  type TransitionEvidence,
+  type TransitionObservations,
+  TRANSITIONS_SPEC,
+  sameValue,
+  type UndeclaredTransition,
+  verifyFlows,
+  writeFlowEvidence,
+} from './lifecycles';
 
 export {
   catalogDiagram,

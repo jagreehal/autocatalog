@@ -74,6 +74,11 @@ export const DEFAULT_FRONTMATTER_SCHEMA = {
     },
     tags: { type: 'array', items: { type: 'string' } },
     /**
+     * Who may read this, such as `people-team`. Left out of the site, `llms.txt`
+     * and any reader not in one of these groups. Without it, everyone can.
+     */
+    audience: { type: 'array', items: { type: 'string' } },
+    /**
      * What sort of document this is: `adr`, `runbook`, `incident`, or a kind
      * the organisation's conventions add. Usually left out, because the folder
      * under docs/ already says it.

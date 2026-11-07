@@ -1,29 +1,26 @@
-import path from 'node:path';
 import { lookupTerm, readDomainModel } from 'autocatalog-docs-core';
+import { checkouts } from './knowledge.js';
 import type { CatalogSnapshot } from './tools.js';
 
 /** The domain model this checkout keeps: glossary, entities, data products, teams and users. */
-export function domainModel(catalog: CatalogSnapshot) {
-  return readDomainModel(
-    [{ repository: path.basename(catalog.repoRoot), dir: catalog.repoRoot }],
-    catalog.mapGraph,
-    {
-      schemaOf: (event) =>
-        catalog.events.find(
-          ({ frontmatter }) =>
-            frontmatter.id === event.ref.id &&
-            event.ref.namespace?.split('/').at(-1) === frontmatter.domain,
-        )?.schema,
-    },
-  );
+export function domainModel(catalog: CatalogSnapshot, company?: string, graph = catalog.mapGraph) {
+  return readDomainModel(checkouts(catalog, company), graph, {
+    deferMissing: company !== undefined,
+    schemaOf: (event) =>
+      catalog.events.find(
+        ({ frontmatter }) =>
+          frontmatter.id === event.ref.id &&
+          event.ref.namespace?.split('/').at(-1) === frontmatter.domain,
+      )?.schema,
+  });
 }
 
 /**
  * What a word means here: the glossary terms that match it, and the entities
  * named for it with their properties and the events that carry them.
  */
-export function define(catalog: CatalogSnapshot, query: string) {
-  const model = domainModel(catalog);
+export function define(catalog: CatalogSnapshot, query: string, company?: string) {
+  const model = domainModel(catalog, company);
   const wanted = query.trim().toLowerCase();
 
   const terms = lookupTerm(model.glossaries, query);

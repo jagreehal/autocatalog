@@ -37,6 +37,14 @@ You get back:
 - `provenance`, `confidence`, `needsReview` — whether the catalog knows this or guessed it
 - `source` — the file and line where the contract is defined
 
+For an HTTP API, pass the operation as its `ref`, with the response field you plan to change:
+
+```json
+{ "ref": "GET /customers/{id}", "field": "tier" }
+```
+
+It returns the service and gateway that expose it, and each caller with how it is known (`declared` or `observed`) and the fields it reads. A caller that names fields leaves out the ones it does not read; one that names none may read anything.
+
 Without MCP, the same reachability answer from the shell:
 
 ```bash

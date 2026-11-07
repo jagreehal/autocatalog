@@ -1,5 +1,6 @@
 import path from 'node:path';
 import { type SiteNavigation, siteNavigationSchema } from 'autocatalog-docs-core';
+import { z } from 'zod';
 /**
  * What the integration decided, read back by the parts Astro loads on their own.
  *
@@ -30,6 +31,8 @@ export interface DocsSiteConfig {
   exclude: string[];
   /** The release each catalog is locked at, as `platform v1.0.0`, by its directory. */
   releases: Record<string, string | undefined>;
+  /** Each service's owning repository, from the lock, when the site is built from one. */
+  serviceOwners: Map<string, string> | undefined;
   title: string;
   description: string;
   navigation: SiteNavigation | undefined;
@@ -50,6 +53,15 @@ export function docsSiteConfig(): DocsSiteConfig {
     indexes: (process.env.AUTOCATALOG_DOCS_INDEXES ?? '').split(path.delimiter).filter(Boolean),
     exclude: (process.env.AUTOCATALOG_DOCS_EXCLUDE ?? '').split(path.delimiter).filter(Boolean),
     releases: JSON.parse(process.env.AUTOCATALOG_DOCS_RELEASES ?? '{}'),
+    serviceOwners: process.env.AUTOCATALOG_DOCS_SERVICE_OWNERS
+      ? new Map(
+          Object.entries(
+            z
+              .record(z.string(), z.string())
+              .parse(JSON.parse(process.env.AUTOCATALOG_DOCS_SERVICE_OWNERS)),
+          ),
+        )
+      : undefined,
     title: process.env.AUTOCATALOG_DOCS_TITLE ?? 'Documentation',
     navigation: process.env.AUTOCATALOG_SITE_NAVIGATION
       ? siteNavigationSchema.parse(JSON.parse(process.env.AUTOCATALOG_SITE_NAVIGATION))

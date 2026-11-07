@@ -17,6 +17,8 @@ import {
 import { z } from 'zod';
 import { resolveAbout } from './about';
 import { DIAGRAM_NODE_TYPES, type Diagram, type DiagramNode } from './diagram';
+import { inside } from './inside';
+import { type Lifecycle, lifecyclesSchema } from './lifecycles';
 
 /**
  * The rest of a domain model, one Markdown file per resource in the repository
@@ -106,6 +108,7 @@ const entitySchema = z
     properties: z.array(entityProperty).optional(),
     /** A JSON Schema in the repository the properties come from, instead of listing them. */
     schema: z.string().optional(),
+    lifecycles: lifecyclesSchema.default({}),
   })
   .refine((entity) => !(entity.properties && entity.schema), {
     message: 'give properties or a schema to read them from, not both',
@@ -123,6 +126,8 @@ export interface Entity extends Authored {
   properties: EntityProperty[];
   /** The events whose schema carries the identifier, so a reader sees where it travels. */
   carriedBy: ResourceRef[];
+  /** The states each lifecycle field moves through, by field. */
+  lifecycles: Record<string, Lifecycle>;
 }
 
 const output = z.union([
@@ -337,25 +342,6 @@ function readSchema(dir: string, file: string): EntityProperty[] {
   return schemaProperties(schema);
 }
 
-/**
- * A file a resource names inside its own repository, refused when it would
- * leave it. Symlinks are resolved first: a repository could commit one that
- * points anywhere on the build machine.
- */
-function inside(dir: string, file: string): string {
-  const full = path.resolve(dir, file);
-
-  if (!fs.existsSync(full)) throw new Error(`'${file}' does not exist`);
-
-  const relative = path.relative(fs.realpathSync(dir), fs.realpathSync(full));
-
-  if (relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) {
-    throw new Error(`'${file}' is outside the repository`);
-  }
-
-  return full;
-}
-
 export interface ReadDomainModelOptions {
   /**
    * Keep references the catalog does not have, unresolved: `ac docs check`
@@ -493,6 +479,7 @@ export function readDomainModel(
         aggregateRoot: data.aggregateRoot,
         identifier,
         properties,
+        lifecycles: data.lifecycles,
         carriedBy: identifier
           ? events
               .filter((event) => {

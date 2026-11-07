@@ -1,0 +1,10 @@
+{
+  "calls": [
+    {
+      "service": "checkout-service",
+      "target": "customers-service",
+      "operation": "GET /customers/{id}",
+      "fields": ["email"]
+    }
+  ]
+}

@@ -13,8 +13,14 @@ import {
   findEventCatalogProjects,
   loadRepositoryEvents,
   mergeArchitectureGraphs,
+  mergeConsumerGraph,
   readDeclarationsFile,
   resolveReferences,
+  resolveServiceOwners,
+  serviceClaims,
+  withEndpoints,
+  withGateways,
+  withNetworkPolicies,
   scanArchitecture,
   type JsonValue,
   type RepositoryReferences,
@@ -63,10 +69,30 @@ const lockEntry = z.strictObject({
   lockedAt: z.string(),
 });
 
-const lockFile = z.strictObject({
-  spec: z.literal('autocatalog/lock-v1'),
-  repositories: z.array(lockEntry),
-});
+// A service, and the repository that owns it, by their names in the lock.
+const serviceName = z.string().regex(/^[A-Za-z0-9][\w.-]{0,199}$/, 'a service name');
+
+const lockFile = z
+  .strictObject({
+    spec: z.literal('autocatalog/lock-v1'),
+    repositories: z.array(lockEntry),
+    /**
+     * Who owns each service: the one repository that may say what the service
+     * reads. Written by `ac federation lock` from what each repository claims,
+     * and reviewed in its diff like a pin.
+     */
+    services: z.record(serviceName, z.string()).optional(),
+  })
+  .refine(
+    ({ repositories, services = {} }) =>
+      Object.values(services).every((owner) => repositories.some(({ name }) => name === owner)),
+    'services: each owner must be a repository the lock pins',
+  );
+
+export interface Lock {
+  repositories: LockEntry[];
+  services: Record<string, string>;
+}
 
 export type LockEntry = z.infer<typeof lockEntry>;
 
@@ -77,8 +103,16 @@ export type LockEntry = z.infer<typeof lockEntry>;
  */
 export async function readLock(
   file: string,
-  { required = false }: { required?: boolean } = {},
+  options: { required?: boolean } = {},
 ): Promise<LockEntry[] | undefined> {
+  return (await readLockFile(file, options))?.repositories;
+}
+
+/** The whole lock: its pins and who owns each service. */
+export async function readLockFile(
+  file: string,
+  { required = false }: { required?: boolean } = {},
+): Promise<Lock | undefined> {
   let text: string;
 
   try {
@@ -108,15 +142,27 @@ export async function readLock(
 
   if (!parsed.success) throw new Error(`${file}: ${z.prettifyError(parsed.error)}`);
 
-  return parsed.data.repositories;
+  return { repositories: parsed.data.repositories, services: parsed.data.services ?? {} };
 }
 
-async function writeLock(file: string, entries: LockEntry[]): Promise<void> {
+async function writeLock(
+  file: string,
+  entries: LockEntry[],
+  services: Record<string, string>,
+): Promise<void> {
   const repositories = [...entries].sort((a, b) => a.name.localeCompare(b.name));
 
   await fs.writeFile(
     file,
-    `${JSON.stringify({ spec: 'autocatalog/lock-v1', repositories }, null, 2)}\n`,
+    `${JSON.stringify(
+      {
+        spec: 'autocatalog/lock-v1',
+        repositories,
+        ...(Object.keys(services).length > 0 && { services }),
+      },
+      null,
+      2,
+    )}\n`,
   );
 }
 
@@ -242,6 +288,8 @@ export interface PreparedSources {
   origins: Map<string, string>;
   /** What each repository was pinned to, by name, when a lock was used. */
   pinned: Map<string, LockEntry>;
+  /** Each service's owner, from the lock, when a lock was used. */
+  owners?: Map<string, string>;
   /** Repositories left out, and why. */
   failures: Array<{ name: string; reason: string }>;
 }
@@ -358,6 +406,8 @@ export async function runFederationLock(
     ref?: string;
     /** Pin each repository's newest release tag. */
     latestTag?: boolean;
+    /** `service=repository`: who owns a service several repositories claim, or a pin to move. */
+    service?: string[];
   },
 ): Promise<number> {
   if (opts.ref && opts.latestTag) {
@@ -374,7 +424,23 @@ export async function runFederationLock(
 
   const token = process.env.GITHUB_TOKEN ?? process.env.GH_TOKEN;
   const lock = path.resolve(opts.lock);
-  const previous = (await readLock(lock)) ?? [];
+  const locked = await readLockFile(lock);
+  const previous = locked?.repositories ?? [];
+
+  const chosen: Record<string, string> = {};
+
+  for (const pair of opts.service ?? []) {
+    const [service, repository] = pair.split('=');
+
+    if (!service || !repository) {
+      console.error(kleur.red(`--service ${pair}: write it as service=repository.`));
+
+      return 1;
+    }
+
+    chosen[service] = repository;
+  }
+
   const repositories = await enrolled(opts, token);
 
   if (repositories.length === 0) {
@@ -415,6 +481,8 @@ export async function runFederationLock(
 
   const now = new Date().toISOString();
   const entries: LockEntry[] = [];
+  // What each repository read this time claims, at the commit it is pinned to.
+  const claims = new Map<string, string[]>();
   let found = false;
 
   for (const repo of repositories) {
@@ -456,6 +524,20 @@ export async function runFederationLock(
     const tag = pin.tag ?? (await latestReleaseTag(dir, commit));
     const tree = await git(dir, ['rev-parse', `${commit}^{tree}`]);
 
+    // Claims are read from the pinned commit, which is what the site will build.
+    await git(dir, ['checkout', '--quiet', '--detach', commit]);
+
+    // A repository whose claims cannot be read keeps the pins it has.
+    try {
+      claims.set(repo.name, await serviceClaims(repo.name, dir));
+    } catch (error) {
+      console.warn(
+        kleur.yellow(
+          `${repo.name}: its services could not be read (${error instanceof Error ? error.message : String(error)}), so its pins stay as they are`,
+        ),
+      );
+    }
+
     // The URL and tag follow this lock even when the commit is the same: a
     // repository moved to a new home with shared history is pinned where it
     // now lives, and a deleted tag is not kept.
@@ -479,7 +561,43 @@ export async function runFederationLock(
     return 1;
   }
 
-  await writeLock(lock, entries);
+  const unknownOwners = Object.entries(chosen).filter(
+    ([, repository]) => !entries.some(({ name }) => name === repository),
+  );
+
+  if (unknownOwners.length) {
+    console.error(
+      kleur.red(
+        `--service names repositories the lock does not pin: ${unknownOwners.map(([service, repository]) => `${service}=${repository}`).join(', ')}`,
+      ),
+    );
+
+    return 1;
+  }
+
+  const owners = resolveServiceOwners({
+    claims,
+    previous: Object.fromEntries(
+      Object.entries(locked?.services ?? {}).filter(([, repository]) =>
+        entries.some(({ name }) => name === repository),
+      ),
+    ),
+    chosen,
+  });
+
+  for (const line of owners.contested) console.warn(kleur.yellow(`! ${line}`));
+
+  if (owners.conflicts.length) {
+    console.error(kleur.red('Services more than one repository claims:'));
+
+    for (const line of owners.conflicts) console.error(`  ${line}`);
+
+    console.error(kleur.red(`\n${path.basename(lock)} was left as it was.`));
+
+    return 1;
+  }
+
+  await writeLock(lock, entries, owners.services);
 
   for (const entry of entries) {
     const before = previous.find((p) => p.name === entry.name);
@@ -497,6 +615,22 @@ export async function runFederationLock(
 
   for (const gone of previous.filter((p) => !entries.some((e) => e.name === p.name)))
     console.log(`${gone.name.padEnd(28)} ${kleur.red('removed: no longer enrolled')}`);
+
+  const before = locked?.services ?? {};
+
+  for (const [service, repository] of Object.entries(owners.services)) {
+    const was = before[service];
+
+    if (was !== repository)
+      console.log(
+        `${`service ${service}`.padEnd(28)} ${was ? kleur.yellow(`${was} → ${repository}`) : kleur.green(`owned by ${repository}`)}`,
+      );
+  }
+
+  for (const service of Object.keys(before).filter((name) => !owners.services[name]))
+    console.log(
+      `${`service ${service}`.padEnd(28)} ${kleur.red('removed: no repository claims it')}`,
+    );
 
   console.log(
     kleur.dim(
@@ -528,6 +662,12 @@ export interface FederationStatus {
   /** Resources more than one repository defines: each id has one owner. */
   duplicates: string[];
   unresolved: string[];
+  /** Where a gateway's routes and the contracts behind them disagree. */
+  gateway: string[];
+  /** Fields a caller declares that wait for the lock to pin its owner. */
+  unpinned: string[];
+  /** Calls and gateway exposure the network policy does not bear out. */
+  network: string[];
   /** Services reading an earlier release than the newest their publisher has. */
   behind: string[];
   failures: PreparedSources['failures'];
@@ -618,7 +758,7 @@ export async function federationStatus(prepared: PreparedSources): Promise<Feder
       events: events.length,
       commands: kindCount(resources, 'command'),
       services: kindCount(mergeArchitectureGraphs(eventGraph, resources), 'service'),
-      references: file.receives.length + file.sends.length,
+      references: file.receives.length + file.sends.length + file.calls.length,
       unresolved: [],
     });
   }
@@ -640,7 +780,26 @@ export async function federationStatus(prepared: PreparedSources): Promise<Feder
 
   const resolved = resolveReferences(composed, references, mergeArchitectureGraphs(...earlier));
 
-  for (const line of resolved.unresolved) {
+  const unresolved = [...resolved.unresolved];
+
+  const gateway: string[] = [];
+  const unpinned: string[] = [];
+  const network: string[] = [];
+
+  const withApis = await withGateways(
+    await withEndpoints(
+      mergeConsumerGraph(composed, resolved.graph),
+      roots,
+      (line) => unresolved.push(line),
+      { owners: prepared.owners, onUnverified: (line) => unpinned.push(line) },
+    ),
+    roots,
+    (line) => gateway.push(line),
+  );
+
+  await withNetworkPolicies(withApis, roots, (line) => network.push(line));
+
+  for (const line of unresolved) {
     const repository = line.split(':')[0];
 
     sources.find((source) => source.repository === repository)?.unresolved.push(line);
@@ -661,7 +820,7 @@ export async function federationStatus(prepared: PreparedSources): Promise<Feder
     )
     .sort();
 
-  return { sources, duplicates, unresolved: resolved.unresolved, behind, failures };
+  return { sources, duplicates, unresolved, gateway, network, unpinned, behind, failures };
 }
 
 const age = (iso: string | undefined) => {
@@ -698,6 +857,24 @@ export function renderFederationStatus(status: FederationStatus): string {
     lines.push('', kleur.yellow('References that do not resolve:'));
 
     for (const u of status.unresolved) lines.push(`  ${u}`);
+  }
+
+  if (status.unpinned.length) {
+    lines.push('', kleur.yellow('Fields that count once the lock pins their owner:'));
+
+    for (const u of status.unpinned) lines.push(`  ${u}`);
+  }
+
+  if (status.network.length) {
+    lines.push('', kleur.yellow('Where the network policy and the calls disagree:'));
+
+    for (const n of status.network) lines.push(`  ${n}`);
+  }
+
+  if (status.gateway.length) {
+    lines.push('', kleur.yellow('Where a gateway and the contracts disagree:'));
+
+    for (const g of status.gateway) lines.push(`  ${g}`);
   }
 
   if (status.behind.length) {
@@ -747,9 +924,11 @@ export async function prepareSources(
   const token = process.env.GITHUB_TOKEN ?? process.env.GH_TOKEN;
   const lockPath = path.resolve(opts.lock ?? LOCK_FILE);
 
-  const pins = opts.unlocked
+  const lock = opts.unlocked
     ? undefined
-    : await readLock(lockPath, { required: Boolean(opts.lock) });
+    : await readLockFile(lockPath, { required: Boolean(opts.lock) });
+
+  const pins = lock?.repositories;
 
   const cache = path.resolve(opts.cache);
   const failures: PreparedSources['failures'] = [];
@@ -782,7 +961,14 @@ export async function prepareSources(
 
   failures.push(...imported.failures);
 
-  return { root, sources: imported.sources, origins: imported.origins, pinned, failures };
+  return {
+    root,
+    sources: imported.sources,
+    origins: imported.origins,
+    pinned,
+    ...(lock && { owners: new Map(Object.entries(lock.services)) }),
+    failures,
+  };
 }
 
 export async function runFederationStatus(

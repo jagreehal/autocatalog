@@ -264,6 +264,41 @@ The consumer checks its side too. In the consumer's own pull request,
 it reads is in the schema the producer publishes, so a typo such as `amout`
 fails before anyone relies on it.
 
+## Callers of an API
+
+An OpenAPI change names callers the same way. A team declares what it calls in
+`autocatalog.consumes.json`:
+
+```json
+{
+  "calls": [
+    {
+      "service": "checkout-service",
+      "target": "customers-service",
+      "operation": "GET /customers/{id}",
+      "fields": ["email"]
+    }
+  ]
+}
+```
+
+`target` is the service that exposes the API, which its spec names in a top-level
+`x-autocatalog.service`. Leave out `operation` and the service may call any of
+them. `fields` are paths in the response body. Leave them out and every change
+reaches the caller; a change to a request always does.
+Only the repository that owns the service can narrow what it reads: from anywhere
+else, the call counts and the fields do not. On a federated site the lock says
+who owns each service (see [who owns a service](/docs/federation#who-owns-a-service)).
+Without a lock, declared fields wait for one: the caller may read anything, and
+the build says so.
+
+Traces name callers nobody declared. When a server span carries `http.route`,
+`ac scan --traces` records it on the call between the two services, and the site
+joins it to the one endpoint it matches, below the spec's `servers` base path if
+it has one. A route that matches none stays a call between services, and the
+build says so. No traced caller proves nobody else calls an operation: traces are
+sampled.
+
 ## Landing a breaking change
 
 Every breaking finding ends with what to do next. There are two ways through

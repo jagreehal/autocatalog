@@ -6,6 +6,9 @@
     "paymentId": { "type": "string", "description": "Unique across every payment Acme takes." },
     "amount": { "type": "integer", "description": "In the currency's minor unit." },
     "currency": { "type": "string", "description": "ISO 4217." },
-    "status": { "type": "string", "enum": ["authorised", "captured", "refunded"] }
+    "status": {
+      "type": "string",
+      "enum": ["authorised", "capturing", "captured", "failed", "refunded"]
+    }
   }
 }

@@ -28,6 +28,15 @@ it('enrols a repository that publishes only contracts/', async () => {
   expect(publishesCatalogContent(repo)).toBe(true);
 });
 
+it('enrols a gateway, and not a folder of gateway configuration named teams/', async () => {
+  await fs.mkdir(path.join(repo, 'teams'));
+  await fs.writeFile(path.join(repo, 'teams/orders.yml'), '_format_version: "3.0"\n');
+  expect(publishesCatalogContent(repo)).toBe(false);
+
+  await fs.writeFile(path.join(repo, 'autocatalog.gateway.json'), '{"gateway":"kong","routes":[]}');
+  expect(publishesCatalogContent(repo)).toBe(true);
+});
+
 it('enrols a repository that has only a Prisma schema', async () => {
   await fs.mkdir(path.join(repo, 'prisma'));
   expect(publishesCatalogContent(repo)).toBe(false);
