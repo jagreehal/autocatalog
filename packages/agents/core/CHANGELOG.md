@@ -1,5 +1,12 @@
 # autocatalog-agents-core
 
+## 0.3.2
+
+### Patch Changes
+
+- Updated dependencies [f5c7ed5]
+  - autocatalog-core@0.10.0
+
 ## 0.3.1
 
 ### Patch Changes
