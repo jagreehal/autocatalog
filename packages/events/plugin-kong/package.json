@@ -1,6 +1,6 @@
 {
   "name": "autocatalog-plugin-kong",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "ac from-kong: put what a Kong gateway exposes on the company site.",
   "license": "MIT",
   "repository": {
