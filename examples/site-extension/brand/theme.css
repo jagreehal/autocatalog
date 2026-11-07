@@ -1,0 +1,19 @@
+/* shadcn/ui tokens the whole site reads, Starlight's pages included. */
+@font-face {
+  font-family: 'Brand Sans';
+  src: url('./fonts/brand.woff2') format('woff2');
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+:root {
+  --font-sans: 'Brand Sans', system-ui, sans-serif;
+  --primary: oklch(0.45 0.2 300);
+  --ring: oklch(0.45 0.2 300);
+  --radius: 0.25rem;
+}
+
+[data-theme='dark'] {
+  --primary: oklch(0.8 0.1 300);
+  --ring: oklch(0.8 0.1 300);
+}

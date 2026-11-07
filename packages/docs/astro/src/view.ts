@@ -1,6 +1,6 @@
 import type { DocsManifest } from 'autocatalog-docs-core';
 import { resourceKey, type ResourceRef } from 'autocatalog-core';
-import { day, docHref, type DocListItem } from './ui/lib/docs';
+import { catalogId, day, docHref, type DocListItem } from './ui/lib/docs';
 
 export { day, docHref, type DocListItem };
 
@@ -20,11 +20,12 @@ export interface DocEntry {
 export function listItems(entries: DocEntry[], manifest: DocsManifest): DocListItem[] {
   return entries
     .map((entry) => {
-      const record = manifest[entry.id];
+      const id = catalogId(entry.id);
+      const record = manifest[id];
 
       return {
-        id: entry.id,
-        repo: entry.id.split('/')[0] ?? '',
+        id,
+        repo: id.split('/')[0] ?? '',
         title: entry.data.title,
         owner: record?.owner ?? entry.data.owner ?? '',
         updated: record?.updated ?? null,

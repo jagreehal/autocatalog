@@ -110,6 +110,8 @@ Add `--latest-tag` to pin each repository's newest release tag, or `--ref <ref>`
 
 A repository's OpenAPI specs under `contracts/` publish each operation as an endpoint. Have each spec name its service with a top-level `x-autocatalog: { service: <name> }`. A gateway repository commits `autocatalog.gateway.json` (install `autocatalog-plugin-kong`, then `autocatalog-from-kong kong.yml`; see `docs/gateways.md`), and a platform repository commits `autocatalog.network.json` (install `autocatalog-plugin-kubernetes`, then `autocatalog-from-kubernetes k8s/`; see `docs/network.md`).
 
+For readers outside the company, `autocatalog.site.json` takes `"audience": "public"`: the site publishes the guides that name that audience and each OpenAPI reference without its `x-internal` operations. `"output": "server"` renders pages per request, `access` names a module that decides which guides each reader may open, and `chat` adds an assistant that answers from the pages that reader may open. Set `url` to the address the site is deployed at, for the sitemap. A page in the `pages` folder replaces the built-in page at its address, such as `search.astro`, `no-access.astro` or `404.astro`, and `autocatalog-docs-astro/search` gives your own search page the built-in results. `docs/site.md` covers each.
+
 A repository lists its UI components by committing `autocatalog.components.json`. With Storybook, install `autocatalog-plugin-storybook` and run `autocatalog-from-storybook storybook-static`. See `docs/components.md`.
 
 `status` exits 1 when a repository is left out or two repositories define one event, and names consumers behind the newest release. See `docs/federation.md`.

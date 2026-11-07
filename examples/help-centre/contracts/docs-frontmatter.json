@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["title"],
+  "properties": {
+    "title": { "type": "string" },
+    "summary": { "type": "string" },
+    "audience": { "type": "array", "items": { "type": "string" } },
+    "access": {
+      "description": "The features an account needs to open this page. None: every reader.",
+      "type": "array",
+      "items": { "enum": ["invoicing", "payments"] }
+    }
+  }
+}

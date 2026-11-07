@@ -1,0 +1,20 @@
+{
+  "$schema": "../../packages/docs/core/contracts/autocatalog.site.schema.json",
+  "title": "Acme Help",
+  "description": "Guides for your Acme account, and an assistant that answers from them.",
+  "brand": "./brand",
+  "audience": "customers",
+  "output": "server",
+  "extend": "./site/extend.ts",
+  "pages": "./pages",
+  "pageActions": false,
+  "access": { "module": "./site/access.ts", "denied": "teaser" },
+  "chat": {
+    "module": "./site/chat.ts",
+    "panel": "./site/ChatPanel.tsx",
+    "title": "Ask Acme",
+    "description": "Answers from the guides on this site.",
+    "support": { "api": "/api/support" },
+    "text": { "emptyTitle": "How can we help?", "placeholder": "Ask how to do something…" }
+  }
+}

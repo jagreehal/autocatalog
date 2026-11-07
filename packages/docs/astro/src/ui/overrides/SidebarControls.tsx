@@ -2,16 +2,14 @@
 import { PanelLeftCloseIcon, PanelLeftOpenIcon } from 'lucide-react';
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { Button } from '#ui/components/ui/button.tsx';
-
-const WIDTH_KEY = 'autocatalog-sidebar-width';
-
-const COLLAPSED_KEY = 'autocatalog-sidebar-collapsed';
+import {
+  SIDEBAR_COLLAPSED_KEY as COLLAPSED_KEY,
+  SIDEBAR_MAX_WIDTH as MAX_WIDTH,
+  SIDEBAR_MIN_WIDTH as MIN_WIDTH,
+  SIDEBAR_WIDTH_KEY as WIDTH_KEY,
+} from '../../sidebar-state';
 
 const DEFAULT_WIDTH = 18.75; // rem, Starlight's --sl-sidebar-width
-
-const MIN_WIDTH = 12;
-
-const MAX_WIDTH = 28;
 
 const rem = (px: number) => px / 16;
 

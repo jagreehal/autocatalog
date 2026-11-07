@@ -34,14 +34,100 @@ import {
 import { DiagramBackground, edgeTypes, pauseEdgeAnimations } from '@eventcatalog/visualiser';
 import { getCanvasLegend, Legend, legendKeyOf } from './components/Legend';
 import { LiveCursors } from './components/LiveCursors';
-import { anchorAt, CommentLayer, CommentList, getAnchorPosition, type Author, type CommentAnchor, type Hotspot, type HotspotSeverity, type Thread as CommentThread, HotspotLayer, HotspotList, topSeverity, type HotspotDraft, type HotspotFields, type HotspotPlace, type HotspotSpot, createSmoother, type LevelPlace, type Thread, CLIPBOARD_TYPE, copyNodes, pasteNodes, readClipboard, type ClipboardContent, keepUnchanged, LOCAL_EDGE_KEYS, LOCAL_NODE_KEYS, containerFor, findDropTargets, placeDropped, toRelativePosition, findGroupAtPoint, getAbsolutePosition, getAbsoluteRect, previewContainerGrowth, sortByHierarchy, withParent, placeNodes, getLayoutPositions, layoutGraph, getLevelGraph, LEVELS, type Level, arrangeLevel, getLevelNodeSize, levelPlaces, canGoInContainer, GROUP_TYPES, getNodeDefinition, getNodeName, getNoteLevel, isGroupType, isOnLevel, isShownOnLevel, isWrittenOnCanvas, updateResource, CanvasControls, FIT_VIEW_OPTIONS, ViewControls, DropTargetContext, nodeTypes, LockedContext, StartWritingContext, EditingContext, UpdateNodeDataContext, ContainerChooser, type ContainerChoice, type LiveMoves } from '@eventcatalog/visualiser/studio';
+import {
+  anchorAt,
+  CommentLayer,
+  CommentList,
+  getAnchorPosition,
+  type Author,
+  type CommentAnchor,
+  type Hotspot,
+  type HotspotSeverity,
+  type Thread as CommentThread,
+  HotspotLayer,
+  HotspotList,
+  topSeverity,
+  type HotspotDraft,
+  type HotspotFields,
+  type HotspotPlace,
+  type HotspotSpot,
+  createSmoother,
+  type LevelPlace,
+  type Thread,
+  CLIPBOARD_TYPE,
+  copyNodes,
+  pasteNodes,
+  readClipboard,
+  type ClipboardContent,
+  keepUnchanged,
+  LOCAL_EDGE_KEYS,
+  LOCAL_NODE_KEYS,
+  containerFor,
+  findDropTargets,
+  placeDropped,
+  toRelativePosition,
+  findGroupAtPoint,
+  getAbsolutePosition,
+  getAbsoluteRect,
+  previewContainerGrowth,
+  sortByHierarchy,
+  withParent,
+  placeNodes,
+  getLayoutPositions,
+  layoutGraph,
+  getLevelGraph,
+  LEVELS,
+  type Level,
+  arrangeLevel,
+  getLevelNodeSize,
+  levelPlaces,
+  canGoInContainer,
+  GROUP_TYPES,
+  getNodeDefinition,
+  getNodeName,
+  getNoteLevel,
+  isGroupType,
+  isOnLevel,
+  isShownOnLevel,
+  isWrittenOnCanvas,
+  updateResource,
+  CanvasControls,
+  FIT_VIEW_OPTIONS,
+  ViewControls,
+  DropTargetContext,
+  nodeTypes,
+  LockedContext,
+  StartWritingContext,
+  EditingContext,
+  UpdateNodeDataContext,
+  ContainerChooser,
+  type ContainerChoice,
+  type LiveMoves,
+} from '@eventcatalog/visualiser/studio';
 import type { CursorSource, Editing, Moving, Peer } from '../collab/room';
 import type * as Y from 'yjs';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { X } from 'lucide-react';
-import { ContextMenu, type ContextMenuState, type MenuQuestion, TEXT_FONT_SIZE } from '@eventcatalog/visualiser/studio';
-import { EditButton, Palette, COMPONENT_DRAG_TYPE, RemeasureHandles } from '@eventcatalog/visualiser/studio';
-import { ConnectChooser, isCardType, newCardData, notPlaceholder, useConnectNew, type NewLink } from '@eventcatalog/visualiser/studio';
+import {
+  ContextMenu,
+  type ContextMenuState,
+  type MenuQuestion,
+  TEXT_FONT_SIZE,
+} from '@eventcatalog/visualiser/studio';
+import {
+  EditButton,
+  Palette,
+  COMPONENT_DRAG_TYPE,
+  RemeasureHandles,
+} from '@eventcatalog/visualiser/studio';
+import {
+  ConnectChooser,
+  isCardType,
+  newCardData,
+  notPlaceholder,
+  useConnectNew,
+  type NewLink,
+} from '@eventcatalog/visualiser/studio';
 import { useCanvasFlow, type CanvasDocument } from './use-canvas-flow';
 import type { AgentCanvas, CanvasIds } from './apply-agent-canvas';
 import { bump, track } from '../analytics';
@@ -76,7 +162,6 @@ const centredOn = (center: XYPosition, size: { width: number; height: number }):
 
 /** How something was put on the canvas: clicked in the palette, dragged from it, or made at the end of a connection */
 type AddedVia = 'click' | 'drag' | 'connect';
-
 
 type Landing = {
   point: XYPosition;
@@ -117,11 +202,15 @@ const asShown = (node: Node, hidden: boolean, className: string) => {
   let shown = looks.get(key);
   if (!shown) {
     if (looks.size > 4) looks.clear();
-    looks.set(key, (shown = { ...node, ...(hidden && { hidden: true }), ...(className && { className }) }));
+    looks.set(
+      key,
+      (shown = { ...node, ...(hidden && { hidden: true }), ...(className && { className }) }),
+    );
   }
   return shown;
 };
-const structureOf = (nodes: Node[]) => nodes.map((node) => `${node.id}:${node.type}:${node.parentId ?? ''}`).join('|');
+const structureOf = (nodes: Node[]) =>
+  nodes.map((node) => `${node.id}:${node.type}:${node.parentId ?? ''}`).join('|');
 
 /** What the canvas is now, for the model */
 export type CanvasSnapshot = {
@@ -138,7 +227,13 @@ export type StudioCanvasHandle = {
   pickNoteTool: () => void;
   /** A sticky note: beside a node, or in the middle of what's on screen (with text, e.g. one the agent wrote) */
   /** A sticky note, or text written on the canvas (kind "text", as big as fontSize): beside a node, or in the middle */
-  addNote: (options?: { nodeId?: string; text?: string; author?: string; kind?: 'sticky' | 'text'; fontSize?: number }) => void;
+  addNote: (options?: {
+    nodeId?: string;
+    text?: string;
+    author?: string;
+    kind?: 'sticky' | 'text';
+    fontSize?: number;
+  }) => void;
   /** Centres a node (selected), at a comfortable zoom */
   centreOn: (nodeId: string) => void;
   /** The canvas as it is now */
@@ -165,7 +260,10 @@ export type StudioCanvasHandle = {
    * The agent's changes (edit_diagram), as the canvas they should give: only what's different is written, and only
    * what was there when the edit began (`before`) is taken off (apply-agent-canvas.ts)
    */
-  applyAgentCanvas: (target: AgentCanvas, before: CanvasIds) => { added: string[]; changed: string[]; removed: string[] };
+  applyAgentCanvas: (
+    target: AgentCanvas,
+    before: CanvasIds,
+  ) => { added: string[]; changed: string[]; removed: string[] };
 };
 
 type StudioCanvasProps = {
@@ -216,13 +314,15 @@ type StudioCanvasProps = {
   areaRef?: (element: HTMLDivElement | null) => void;
 };
 
-export const StudioCanvas = forwardRef<StudioCanvasHandle, StudioCanvasProps>(function StudioCanvas(props, ref) {
-  return (
-    <ReactFlowProvider>
-      <Canvas {...props} handleRef={ref} />
-    </ReactFlowProvider>
-  );
-});
+export const StudioCanvas = forwardRef<StudioCanvasHandle, StudioCanvasProps>(
+  function StudioCanvas(props, ref) {
+    return (
+      <ReactFlowProvider>
+        <Canvas {...props} handleRef={ref} />
+      </ReactFlowProvider>
+    );
+  },
+);
 
 function Canvas({
   content,
@@ -259,8 +359,11 @@ function Canvas({
   lockedRef.current = locked;
   // Fitted clear of the palette on the left, when it's there
   const fitOptions = useMemo<FitViewOptions>(
-    () => (showPanel && !locked ? { ...FIT_VIEW_OPTIONS, padding: { ...FIT_VIEW_OPTIONS.padding, left: '304px' } } : FIT_VIEW_OPTIONS),
-    [showPanel, locked]
+    () =>
+      showPanel && !locked
+        ? { ...FIT_VIEW_OPTIONS, padding: { ...FIT_VIEW_OPTIONS.padding, left: '304px' } }
+        : FIT_VIEW_OPTIONS,
+    [showPanel, locked],
   );
 
   // Nodes glide to their new place after a layout or a level change (not while editing: it would make dragging lag)
@@ -276,26 +379,44 @@ function Canvas({
   const animateContainers = useCallback(() => {
     canvasRef.current?.classList.add('is-container-resize');
     clearTimeout(resizeTimer.current);
-    resizeTimer.current = setTimeout(() => canvasRef.current?.classList.remove('is-container-resize'), 400);
+    resizeTimer.current = setTimeout(
+      () => canvasRef.current?.classList.remove('is-container-resize'),
+      400,
+    );
   }, []);
 
   // Told after the change is shown (the document changes first, then React's state)
   const [changes, setChanges] = useState(0);
-  const flow = useCanvasFlow({ content, onLayout: glide, onContainerResize: animateContainers, onChange: () => setChanges((n) => n + 1) });
+  const flow = useCanvasFlow({
+    content,
+    onLayout: glide,
+    onContainerResize: animateContainers,
+    onChange: () => setChanges((n) => n + 1),
+  });
   const lockedBy = flow.lockedBy;
   useEffect(() => setLocked(!!lockedBy), [lockedBy]);
   useEffect(() => onDocChange?.(flow.doc), [flow.doc]);
-  const { screenToFlowPosition, flowToScreenPosition, setCenter, fitView, getZoom, getViewport, getNodesBounds } = useReactFlow();
+  const {
+    screenToFlowPosition,
+    flowToScreenPosition,
+    setCenter,
+    fitView,
+    getZoom,
+    getViewport,
+    getNodesBounds,
+  } = useReactFlow();
   // Nodes pop in (scaled up from smaller, see studio.css): where their handles are is measured again once they're
   // full size, or connections to handles off their middle (an entity's properties) would end short of them
   const updateNodeInternals = useUpdateNodeInternals();
   const onNodeShown = useCallback(
     (event: React.AnimationEvent) => {
       if (event.animationName !== 'studio-node-in') return;
-      const id = (event.target as HTMLElement).closest?.('.react-flow__node')?.getAttribute('data-id');
+      const id = (event.target as HTMLElement)
+        .closest?.('.react-flow__node')
+        ?.getAttribute('data-id');
       if (id) updateNodeInternals(id);
     },
-    [updateNodeInternals]
+    [updateNodeInternals],
   );
 
   const nodesRef = useRef(flow.nodes);
@@ -338,7 +459,8 @@ function Canvas({
       let changed = false;
       const nodes = current.nodes.map((node) => {
         const to = moves.get(node.id);
-        if (!to || node.dragging || (node.position.x === to.x && node.position.y === to.y)) return node;
+        if (!to || node.dragging || (node.position.x === to.x && node.position.y === to.y))
+          return node;
         changed = true;
         return { ...node, position: to };
       });
@@ -370,7 +492,7 @@ function Canvas({
           if (kind) return;
           if (!on) onCanvas.set(id, { x, y });
           else if (on === level) onLevel.set(id, { x, y });
-        })
+        }),
       );
       const key = `${level}|${[...onCanvas, ...onLevel].map(([id, { x, y }]) => `${id}:${x}:${y}`).join('|')}`;
       if (key === shown) return;
@@ -412,7 +534,10 @@ function Canvas({
     const rect = canvasRef.current!.getBoundingClientRect();
     const step = nodesRef.current.length % 6;
     const offset = { x: ((step % 3) - 1) * 240, y: (Math.floor(step / 3) - 0.5) * 160 };
-    return screenToFlowPosition({ x: rect.left + rect.width / 2 + offset.x, y: rect.top + rect.height / 2 + offset.y });
+    return screenToFlowPosition({
+      x: rect.left + rect.width / 2 + offset.x,
+      y: rect.top + rect.height / 2 + offset.y,
+    });
   };
 
   // ---- Levels of detail ----
@@ -421,35 +546,51 @@ function Canvas({
   // edited on their own (what's done there changes the canvas: a system card is the system)
   const [level, setLevel] = useState<Level>(initialLevel);
   // (comment pins and hotspot markers moved live, on the level shown)
-  const live = useMemo((): LiveMoves | undefined => (cursors ? { send: sendMoving, source: cursors, level } : undefined), [cursors, sendMoving, level]);
+  const live = useMemo(
+    (): LiveMoves | undefined =>
+      cursors ? { send: sendMoving, source: cursors, level } : undefined,
+    [cursors, sendMoving, level],
+  );
   useEffect(() => setLevel(initialLevel), [content]);
   const levelRef = useRef(level);
   levelRef.current = level;
   const editable = level === 3;
-  const [levelGraph, setLevelGraphState] = useState<{ level: Level; nodes: Node[]; edges: Edge[] } | null>(null);
+  const [levelGraph, setLevelGraphState] = useState<{
+    level: Level;
+    nodes: Node[];
+    edges: Edge[];
+  } | null>(null);
   const levelGraphRef = useRef(levelGraph);
   const updateLevelGraph = useCallback((next: { level: Level; nodes: Node[]; edges: Edge[] }) => {
     levelGraphRef.current = next;
     setLevelGraphState(next);
   }, []);
-  const setLevelGraph = useCallback((next: { level: Level; nodes: Node[]; edges: Edge[] } | null) => {
-    const previous = levelGraphRef.current;
-    const same = previous && next && previous.level === next.level ? previous : null;
-    const shown = next && {
-      ...next,
-      nodes: sortByHierarchy(same ? keepUnchanged(same.nodes, next.nodes, LOCAL_NODE_KEYS) : next.nodes),
-      edges: same ? keepUnchanged(same.edges, next.edges, LOCAL_EDGE_KEYS) : next.edges,
-    };
-    levelGraphRef.current = shown;
-    setLevelGraphState(shown);
-  }, []);
+  const setLevelGraph = useCallback(
+    (next: { level: Level; nodes: Node[]; edges: Edge[] } | null) => {
+      const previous = levelGraphRef.current;
+      const same = previous && next && previous.level === next.level ? previous : null;
+      const shown = next && {
+        ...next,
+        nodes: sortByHierarchy(
+          same ? keepUnchanged(same.nodes, next.nodes, LOCAL_NODE_KEYS) : next.nodes,
+        ),
+        edges: same ? keepUnchanged(same.edges, next.edges, LOCAL_EDGE_KEYS) : next.edges,
+      };
+      levelGraphRef.current = shown;
+      setLevelGraphState(shown);
+    },
+    [],
+  );
 
   // The level shown, arranged again from its layout: what someone dragged there and let go of without a drop goes
   // back (a drop changes the layout, which arranges it anyway)
   const rearrangeLevel = useStableCallback(() => {
     const level = levelRef.current;
     if (level === 3 || levelGraphRef.current?.level !== level) return;
-    const arranged = arrangeLevel(getLevelGraph(nodesRef.current, edgesRef.current, level), flow.levelLayouts[level]);
+    const arranged = arrangeLevel(
+      getLevelGraph(nodesRef.current, edgesRef.current, level),
+      flow.levelLayouts[level],
+    );
     if (arranged) setLevelGraph({ level, ...arranged.graph });
   });
 
@@ -472,7 +613,7 @@ function Canvas({
       // Nothing on it has a place yet: laid out with the visualiser's layout once, and kept
       void layoutGraph(
         content.nodes.map((node) => ({ ...node, selected: false })),
-        content.edges
+        content.edges,
       ).then((laidOut) => {
         if (cancelled) return;
         setLevelGraph({ level, ...laidOut });
@@ -504,7 +645,7 @@ function Canvas({
     relayoutWhenMeasured.current = null;
     void layoutGraph(
       levelGraph.nodes.map((node) => ({ ...node, selected: false })),
-      levelGraph.edges
+      levelGraph.edges,
     ).then((laidOut) => {
       if (levelRef.current !== pending) return;
       glide();
@@ -520,7 +661,8 @@ function Canvas({
     if (!tidyCanvasWhenShown.current || level !== 3) return;
     // (notes and text written on L1 or L2 aren't drawn here)
     const shown = flow.nodes.filter((node) => isOnLevel(node, 3));
-    if (!shown.length || !shown.every((node) => node.measured?.width && node.measured?.height)) return;
+    if (!shown.length || !shown.every((node) => node.measured?.width && node.measured?.height))
+      return;
     tidyCanvasWhenShown.current = false;
     void reorder();
   }, [level, flow.nodes]);
@@ -570,25 +712,46 @@ function Canvas({
     if (level === 3) return { point, center: point };
     const shownHere = isShownOnLevel(type, level);
     if (!shownHere) changeLevel(3);
-    const shown = shownHere && levelGraphRef.current?.level === level ? levelGraphRef.current.nodes : [];
+    const shown =
+      shownHere && levelGraphRef.current?.level === level ? levelGraphRef.current.nodes : [];
     const container = canGoInContainer(type) ? findGroupAtPoint(point, shown, type) : undefined;
     const canvas = nodesRef.current;
-    const inside = container && containerFor(point, canvas, container.id, type) ? container.id : undefined;
+    const inside =
+      container && containerFor(point, canvas, container.id, type) ? container.id : undefined;
     const lookup = new Map(canvas.map((node) => [node.id, node]));
-    const beside = canvas.filter((node) => (inside ? node.parentId === inside : !node.parentId && isOnLevel(node, 3)));
-    const rects = (beside.length ? beside : inside ? [lookup.get(inside)!] : []).map((node) => getAbsoluteRect(node, lookup));
+    const beside = canvas.filter((node) =>
+      inside ? node.parentId === inside : !node.parentId && isOnLevel(node, 3),
+    );
+    const rects = (beside.length ? beside : inside ? [lookup.get(inside)!] : []).map((node) =>
+      getAbsoluteRect(node, lookup),
+    );
     const center = rects.length
       ? {
-          x: (Math.min(...rects.map((rect) => rect.x)) + Math.max(...rects.map((rect) => rect.x + rect.width))) / 2,
-          y: beside.length ? Math.max(...rects.map((rect) => rect.y + rect.height)) + 160 : rects[0]!.y + rects[0]!.height / 2,
+          x:
+            (Math.min(...rects.map((rect) => rect.x)) +
+              Math.max(...rects.map((rect) => rect.x + rect.width))) /
+            2,
+          y: beside.length
+            ? Math.max(...rects.map((rect) => rect.y + rect.height)) + 160
+            : rects[0]!.y + rects[0]!.height / 2,
         }
       : { x: 0, y: 0 };
     if (!shownHere) return { point, center };
-    const origin = container && inside ? getAbsolutePosition(container, new Map(shown.map((node) => [node.id, node]))) : { x: 0, y: 0 };
+    const origin =
+      container && inside
+        ? getAbsolutePosition(container, new Map(shown.map((node) => [node.id, node])))
+        : { x: 0, y: 0 };
     const size = getLevelNodeSize(type, level);
-    return { point, center, inside, onLevel: { level, center: { x: point.x - origin.x, y: point.y - origin.y }, size } };
+    return {
+      point,
+      center,
+      inside,
+      onLevel: { level, center: { x: point.x - origin.x, y: point.y - origin.y }, size },
+    };
   };
-  const centring = useRef(new Map<string, { level: 1 | 2; size: { width: number; height: number } }>());
+  const centring = useRef(
+    new Map<string, { level: 1 | 2; size: { width: number; height: number } }>(),
+  );
   const keepOnLevel = (at: Landing, id: string | undefined) => {
     if (!id || !at.onLevel) return;
     const { level, center, size } = at.onLevel;
@@ -599,14 +762,22 @@ function Canvas({
   /** A sticky note on the level shown (it's only shown on that level) */
   const addNoteAt = (center: XYPosition, extra: Record<string, unknown> = {}) => {
     const data = { ...getNodeDefinition('note')!.createData(), createdAt: Date.now(), ...extra };
-    const id = flow.insertNode('note', levelRef.current === 3 ? data : { ...data, level: levelRef.current }, center);
+    const id = flow.insertNode(
+      'note',
+      levelRef.current === 3 ? data : { ...data, level: levelRef.current },
+      center,
+    );
     track('note_added', { level: levelRef.current, from: extra.text ? 'prefilled' : 'canvas' });
     // Written on straight away (not one that already says something, e.g. the agent's)
     if (!extra.text) setStartWriting(id);
     return id;
   };
   // A domain or system put on the canvas: asked whether it's a container or a card first (as Studio asks)
-  const [chooser, setChooser] = useState<{ kind: 'domain' | 'system'; point: XYPosition; via: AddedVia } | null>(null);
+  const [chooser, setChooser] = useState<{
+    kind: 'domain' | 'system';
+    point: XYPosition;
+    via: AddedVia;
+  } | null>(null);
   useEffect(() => onChoosingChange?.(!!chooser), [!!chooser]);
   const choose = useStableCallback((choice: ContainerChoice) => {
     if (!chooser) return;
@@ -616,18 +787,35 @@ function Canvas({
     addCardAt(kind === 'domain' ? 'context-domain' : 'system', point, via);
   });
   // A card: the visualiser's domain or system card, connected to what it holds
-  const addCardAt = (type: 'context-domain' | 'system', point: XYPosition, via: AddedVia, link?: NewLink) => {
+  const addCardAt = (
+    type: 'context-domain' | 'system',
+    point: XYPosition,
+    via: AddedVia,
+    link?: NewLink,
+  ) => {
     const kind = type === 'context-domain' ? 'domain' : 'system';
     const at = landingAt(point, type);
     const id = flow.insertNode(type, newCardData(type), at.center, at.inside, link);
     keepOnLevel(at, id);
     openOnceShown(id);
-    if (id) track('resource_added', { resource_type: kind, as: 'card', via, level: at.onLevel?.level ?? 3 });
+    if (id)
+      track('resource_added', {
+        resource_type: kind,
+        as: 'card',
+        via,
+        level: at.onLevel?.level ?? 3,
+      });
     return id;
   };
   const cancelChooser = useCallback(() => setChooser(null), []);
 
-  const addComponentAt = (component: string, point: XYPosition, via: AddedVia, chosen = false, link?: NewLink) => {
+  const addComponentAt = (
+    component: string,
+    point: XYPosition,
+    via: AddedVia,
+    chosen = false,
+    link?: NewLink,
+  ) => {
     // A kind of data store is a data node: placed by its type
     const type = getNodeDefinition(component)?.type ?? component;
     if (type === 'note') return addNoteAt(point);
@@ -640,8 +828,16 @@ function Canvas({
     const at = landingAt(point, type);
     const id = flow.addNode(component, at.center, at.inside, link);
     keepOnLevel(at, id);
-    if (id) track('resource_added', { resource_type: component, ...(chosen && { as: 'container' }), via, level: at.onLevel?.level ?? 3, first });
-    if (id && first) void setCenter(at.center.x, at.center.y, { zoom: FIRST_NODE_ZOOM, duration: 500 });
+    if (id)
+      track('resource_added', {
+        resource_type: component,
+        ...(chosen && { as: 'container' }),
+        via,
+        level: at.onLevel?.level ?? 3,
+        first,
+      });
+    if (id && first)
+      void setCenter(at.center.x, at.center.y, { zoom: FIRST_NODE_ZOOM, duration: 500 });
     // Named straight away, like a new layer in a design tool
     if (id && !isWrittenOnCanvas(type)) openOnceShown(id);
     return id;
@@ -657,7 +853,8 @@ function Canvas({
   const onDrop = useStableCallback((event: DragEvent) => {
     event.preventDefault();
     const type = event.dataTransfer.getData(COMPONENT_DRAG_TYPE);
-    if (type) addComponentAt(type, screenToFlowPosition({ x: event.clientX, y: event.clientY }), 'drag');
+    if (type)
+      addComponentAt(type, screenToFlowPosition({ x: event.clientX, y: event.clientY }), 'drag');
   });
   const onDragOver = useStableCallback((event: DragEvent) => {
     // Files are dropped on the diagram (opened), components here
@@ -676,7 +873,9 @@ function Canvas({
     getLevel: () => levelRef.current,
     locked,
     onMake: (option, center, link) => {
-      const id = isCardType(option.type) ? addCardAt(option.type, center, 'connect', link) : addComponentAt(option.key, center, 'connect', false, link);
+      const id = isCardType(option.type)
+        ? addCardAt(option.type, center, 'connect', link)
+        : addComponentAt(option.key, center, 'connect', false, link);
       if (!id) return;
       track('relation_added', { level: levelRef.current, via: 'connect' });
       // Its details open, to name it
@@ -704,30 +903,44 @@ function Canvas({
   const copiedFromMenu = useRef(false);
 
   /** Adds copies (one change, so one undo takes them back) and selects them instead of what was selected */
-  const paste = useStableCallback((content: ClipboardContent, place: { at: XYPosition } | { offset: XYPosition }) => {
-    const { nodes, edges } = pasteNodes(content, nodesRef.current, place);
-    flow.onNodesChange(selectedIds().map((id) => ({ type: 'select', id, selected: false })));
-    flow.insertNodes(nodes, edges);
-    flow.onNodesChange(nodes.map((node) => ({ type: 'select', id: node.id, selected: true })));
-    track('pasted', { count: nodes.length });
-  });
+  const paste = useStableCallback(
+    (content: ClipboardContent, place: { at: XYPosition } | { offset: XYPosition }) => {
+      const { nodes, edges } = pasteNodes(content, nodesRef.current, place);
+      flow.onNodesChange(selectedIds().map((id) => ({ type: 'select', id, selected: false })));
+      flow.insertNodes(nodes, edges);
+      flow.onNodesChange(nodes.map((node) => ({ type: 'select', id: node.id, selected: true })));
+      track('pasted', { count: nodes.length });
+    },
+  );
 
   useEffect(() => {
     const isTyping = () => {
       const active = document.activeElement;
-      return active instanceof HTMLElement && (active.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(active.tagName));
+      return (
+        active instanceof HTMLElement &&
+        (active.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(active.tagName))
+      );
     };
     const hasTextSelected = () => !!window.getSelection()?.toString();
     const copy = (event: ClipboardEvent) => {
       const fromMenu = copyOnly.current !== null;
       const ids = copyOnly.current ?? selectedIds();
       copyOnly.current = null;
-      if (levelRef.current !== 3 || isTyping() || !event.clipboardData || (!fromMenu && hasTextSelected())) return;
+      if (
+        levelRef.current !== 3 ||
+        isTyping() ||
+        !event.clipboardData ||
+        (!fromMenu && hasTextSelected())
+      )
+        return;
       const content = copyNodes(nodesRef.current, edgesRef.current, ids);
       if (!content) return;
       event.preventDefault();
       event.clipboardData.setData(CLIPBOARD_TYPE, JSON.stringify(content));
-      event.clipboardData.setData('text/plain', content.nodes.map((node) => getNodeName(node.type, node.data)).join('\n'));
+      event.clipboardData.setData(
+        'text/plain',
+        content.nodes.map((node) => getNodeName(node.type, node.data)).join('\n'),
+      );
       pastes.current = 0;
       setLastCopied(content);
       if (fromMenu) copiedFromMenu.current = true;
@@ -735,12 +948,17 @@ function Canvas({
     };
     const onPaste = (event: ClipboardEvent) => {
       if (levelRef.current !== 3 || isTyping() || lockedRef.current) return;
-      const content = readClipboard(event.clipboardData?.getData(CLIPBOARD_TYPE)) ?? readClipboard(event.clipboardData?.getData('text/plain'));
+      const content =
+        readClipboard(event.clipboardData?.getData(CLIPBOARD_TYPE)) ??
+        readClipboard(event.clipboardData?.getData('text/plain'));
       if (!content) return;
       event.preventDefault();
       pastes.current += 1;
       const step = 40 * pastes.current;
-      paste(content, pointerAt.current ? { at: pointerAt.current } : { offset: { x: step, y: step } });
+      paste(
+        content,
+        pointerAt.current ? { at: pointerAt.current } : { offset: { x: step, y: step } },
+      );
     };
     document.addEventListener('copy', copy);
     document.addEventListener('cut', copy);
@@ -780,7 +998,8 @@ function Canvas({
     }
     const depth = (id: string) => {
       let level = 0;
-      for (let parent = lookup.get(id)?.parentId; parent; parent = lookup.get(parent)?.parentId) level++;
+      for (let parent = lookup.get(id)?.parentId; parent; parent = lookup.get(parent)?.parentId)
+        level++;
       return level;
     };
     containers.sort((a, b) => depth(b) - depth(a));
@@ -791,22 +1010,44 @@ function Canvas({
     if (!started) return;
     const now = lookupNodes();
     dragged.forEach((node) => now.set(node.id, { ...now.get(node.id)!, position: node.position }));
-    flow.showDragPreview(previewContainerGrowth(started.containers, new Set(dragged.map((node) => node.id)), started.nodes, now));
+    flow.showDragPreview(
+      previewContainerGrowth(
+        started.containers,
+        new Set(dragged.map((node) => node.id)),
+        started.nodes,
+        now,
+      ),
+    );
   };
   // What a drag happens among: the canvas on L3, and on L1 and L2 the level's own arrangement (what's dragged where
   // it is now), so a system can be moved into or out of a domain there too
   const dragNodes = (dragged: Node[]) => {
     if (levelRef.current === 3) return nodesRef.current;
     const at = new Map(dragged.map((node) => [node.id, node.position]));
-    return (levelGraphRef.current?.nodes ?? []).map((node) => (at.has(node.id) ? { ...node, position: at.get(node.id)! } : node));
+    return (levelGraphRef.current?.nodes ?? []).map((node) =>
+      at.has(node.id) ? { ...node, position: at.get(node.id)! } : node,
+    );
   };
   const onNodeDrag = useStableCallback((_: unknown, held: Node, dragged: Node[]) => {
     if (levelRef.current === 3) growContainers(dragged);
     // The others in a live room see it move (on the level it's on: L1 and L2 are arranged on their own; notes and
     // text keep their place on the canvas, on whichever level they're on)
     const on = levelRef.current === 3 ? {} : { level: levelRef.current as 1 | 2 };
-    onNodesMove?.(dragged.map(({ id, type, position }) => ({ id, x: position.x, y: position.y, ...(!isWrittenOnCanvas(type) && on) })));
-    setDropTargetId(findDropTargets(held.id, dragged.map(({ id }) => id), dragNodes(dragged)).find(({ target }) => target)?.target?.id ?? null);
+    onNodesMove?.(
+      dragged.map(({ id, type, position }) => ({
+        id,
+        x: position.x,
+        y: position.y,
+        ...(!isWrittenOnCanvas(type) && on),
+      })),
+    );
+    setDropTargetId(
+      findDropTargets(
+        held.id,
+        dragged.map(({ id }) => id),
+        dragNodes(dragged),
+      ).find(({ target }) => target)?.target?.id ?? null,
+    );
   });
   const onNodeDragStop = useStableCallback((_: unknown, held: Node, dragged: Node[]) => {
     onNodesMove?.(null);
@@ -818,12 +1059,18 @@ function Canvas({
     const nodes = dragNodes(dragged);
     // Dropped in a container (or out of one), what's selected with it goes too, into free space there (gliding off
     // anything it was dropped on), as one change
-    const moves = findDropTargets(held.id, dragged.map((node) => node.id), nodes);
+    const moves = findDropTargets(
+      held.id,
+      dragged.map((node) => node.id),
+      nodes,
+    );
     if (!moves.length) return;
     const { places, nudged } = placeDropped(nodes, moves);
     if (nudged) glide();
     if (level === 3) {
-      flow.setParents(moves.map(({ id, target }) => ({ id, parentId: target?.id, at: places.get(id) })));
+      flow.setParents(
+        moves.map(({ id, target }) => ({ id, parentId: target?.id, at: places.get(id) })),
+      );
       return;
     }
     // On L1 and L2: each stays where it was dropped on the level (now in its new container), and on the canvas it's
@@ -833,14 +1080,24 @@ function Canvas({
     const onCanvas: { id: string; parentId: string | undefined; at?: XYPosition }[] = [];
     let canvas = nodesRef.current;
     for (const { id, target } of moves) {
-      const inLevel = withParent(nodes.find((node) => node.id === id)!, target?.id, nodes);
-      const place = levelPlaces([{ ...inLevel, position: places.get(id) ?? inLevel.position }]).get(id);
+      const inLevel = withParent(
+        nodes.find((node) => node.id === id)!,
+        target?.id,
+        nodes,
+      );
+      const place = levelPlaces([{ ...inLevel, position: places.get(id) ?? inLevel.position }]).get(
+        id,
+      );
       if (place) onLevel.set(id, place);
-      const moved = canvas.map((node) => (node.id === id ? { ...node, parentId: target?.id, position: { x: 0, y: 0 } } : node));
+      const moved = canvas.map((node) =>
+        node.id === id ? { ...node, parentId: target?.id, position: { x: 0, y: 0 } } : node,
+      );
       // On the canvas, and then in its container
       const spot = placeNodes(moved, [id], edgesRef.current).get(id);
       const at = spot && target ? toRelativePosition(spot, target.id, moved) : spot;
-      canvas = at ? moved.map((node) => (node.id === id ? { ...node, position: at } : node)) : moved;
+      canvas = at
+        ? moved.map((node) => (node.id === id ? { ...node, position: at } : node))
+        : moved;
       onCanvas.push({ id, parentId: target?.id, at });
     }
     if (onLevel.size) flow.setLevelLayout(level, onLevel);
@@ -853,10 +1110,19 @@ function Canvas({
     if (level !== 3) {
       const content = getLevelGraph(nodesRef.current, edgesRef.current, level);
       // As they're drawn on the level (its cards and boxes aren't the canvas's), where they have been
-      const drawn = new Map((levelGraphRef.current?.level === level ? levelGraphRef.current.nodes : []).map((node) => [node.id, node.measured]));
+      const drawn = new Map(
+        (levelGraphRef.current?.level === level ? levelGraphRef.current.nodes : []).map((node) => [
+          node.id,
+          node.measured,
+        ]),
+      );
       const laidOut = await layoutGraph(
-        content.nodes.map((node) => ({ ...node, selected: false, ...(drawn.get(node.id) && { measured: drawn.get(node.id) }) })),
-        content.edges
+        content.nodes.map((node) => ({
+          ...node,
+          selected: false,
+          ...(drawn.get(node.id) && { measured: drawn.get(node.id) }),
+        })),
+        content.edges,
       );
       glide();
       flow.setLevelLayout(level, levelPlaces(laidOut.nodes));
@@ -876,7 +1142,9 @@ function Canvas({
 
   const hierarchyOrder = useMemo(() => {
     const sorted = sortByHierarchy(nodesRef.current);
-    return sorted.every((node, index) => node === nodesRef.current[index]) ? null : sorted.map((node) => node.id);
+    return sorted.every((node, index) => node === nodesRef.current[index])
+      ? null
+      : sorted.map((node) => node.id);
   }, [structure]);
   const sortedNodes = useMemo(() => {
     if (!hierarchyOrder) return flow.nodes;
@@ -885,7 +1153,10 @@ function Canvas({
   }, [flow.nodes, hierarchyOrder]);
   const levelShown = level !== 3 && levelGraph?.level === level ? levelGraph : null;
   const shownNodes = useMemo(() => {
-    if (!levelShown) return sortedNodes.every((node) => isOnLevel(node, 3)) ? sortedNodes : sortedNodes.filter((node) => isOnLevel(node, 3));
+    if (!levelShown)
+      return sortedNodes.every((node) => isOnLevel(node, 3))
+        ? sortedNodes
+        : sortedNodes.filter((node) => isOnLevel(node, 3));
     const notes = sortedNodes.filter((node) => getNoteLevel(node) === levelShown.level);
     return notes.length ? [...levelShown.nodes, ...notes.map(asLevelNote)] : levelShown.nodes;
   }, [levelShown, sortedNodes]);
@@ -895,14 +1166,20 @@ function Canvas({
   // The legend, as the visualiser's: clicking a kind hides or shows it (only for this person)
   const [hiddenLegendKeys, setHiddenLegendKeys] = useState<string[]>([]);
   const toggleLegendKey = useCallback(
-    (key: string) => setHiddenLegendKeys((keys) => (keys.includes(key) ? keys.filter((other) => other !== key) : [...keys, key])),
-    []
+    (key: string) =>
+      setHiddenLegendKeys((keys) =>
+        keys.includes(key) ? keys.filter((other) => other !== key) : [...keys, key],
+      ),
+    [],
   );
   const shownStructure = levelShown ? structureOf(levelShown.nodes) : structure;
   const legend = useMemo(() => getCanvasLegend(shownNodes), [shownStructure]);
   // What the legend hides
   // The node a hotspot being dragged would go on: it lights up in the hotspot's colour
-  const [hotspotDropTarget, setHotspotDropTarget] = useState<{ nodeId: string; severity: HotspotSeverity } | null>(null);
+  const [hotspotDropTarget, setHotspotDropTarget] = useState<{
+    nodeId: string;
+    severity: HotspotSeverity;
+  } | null>(null);
   // Hotspots where they show on this level: on L3 on their node (or at their place); on L1 and L2 on their node if
   // it's shown, else on what it's in that is (so they're found from the overview)
   // (from what's on the canvas and the level, read through refs: the nodes arrays are new on every drag frame, and
@@ -921,26 +1198,47 @@ function Canvas({
     for (const hotspot of flow.hotspots) {
       let target = hotspot.nodeId && canvas.has(hotspot.nodeId) ? hotspot.nodeId : undefined;
       if (!target) {
-        if ((hotspot.level ?? 3) === level) places.push({ key: `place:${hotspot.id}`, position: hotspot.position, hotspots: [hotspot] });
+        if ((hotspot.level ?? 3) === level)
+          places.push({
+            key: `place:${hotspot.id}`,
+            position: hotspot.position,
+            hotspots: [hotspot],
+          });
         continue;
       }
       const own = target;
       target = shownAround(own);
       // Not in anything shown (e.g. a message on L2): on what it's connected to (its sender first), or what that's in
       if (!target) {
-        const linked = flow.edges.filter((edge) => edge.source === own || edge.target === own).sort((a) => (a.target === own ? -1 : 1));
-        target = linked.map((edge) => shownAround(edge.source === own ? edge.target : edge.source)).find(Boolean);
+        const linked = flow.edges
+          .filter((edge) => edge.source === own || edge.target === own)
+          .sort((a) => (a.target === own ? -1 : 1));
+        target = linked
+          .map((edge) => shownAround(edge.source === own ? edge.target : edge.source))
+          .find(Boolean);
       }
       if (!target) continue;
       if (target !== hotspot.nodeId) holding.add(target);
       onNodes.set(target, [...(onNodes.get(target) ?? []), hotspot]);
     }
-    return [...[...onNodes].map(([nodeId, hotspots]) => ({ key: `node:${nodeId}`, nodeId, hotspots, inside: holding.has(nodeId) })), ...places];
+    return [
+      ...[...onNodes].map(([nodeId, hotspots]) => ({
+        key: `node:${nodeId}`,
+        nodeId,
+        hotspots,
+        inside: holding.has(nodeId),
+      })),
+      ...places,
+    ];
   }, [flow.hotspots, structure, shownStructure, flow.edges, level]);
 
   const visibleNodes = useMemo(() => {
     // A node with hotspots glows in the colour of the most important (see studio.css)
-    const glowing = new Map(hotspotSpots.flatMap((spot) => (spot.nodeId ? [[spot.nodeId, topSeverity(spot.hotspots)] as const] : [])));
+    const glowing = new Map(
+      hotspotSpots.flatMap((spot) =>
+        spot.nodeId ? [[spot.nodeId, topSeverity(spot.hotspots)] as const] : [],
+      ),
+    );
     const dropOn = hotspotDropTarget?.nodeId;
     if (!hiddenLegendKeys.length && !glowing.size && !dropOn) return shownNodes;
     return shownNodes.map((node) => {
@@ -957,7 +1255,10 @@ function Canvas({
     });
   }, [shownNodes, hiddenLegendKeys, hotspotSpots, hotspotDropTarget]);
   const { placeholder } = connect;
-  const flowNodes = useMemo(() => (placeholder ? [...visibleNodes, placeholder.node] : visibleNodes), [visibleNodes, placeholder]);
+  const flowNodes = useMemo(
+    () => (placeholder ? [...visibleNodes, placeholder.node] : visibleNodes),
+    [visibleNodes, placeholder],
+  );
 
   /** Changes on L1 and L2: notes go to the canvas, removing removes from the canvas, moving arranges the level */
   const onLevelNodesChange = useStableCallback((allChanges: NodeChange[]) => {
@@ -965,13 +1266,17 @@ function Canvas({
     const level = levelRef.current;
     const current = levelGraphRef.current;
     if (level === 3 || !current) return;
-    const notes = new Set(nodesRef.current.filter((node) => getNoteLevel(node) === level).map((node) => node.id));
+    const notes = new Set(
+      nodesRef.current.filter((node) => getNoteLevel(node) === level).map((node) => node.id),
+    );
     const isNote = (change: NodeChange) => 'id' in change && notes.has(change.id);
     const ofNotes = changes.filter((change) => change.type !== 'add' && isNote(change));
     if (ofNotes.length) flow.onNodesChange(ofNotes);
     const ofLevel = changes.filter((change) => !isNote(change) && change.type !== 'add');
     const onCanvas = new Set(nodesRef.current.map((node) => node.id));
-    const removed = ofLevel.flatMap((change) => (change.type === 'remove' && onCanvas.has(change.id) ? [change.id] : []));
+    const removed = ofLevel.flatMap((change) =>
+      change.type === 'remove' && onCanvas.has(change.id) ? [change.id] : [],
+    );
     if (removed.length) flow.deleteNodes(removed);
     const arranging = ofLevel.filter((change) => change.type !== 'remove');
     if (!arranging.length) return;
@@ -979,18 +1284,26 @@ function Canvas({
     updateLevelGraph({ ...current, nodes });
     const done = new Set(
       arranging.flatMap((change) =>
-        (change.type === 'position' && change.dragging === false) || (change.type === 'dimensions' && change.resizing === false) ? [change.id] : []
-      )
+        (change.type === 'position' && change.dragging === false) ||
+        (change.type === 'dimensions' && change.resizing === false)
+          ? [change.id]
+          : [],
+      ),
     );
-    if (done.size) flow.setLevelLayout(level, levelPlaces(nodes.filter((node) => done.has(node.id))));
+    if (done.size)
+      flow.setLevelLayout(level, levelPlaces(nodes.filter((node) => done.has(node.id))));
     const measured = arranging.flatMap((change) => {
-      const dropped = change.type === 'dimensions' && change.dimensions && centring.current.get(change.id);
+      const dropped =
+        change.type === 'dimensions' && change.dimensions && centring.current.get(change.id);
       const node = dropped && nodes.find((candidate) => candidate.id === change.id);
       if (!dropped || !node) return [];
       centring.current.delete(change.id);
       const { width, height } = change.dimensions!;
       const { x, y } = node.position;
-      const place = { x: x + (dropped.size.width - width) / 2, y: y + (dropped.size.height - height) / 2 };
+      const place = {
+        x: x + (dropped.size.width - width) / 2,
+        y: y + (dropped.size.height - height) / 2,
+      };
       return dropped.level === level ? [[change.id, place] as const] : [];
     });
     if (measured.length) flow.setLevelLayout(level, new Map(measured));
@@ -1016,19 +1329,31 @@ function Canvas({
   // Message edges' envelopes only move under the pointer (the connection, or a node at either end): any moving envelope
   // needs a main-thread frame on every frame (one selected node's cost ~200–300 ms of every 3 seconds and dropped frames)
   const [hovered, setHovered] = useState<{ node?: string; edge?: string }>({});
-  const onNodeMouseEnter = useCallback((_: React.MouseEvent, node: Node) => setHovered({ node: node.id }), []);
-  const onEdgeMouseEnter = useCallback((_: React.MouseEvent, edge: Edge) => setHovered({ edge: edge.id }), []);
+  const onNodeMouseEnter = useCallback(
+    (_: React.MouseEvent, node: Node) => setHovered({ node: node.id }),
+    [],
+  );
+  const onEdgeMouseEnter = useCallback(
+    (_: React.MouseEvent, edge: Edge) => setHovered({ edge: edge.id }),
+    [],
+  );
   const onHoverEnd = useCallback(() => setHovered({}), []);
   const levelEdges = levelShown?.edges;
   const shownEdges = useMemo(() => {
     const edges = levelEdges ?? flow.edges;
     return edges.map((edge) =>
-      edge.type === 'animated' && edge.id !== hovered.edge && edge.source !== hovered.node && edge.target !== hovered.node
+      edge.type === 'animated' &&
+      edge.id !== hovered.edge &&
+      edge.source !== hovered.node &&
+      edge.target !== hovered.node
         ? withoutEnvelope(edge)
-        : edge
+        : edge,
     );
   }, [levelEdges, flow.edges, hovered]);
-  const flowEdges = useMemo(() => (placeholder ? [...shownEdges, placeholder.edge] : shownEdges), [shownEdges, placeholder]);
+  const flowEdges = useMemo(
+    () => (placeholder ? [...shownEdges, placeholder.edge] : shownEdges),
+    [shownEdges, placeholder],
+  );
 
   // ---- Keyboard ----
 
@@ -1041,43 +1366,57 @@ function Canvas({
   useEffect(() => {
     if (allSelected && (!everyNodeSelected || level !== 3)) setAllSelected(false);
   }, [allSelected, everyNodeSelected, level]);
-  const selectedThreadIds = useMemo(() => (allSelected ? new Set(flow.threads.map((thread) => thread.id)) : null), [allSelected, flow.threads]);
-  const selectedHotspotIds = useMemo(() => (allSelected ? new Set(flow.hotspots.map((hotspot) => hotspot.id)) : null), [allSelected, flow.hotspots]);
+  const selectedThreadIds = useMemo(
+    () => (allSelected ? new Set(flow.threads.map((thread) => thread.id)) : null),
+    [allSelected, flow.threads],
+  );
+  const selectedHotspotIds = useMemo(
+    () => (allSelected ? new Set(flow.hotspots.map((hotspot) => hotspot.id)) : null),
+    [allSelected, flow.hotspots],
+  );
   // Everything on the level shown (Cmd or Ctrl + A, on a Mac too)
   useHotkeys(
     ['mod+a', 'ctrl+a'],
     () => {
       if (!onCanvas()) {
         const shownNow = levelGraphRef.current?.nodes ?? [];
-        onLevelNodesChange(shownNow.map((node) => ({ type: 'select', id: node.id, selected: true })));
+        onLevelNodesChange(
+          shownNow.map((node) => ({ type: 'select', id: node.id, selected: true })),
+        );
         return;
       }
-      flow.onNodesChange(nodesRef.current.filter((node) => isOnLevel(node, 3)).map((node) => ({ type: 'select', id: node.id, selected: true })));
-      flow.onEdgesChange(edgesRef.current.map((edge) => ({ type: 'select', id: edge.id, selected: true })));
+      flow.onNodesChange(
+        nodesRef.current
+          .filter((node) => isOnLevel(node, 3))
+          .map((node) => ({ type: 'select', id: node.id, selected: true })),
+      );
+      flow.onEdgesChange(
+        edgesRef.current.map((edge) => ({ type: 'select', id: edge.id, selected: true })),
+      );
       // Comments and hotspots too: they're on the canvas
       setAllSelected(true);
     },
-    { preventDefault: true }
+    { preventDefault: true },
   );
   // Everything selected, deleted: comments and hotspots go with the nodes (React Flow deletes those)
-  useHotkeys(
-    ['delete', 'backspace'],
-    () => {
-      if (!allSelectedRef.current || lockedRef.current || !onCanvas()) return;
-      threadsRef.current.forEach((thread) => flow.deleteThread(thread.id));
-      hotspotsRef.current.forEach((hotspot) => flow.deleteHotspot(hotspot.id));
-      setOpenThreadId(null);
-      setOpenHotspot(null);
-      setAllSelected(false);
-    }
-  );
+  useHotkeys(['delete', 'backspace'], () => {
+    if (!allSelectedRef.current || lockedRef.current || !onCanvas()) return;
+    threadsRef.current.forEach((thread) => flow.deleteThread(thread.id));
+    hotspotsRef.current.forEach((hotspot) => flow.deleteHotspot(hotspot.id));
+    setOpenThreadId(null);
+    setOpenHotspot(null);
+    setAllSelected(false);
+  });
   useHotkeys(
     'mod+d',
     () => {
-      const content = onCanvas() && !lockedRef.current && copyNodes(nodesRef.current, edgesRef.current, selectedIds());
+      const content =
+        onCanvas() &&
+        !lockedRef.current &&
+        copyNodes(nodesRef.current, edgesRef.current, selectedIds());
       if (content) paste(content, { offset: { x: 40, y: 40 } });
     },
-    { preventDefault: true }
+    { preventDefault: true },
   );
   const undo = useStableCallback(() => {
     bump('undo');
@@ -1088,7 +1427,9 @@ function Canvas({
     flow.redo();
   });
   useHotkeys('mod+z', () => !lockedRef.current && undo(), { preventDefault: true });
-  useHotkeys(['mod+shift+z', 'mod+y'], () => !lockedRef.current && redo(), { preventDefault: true });
+  useHotkeys(['mod+shift+z', 'mod+y'], () => !lockedRef.current && redo(), {
+    preventDefault: true,
+  });
   // Drawing tools' keys: V to select, T for text (N for a note is the view's), 1-3 for the levels, Shift+1 to fit
   useHotkeys('t', () => pickTool('text'));
   useHotkeys('c', () => pickTool('comment'));
@@ -1108,17 +1449,27 @@ function Canvas({
     setOpenThreadId(null);
     setHotspotDraft(null);
     setOpenHotspot(null);
-    flow.onNodesChange(nodesRef.current.filter((node) => node.selected).map((node) => ({ type: 'select', id: node.id, selected: false })));
-    flow.onEdgesChange(edgesRef.current.filter((edge) => edge.selected).map((edge) => ({ type: 'select', id: edge.id, selected: false })));
+    flow.onNodesChange(
+      nodesRef.current
+        .filter((node) => node.selected)
+        .map((node) => ({ type: 'select', id: node.id, selected: false })),
+    );
+    flow.onEdgesChange(
+      edgesRef.current
+        .filter((edge) => edge.selected)
+        .map((edge) => ({ type: 'select', id: edge.id, selected: false })),
+    );
   });
 
   // ---- Clicking ----
 
-  const flowPositionOf = (event: { clientX: number; clientY: number }) => screenToFlowPosition({ x: event.clientX, y: event.clientY });
+  const flowPositionOf = (event: { clientX: number; clientY: number }) =>
+    screenToFlowPosition({ x: event.clientX, y: event.clientY });
   // A place on L1 or L2 is on that level (they're laid out on their own): what's put there says so
   const placeLevel = () => (levelRef.current === 3 ? {} : { level: levelRef.current as 1 | 2 });
   // The nodes shown now (on L1 and L2 they're the level's, where they are there)
-  const shownLookup = () => new Map<string, Node>(shownNodesRef.current.map((node) => [node.id, node]));
+  const shownLookup = () =>
+    new Map<string, Node>(shownNodesRef.current.map((node) => [node.id, node]));
 
   const onPaneClick = useStableCallback((event: ReactMouseEvent) => {
     onPaneClicked?.();
@@ -1127,9 +1478,11 @@ function Canvas({
     setOpenHotspot(null);
     if (tool === 'hand') return;
     // Commenting: a pin where it's clicked, and its comment written there
-    if (tool === 'comment') return startComment({ ...anchorAt(flowPositionOf(event)), ...placeLevel() });
+    if (tool === 'comment')
+      return startComment({ ...anchorAt(flowPositionOf(event)), ...placeLevel() });
     // Flagging: a hotspot where it's clicked
-    if (tool === 'hotspot') return startHotspot({ position: flowPositionOf(event), ...placeLevel() });
+    if (tool === 'hotspot')
+      return startHotspot({ position: flowPositionOf(event), ...placeLevel() });
     // The text and note tools: put where it's clicked, then back to selecting
     if (tool !== 'select') {
       setTool('select');
@@ -1137,20 +1490,28 @@ function Canvas({
       return void addNoteAt(flowPositionOf(event));
     }
     // A click inside a container (not on something in it) selects it
-    const container = editable ? findGroupAtPoint(flowPositionOf(event), nodesRef.current) : undefined;
-    if (container) queueMicrotask(() => flow.onNodesChange([{ type: 'select', id: container.id, selected: true }]));
+    const container = editable
+      ? findGroupAtPoint(flowPositionOf(event), nodesRef.current)
+      : undefined;
+    if (container)
+      queueMicrotask(() =>
+        flow.onNodesChange([{ type: 'select', id: container.id, selected: true }]),
+      );
   });
   // Double clicking a node opens its details, as its Edit button does (notes and text are written on instead, by
   // double clicking them), as EventCatalog's Studio does
   const onNodeDoubleClick = useStableCallback((_: ReactMouseEvent, node: Node) => {
     // On L1 and L2 too: what's there is on the canvas (a system card is the system)
-    if (!isWrittenOnCanvas(node.type) && nodesRef.current.some((other) => other.id === node.id)) onNodeClicked?.(node);
+    if (!isWrittenOnCanvas(node.type) && nodesRef.current.some((other) => other.id === node.id))
+      onNodeClicked?.(node);
   });
   // ...and inside a container (not on something in it): its body lets the pointer through, so it's on the canvas
   // ...and anywhere else on the canvas writes there, as on Excalidraw's
   const onCanvasDoubleClick = useStableCallback((event: ReactMouseEvent) => {
     if (!(event.target as Element).classList?.contains('react-flow__pane')) return;
-    const container = editable ? findGroupAtPoint(flowPositionOf(event), nodesRef.current) : undefined;
+    const container = editable
+      ? findGroupAtPoint(flowPositionOf(event), nodesRef.current)
+      : undefined;
     if (container) return onNodeClicked?.(container);
     if (lockedRef.current) return;
     writeTextAt(flowPositionOf(event));
@@ -1158,7 +1519,10 @@ function Canvas({
   // A node's details open from its Edit button (not on a click: clicking selects, to move or connect it)
   // (hidden while things move: see studio.css)
   const selectedNodes = visibleNodes.filter((node) => node.selected);
-  const toEdit = selectedNodes.length === 1 && !isWrittenOnCanvas(selectedNodes[0]!.type) ? selectedNodes[0] : undefined;
+  const toEdit =
+    selectedNodes.length === 1 && !isWrittenOnCanvas(selectedNodes[0]!.type)
+      ? selectedNodes[0]
+      : undefined;
   const editNode = useStableCallback(() => toEdit && onNodeClicked?.(toEdit));
 
   // A node clicked with the comment tool: the pin's on it (and moves with it)
@@ -1167,20 +1531,32 @@ function Canvas({
     // Not on notes and text: they're written on, not what's being flagged or commented on
     if (isWrittenOnCanvas(node.type)) return;
     // A hotspot on it (it shows on the node, wherever it goes, on every level it's on)
-    if (tool === 'hotspot') return startHotspot({ nodeId: node.id, position: flowPositionOf(event) });
+    if (tool === 'hotspot')
+      return startHotspot({ nodeId: node.id, position: flowPositionOf(event) });
     if (tool !== 'comment') return;
     // On a domain or system, it's at that place (it doesn't go in containers)
-    if (isGroupType(node.type)) return startComment({ ...anchorAt(flowPositionOf(event)), ...placeLevel() });
+    if (isGroupType(node.type))
+      return startComment({ ...anchorAt(flowPositionOf(event)), ...placeLevel() });
     startComment(anchorAt(flowPositionOf(event), node, shownLookup()));
   });
 
   // ---- A connection's label, written over it (double click it) ----
-  const [editingEdge, setEditingEdge] = useState<{ id: string; x: number; y: number; text: string } | null>(null);
+  const [editingEdge, setEditingEdge] = useState<{
+    id: string;
+    x: number;
+    y: number;
+    text: string;
+  } | null>(null);
   const onEdgeDoubleClick = useStableCallback((event: ReactMouseEvent, edge: Edge) => {
     if (levelRef.current !== 3 || lockedRef.current) return;
     const written = (edge.data as { customLabel?: string } | undefined)?.customLabel;
     // What it says now (without the agent's "(inferred)")
-    const text = written ?? String(edge.label ?? '').replace(/\(inferred\)/, '').replace(/\s+/g, ' ').trim();
+    const text =
+      written ??
+      String(edge.label ?? '')
+        .replace(/\(inferred\)/, '')
+        .replace(/\s+/g, ' ')
+        .trim();
     setEditingEdge({ id: edge.id, x: event.clientX, y: event.clientY, text });
   });
   const saveEdgeLabel = useStableCallback((text: string) => {
@@ -1254,26 +1630,37 @@ function Canvas({
   }, []);
   const commentsControl = useMemo(
     () => ({ open: openComments, onToggle: toggleCommentList, active: listingComments }),
-    [openComments, toggleCommentList, listingComments]
+    [openComments, toggleCommentList, listingComments],
   );
   const hotspotsCount = flow.hotspots.length;
   const hotspotsSeverity = topSeverity(flow.hotspots);
   // The comments on the level shown: on a node it shows, or at a place on it
   const threadsShown = useMemo(() => {
     const shown = new Set(shownNodesRef.current.map((node) => node.id));
-    return flow.threads.filter((thread) => (thread.nodeId ? shown.has(thread.nodeId) : (thread.level ?? 3) === level));
+    return flow.threads.filter((thread) =>
+      thread.nodeId ? shown.has(thread.nodeId) : (thread.level ?? 3) === level,
+    );
   }, [flow.threads, shownStructure, level]);
   // Moved (or the one being written moved): onto a node, or to a place on the level shown
-  const moveComment = useStableCallback((id: string, anchor: CommentAnchor) => flow.moveThread(id, anchor.nodeId ? anchor : { ...anchor, ...placeLevel() }));
-  const moveDraft = useStableCallback((anchor: CommentAnchor) => setDraft(anchor.nodeId ? anchor : { ...anchor, ...placeLevel() }));
+  const moveComment = useStableCallback((id: string, anchor: CommentAnchor) =>
+    flow.moveThread(id, anchor.nodeId ? anchor : { ...anchor, ...placeLevel() }),
+  );
+  const moveDraft = useStableCallback((anchor: CommentAnchor) =>
+    setDraft(anchor.nodeId ? anchor : { ...anchor, ...placeLevel() }),
+  );
 
   // ---- Hotspots: what's flagged for people to know (risks, problems, the key parts), on nodes or places ----
   const [hotspotDraft, setHotspotDraft] = useState<HotspotDraft | null>(null);
   const [openHotspot, setOpenHotspot] = useState<string | null>(null);
   const [listingHotspots, setListingHotspots] = useState(false);
   const hotspotsControl = useMemo(
-    () => ({ count: hotspotsCount, severity: hotspotsSeverity, onToggle: toggleHotspotList, active: listingHotspots }),
-    [hotspotsCount, hotspotsSeverity, toggleHotspotList, listingHotspots]
+    () => ({
+      count: hotspotsCount,
+      severity: hotspotsSeverity,
+      onToggle: toggleHotspotList,
+      active: listingHotspots,
+    }),
+    [hotspotsCount, hotspotsSeverity, toggleHotspotList, listingHotspots],
   );
   const startHotspot = useStableCallback((at: HotspotDraft) => {
     setOpenHotspot(null);
@@ -1285,25 +1672,50 @@ function Canvas({
     if (!hotspotDraft) return;
     flow.createHotspot({
       ...fields,
-      ...(hotspotDraft.nodeId ? { nodeId: hotspotDraft.nodeId } : hotspotDraft.level && { level: hotspotDraft.level }),
+      ...(hotspotDraft.nodeId
+        ? { nodeId: hotspotDraft.nodeId }
+        : hotspotDraft.level && { level: hotspotDraft.level }),
       position: hotspotDraft.position,
       author,
     });
-    track('hotspot_added', { severity: fields.severity, on: hotspotDraft.nodeId ? 'node' : 'place', level: levelRef.current });
+    track('hotspot_added', {
+      severity: fields.severity,
+      on: hotspotDraft.nodeId ? 'node' : 'place',
+      level: levelRef.current,
+    });
     setHotspotDraft(null);
   });
   const cancelHotspot = useCallback(() => setHotspotDraft(null), []);
   // The hotspot being added, dragged somewhere else before it's added: onto a node, or a place on the level shown
   const moveHotspotDraft = useStableCallback((to: HotspotPlace) =>
-    setHotspotDraft((draft) => draft && { ...(to.nodeId ? { nodeId: to.nodeId } : placeLevel()), position: to.position })
+    setHotspotDraft(
+      (draft) =>
+        draft && { ...(to.nodeId ? { nodeId: to.nodeId } : placeLevel()), position: to.position },
+    ),
   );
   const deleteHotspot = useStableCallback((id: string) => flow.deleteHotspot(id));
   // Dragged onto a node (they move with it), or to a place; open where it lands if it was open
-  const moveHotspots = useStableCallback((ids: string[], to: { nodeId?: string; position: XYPosition }) => {
-    const at = to.nodeId ? {} : placeLevel();
-    ids.forEach((id) => flow.updateHotspot(id, { nodeId: to.nodeId, position: to.position, level: 'level' in at ? at.level : undefined }));
-    setOpenHotspot((open) => (open ? (to.nodeId ? `node:${to.nodeId}` : ids.length === 1 ? `place:${ids[0]}` : null) : open));
-  });
+  const moveHotspots = useStableCallback(
+    (ids: string[], to: { nodeId?: string; position: XYPosition }) => {
+      const at = to.nodeId ? {} : placeLevel();
+      ids.forEach((id) =>
+        flow.updateHotspot(id, {
+          nodeId: to.nodeId,
+          position: to.position,
+          level: 'level' in at ? at.level : undefined,
+        }),
+      );
+      setOpenHotspot((open) =>
+        open
+          ? to.nodeId
+            ? `node:${to.nodeId}`
+            : ids.length === 1
+              ? `place:${ids[0]}`
+              : null
+          : open,
+      );
+    },
+  );
   // From the list (or inside a node on L1 and L2): the canvas goes to it on L3, and it opens
   const goToHotspot = useStableCallback((hotspot: Hotspot) => {
     // On a node shown here, it's here; on another, on L3; at a place, on its level
@@ -1314,7 +1726,10 @@ function Canvas({
     const node = hotspot.nodeId ? nodes.get(hotspot.nodeId) : undefined;
     const at = node ? getAbsolutePosition(node, nodes) : hotspot.position;
     const width = node ? (node.measured?.width ?? node.width ?? 0) : 0;
-    void setCenter(at.x + width / 2 + 120, at.y + 80, { zoom: Math.max(getZoom(), 0.8), duration: 300 });
+    void setCenter(at.x + width / 2 + 120, at.y + 80, {
+      zoom: Math.max(getZoom(), 0.8),
+      duration: 300,
+    });
     setHotspotDraft(null);
     // (the list stays open, so they can go through them one by one)
     setOpenHotspot(node ? `node:${node.id}` : `place:${hotspot.id}`);
@@ -1336,7 +1751,10 @@ function Canvas({
     const size = getNodeDefinition('text')!.defaultSize!;
     // On the level it's written on (as notes are)
     const data = levelRef.current === 3 ? { text: '' } : { text: '', level: levelRef.current };
-    const id = flow.insertNode('text', data, { x: point.x + size.width / 2 - 4, y: point.y + size.height / 2 - 16 });
+    const id = flow.insertNode('text', data, {
+      x: point.x + size.width / 2 - 4,
+      y: point.y + size.height / 2 - 16,
+    });
     track('text_added', { level: levelRef.current });
     setStartWriting(id);
   };
@@ -1356,17 +1774,28 @@ function Canvas({
   const toggleNoteTool = useCallback(() => pickTool('note'), [pickTool]);
   const openContextMenu = useStableCallback((event: ReactMouseEvent | MouseEvent, node?: Node) => {
     event.preventDefault();
-    setContextMenu({ x: event.clientX, y: event.clientY, flowPosition: flowPositionOf(event), node });
+    setContextMenu({
+      x: event.clientX,
+      y: event.clientY,
+      flowPosition: flowPositionOf(event),
+      node,
+    });
   });
-  const onPaneContextMenu = useCallback((event: ReactMouseEvent | MouseEvent) => openContextMenu(event), [openContextMenu]);
-  const onNodeContextMenu = useCallback((event: ReactMouseEvent, node: Node) => openContextMenu(event, node), [openContextMenu]);
+  const onPaneContextMenu = useCallback(
+    (event: ReactMouseEvent | MouseEvent) => openContextMenu(event),
+    [openContextMenu],
+  );
+  const onNodeContextMenu = useCallback(
+    (event: ReactMouseEvent, node: Node) => openContextMenu(event, node),
+    [openContextMenu],
+  );
   const closeContextMenu = useCallback(() => setContextMenu(null), []);
   const commentFromMenu = useStableCallback(() => {
     if (!contextMenu) return;
     startComment(
       contextMenu.node && !isGroupType(contextMenu.node.type)
         ? anchorAt(contextMenu.flowPosition, contextMenu.node, shownLookup())
-        : { ...anchorAt(contextMenu.flowPosition), ...placeLevel() }
+        : { ...anchorAt(contextMenu.flowPosition), ...placeLevel() },
     );
     setContextMenu(null);
   });
@@ -1376,7 +1805,10 @@ function Canvas({
   });
   const hotspotFromMenu = useStableCallback(() => {
     if (!contextMenu) return;
-    startHotspot({ ...(contextMenu.node ? { nodeId: contextMenu.node.id } : placeLevel()), position: contextMenu.flowPosition });
+    startHotspot({
+      ...(contextMenu.node ? { nodeId: contextMenu.node.id } : placeLevel()),
+      position: contextMenu.flowPosition,
+    });
     setContextMenu(null);
   });
   const menuTargets = () => {
@@ -1419,7 +1851,10 @@ function Canvas({
     else addNoteAt(contextMenu.flowPosition);
     setContextMenu(null);
   });
-  const menuQuestions = useMemo(() => (contextMenu?.node && questionsFor ? questionsFor(contextMenu.node) : undefined), [contextMenu, questionsFor]);
+  const menuQuestions = useMemo(
+    () => (contextMenu?.node && questionsFor ? questionsFor(contextMenu.node) : undefined),
+    [contextMenu, questionsFor],
+  );
 
   /** How big text is drawn on the canvas at a font size (written in it out of sight, as the text node draws it) */
   const measureText = (text: string, fontSize: number) => {
@@ -1457,9 +1892,14 @@ function Canvas({
     const at = node ? getAbsolutePosition(node, lookup) : undefined;
     const width = node ? (node.measured?.width ?? node.width ?? 240) : 0;
     // Centred over the node, its last line clear of it by about half a line
-    const middle = at ? { x: at.x + width / 2, y: at.y - size * 0.7 - drawn.height / 2 } : canvasCenter();
+    const middle = at
+      ? { x: at.x + width / 2, y: at.y - size * 0.7 - drawn.height / 2 }
+      : canvasCenter();
     const topLeft = { x: middle.x - drawn.width / 2, y: middle.y - drawn.height / 2 };
-    const id = flow.insertNode('text', data, { x: topLeft.x + placed.width / 2, y: topLeft.y + placed.height / 2 });
+    const id = flow.insertNode('text', data, {
+      x: topLeft.x + placed.width / 2,
+      y: topLeft.y + placed.height / 2,
+    });
     track('text_added', { level: levelRef.current, from: 'agent' });
     return id;
   };
@@ -1504,9 +1944,16 @@ function Canvas({
     if (!hook) return;
     hook.level = () => levelRef.current;
     hook.nodes = () => {
-      const shown = levelRef.current === 3 ? nodesRef.current : (levelGraphRef.current?.nodes ?? []);
+      const shown =
+        levelRef.current === 3 ? nodesRef.current : (levelGraphRef.current?.nodes ?? []);
       const lookup = new Map(shown.map((node) => [node.id, node]));
-      return shown.map((node) => ({ id: node.id, type: node.type, parentId: node.parentId, measured: !!node.measured?.width, ...getAbsoluteRect(node, lookup) }));
+      return shown.map((node) => ({
+        id: node.id,
+        type: node.type,
+        parentId: node.parentId,
+        measured: !!node.measured?.width,
+        ...getAbsoluteRect(node, lookup),
+      }));
     };
   }, []);
 
@@ -1522,7 +1969,11 @@ function Canvas({
       else addNoteAt(canvasCenter(), extra);
     },
     centreOn: (nodeId) => {
-      if (levelRef.current !== 3 && !levelGraphRef.current?.nodes.some((node) => node.id === nodeId)) changeLevel(3);
+      if (
+        levelRef.current !== 3 &&
+        !levelGraphRef.current?.nodes.some((node) => node.id === nodeId)
+      )
+        changeLevel(3);
       const lookup = lookupNodes();
       const node = lookup.get(nodeId);
       if (!node) return;
@@ -1560,9 +2011,15 @@ function Canvas({
       if (inView) return;
       const ids = new Set(shown.map((node) => node.id));
       edgesRef.current.forEach((edge) => {
-        if (ids.has(edge.source) || ids.has(edge.target)) ids.add(ids.has(edge.source) ? edge.target : edge.source);
+        if (ids.has(edge.source) || ids.has(edge.target))
+          ids.add(ids.has(edge.source) ? edge.target : edge.source);
       });
-      void fitView({ nodes: [...ids].map((id) => ({ id })), padding: 0.2, maxZoom: zoom, duration: 450 });
+      void fitView({
+        nodes: [...ids].map((id) => ({ id })),
+        padding: 0.2,
+        maxZoom: zoom,
+        duration: 450,
+      });
     },
     updateNode: (nodeId, fields) => {
       const node = nodesRef.current.find((candidate) => candidate.id === nodeId);
@@ -1573,241 +2030,284 @@ function Canvas({
   return (
     <UpdateNodeDataContext.Provider value={flow.updateNodeData}>
       <EditingContext.Provider value={editingTo}>
-      <DropTargetContext.Provider value={dropTargetId}>
-        <StartWritingContext.Provider value={startWriting}>
-          <LockedContext.Provider value={locked}>
-            <div className="flex h-full min-h-0 text-[rgb(var(--ec-page-text))]">
-              <div
-                ref={(element) => {
-                  canvasRef.current = element;
-                  areaRef?.(element);
-                }}
-                className={`eventcatalog-visualizer studio-canvas relative min-w-0 flex-1 ${transitioning ? 'is-layout-transition' : ''} ${placing || tool === 'comment' || tool === 'hotspot' ? 'is-placing' : ''} ${tool === 'hotspot' ? 'is-placing-hotspot' : ''} ${tool === 'hand' ? 'is-panning' : ''}`}
-                onPointerMove={trackPointer}
-                onAnimationEnd={onNodeShown}
-                onPointerLeave={clearPointer}
-                onDoubleClick={onCanvasDoubleClick}
-              >
-                <ReactFlow
-                  nodes={flowNodes}
-                  edges={flowEdges}
-                  onNodeMouseEnter={onNodeMouseEnter}
-                  onNodeMouseLeave={onHoverEnd}
-                  onEdgeMouseEnter={onEdgeMouseEnter}
-                  onEdgeMouseLeave={onHoverEnd}
-                  nodeTypes={nodeTypes}
-                  edgeTypes={edgeTypes}
-                  nodesDraggable={!locked && tool !== 'hand'}
-                  nodesConnectable={!locked && tool !== 'hand'}
-                  elementsSelectable={tool !== 'hand'}
-                  onNodesChange={editable ? onCanvasNodesChange : onLevelNodesChange}
-                  onEdgesChange={editable ? flow.onEdgesChange : undefined}
-                  onConnect={editable ? onCanvasConnect : onLevelConnect}
-                  onConnectEnd={connect.onConnectEnd}
-                  edgesReconnectable={editable && !locked}
-                  onReconnect={editable ? flow.onReconnect : undefined}
-                  onReconnectStart={connect.onReconnectStart}
-                  onReconnectEnd={connect.onReconnectEnd}
-                  reconnectRadius={RECONNECT_RADIUS}
-                  onDragOver={locked ? undefined : onDragOver}
-                  onDrop={locked ? undefined : onDrop}
-                  onMoveStart={onMoveStart}
-                  onMoveEnd={onMoveEnd}
-                  onNodeDragStart={onNodeDragStart}
-                  onNodeDrag={onNodeDrag}
-                  onNodeDragStop={onNodeDragStop}
-                  onPaneClick={onPaneClick}
-                  onNodeClick={onNodeClick}
-                  onEdgeDoubleClick={onEdgeDoubleClick}
-                  onNodeDoubleClick={onNodeDoubleClick}
-                  onError={onFlowError}
-                  onPaneContextMenu={locked ? undefined : onPaneContextMenu}
-                  onNodeContextMenu={locked ? undefined : onNodeContextMenu}
-                  connectionLineType={ConnectionLineType.SmoothStep}
-                  connectionRadius={40}
-                  deleteKeyCode={locked ? null : DELETE_KEYS}
-                  multiSelectionKeyCode={MULTI_SELECTION_KEYS}
-                  selectionOnDrag={tool !== 'hand'}
-                  panOnDrag={tool === 'hand' ? true : PAN_BUTTONS}
-                  panOnScroll
-                  zoomActivationKeyCode={ZOOM_KEYS}
-                  zoomOnDoubleClick={false}
-                  // A note or text being written takes focus: the camera stays where it was put
-                  autoPanOnNodeFocus={false}
-                  minZoom={0.1}
-                  maxZoom={2}
-                  proOptions={{ hideAttribution: true }}
+        <DropTargetContext.Provider value={dropTargetId}>
+          <StartWritingContext.Provider value={startWriting}>
+            <LockedContext.Provider value={locked}>
+              <div className="flex h-full min-h-0 text-[rgb(var(--ec-page-text))]">
+                <div
+                  ref={(element) => {
+                    canvasRef.current = element;
+                    areaRef?.(element);
+                  }}
+                  className={`eventcatalog-visualizer studio-canvas relative min-w-0 flex-1 ${transitioning ? 'is-layout-transition' : ''} ${placing || tool === 'comment' || tool === 'hotspot' ? 'is-placing' : ''} ${tool === 'hotspot' ? 'is-placing-hotspot' : ''} ${tool === 'hand' ? 'is-panning' : ''}`}
+                  onPointerMove={trackPointer}
+                  onAnimationEnd={onNodeShown}
+                  onPointerLeave={clearPointer}
+                  onDoubleClick={onCanvasDoubleClick}
                 >
-                  <DiagramBackground />
-                  <RemeasureHandles />
-                  {/* Above the selected node's top right corner: its details, to edit them */}
-                  {toEdit && <EditButton nodeId={toEdit.id} locked={locked} onClick={editNode} />}
-                  <Legend legend={legend} hiddenKeys={hiddenLegendKeys} onToggle={toggleLegendKey} />
-                  {peers && peers.length > 0 && cursors && <LiveCursors people={peers} source={cursors} />}
-                  {/* Comments on the level shown: on its nodes, and at places on it */}
-                  {(
-                    <CommentLayer
-                      threads={threadsShown}
-                      author={author}
-                      openThreadId={openThreadId}
-                      draft={draft}
-                      showResolved={showResolved}
-                      onOpen={setOpenThreadId}
-                      onCreate={createComment}
-                      onCancelDraft={cancelDraft}
-                      onReply={replyToComment}
-                      onResolve={resolveComment}
-                      onDelete={deleteComment}
-                      onMove={moveComment}
-                      onMoveDraft={moveDraft}
-                      selectedIds={selectedThreadIds ?? noThreadsSelected}
-                      selectionOffset={null}
+                  <ReactFlow
+                    nodes={flowNodes}
+                    edges={flowEdges}
+                    onNodeMouseEnter={onNodeMouseEnter}
+                    onNodeMouseLeave={onHoverEnd}
+                    onEdgeMouseEnter={onEdgeMouseEnter}
+                    onEdgeMouseLeave={onHoverEnd}
+                    nodeTypes={nodeTypes}
+                    edgeTypes={edgeTypes}
+                    nodesDraggable={!locked && tool !== 'hand'}
+                    nodesConnectable={!locked && tool !== 'hand'}
+                    elementsSelectable={tool !== 'hand'}
+                    onNodesChange={editable ? onCanvasNodesChange : onLevelNodesChange}
+                    onEdgesChange={editable ? flow.onEdgesChange : undefined}
+                    onConnect={editable ? onCanvasConnect : onLevelConnect}
+                    onConnectEnd={connect.onConnectEnd}
+                    edgesReconnectable={editable && !locked}
+                    onReconnect={editable ? flow.onReconnect : undefined}
+                    onReconnectStart={connect.onReconnectStart}
+                    onReconnectEnd={connect.onReconnectEnd}
+                    reconnectRadius={RECONNECT_RADIUS}
+                    onDragOver={locked ? undefined : onDragOver}
+                    onDrop={locked ? undefined : onDrop}
+                    onMoveStart={onMoveStart}
+                    onMoveEnd={onMoveEnd}
+                    onNodeDragStart={onNodeDragStart}
+                    onNodeDrag={onNodeDrag}
+                    onNodeDragStop={onNodeDragStop}
+                    onPaneClick={onPaneClick}
+                    onNodeClick={onNodeClick}
+                    onEdgeDoubleClick={onEdgeDoubleClick}
+                    onNodeDoubleClick={onNodeDoubleClick}
+                    onError={onFlowError}
+                    onPaneContextMenu={locked ? undefined : onPaneContextMenu}
+                    onNodeContextMenu={locked ? undefined : onNodeContextMenu}
+                    connectionLineType={ConnectionLineType.SmoothStep}
+                    connectionRadius={40}
+                    deleteKeyCode={locked ? null : DELETE_KEYS}
+                    multiSelectionKeyCode={MULTI_SELECTION_KEYS}
+                    selectionOnDrag={tool !== 'hand'}
+                    panOnDrag={tool === 'hand' ? true : PAN_BUTTONS}
+                    panOnScroll
+                    zoomActivationKeyCode={ZOOM_KEYS}
+                    zoomOnDoubleClick={false}
+                    // A note or text being written takes focus: the camera stays where it was put
+                    autoPanOnNodeFocus={false}
+                    minZoom={0.1}
+                    maxZoom={2}
+                    proOptions={{ hideAttribution: true }}
+                  >
+                    <DiagramBackground />
+                    <RemeasureHandles />
+                    {/* Above the selected node's top right corner: its details, to edit them */}
+                    {toEdit && <EditButton nodeId={toEdit.id} locked={locked} onClick={editNode} />}
+                    <Legend
+                      legend={legend}
+                      hiddenKeys={hiddenLegendKeys}
+                      onToggle={toggleLegendKey}
+                    />
+                    {peers && peers.length > 0 && cursors && (
+                      <LiveCursors people={peers} source={cursors} />
+                    )}
+                    {/* Comments on the level shown: on its nodes, and at places on it */}
+                    {
+                      <CommentLayer
+                        threads={threadsShown}
+                        author={author}
+                        openThreadId={openThreadId}
+                        draft={draft}
+                        showResolved={showResolved}
+                        onOpen={setOpenThreadId}
+                        onCreate={createComment}
+                        onCancelDraft={cancelDraft}
+                        onReply={replyToComment}
+                        onResolve={resolveComment}
+                        onDelete={deleteComment}
+                        onMove={moveComment}
+                        onMoveDraft={moveDraft}
+                        selectedIds={selectedThreadIds ?? noThreadsSelected}
+                        selectionOffset={null}
+                        live={live}
+                      />
+                    }
+                    {/* Hotspots on every level (on L1 and L2, on what they're in) */}
+                    <HotspotLayer
+                      spots={hotspotSpots}
+                      openKey={openHotspot}
+                      draft={hotspotDraft}
+                      locked={locked}
+                      movable={!locked}
+                      selectedIds={selectedHotspotIds}
+                      onMove={moveHotspots}
+                      onDropTarget={setHotspotDropTarget}
+                      onOpen={setOpenHotspot}
+                      onCreate={createHotspot}
+                      onCancelDraft={cancelHotspot}
+                      onUpdate={flow.updateHotspot}
+                      onDelete={deleteHotspot}
+                      onGo={goToHotspot}
+                      onMoveDraft={moveHotspotDraft}
                       live={live}
                     />
+                  </ReactFlow>
+
+                  {!editable && (
+                    <div className="absolute left-1/2 top-16 z-10 flex -translate-x-1/2 items-center gap-3 rounded-full border px-4 py-1.5 text-xs shadow-sm bg-[rgb(var(--ec-card-bg))] border-[rgb(var(--ec-page-border))] text-[rgb(var(--ec-page-text))]">
+                      <span>
+                        <span className="font-semibold">L{level}</span> ·{' '}
+                        {LEVELS.find((entry) => entry.level === level)?.description}
+                      </span>
+                      <button
+                        onClick={editInL3}
+                        className="font-semibold text-[rgb(var(--ec-accent))] hover:underline"
+                      >
+                        Everything is on L3
+                      </button>
+                    </div>
                   )}
-                  {/* Hotspots on every level (on L1 and L2, on what they're in) */}
-                  <HotspotLayer
-                    spots={hotspotSpots}
-                    openKey={openHotspot}
-                    draft={hotspotDraft}
+
+                  <CanvasControls
+                    level={level}
+                    onLevelChange={changeLevel}
+                    editable={editable}
                     locked={locked}
-                    movable={!locked}
-                    selectedIds={selectedHotspotIds}
-                    onMove={moveHotspots}
-                    onDropTarget={setHotspotDropTarget}
-                    onOpen={setOpenHotspot}
-                    onCreate={createHotspot}
-                    onCancelDraft={cancelHotspot}
-                    onUpdate={flow.updateHotspot}
-                    onDelete={deleteHotspot}
-                    onGo={goToHotspot}
-                    onMoveDraft={moveHotspotDraft}
-                    live={live}
+                    onToggleLock={toggleLock}
+                    lockedBy={lockedBy}
+                    selectMode={tool === 'select'}
+                    onSelectMode={selectTool}
+                    handMode={tool === 'hand'}
+                    onHandMode={handTool}
+                    noteMode={tool === 'note'}
+                    onToggleNoteMode={toggleNoteTool}
+                    textMode={tool === 'text'}
+                    commentMode={tool === 'comment'}
+                    onToggleCommentMode={toggleCommentMode}
+                    hotspotMode={tool === 'hotspot'}
+                    onToggleHotspotMode={toggleHotspotMode}
+                    onToggleTextMode={toggleTextMode}
+                    extras={barExtras}
                   />
-                </ReactFlow>
 
-                {!editable && (
-                  <div className="absolute left-1/2 top-16 z-10 flex -translate-x-1/2 items-center gap-3 rounded-full border px-4 py-1.5 text-xs shadow-sm bg-[rgb(var(--ec-card-bg))] border-[rgb(var(--ec-page-border))] text-[rgb(var(--ec-page-text))]">
-                    <span>
-                      <span className="font-semibold">L{level}</span> · {LEVELS.find((entry) => entry.level === level)?.description}
-                    </span>
-                    <button onClick={editInL3} className="font-semibold text-[rgb(var(--ec-accent))] hover:underline">
-                      Everything is on L3
-                    </button>
-                  </div>
-                )}
+                  <ContextMenu
+                    menu={contextMenu}
+                    questions={menuQuestions}
+                    onCopy={copyFromMenu}
+                    onCut={level === 3 ? cutFromMenu : undefined}
+                    onDuplicate={duplicateFromMenu}
+                    onPaste={lastCopied ? pasteFromMenu : undefined}
+                    onAddNote={noteFromMenu}
+                    onAddComment={commentFromMenu}
+                    onAddHotspot={!locked ? hotspotFromMenu : undefined}
+                    onReorder={locked ? undefined : reorderFromMenu}
+                    onDeleteNode={deleteFromMenu}
+                    onClose={closeContextMenu}
+                  />
 
-                <CanvasControls
-                  level={level}
-                  onLevelChange={changeLevel}
-                  editable={editable}
-                  locked={locked}
-                  onToggleLock={toggleLock}
-                  lockedBy={lockedBy}
-                  selectMode={tool === 'select'}
-                  onSelectMode={selectTool}
-                  handMode={tool === 'hand'}
-                  onHandMode={handTool}
-                  noteMode={tool === 'note'}
-                  onToggleNoteMode={toggleNoteTool}
-                  textMode={tool === 'text'}
-                  commentMode={tool === 'comment'}
-                  onToggleCommentMode={toggleCommentMode}
-                  hotspotMode={tool === 'hotspot'}
-                  onToggleHotspotMode={toggleHotspotMode}
-                  onToggleTextMode={toggleTextMode}
-                  extras={barExtras}
-                />
-
-                <ContextMenu
-                  menu={contextMenu}
-                  questions={menuQuestions}
-                  onCopy={copyFromMenu}
-                  onCut={level === 3 ? cutFromMenu : undefined}
-                  onDuplicate={duplicateFromMenu}
-                  onPaste={lastCopied ? pasteFromMenu : undefined}
-                  onAddNote={noteFromMenu}
-                  onAddComment={commentFromMenu}
-                  onAddHotspot={!locked ? hotspotFromMenu : undefined}
-                  onReorder={locked ? undefined : reorderFromMenu}
-                  onDeleteNode={deleteFromMenu}
-                  onClose={closeContextMenu}
-                />
-
-                {editingEdge && (
-                  <input
-                    autoFocus
-                    aria-label="What the connection says"
-                    defaultValue={editingEdge.text}
-                    maxLength={80}
-                    placeholder="What it says (empty: the usual wording)"
-                    onFocus={(event) => event.currentTarget.select()}
-                    onBlur={(event) => saveEdgeLabel(event.currentTarget.value)}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter') event.currentTarget.blur();
-                      if (event.key === 'Escape') {
-                        event.stopPropagation();
-                        setEditingEdge(null);
+                  {editingEdge && (
+                    <input
+                      autoFocus
+                      aria-label="What the connection says"
+                      defaultValue={editingEdge.text}
+                      maxLength={80}
+                      placeholder="What it says (empty: the usual wording)"
+                      onFocus={(event) => event.currentTarget.select()}
+                      onBlur={(event) => saveEdgeLabel(event.currentTarget.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter') event.currentTarget.blur();
+                        if (event.key === 'Escape') {
+                          event.stopPropagation();
+                          setEditingEdge(null);
+                        }
+                      }}
+                      className="fixed z-50 w-56 -translate-x-1/2 -translate-y-1/2 rounded-md border border-[rgb(var(--ec-accent))] bg-[rgb(var(--ec-card-bg))] px-2 py-1 text-center text-xs font-medium text-[rgb(var(--ec-page-text))] shadow-lg outline-none"
+                      style={{ left: editingEdge.x, top: editingEdge.y }}
+                    />
+                  )}
+                  {connect.chooser && <ConnectChooser {...connect.chooser} />}
+                  {chooser && (
+                    <ContainerChooser
+                      kind={chooser.kind}
+                      position={flowToScreenPosition(chooser.point)}
+                      onChoose={choose}
+                      onCancel={cancelChooser}
+                    />
+                  )}
+                  {/* The components to add, under the diagram's menu (drawn by the children) */}
+                  {showPanel && !locked && (
+                    <Palette level={level} onAddComponent={addComponent} footer={paletteFooter} />
+                  )}
+                  {/* All the comments, over the bottom left controls: clicking one goes to it on the canvas */}
+                  {listingComments && (
+                    <div className="absolute bottom-[64px] left-3 z-20 flex max-h-[min(480px,calc(100%-140px))] w-80 flex-col overflow-hidden rounded-xl border border-[rgb(var(--ec-page-border))] bg-[rgb(var(--ec-card-bg))] shadow-xl">
+                      <div className="flex flex-none items-center justify-between border-b border-[rgb(var(--ec-page-border))] px-3 py-2 text-sm font-semibold">
+                        Comments
+                        <button
+                          type="button"
+                          aria-label="Close"
+                          onClick={() => setListingComments(false)}
+                          className="rounded p-1 text-[rgb(var(--ec-page-text-muted))] hover:bg-[rgb(var(--ec-content-hover))]!"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                      <div className="min-h-0 flex-1 overflow-y-auto">
+                        <CommentList
+                          threads={flow.threads}
+                          showResolved={showResolved}
+                          onToggleResolved={() => setShowResolved((shown) => !shown)}
+                          onOpen={openCommentFromList}
+                        />
+                      </div>
+                    </div>
+                  )}
+                  {/* All the hotspots, most important first: clicking one goes to it */}
+                  {listingHotspots && (
+                    <div className="absolute bottom-[64px] left-3 z-20 flex max-h-[min(480px,calc(100%-140px))] w-80 flex-col overflow-hidden rounded-xl border border-[rgb(var(--ec-page-border))] bg-[rgb(var(--ec-card-bg))] shadow-xl">
+                      <div className="flex flex-none items-center justify-between border-b border-[rgb(var(--ec-page-border))] px-3 py-2 text-sm font-semibold">
+                        Hotspots
+                        <button
+                          type="button"
+                          aria-label="Close"
+                          onClick={() => setListingHotspots(false)}
+                          className="rounded p-1 text-[rgb(var(--ec-page-text-muted))] hover:bg-[rgb(var(--ec-content-hover))]!"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                      <div className="min-h-0 flex-1 overflow-y-auto">
+                        <HotspotList
+                          hotspots={flow.hotspots}
+                          nameOf={nameOfNode}
+                          onOpen={goToHotspot}
+                          goOnHover={!hotspotDraft}
+                        />
+                      </div>
+                    </div>
+                  )}
+                  {/* Bottom left: zoom, undo and redo (as Excalidraw's), then what the view puts there */}
+                  <div className="absolute bottom-3 left-3 z-10 flex items-center gap-2">
+                    <ViewControls
+                      canUndo={flow.canUndo && !locked}
+                      canRedo={flow.canRedo && !locked}
+                      onUndo={undo}
+                      onRedo={redo}
+                      onReorder={onReorder}
+                      reorderLabel={
+                        editable
+                          ? "Reorder diagram (the visualiser's layout)"
+                          : `Reorder L${level} (the visualiser's layout)`
                       }
-                    }}
-                    className="fixed z-50 w-56 -translate-x-1/2 -translate-y-1/2 rounded-md border border-[rgb(var(--ec-accent))] bg-[rgb(var(--ec-card-bg))] px-2 py-1 text-center text-xs font-medium text-[rgb(var(--ec-page-text))] shadow-lg outline-none"
-                    style={{ left: editingEdge.x, top: editingEdge.y }}
-                  />
-                )}
-                {connect.chooser && <ConnectChooser {...connect.chooser} />}
-                {chooser && <ContainerChooser kind={chooser.kind} position={flowToScreenPosition(chooser.point)} onChoose={choose} onCancel={cancelChooser} />}
-                {/* The components to add, under the diagram's menu (drawn by the children) */}
-                {showPanel && !locked && <Palette level={level} onAddComponent={addComponent} footer={paletteFooter} />}
-                {/* All the comments, over the bottom left controls: clicking one goes to it on the canvas */}
-            {listingComments && (
-              <div className="absolute bottom-[64px] left-3 z-20 flex max-h-[min(480px,calc(100%-140px))] w-80 flex-col overflow-hidden rounded-xl border border-[rgb(var(--ec-page-border))] bg-[rgb(var(--ec-card-bg))] shadow-xl">
-                <div className="flex flex-none items-center justify-between border-b border-[rgb(var(--ec-page-border))] px-3 py-2 text-sm font-semibold">
-                  Comments
-                  <button type="button" aria-label="Close" onClick={() => setListingComments(false)} className="rounded p-1 text-[rgb(var(--ec-page-text-muted))] hover:bg-[rgb(var(--ec-content-hover))]!">
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
-                <div className="min-h-0 flex-1 overflow-y-auto">
-                  <CommentList threads={flow.threads} showResolved={showResolved} onToggleResolved={() => setShowResolved((shown) => !shown)} onOpen={openCommentFromList} />
+                      locked={locked}
+                      fitOptions={fitOptions}
+                      comments={commentsControl}
+                      hotspots={hotspotsControl}
+                    />
+                    {footer}
+                  </div>
+                  {children}
                 </div>
               </div>
-            )}
-            {/* All the hotspots, most important first: clicking one goes to it */}
-            {listingHotspots && (
-              <div className="absolute bottom-[64px] left-3 z-20 flex max-h-[min(480px,calc(100%-140px))] w-80 flex-col overflow-hidden rounded-xl border border-[rgb(var(--ec-page-border))] bg-[rgb(var(--ec-card-bg))] shadow-xl">
-                <div className="flex flex-none items-center justify-between border-b border-[rgb(var(--ec-page-border))] px-3 py-2 text-sm font-semibold">
-                  Hotspots
-                  <button type="button" aria-label="Close" onClick={() => setListingHotspots(false)} className="rounded p-1 text-[rgb(var(--ec-page-text-muted))] hover:bg-[rgb(var(--ec-content-hover))]!">
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
-                <div className="min-h-0 flex-1 overflow-y-auto">
-                  <HotspotList hotspots={flow.hotspots} nameOf={nameOfNode} onOpen={goToHotspot} goOnHover={!hotspotDraft} />
-                </div>
-              </div>
-            )}
-            {/* Bottom left: zoom, undo and redo (as Excalidraw's), then what the view puts there */}
-                <div className="absolute bottom-3 left-3 z-10 flex items-center gap-2">
-                  <ViewControls
-                    canUndo={flow.canUndo && !locked}
-                    canRedo={flow.canRedo && !locked}
-                    onUndo={undo}
-                    onRedo={redo}
-                    onReorder={onReorder}
-                    reorderLabel={editable ? "Reorder diagram (the visualiser's layout)" : `Reorder L${level} (the visualiser's layout)`}
-                    locked={locked}
-                    fitOptions={fitOptions}
-                    comments={commentsControl}
-                    hotspots={hotspotsControl}
-                  />
-                  {footer}
-                </div>
-                {children}
-              </div>
-            </div>
-          </LockedContext.Provider>
-        </StartWritingContext.Provider>
-      </DropTargetContext.Provider>
+            </LockedContext.Provider>
+          </StartWritingContext.Provider>
+        </DropTargetContext.Provider>
       </EditingContext.Provider>
     </UpdateNodeDataContext.Provider>
   );

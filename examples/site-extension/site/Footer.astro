@@ -1,0 +1,7 @@
+---
+import Default from '@astrojs/starlight/components/Footer.astro';
+
+const access = Astro.locals.starlightRoute?.entry?.data?.access ?? 'everyone';
+---
+<Default><slot /></Default>
+<p data-extended-footer>Extended footer, access: {access}</p>

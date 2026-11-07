@@ -10,7 +10,7 @@ import {
 } from 'autocatalog-core';
 import { z } from 'zod';
 import { inside } from './inside';
-import { readRepositoryMeta, type RepositoryMeta } from './repository-meta';
+import { readRepositoryMeta, REPOSITORY_META, type RepositoryMeta } from './repository-meta';
 
 /**
  * One authored document, addressed by its path rather than a declared id.
@@ -59,6 +59,11 @@ export interface ReadDocsOptions {
    * `'all'` is for checks, which validate what they would not publish.
    */
   audience?: readonly string[] | 'all';
+  /**
+   * Leave out a document that names no `audience:` as well, for a site read
+   * outside the company: there, a document is published only by opting in.
+   */
+  audienceRequired?: boolean;
 }
 
 /** Where the documents are and how a matched path becomes an id. */
@@ -105,13 +110,15 @@ export function resolveDocsLayout(root: string, options: ReadDocsOptions = {}): 
 
   const rootFor = (file: string) => roots.find((candidate) => file.startsWith(docsDir(candidate)));
 
-  const repoFor = (file: string): string => {
+  const ownerOf = (file: string): CatalogRoot => {
     const owner = rootFor(file);
 
     if (!owner) throw new Error(`${file} is not in any repository's docs/`);
 
-    return owner.name;
+    return owner;
   };
+
+  const repoFor = (file: string): string => ownerOf(file).name;
 
   return {
     root: absolute,
@@ -120,9 +127,9 @@ export function resolveDocsLayout(root: string, options: ReadDocsOptions = {}): 
     rootFor,
     repoFor,
     idFor(file: string): string {
-      const rest = file.slice(docsDir(rootFor(file)!).length);
+      const owner = ownerOf(file);
 
-      return `${repoFor(file)}/${rest.replace(/\.mdx?$/, '')}`;
+      return `${owner.name}/${file.slice(docsDir(owner).length).replace(/\.mdx?$/, '')}`;
     },
   };
 }
@@ -139,7 +146,7 @@ export function readDocs(root: string, options: ReadDocsOptions = {}): Doc[] {
   // Nothing publishes documents, every repository excluded included.
   if (layout.roots.length === 0) return [];
 
-  const metas = new Map(layout.roots.map((root) => [root.name, readRepositoryMeta(root.dir).meta]));
+  const metas = new Map(layout.roots.map((root) => [root.name, readRepositoryMeta(root.dir)]));
 
   const readable = (file: string) => {
     const dir = layout.rootFor(file)?.dir ?? layout.root;
@@ -159,6 +166,20 @@ export function readDocs(root: string, options: ReadDocsOptions = {}): Doc[] {
     .filter(readable)
     .flatMap((file) => {
       const repo = layout.repoFor(file);
+      const read = metas.get(repo);
+
+      // meta.json can give every document here its owner and who may read it,
+      // so its documents wait until it is valid.
+      if (read?.problem) {
+        const message = `${REPOSITORY_META} is not valid, so its documents are left out (${read.problem.split('\n')[0]})`;
+
+        if (!options.onUnreadable) throw new Error(`${repo}/${message}`);
+
+        options.onUnreadable({ file, repo }, message);
+
+        return [];
+      }
+
       let parsed: ReturnType<typeof parseFrontmatter>;
 
       try {
@@ -174,19 +195,55 @@ export function readDocs(root: string, options: ReadDocsOptions = {}): Doc[] {
         return [];
       }
 
-      const owner = metas.get(repo)?.owner;
-      const data = owner ? { owner, ...parsed.data } : parsed.data;
+      const meta = read?.meta;
+      const id = layout.idFor(file);
+      const page = id.slice(repo.length + 1);
+      const access = fromMeta(meta, page, 'access');
+      const audience = fromMeta(meta, page, 'audience');
 
-      if (!mayRead(data.audience, options.audience)) return [];
+      const data: JsonObject = {
+        ...(meta?.owner && { owner: meta.owner }),
+        ...(access && { access }),
+        ...(audience && { audience }),
+        ...parsed.data,
+      };
 
-      return [{ id: layout.idFor(file), repo, file, data, body: parsed.content }];
+      if (!mayRead(data.audience, options)) return [];
+
+      return [{ id, repo, file, data, body: parsed.content }];
     });
+}
+
+/**
+ * What `meta.json` says of a document at `page` in `docs/`: the deepest listed
+ * folder above it that says, then the repository.
+ */
+function fromMeta(
+  meta: RepositoryMeta | undefined,
+  page: string,
+  key: 'access' | 'audience',
+): string[] | undefined {
+  const folders = page.split('/').slice(0, -1);
+
+  for (let depth = folders.length; depth > 0; depth--) {
+    const directory = folders.slice(0, depth).join('/');
+    const value = meta?.sidebar?.find((entry) => entry.directory === directory)?.[key];
+
+    if (value) return value;
+  }
+
+  return meta?.[key];
 }
 
 const audienceOf = z.union([z.string().transform((one) => [one]), z.array(z.string())]);
 
-function mayRead(named: JsonValue | undefined, reader: ReadDocsOptions['audience'] = []): boolean {
-  if (named === undefined || reader === 'all') return true;
+function mayRead(
+  named: JsonValue | undefined,
+  { audience: reader = [], audienceRequired }: ReadDocsOptions,
+): boolean {
+  if (reader === 'all') return true;
+
+  if (named === undefined) return !audienceRequired;
 
   const parsed = audienceOf.safeParse(named);
 

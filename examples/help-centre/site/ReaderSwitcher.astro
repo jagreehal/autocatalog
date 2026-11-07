@@ -1,0 +1,28 @@
+---
+// Who is reading. Picking an account reloads the page as them.
+import { readers } from './readers.ts';
+
+const current = Astro.locals.reader;
+---
+
+<form method="get" action={Astro.url.pathname} class="reader-switcher">
+  <label>
+    <span class="sr-only">Signed in as</span>
+    <select name="reader" onchange="this.form.submit()">
+      <option value="" selected={!current}>Not signed in</option>
+      {readers.map((reader) => <option value={reader.id} selected={current?.id === reader.id}>{reader.name}</option>)}
+    </select>
+  </label>
+  <noscript><button>Switch</button></noscript>
+</form>
+
+<style>
+  select {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--background);
+    color: var(--foreground);
+    padding: 0.25rem 0.5rem;
+    font: inherit;
+  }
+</style>

@@ -1,5 +1,12 @@
 import path from 'node:path';
-import { type SiteNavigation, siteNavigationSchema } from 'autocatalog-docs-core';
+import {
+  type SiteAccessConfig,
+  type SiteChat,
+  siteAccessSchema,
+  siteChatSchema,
+  type SiteNavigation,
+  siteNavigationSchema,
+} from 'autocatalog-docs-core';
 import { z } from 'zod';
 /**
  * What the integration decided, read back by the parts Astro loads on their own.
@@ -35,6 +42,14 @@ export interface DocsSiteConfig {
   serviceOwners: Map<string, string> | undefined;
   title: string;
   description: string;
+  /** Who the site is for when not the company itself, such as `public`. */
+  audience: string | undefined;
+  /** The assistant every page offers, when the site has one. */
+  chat: SiteChat | undefined;
+  /** Who may open each document, decided per request. */
+  access: SiteAccessConfig | undefined;
+  /** Whether each page offers to copy, view and pin its Markdown. */
+  pageActions: boolean;
   navigation: SiteNavigation | undefined;
   /** A server-sent events feed the maps can follow live. */
   live: { url: string; event: string } | undefined;
@@ -63,6 +78,14 @@ export function docsSiteConfig(): DocsSiteConfig {
         )
       : undefined,
     title: process.env.AUTOCATALOG_DOCS_TITLE ?? 'Documentation',
+    audience: process.env.AUTOCATALOG_SITE_AUDIENCE || undefined,
+    pageActions: process.env.AUTOCATALOG_SITE_PAGE_ACTIONS !== 'false',
+    access: process.env.AUTOCATALOG_SITE_ACCESS
+      ? siteAccessSchema.parse(JSON.parse(process.env.AUTOCATALOG_SITE_ACCESS))
+      : undefined,
+    chat: process.env.AUTOCATALOG_SITE_CHAT
+      ? siteChatSchema.parse(JSON.parse(process.env.AUTOCATALOG_SITE_CHAT))
+      : undefined,
     navigation: process.env.AUTOCATALOG_SITE_NAVIGATION
       ? siteNavigationSchema.parse(JSON.parse(process.env.AUTOCATALOG_SITE_NAVIGATION))
       : undefined,

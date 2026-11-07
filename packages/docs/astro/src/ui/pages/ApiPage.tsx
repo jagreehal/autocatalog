@@ -29,6 +29,11 @@ export interface ApiPageProps {
   /** Services this API is matched to by its title or the events it defines. */
   services: Array<{ name: string; href: string }>;
   operations: ApiOperation[];
+  /**
+   * Read outside the company: the page leaves out where the spec lives and who
+   * serves it, and readers can send requests from the reference.
+   */
+  outside?: boolean | undefined;
 }
 
 /** Scalar's API reference, pinned to one release. */
@@ -65,7 +70,7 @@ const isDark = () => document.documentElement.dataset.theme === 'dark';
  * Draws the interactive reference once Scalar loads. Until then, and offline,
  * the operations table rendered on the server stands in.
  */
-function useScalar(specHref: string) {
+function useScalar(specHref: string, outside: boolean) {
   const target = useRef<HTMLDivElement>(null);
 
   const [ready, setReady] = useState(false);
@@ -77,7 +82,7 @@ function useScalar(specHref: string) {
       showSidebar: false,
       hideSearch: true,
       hideDarkModeToggle: true,
-      hideClientButton: true,
+      hideClientButton: !outside,
       withDefaultFonts: false,
       showDeveloperTools: 'never' as const,
       agent: { disabled: true },
@@ -116,7 +121,7 @@ function useScalar(specHref: string) {
       script?.removeEventListener('load', mount);
       observer?.disconnect();
     };
-  }, [specHref]);
+  }, [specHref, outside]);
 
   return { target, ready };
 }
@@ -128,30 +133,33 @@ export function ApiPage({
   specHref,
   services,
   operations,
+  outside = false,
 }: ApiPageProps) {
-  const { target, ready } = useScalar(specHref);
+  const { target, ready } = useScalar(specHref, outside);
 
   return (
     <div className="not-content flex flex-col gap-8" data-wide>
-      <p className="m-0 max-w-prose">
-        {version && <>Version {version}, read </>}
-        {version ? 'from' : 'Read from'} <code>{file}</code> in the {repository} repository.
-        {services.length > 0 && (
-          <>
-            {' '}
-            Served by{' '}
-            {services.map((service, i) => (
-              <Fragment key={service.name}>
-                {i > 0 && (i === services.length - 1 ? ' and ' : ', ')}
-                <a className={link} href={service.href} data-kind="service">
-                  {service.name}
-                </a>
-              </Fragment>
-            ))}
-            .
-          </>
-        )}
-      </p>
+      {!outside && (
+        <p className="m-0 max-w-prose">
+          {version && <>Version {version}, read </>}
+          {version ? 'from' : 'Read from'} <code>{file}</code> in the {repository} repository.
+          {services.length > 0 && (
+            <>
+              {' '}
+              Served by{' '}
+              {services.map((service, i) => (
+                <Fragment key={service.name}>
+                  {i > 0 && (i === services.length - 1 ? ' and ' : ', ')}
+                  <a className={link} href={service.href} data-kind="service">
+                    {service.name}
+                  </a>
+                </Fragment>
+              ))}
+              .
+            </>
+          )}
+        </p>
+      )}
 
       {!ready && (
         <Card id="operations">

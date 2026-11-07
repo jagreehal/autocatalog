@@ -3,6 +3,7 @@ import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { AstroIntegration } from 'astro';
+import type { Plugin } from 'vite';
 
 const require = createRequire(import.meta.url);
 
@@ -49,6 +50,7 @@ export function reactRendererIntegration(): AstroIntegration {
 
         updateConfig({
           vite: {
+            plugins: [oneReact()],
             resolve: { alias: [...renderer, ...shims] },
             server: {
               fs: {
@@ -62,6 +64,28 @@ export function reactRendererIntegration(): AstroIntegration {
           },
         });
       },
+    },
+  };
+}
+
+const REACT = /^react(-dom)?(\/|$)/;
+
+/**
+ * The assistant's panel renders with this package's React. npm can give
+ * autocatalog-chatbot a copy of its own beside a project's older React, and
+ * two copies on one page cannot share hooks.
+ */
+function oneReact(): Plugin {
+  const chatbot = path.dirname(path.dirname(require.resolve('autocatalog-chatbot')));
+  const self = fileURLToPath(import.meta.url);
+
+  return {
+    name: 'autocatalog-docs-one-react',
+    enforce: 'pre',
+    resolveId(source, importer) {
+      if (!importer?.startsWith(chatbot) || !REACT.test(source)) return null;
+
+      return this.resolve(source, self, { skipSelf: true });
     },
   };
 }

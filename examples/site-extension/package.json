@@ -1,0 +1,20 @@
+{
+  "name": "@autocatalog-example/site-extension",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "A site `ac site` builds, white-labelled and extended with its own code, rendered per request. Nothing from Astro is installed here.",
+  "scripts": {
+    "build": "node ../../packages/events/cli/dist/bin.js site .",
+    "dev": "node ../../packages/events/cli/dist/bin.js site . --dev",
+    "start": "node dist/server.mjs",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "autocatalog-cli": "workspace:*"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.64.0",
+    "executable-stories-playwright": "8.11.0"
+  }
+}

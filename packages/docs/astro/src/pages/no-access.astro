@@ -1,0 +1,31 @@
+---
+// What a reader gets for a document they may not open, with `"denied": "teaser"`:
+// its title and summary, and a way to ask. A site's own `no-access.astro` replaces it.
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import { chatPanel } from 'virtual:autocatalog-docs-build';
+import { buttonVariants } from '../ui/components/ui/button';
+
+export const prerender = false;
+
+const { denied } = Astro.locals;
+---
+
+<StarlightPage
+  frontmatter={{
+    title: denied?.title ?? 'Not available',
+    description: denied?.description,
+    tableOfContents: false,
+    pagefind: false,
+  }}
+>
+  <p>This page is not available on your account.</p>
+  {
+    chatPanel?.support && (
+      <p>
+        <button type="button" class={buttonVariants()} onclick="window.dispatchEvent(new Event('autocatalog:support'))">
+          Ask us about it
+        </button>
+      </p>
+    )
+  }
+</StarlightPage>

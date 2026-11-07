@@ -14,7 +14,8 @@
     "**/.roo/**",
     "**/.windsurf/**",
     "tools/oxlint/anti-slop/**",
-    "packages/docs/astro/src/ui/components/ui/**"
+    "packages/docs/astro/src/ui/components/ui/**",
+    "packages/docs/chatbot/src/ui/components/ui/**"
   ],
   "categories": {
     "correctness": "error"
@@ -50,7 +51,11 @@
   },
   "overrides": [
     {
-      "files": ["packages/docs/astro/src/ui/**", "apps/docs/src/**/*.tsx"],
+      "files": [
+        "packages/docs/astro/src/ui/**",
+        "packages/docs/chatbot/src/react/**",
+        "apps/docs/src/**/*.tsx"
+      ],
       "rules": {
         "shadcn/no-restyle": [
           "error",

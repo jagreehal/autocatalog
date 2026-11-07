@@ -1,6 +1,7 @@
 ---
 import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
 import type { InferGetStaticPropsType } from 'astro';
+import { readableCatalog } from '../access';
 import { docsCatalog } from '../catalog';
 import { kindIndexProps } from '../kinds';
 import { KindIndexPage } from '../ui/pages/KindIndexPage';
@@ -13,11 +14,18 @@ export async function getStaticPaths() {
   return catalog.kinds.map((kind) => ({ params: { kind: kind.path }, props: { kind } }));
 }
 
-type Props = InferGetStaticPropsType<typeof getStaticPaths>;
+type Props = Partial<InferGetStaticPropsType<typeof getStaticPaths>>;
 
-const { kind } = Astro.props;
+const catalog = await docsCatalog();
 
-const page = kindIndexProps(await docsCatalog(), kind);
+// On a site with `access` each kind has a route of its own, rendered per
+// request, and lists only what this reader may open.
+const kind =
+  Astro.props.kind ?? catalog.kinds.find((each) => `/${each.path}` === Astro.routePattern);
+
+if (!kind) return Astro.rewrite('/404');
+
+const page = kindIndexProps(readableCatalog(catalog, Astro.locals.canRead), kind);
 ---
 
 <StarlightPage

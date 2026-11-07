@@ -71,30 +71,13 @@ function readManifest(
   return publishedIndex.parse(JSON.parse(fs.readFileSync(resolved, 'utf8')));
 }
 
-/** Whether a sidebar entry is a folder directly under `docs/`, the only kind it can group. */
-function isDocsFolder(dir: string, directory: string): boolean {
-  if (directory !== path.basename(directory) || directory === '.' || directory === '..') {
-    return false;
-  }
-
-  const entry = fs.lstatSync(path.join(dir, 'docs', directory), { throwIfNoEntry: false });
-
-  return entry?.isDirectory() === true;
-}
-
 /** A `docs/meta.json` that does not read, or names something that is not a folder of `docs/`. */
 function repositoryMetaFailures(root: string, options: CheckDocsOptions): string[] {
   return resolveDocsLayout(root, options).roots.flatMap(({ dir }) => {
-    const { meta, problem } = readRepositoryMeta(dir);
+    const { problem } = readRepositoryMeta(dir);
     const file = path.relative(root, path.join(dir, REPOSITORY_META)).split(path.sep).join('/');
 
-    if (problem) return [`${file}: ${problem}`];
-
-    return (meta.sidebar ?? []).flatMap(({ directory }) =>
-      isDocsFolder(dir, directory)
-        ? []
-        : [`${file}: sidebar names "${directory}", which is not a folder directly under docs/`],
-    );
+    return problem ? [`${file}: ${problem}`] : [];
   });
 }
 
@@ -105,7 +88,15 @@ function repositoryMetaFailures(root: string, options: CheckDocsOptions): string
  */
 export function checkDocs(root: string, options: CheckDocsOptions = {}): CheckDocsResult {
   // Everything in the checkout, restricted documents included: this is the check.
-  const docs = readDocs(root, { ...options, audience: 'all' });
+  // An invalid meta.json leaves its documents out, and is reported once below.
+  const docs = readDocs(root, {
+    ...options,
+    audience: 'all',
+    onUnreadable: (doc, message) => {
+      if (!message.startsWith(REPOSITORY_META)) throw new Error(`${doc.file}: ${message}`);
+    },
+  });
+
   const contract = resolveFrontmatterContract(root, options.schemaPath);
   const conventions = resolveDocKinds(root, options.conventionsPath);
   const validate = kindValidator(contract.schema, conventions.kinds);

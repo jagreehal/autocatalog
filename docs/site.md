@@ -26,20 +26,21 @@ each one with its history, and writes the site to `dist/`. A team enrols its
 repository by adding the topic on GitHub. Nobody edits a list in the site's
 repository, and the site's owners approve nothing.
 
-| Flag                 | Meaning                                                         |
-| -------------------- | --------------------------------------------------------------- |
-| `--topic`, `--owner` | Clone every repository the owner has with the topic             |
-| `--repo <url...>`    | Clone these repositories as well                                |
-| `[root]`             | Build from checkouts already on disk, or from one repository    |
-| `--site`, `--base`   | Where the site is served, for links, the sitemap and `llms.txt` |
-| `--title`            | The site's title                                                |
-| `--description`      | One sentence for the home page and `llms.txt`                   |
-| `--brand`            | A folder with your logo, favicon and theme                      |
-| `--theme`            | An accent colour by name                                        |
-| `--out`              | Output directory, `dist` by default                             |
-| `--dev`              | Serve with live reload                                          |
-| `--eventcatalog`     | Draw diagrams with EventCatalog, inside this site               |
-| `--docs-schema`      | The docs frontmatter contract to enforce                        |
+| Flag                 | Meaning                                                                           |
+| -------------------- | --------------------------------------------------------------------------------- |
+| `--topic`, `--owner` | Clone every repository the owner has with the topic                               |
+| `--repo <url...>`    | Clone these repositories as well                                                  |
+| `[root]`             | Build from checkouts already on disk, or from one repository                      |
+| `--site`, `--base`   | Where the site is served, for links, the sitemap and `llms.txt`                   |
+| `--title`            | The site's title                                                                  |
+| `--description`      | One sentence for the home page and `llms.txt`                                     |
+| `--brand`            | A folder with your logo, favicon and theme                                        |
+| `--theme`            | An accent colour by name                                                          |
+| `--audience`         | Build for readers outside, e.g. `public`: see [Public API docs](#public-api-docs) |
+| `--out`              | Output directory, `dist` by default                                               |
+| `--dev`              | Serve with live reload                                                            |
+| `--eventcatalog`     | Draw diagrams with EventCatalog, inside this site                                 |
+| `--docs-schema`      | The docs frontmatter contract to enforce                                          |
 
 Set the flags once in `package.json` and reuse them for the dev server:
 
@@ -457,8 +458,13 @@ site` reads it, so the command takes no flags:
   "$schema": "https://unpkg.com/autocatalog-docs-core/contracts/autocatalog.site.schema.json",
   "title": "Acme Docs",
   "description": "Documentation from every Acme team.",
+  "url": "https://docs.acme.com",
   "brand": "./brand",
   "theme": "teal",
+  "social": [{ "icon": "github", "label": "GitHub", "href": "https://github.com/acme" }],
+  "head": [{ "tag": "meta", "attrs": { "name": "robots", "content": "noindex" } }],
+  "strings": { "search.label": "Search Acme docs" },
+  "nav": [{ "label": "Guides", "href": "/guides/" }],
   "navigation": {
     "groups": [
       {
@@ -479,6 +485,8 @@ That is `autocatalog.site.json`: plain JSON, so reading it runs nothing, and it
 fails the build on a field it does not know. A flag of the same name wins over
 the file.
 
+`url` is where the site is deployed, for the sitemap and `llms.txt`, as `--site` sets it.
+
 `theme` is an accent colour: `teal`, `blue`, `orange`, `green` or `purple`.
 
 `navigation.groups` replaces the catalog's group in the sidebar. An item is a
@@ -487,15 +495,49 @@ has nothing for is left out, so a group can list everything you might want. Each
 repository's documents follow, arranged by its
 [`docs/meta.json`](/docs/docs-convention#a-repository-describes-itself).
 
+`nav` puts the site's sections in the header, beside its title, and at the top
+of the menu on a phone. The section a reader is in is marked as the current
+page. `match` is the paths a section stands for, one or several, and defaults
+to `href`; when two match, the longer wins, so `/guides/api/` beats `/guides/`
+on its own pages. `/` is current on the home page only. A link to another site
+says so with ↗:
+
+```json
+{
+  "nav": [
+    { "label": "Guides", "href": "/", "match": ["/labels/", "/publishers/"] },
+    { "label": "Academy", "href": "/academy/", "match": "/academy/" },
+    { "label": "Status", "href": "https://status.acme.com" }
+  ]
+}
+```
+
+Site paths take the `--base` the site is served under. A site that overrides
+Starlight's `Header` itself places the links with
+`autocatalog-docs-astro/overrides/TopNav.astro`.
+
+`social` puts links in the header, with any of
+[Starlight's icons](https://starlight.astro.build/reference/icons/). `head` adds
+tags to every page: meta tags, a verification code, an analytics script.
+
+`strings` replaces the interface's words, by
+[Starlight's translation key](https://starlight.astro.build/guides/i18n/#translate-starlights-ui):
+`search.label`, `tableOfContents.onThisPage`, `page.lastUpdated`,
+`page.previousLink`, `404.text` and the rest.
+
 `brand` is a folder of your files. Each one is optional:
 
 ```text
 brand/
   logo.svg       # replaces the title in the header (svg, png, webp, jpg, avif)
   logo-dark.svg  # the same for the dark theme
-  favicon.svg
+  favicon.svg    # or favicon.ico, favicon.png
   theme.css
+  fonts/         # anything theme.css points at with url(), bundled with it
+  public/        # served as it is: apple-touch-icon.png, a social card, robots.txt
 ```
+
+The logo's alt text is the site's `title`.
 
 `theme.css` sets the [shadcn/ui tokens](https://ui.shadcn.com/docs/theming) the
 whole site reads, Starlight's pages included. Set each one for both themes:
@@ -523,17 +565,393 @@ whole site reads, Starlight's pages included. Set each one for both themes:
 }
 ```
 
+A font or image `theme.css` names with `url('./fonts/brand.woff2')` is bundled
+with it, so `@font-face` works with your own files:
+
+```css
+@font-face {
+  font-family: 'Acme Sans';
+  src: url('./fonts/acme-sans.woff2') format('woff2');
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+:root {
+  --font-sans: 'Acme Sans', system-ui, sans-serif;
+}
+```
+
+Every token `theme.css` can set, each for `:root` and `[data-theme='dark']`:
+
+| Tokens                                                                                                                                                                            | What they colour                                    |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------- |
+| `--background`, `--foreground`                                                                                                                                                    | The page and its text                               |
+| `--card`, `--card-foreground`, `--popover`, `--popover-foreground`                                                                                                                | Panels, menus, the search dialog                    |
+| `--primary`, `--primary-foreground`, `--ring`                                                                                                                                     | Links, buttons, the current page, focus             |
+| `--secondary`, `--secondary-foreground`, `--muted`, `--muted-foreground`, `--accent`, `--accent-foreground`                                                                       | Quieter surfaces and text, hover                    |
+| `--border`, `--input`, `--destructive`                                                                                                                                            | Lines, fields, errors                               |
+| `--sidebar`, `--sidebar-foreground`, `--sidebar-primary`, `--sidebar-primary-foreground`, `--sidebar-accent`, `--sidebar-accent-foreground`, `--sidebar-border`, `--sidebar-ring` | The navigation                                      |
+| `--chart-1` to `--chart-5`                                                                                                                                                        | Charts                                              |
+| `--font-sans`, `--font-heading`, `--font-mono`, `--sl-font-mono`                                                                                                                  | Type                                                |
+| `--radius`                                                                                                                                                                        | Corners; the smaller and larger ones follow from it |
+| `--sl-content-width`, `--sl-sidebar-width`, `--sl-nav-height`                                                                                                                     | Starlight's layout                                  |
+
+Your `theme.css` loads after the built-in theme, so a token you set wins and one
+you leave keeps its default.
+
 The provenance colours (declared, extracted, inferred) carry meaning on every
 page, so keep them.
 
-To replace the home page, add `index.astro` to `--pages`. For more, such as your
-own Markdown plugins or a replaced component, run the site as your own Astro
-project with `autocatalog-docs-astro`, which takes `theme` and `navigation` as
-options. Starlight's `logo`, `customCss`, `head` and `components` keep working,
-and your `customCss` loads after the theme. Use `unified()` as the Markdown
-processor, with `rehypeDocsBase` so links reach the right pages, as
+To replace the home page, or any other page, add your own at its address to
+`pages`. For anything else, extend the site with code of your own.
+
+## Extend the site
+
+`extend` names modules that add to the site `ac site` builds, so you change its
+behaviour without forking it or asking for a feature:
+
+```json
+{
+  "title": "Acme Help",
+  "extend": ["./site/extend.ts", "@acme/autocatalog-site-kit"],
+  "output": "server"
+}
+```
+
+Each module default-exports an extension, or an array of them, so extensions
+compose by importing one another. A path starting with `.` is relative to the
+module:
+
+```ts
+// site/extend.ts
+import { glossaryLinks } from './glossary.ts';
+
+export default {
+  middleware: './middleware.ts', // Astro middleware: sign-in, redirects, headers
+  routeMiddleware: './route-data.ts', // Starlight route data: trim the sidebar per reader
+  components: { Footer: './Footer.astro' }, // Starlight component overrides
+  customCss: ['./brand.css'],
+  head: [{ tag: 'meta', attrs: { name: 'robots', content: 'noindex' } }],
+  remarkPlugins: [],
+  rehypePlugins: [[glossaryLinks, { glossary: './glossary.json' }]],
+  plugins: [], // any Starlight plugin
+  integrations: [], // any Astro integration
+};
+```
+
+A field the extension does not know fails the build, naming the module. Later
+extensions win a component both override; everything else adds up, in order.
+
+Your files import what the site is built with, such as
+`@astrojs/starlight/components/Footer.astro` or React, without installing it.
+A package your project installs itself wins.
+
+A package extends the site the same way. It names its module in `package.json`,
+and a site lists the package by name in `extend`:
+
+```json
+{ "name": "@acme/autocatalog-site-kit", "autocatalog": { "site": "./site.js" } }
+```
+
+To take options, export a function from the package and call it from your own
+`extend.ts`.
+
+### Per-request pages
+
+`"output": "server"` renders documents when they are requested, so middleware
+can decide what each reader sees and pages under `--pages` can be API routes
+that take requests. The catalog's own pages are still built once. A copy built
+ahead would skip that middleware, so a server site publishes no Markdown twin of
+a document and no `llms-full.txt`, and its `llms.txt` lists no documents. With
+[`access`](#who-may-read-what) they render per request instead, through its
+rule. Pagefind indexes only pages built ahead, so the header's search box asks
+the server, and `/search` lists the pages with any of the words, those with
+more of them first. The build carries the catalog it read, so you deploy `dist/`
+without the repositories. It writes `server.mjs` beside the site:
+
+```bash
+npx autocatalog site .
+PORT=8080 node dist/server.mjs
+```
+
+The server loads autocatalog's packages from the install that built it, as any
+Node server does from its `node_modules`, so build where it runs.
+
+[`examples/site-extension`](https://github.com/jagreehal/autocatalog/tree/main/examples/site-extension)
+puts staff-only pages behind a cookie, trims them from the sidebar of other
+readers, overrides the footer and adds a rehype plugin.
+
+To run the site as your own Astro project instead, use `autocatalog-docs-astro`,
+which takes `theme` and `navigation` as options, with `unified()` and
+`rehypeDocsBase` as
 [the bundled site](https://github.com/jagreehal/autocatalog/blob/main/packages/docs/astro/site/astro.config.mjs)
 does.
+
+## Public API docs
+
+The same repositories can also build a site for developers outside the company:
+guides, the API reference with a client to send requests, your brand, and
+nothing about your own systems. Set an audience in `autocatalog.site.json`:
+
+```json
+{
+  "title": "Acme Developers",
+  "brand": "./brand",
+  "audience": "public",
+  "navigation": {
+    "groups": [
+      {
+        "label": "Developers",
+        "items": ["apis", { "label": "Get an API key", "href": "https://acme.com/register" }]
+      }
+    ]
+  }
+}
+```
+
+or pass `--audience public`, and keep a second build without it for the company.
+Commit the spec your framework generates as `contracts/openapi.json` or
+`contracts/openapi.yaml`.
+
+A document publishes only when its frontmatter names the audience. A document
+that names none stays on the company's site:
+
+```yaml
+---
+title: Getting started
+owner: developer-relations
+audience: [public]
+---
+```
+
+Each OpenAPI document publishes with Scalar's reference, request client and
+code samples. Mark what stays internal with `x-internal: true`, which most
+generators can set:
+
+- on the document, and the API is left out;
+- on a path or webhook, and every operation under it is left out;
+- on an operation, and that operation is left out.
+
+Tags and components that only the left-out operations used go with them, and
+`x-autocatalog` extensions are removed everywhere. The published
+`openapi.json` is that filtered document.
+
+The site leaves out events, services, owners, the knowledge graph, repository
+links and `docs-manifest.json`. `llms.txt` lists the guides and links each
+API's `openapi.json`. See
+[`examples/public-api`](https://github.com/jagreehal/autocatalog/tree/main/examples/public-api).
+
+## An assistant
+
+Every page can offer an assistant that answers from the pages this site
+publishes: it searches them, reads the ones that fit, links what it used, and
+says so when nothing covers the question. A site built for an audience answers
+only from what that audience can open. Add `chat` to `autocatalog.site.json`:
+
+```json
+{
+  "chat": {
+    "module": "./site/chat.ts",
+    "title": "Ask Acme",
+    "description": "Answers from these guides and the API reference.",
+    "suggestions": ["How do I authenticate?"]
+  }
+}
+```
+
+The module is your code, so the model is your choice. It default-exports the
+options of `createChat` from
+[autocatalog-chatbot](https://github.com/jagreehal/autocatalog/tree/main/packages/docs/chatbot):
+
+```ts
+import type { ChatOptions } from 'autocatalog-chatbot';
+
+export default {
+  model: 'anthropic/claude-haiku-5.5',
+  subject: 'the Acme Payments API',
+  instructions: 'Show requests as curl.',
+  onAnswered: (turn) => turn.answered || console.log('No page covers:', turn.gap),
+} satisfies ChatOptions;
+```
+
+A model id like that one goes through the Vercel AI Gateway and needs
+`AI_GATEWAY_API_KEY` where the site runs; import any AI SDK provider instead to
+use your own. `system` replaces the instructions, `instructions` adds to them,
+and `tools` rewrites what each tool is described as.
+
+The pages stay prerendered and `/api/chat` answers per request, so `ac site`
+writes `server.mjs` to start it. The pages it answers from are taken when the
+site is built.
+
+On a site with [`access`](#who-may-read-what), the assistant answers only
+from the pages that reader may open. `context` adds a line about the reader,
+and `source` replaces what it searches and reads; both are given the request,
+the `locals` your middleware set and the pages it may answer from, each with
+its frontmatter as `data`:
+
+```ts
+import type { SiteChatOptions } from 'autocatalog-docs-astro';
+
+export default {
+  model: 'anthropic/claude-haiku-5.5',
+  subject: 'Acme',
+  context: ({ locals }) => locals.reader && `The reader is ${locals.reader.name}.`,
+} satisfies SiteChatOptions;
+```
+
+`onAsked` and `onAnswered` are given the same request as a second argument, so
+analytics can say who asked and whether the pages answered.
+
+The panel can change per reader too: middleware that sets `locals.chat` (such
+as `suggestions` or `description`) overrides `chat` in `autocatalog.site.json`
+for that page.
+
+Make the panel yours in the same block:
+
+| Field     | What it does                                                                                |
+| --------- | ------------------------------------------------------------------------------------------- |
+| `text`    | Any of its words by name, such as `placeholder`, `emptyTitle`, `launcher` or `askAbout`     |
+| `icons`   | Any of its icons by name, such as `launcher` or `send`: a `.svg` file, a URL, or SVG markup |
+| `side`    | `right` or `left`                                                                           |
+| `support` | `{ "api": "/api/support" }`: a form to message a person, with the conversation attached     |
+
+A name the panel does not have fails the build and lists the ones it does.
+Icons are drawn in the text colour, and the panel uses your theme's tokens.
+Size it from `brand/theme.css` with `--chat-width`, `--chat-height`,
+`--chat-inset` and `--chat-radius`, and style any part by its `data-slot`.
+
+To build the panel yourself, name a React component of your own as
+`"panel": "./site/ChatPanel.tsx"`. It gets the panel's props, and composes the
+parts `autocatalog-docs-astro/chat` exports: `ChatRoot`, `ChatWindow`,
+`ChatMessages` and the rest, or a part you write on `useChatPanel()`. The
+[chatbot README](https://github.com/jagreehal/autocatalog/tree/main/packages/docs/chatbot#compose-your-own)
+lists them, and `examples/help-centre/site/ChatPanel.tsx` is one.
+
+## Who may read what
+
+On a server site, `access` decides who may open each document:
+
+```json
+{
+  "output": "server",
+  "access": { "module": "./site/access.ts", "denied": "teaser" }
+}
+```
+
+The module says who is reading. Read your own session: a cookie, a token, or a
+header your proxy sets. Undefined is a reader nobody signed in as.
+
+```ts
+// site/access.ts
+import type { SiteAccess } from 'autocatalog-docs-astro';
+
+export default {
+  reader: async ({ cookies }) => sessions.get(cookies.get('session')?.value),
+} satisfies SiteAccess<Reader>;
+```
+
+A document opens when the reader's `access` holds everything its frontmatter's
+`access:` lists. One that lists nothing opens for everyone:
+
+```yaml
+access: [payments]
+```
+
+To set it for a whole folder, or for the repository, use `docs/meta.json`. A
+document's own `access:` wins, and `access: []` opens one in a closed folder:
+
+```json
+{
+  "access": ["signed-in"],
+  "sidebar": [{ "directory": "payments", "label": "Payments", "access": ["payments"] }]
+}
+```
+
+For any other rule, export `canRead(doc, reader)` beside `reader`. It is given
+the document's `id` and its frontmatter as `data`.
+
+The one rule decides:
+
+- whether a document opens, and its Markdown twin;
+- the sidebar, and the previous and next links;
+- the home page and each kind's page;
+- search;
+- `llms.txt` and `llms-full.txt`;
+- what the assistant searches and reads.
+
+Name some sample readers, and the build tries the rule as each:
+
+```ts
+export default {
+  reader: ({ cookies }) => sessions.get(cookies.get('session')?.value),
+  readers: { 'Lakeview Shop': lakeview, 'Riverside Studio': riverside },
+} satisfies SiteAccess<Reader>;
+```
+
+The build prints which documents each may open, signed out included, and warns
+of each link, by `related` or in a document's text, that would lead one of them
+from a document they may open to one they may not. `ac site --dev` adds a
+**View as** menu to every page, to see the site as each of them. It is never
+part of a built site.
+
+In your own Astro project, set `output: 'server'` in Astro and `prerender: false`
+in Starlight, so every document renders per request, and load the module at the
+top of `astro.config.mjs` so the build can try it:
+
+```js
+import autocatalogDocs, { loadSiteAccess } from 'autocatalog-docs-astro';
+
+const rule = await loadSiteAccess('./site/access.ts');
+
+// …
+plugins: [autocatalogDocs({ access: { module: './site/access.ts', rule } })],
+```
+
+A document someone may not open answers with `denied`. `hide`, the default, is
+a 404 that names nothing. `teaser` is a 403 page with its title and summary,
+and a button to ask about it when the assistant has `support`. Replace that
+page with a `no-access.astro` in `pages`: `Astro.locals.denied` holds the
+document's `id`, title and summary, so your page can say what is missing.
+`onDenied(doc, reader, context)` beside `reader` is told each refusal, for
+analytics such as which features readers try to open.
+
+The rule keeps a document closed when its frontmatter's `access:` cannot be
+read, and when `canRead` throws. Each response that depends on the reader is
+sent with `Cache-Control: private`, unless your code sets its own.
+
+What `reader` returns is `Astro.locals.reader` on every page, and is there for
+your own middleware, which runs after it. `Astro.locals.canRead(doc)` applies
+the rule in a page of your own, to any document with its `id`, such as an entry
+from `getCollection('docs')`. In TypeScript, declare `reader` in
+`App.Locals`:
+
+```ts
+// site/env.d.ts
+declare namespace App {
+  interface Locals {
+    reader?: import('./readers').Reader | undefined;
+  }
+}
+```
+
+Pages built ahead, such as the graph, the owners and the flows, are the same for
+everyone, so they list only the documents a signed-out reader may open.
+
+## One repository at the root
+
+A site built from one repository publishes its documents under the folder's
+name: `/payments-service/start/`. `"repo"` names it, and `"atRoot": true`
+publishes the documents at the site's root, with the repository's folders at the
+top of the sidebar:
+
+```json
+{ "repo": "help", "atRoot": true }
+```
+
+`docs/labels/start.md` is then at `/labels/start/`. Its id stays `help/labels/start`,
+so `related:` and `docHref(id)` read as before. A folder whose name the site
+uses itself, such as `apis` or `search`, fails the build with the documents to
+move.
 
 ## Your own pages and API routes
 
@@ -541,17 +959,54 @@ A site you run as your own Astro project already takes pages and API routes in
 `src/pages/`. For the site `ac site` builds, keep them in a folder laid out the
 same way:
 
-```bash
-ac site --pages ./site-pages
+```json
+{ "pages": "./site-pages" }
 ```
 
+in `autocatalog.site.json`, or `ac site --pages ./site-pages`.
+
 `site-pages/team.astro` publishes `/team/`, and `site-pages/api/glossary.json.ts`
-publishes `/api/glossary.json`. An `index.astro` replaces the home page. A `.md`
+publishes `/api/glossary.json`. A page at an address the catalog publishes
+replaces the catalog's: `index.astro` is the home page, `apis.astro` the API
+list, `search.astro` the search page, `404.astro` the page for an address with
+nothing at it.
+
+A search page of your own searches as the built-in one does, and renders the
+results with its parts. Change the links or the results before passing them,
+and count each search where you like:
+
+```astro
+---
+// site-pages/search.astro
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import { SearchPage, searchSite } from 'autocatalog-docs-astro/search';
+
+export const prerender = false;
+
+const query = Astro.url.searchParams.get('q') ?? '';
+const { words, results } = await searchSite(query, Astro.locals.canRead);
+
+const shown = results.slice(0, 30).map((result, i) => ({
+  ...result,
+  href: `${result.href}?ref=search&pos=${i + 1}`,
+}));
+---
+
+<StarlightPage frontmatter={{ title: 'Search' }}>
+  <SearchPage query={query} words={words} results={shown} total={results.length}>
+    <p slot="empty">Write to us at help@example.com.</p>
+  </SearchPage>
+</StarlightPage>
+```
+
+What the project's own `package.json` installs stays outside the server
+bundle and loads from its `node_modules`, as in any Astro project. Packages that
+render with React are bundled instead, so every component shares one React. One that exports `const prerender = false` renders per request on a site
+with `"output": "server"`, so it can read `Astro.locals`. A `.md`
 or `.mdx` page takes the site's layout and needs a `title` in its frontmatter,
 which accepts what Starlight's does. Files
 and folders that start with `_` are left out, so a layout can sit beside the
-pages. A page at a path the catalog publishes fails the build with the file to
-rename. In your own project, pass the folder as `autocatalogDocs({ pages })`.
+pages. In your own project, pass the folder as `autocatalogDocs({ pages })`.
 
 Pages import from the site's dependencies. `docsCatalog()` hands a page the
 catalog every page is built from:
@@ -564,6 +1019,22 @@ export async function GET() {
   return Response.json((await docsCatalog()).model.glossaries);
 }
 ```
+
+## A help centre
+
+Together these build a help centre where each customer sees their own guides:
+`audience` publishes only the guides for customers, `output: "server"` renders
+each page for its reader, `access` decides which guides each reader may open,
+`extend` adds signing in, `pages` adds the pages and endpoints of your own, `brand` and
+`components` give it your look, `"pageActions": false` drops the Markdown copy
+and pin, and `chat` answers from the guides that reader can open.
+[`examples/help-centre`](https://github.com/jagreehal/autocatalog/tree/main/examples/help-centre)
+is one, end to end.
+
+A site whose own code (`extend`, `pages`, `chat`, `access`) shares no folder with
+autocatalog's install, such as one in `/app` with autocatalog installed
+globally, cannot be built: Astro cannot compile its components from there, and
+`ac site` says so. Install autocatalog in the site's folder.
 
 ## For agents
 

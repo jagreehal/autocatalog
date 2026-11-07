@@ -7,12 +7,13 @@ import {
   resolveFrontmatterContract,
   unreadableDocs,
 } from 'autocatalog-docs-core';
+import { audienceReader } from './audience';
 import { docsSiteConfig } from './config';
 import { docsLoader } from './loader';
 
 // AUTOCATALOG_DOCS_* are set by the autocatalogDocs() plugin in config:setup,
 // which fires before the loaders are invoked.
-const { root, repo, repository, schemaPath, conventionsPath, exclude } = docsSiteConfig();
+const { root, repo, repository, schemaPath, conventionsPath, exclude, audience } = docsSiteConfig();
 
 // The reader and the site must address a document the same way, so the pattern
 // and the id both come from the shared layout rather than being restated here.
@@ -81,7 +82,9 @@ export const collections = {
   // is the same glob somewhere else, so pages, search and navigation are
   // Starlight's and only the source of the documents is ours.
   docs: defineCollection({
-    loader: docsLoader(layout, () => unreadableDocs(root, { repo, repository, exclude })),
+    loader: docsLoader(layout, () =>
+      unreadableDocs(root, { repo, repository, exclude, ...audienceReader(audience) }),
+    ),
     // Everything is optional here, including `owner`, which the contract
     // requires. Enforcement belongs to the company's JSON Schema — checked when
     // the index is built and by `ac docs check` in the repository that owns the

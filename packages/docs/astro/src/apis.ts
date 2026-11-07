@@ -41,6 +41,10 @@ export const apiTitle = (api: CatalogApi) => text(info(api).title) ?? api.file;
 
 export const apiDescription = (api: CatalogApi) => text(info(api).description);
 
+/** The description's first line, for a card or a list. */
+export const apiSummary = (api: CatalogApi) =>
+  apiDescription(api)?.split('\n')[0]?.trim() || undefined;
+
 /**
  * The APIs a service serves: one whose spec names it in `x-autocatalog.service`.
  * Failing that, one whose title names it ("Payments Service API" for
@@ -114,8 +118,14 @@ export function apiOperations(api: CatalogApi): ApiPageProps['operations'] {
   }));
 }
 
-export function apiPageProps(api: CatalogApi, services: string[], base: string): ApiPageProps {
+export function apiPageProps(
+  api: CatalogApi,
+  services: string[],
+  base: string,
+  outside = false,
+): ApiPageProps {
   return {
+    outside,
     version: text(info(api).version),
     repository: api.repository,
     file: api.file,
@@ -125,8 +135,9 @@ export function apiPageProps(api: CatalogApi, services: string[], base: string):
   };
 }
 
-export function apisPageProps(apis: CatalogApi[], base: string): ApisPageProps {
+export function apisPageProps(apis: CatalogApi[], base: string, outside = false): ApisPageProps {
   return {
+    outside,
     apis: apis.map((api) => ({
       title: apiTitle(api),
       version: text(info(api).version),

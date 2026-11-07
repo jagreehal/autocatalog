@@ -17,6 +17,20 @@
       "type": "string",
       "minLength": 1
     },
+    "access": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "audience": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
     "sidebar": {
       "type": "array",
       "items": {
@@ -32,6 +46,20 @@
           },
           "collapsed": {
             "type": "boolean"
+          },
+          "access": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "audience": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
           }
         },
         "required": [

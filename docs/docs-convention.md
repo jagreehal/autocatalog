@@ -74,6 +74,7 @@ to join it. Every field is optional:
   "owner": "payments",
   "sidebar": [
     { "directory": "guide", "label": "Start here" },
+    { "directory": "partners", "label": "Partners", "access": ["partner"] },
     { "directory": "runbooks", "label": "Runbooks", "collapsed": true }
   ]
 }
@@ -81,10 +82,13 @@ to join it. Every field is optional:
 
 `label` and `description` are what readers see in the navigation and on the home
 page. `owner` owns every document here that names none of its own, so one line
-covers a repository and a page can still name another team. `sidebar` orders the
-folders of `docs/`; a folder it leaves out still appears, last and collapsed, so
-a new section is never hidden. `ac docs check` fails a file that does not parse
-or a `directory` that is not a folder directly under `docs/`.
+covers a repository and a page can still name another team. `access` and
+`audience` work the same way: the deepest `sidebar` folder above a document that
+sets one applies, then the repository's, to each document that names none.
+`sidebar` orders the folders of `docs/`, and labels nested ones by their path,
+such as `labels/faqs`; a folder it leaves out still appears, last and
+collapsed, so a new section is never hidden. `ac docs check` fails a file that
+does not parse or a `directory` that is not a folder under `docs/`. A site leaves out every document of a repository whose `meta.json` fails, rather than publish them without the owner and access it gives them.
 
 ## Decisions, runbooks and incidents
 

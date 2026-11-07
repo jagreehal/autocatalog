@@ -121,6 +121,47 @@ describe('docsSidebar', () => {
     expect(docHref('payments/index')).toBe('/payments');
   });
 
+  it('nests a folder in a folder, with the labels meta.json gives each', async () => {
+    await write(
+      'help/docs/meta.json',
+      JSON.stringify({
+        label: 'Help',
+        sidebar: [
+          { directory: 'labels', label: 'For labels' },
+          { directory: 'labels/faqs', label: 'FAQs' },
+        ],
+      }),
+    );
+    await write('help/docs/labels/start.md', doc('Start'));
+    await write('help/docs/labels/faqs/refunds.md', doc('Refunds'));
+    await write('help/docs/labels/sales/upload.md', doc('Upload'));
+
+    expect(docsSidebar(root)).toEqual([
+      {
+        label: 'Help',
+        items: [
+          {
+            label: 'For labels',
+            collapsed: false,
+            items: [
+              { label: 'Start', link: '/help/labels/start' },
+              {
+                label: 'FAQs',
+                collapsed: false,
+                items: [{ label: 'Refunds', link: '/help/labels/faqs/refunds' }],
+              },
+              {
+                label: 'Sales',
+                collapsed: true,
+                items: [{ label: 'Upload', link: '/help/labels/sales/upload' }],
+              },
+            ],
+          },
+        ],
+      },
+    ]);
+  });
+
   it('takes the name and folder order a repository gives in docs/meta.json', async () => {
     await write(
       'tools/docs/meta.json',
@@ -129,7 +170,6 @@ describe('docsSidebar', () => {
         sidebar: [
           { directory: 'runbooks', label: 'Runbooks', collapsed: true },
           { directory: 'guide', label: 'Start here' },
-          { directory: 'gone', label: 'No pages' },
         ],
       }),
     );

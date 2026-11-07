@@ -26,9 +26,11 @@ export interface ApisPageProps {
     href: string;
     operations: number;
   }>;
+  /** Read outside the company, where the repository and file mean nothing. */
+  outside?: boolean | undefined;
 }
 
-export function ApisPage({ apis }: ApisPageProps) {
+export function ApisPage({ apis, outside = false }: ApisPageProps) {
   return (
     <div className="not-content" data-wide>
       {apis.length === 0 ? (
@@ -51,8 +53,8 @@ export function ApisPage({ apis }: ApisPageProps) {
               <TableHeader>
                 <TableHead isRowHeader>API</TableHead>
                 <TableHead>Version</TableHead>
-                <TableHead>Repository</TableHead>
-                <TableHead>Spec</TableHead>
+                {!outside && <TableHead>Repository</TableHead>}
+                {!outside && <TableHead>Spec</TableHead>}
                 <TableHead>Operations</TableHead>
               </TableHeader>
               <TableBody>
@@ -67,10 +69,12 @@ export function ApisPage({ apis }: ApisPageProps) {
                       </a>
                     </TableCell>
                     <TableCell>{api.version && <code>{api.version}</code>}</TableCell>
-                    <TableCell>{api.repository}</TableCell>
-                    <TableCell>
-                      <code>{api.file}</code>
-                    </TableCell>
+                    {!outside && <TableCell>{api.repository}</TableCell>}
+                    {!outside && (
+                      <TableCell>
+                        <code>{api.file}</code>
+                      </TableCell>
+                    )}
                     <TableCell>{api.operations}</TableCell>
                   </TableRow>
                 ))}

@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { checkDocs } from '../src/check';
 import { readDocs, repositoryMetas } from '../src/read-docs';
@@ -35,6 +36,7 @@ describe('docs/meta.json', () => {
   it('names a repository in its own words', async () => {
     await write('payments/docs/meta.json', meta);
     await write('payments/docs/index.md', '---\ntitle: Payments\nowner: x\n---\n');
+    await write('payments/docs/guide/start.md', '---\ntitle: Start\nowner: x\n---\n');
 
     expect(repositoryMetas(root).get('payments')).toEqual(JSON.parse(meta));
   });
@@ -55,7 +57,7 @@ describe('docs/meta.json', () => {
     expect(checkDocs(root).failures.join('\n')).toMatch(/payments\/docs\/meta\.json.*lable/);
   });
 
-  it.each(['one.md', 'ops/runbooks', '../outside', '.'])(
+  it.each(['one.md', 'ops/nope', '../outside', '.'])(
     'fails the check on a sidebar entry the navigation could not show: %s',
     async (directory) => {
       await write(
@@ -79,6 +81,44 @@ describe('docs/meta.json', () => {
 });
 
 describe('autocatalog.site.json', () => {
+  it("resolves the assistant's module and icon files beside it, and keeps a URL", async () => {
+    await write(
+      'autocatalog.site.json',
+      JSON.stringify({
+        chat: {
+          module: './site/chat.ts',
+          title: 'Ask',
+          icons: { launcher: './brand/chat.svg', send: '/send.svg', close: '<svg/>' },
+        },
+      }),
+    );
+
+    expect(readSiteConfig(root).chat).toEqual({
+      module: path.join(root, 'site/chat.ts'),
+      title: 'Ask',
+      icons: {
+        launcher: pathToFileURL(path.join(root, 'brand/chat.svg')).href,
+        send: '/send.svg',
+        close: '<svg/>',
+      },
+    });
+  });
+
+  it('resolves the access module beside it', async () => {
+    await write(
+      'autocatalog.site.json',
+      JSON.stringify({
+        output: 'server',
+        access: { module: './site/access.ts', denied: 'teaser' },
+      }),
+    );
+
+    expect(readSiteConfig(root).access).toEqual({
+      module: path.join(root, 'site/access.ts'),
+      denied: 'teaser',
+    });
+  });
+
   it('finds nothing to read in a project without one', () => {
     expect(readSiteConfig(root)).toEqual({});
   });
@@ -94,6 +134,53 @@ describe('autocatalog.site.json', () => {
       theme: 'teal',
       brand: path.join(root, 'brand'),
     });
+  });
+
+  it('takes extensions as a path against the file or a package by name, and server output', async () => {
+    await write(
+      'autocatalog.site.json',
+      JSON.stringify({ extend: ['./site/extend.ts', '@acme/site-kit'], output: 'server' }),
+    );
+
+    expect(readSiteConfig(root)).toEqual({
+      extend: [path.join(root, 'site/extend.ts'), '@acme/site-kit'],
+      output: 'server',
+    });
+  });
+
+  it('takes header links, head tags and the interface in its own words', async () => {
+    const site = {
+      social: [{ icon: 'github', label: 'GitHub', href: 'https://github.com/acme' }],
+      head: [{ tag: 'meta', attrs: { name: 'robots', content: 'noindex' } }],
+      strings: { 'search.label': 'Search help' },
+    };
+
+    await write('autocatalog.site.json', JSON.stringify(site));
+
+    expect(readSiteConfig(root)).toEqual(site);
+  });
+
+  it('takes header links, each standing for the paths it matches', async () => {
+    const nav = [
+      { label: 'Guides', href: '/', match: ['/labels/', '/publishers/'] },
+      { label: 'Status', href: 'https://status.acme.com' },
+    ];
+
+    await write('autocatalog.site.json', JSON.stringify({ nav }));
+
+    expect(readSiteConfig(root)).toEqual({ nav });
+  });
+
+  it('refuses a header link without a label', async () => {
+    await write('autocatalog.site.json', JSON.stringify({ nav: [{ href: '/' }] }));
+
+    expect(() => readSiteConfig(root)).toThrow('label');
+  });
+
+  it('refuses a head tag a page cannot hold', async () => {
+    await write('autocatalog.site.json', JSON.stringify({ head: [{ tag: 'div' }] }));
+
+    expect(() => readSiteConfig(root)).toThrow('autocatalog.site.json');
   });
 
   it('names what the site enrols', async () => {

@@ -29,6 +29,8 @@ export interface PageTitleChromeProps {
   /** What a document of a kind records about itself: its kind, date, what it applies to. */
   facts?: TitleFact[] | undefined;
   actions: PageAction[];
+  /** Whether the page offers to copy and pin itself, beside `actions`. */
+  markdownActions?: boolean;
   /** Starlight's own `<h1>`, rendered by the Astro shell. */
   children?: ReactNode;
 }
@@ -185,6 +187,7 @@ export function PageTitleChrome({
   status,
   facts = [],
   actions,
+  markdownActions = true,
   children,
 }: PageTitleChromeProps) {
   const [announcement, setAnnouncement] = useState('');
@@ -258,36 +261,38 @@ export function PageTitleChrome({
           ))}
         </dl>
       )}
-      <ButtonGroup aria-label="Page actions" data-pagefind-ignore="">
-        {actions.map((action) =>
-          action.copy && action.label === COPY_MARKDOWN_LABEL ? (
-            <CopyMarkdownButton
-              key={`${action.href}|${action.label}`}
-              href={action.href}
-              onStatus={setAnnouncement}
-            />
-          ) : action.copy ? (
-            <CopyAction
-              key={`${action.href}|${action.label}`}
-              action={action}
-              onStatus={setAnnouncement}
-            />
-          ) : (
-            <LinkButton
-              key={`${action.href}|${action.label}`}
-              variant="outline"
-              size="sm"
-              href={action.href}
-            >
-              <Icon name={action.icon} />
-              {action.label}
-            </LinkButton>
-          ),
-        )}
-        {/* Pages with no Markdown twin still get a copy of the page itself. */}
-        {!hasMarkdownCopy && <CopyMarkdownButton onStatus={setAnnouncement} />}
-        <FavoriteToggle catalogKey={catalogKey} label={title} />
-      </ButtonGroup>
+      {(markdownActions || actions.length > 0) && (
+        <ButtonGroup aria-label="Page actions" data-pagefind-ignore="">
+          {actions.map((action) =>
+            action.copy && action.label === COPY_MARKDOWN_LABEL ? (
+              <CopyMarkdownButton
+                key={`${action.href}|${action.label}`}
+                href={action.href}
+                onStatus={setAnnouncement}
+              />
+            ) : action.copy ? (
+              <CopyAction
+                key={`${action.href}|${action.label}`}
+                action={action}
+                onStatus={setAnnouncement}
+              />
+            ) : (
+              <LinkButton
+                key={`${action.href}|${action.label}`}
+                variant="outline"
+                size="sm"
+                href={action.href}
+              >
+                <Icon name={action.icon} />
+                {action.label}
+              </LinkButton>
+            ),
+          )}
+          {/* Pages with no Markdown twin still get a copy of the page itself. */}
+          {markdownActions && !hasMarkdownCopy && <CopyMarkdownButton onStatus={setAnnouncement} />}
+          {markdownActions && <FavoriteToggle catalogKey={catalogKey} label={title} />}
+        </ButtonGroup>
+      )}
       <Separator className="mt-1" />
       {/* A screen reader hears the result of a copy, not only a changed label. */}
       <span className="sr-only" role="status" aria-live="polite" data-copy-status="">

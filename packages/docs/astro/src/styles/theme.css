@@ -471,13 +471,18 @@ starlight-toc a[aria-current='true'] {
     visibility: hidden;
     pointer-events: none;
   }
+  /* Starlight sizes "On this page" from --sl-sidebar-width too; keep it at the open width. */
+  :root[data-sidebar='collapsed'] .right-sidebar-panel .sl-container {
+    width: calc(var(--ac-sidebar-width, 18.75rem) - 2 * var(--sl-sidebar-pad-x));
+  }
   :root[data-sidebar='collapsed'] [data-sidebar-resizer] {
     display: none;
   }
 
+  /* Above the resize handle, which runs down the same edge and would take its clicks. */
   [data-sidebar-toggle] {
     position: fixed;
-    z-index: calc(var(--sl-z-index-navbar) - 1);
+    z-index: var(--sl-z-index-navbar);
     top: calc(var(--sl-nav-height) + 0.5rem);
     inset-inline-start: calc(var(--sl-sidebar-width) - 1rem);
     background: var(--sl-color-bg-sidebar, var(--background, #fff));

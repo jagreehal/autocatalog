@@ -8,11 +8,22 @@
  */
 import { memo, useEffect, useRef } from 'react';
 import type { CursorSource, Peer } from '../../collab/room';
-import { CanvasPortal, createSmoother, COUNTER_SCALE, useCounterScale } from '@eventcatalog/visualiser/studio';
+import {
+  CanvasPortal,
+  createSmoother,
+  COUNTER_SCALE,
+  useCounterScale,
+} from '@eventcatalog/visualiser/studio';
 
 type Person = Pick<Peer, 'id' | 'name' | 'color'>;
 
-export const LiveCursors = memo(function LiveCursors({ people, source }: { people: Person[]; source: CursorSource }) {
+export const LiveCursors = memo(function LiveCursors({
+  people,
+  source,
+}: {
+  people: Person[];
+  source: CursorSource;
+}) {
   const layer = useRef<HTMLDivElement>(null);
   useCounterScale(layer);
   const elements = useRef(new Map<string, HTMLDivElement>());
@@ -22,7 +33,8 @@ export const LiveCursors = memo(function LiveCursors({ people, source }: { peopl
       for (const [id, element] of elements.current) {
         const cursor = shown.get(id);
         element.style.display = cursor ? '' : 'none';
-        if (cursor) element.style.transform = `translate(${cursor.x}px, ${cursor.y}px) scale(var(${COUNTER_SCALE}, 1))`;
+        if (cursor)
+          element.style.transform = `translate(${cursor.x}px, ${cursor.y}px) scale(var(${COUNTER_SCALE}, 1))`;
       }
     });
     const place = (peers: ReadonlyMap<string, Peer>) => {
@@ -43,12 +55,22 @@ export const LiveCursors = memo(function LiveCursors({ people, source }: { peopl
         {people.map((person) => (
           <div
             key={person.id}
-            ref={(element) => void (element ? elements.current.set(person.id, element) : elements.current.delete(person.id))}
+            ref={(element) =>
+              void (element
+                ? elements.current.set(person.id, element)
+                : elements.current.delete(person.id))
+            }
             className="studio-live-cursor"
             style={{ display: 'none' }}
           >
             <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden>
-              <path d="M2 1.5 L15.5 8.2 L9.2 9.6 L6.6 15.8 Z" fill={person.color} stroke="white" strokeWidth="1.4" strokeLinejoin="round" />
+              <path
+                d="M2 1.5 L15.5 8.2 L9.2 9.6 L6.6 15.8 Z"
+                fill={person.color}
+                stroke="white"
+                strokeWidth="1.4"
+                strokeLinejoin="round"
+              />
             </svg>
             <span style={{ background: person.color }}>{person.name}</span>
           </div>

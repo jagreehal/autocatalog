@@ -37,6 +37,19 @@ describe('renderLlmsTxt', () => {
     expect(text).toContain(`[llms-full.txt](${base}/llms-full.txt)`);
   });
 
+  it('links each API to its spec, and names no owner where the site has none', () => {
+    const text = renderLlmsTxt({
+      title: 'Acme Developers',
+      description: 'The Acme API.',
+      base,
+      items: [{ id: 'api/start', repo: 'api', title: 'Start', owner: '', updated: null, tags: [] }],
+      apis: [{ path: 'apis/api/openapi/', title: 'Payments API', summary: 'Move money.' }],
+    });
+
+    expect(text).toContain(`- [Start](${base}/api/start.md)\n`);
+    expect(text).toContain(`- [Payments API](${base}/apis/api/openapi/openapi.json): Move money\n`);
+  });
+
   it('gives each glossary term its meaning, and links entities and data products', () => {
     const authored = { repository: 'payments-service', body: '' };
 

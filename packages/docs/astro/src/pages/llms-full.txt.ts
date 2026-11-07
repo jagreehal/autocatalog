@@ -1,21 +1,24 @@
 import type { APIRoute } from 'astro';
+import { readableCatalog } from '../access';
 import { docsCatalog } from '../catalog';
 import { docsSiteConfig } from '../config';
 import { modelMarkdown } from '../data-models';
 import { eventPath } from '../event-path';
 import { renderLlmsFullTxt } from '../llms';
 import { componentRows } from '../page-models';
+import { docPage } from '../ui/lib/docs';
 import { componentTwin, docTwin, eventSource, eventTwin, pageUrl } from '../twins';
 
-export const GET: APIRoute = async ({ site }) => {
+export const GET: APIRoute = async ({ site, locals }) => {
   const config = docsSiteConfig();
-  const catalog = await docsCatalog();
+  // With `access`, this renders per request with what this reader may open.
+  const catalog = readableCatalog(await docsCatalog(), locals.canRead);
   const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
 
   // Documents by id, then events, as llms.txt lists them; then data models.
   const docs = [...catalog.docs]
     .sort((a, b) => a.id.localeCompare(b.id))
-    .map((doc) => docTwin(doc, catalog.manifest, pageUrl(site, base, `${doc.id}/`)));
+    .map((doc) => docTwin(doc, catalog.manifest, pageUrl(site, base, `${docPage(doc.id)}/`)));
 
   const events = catalog.events.map((entry) =>
     eventTwin(entry, { source: eventSource(entry), url: pageUrl(site, base, eventPath(entry)) }),
