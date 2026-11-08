@@ -1,5 +1,12 @@
 # autocatalog-agents-mcp
 
+## 0.2.11
+
+### Patch Changes
+
+- autocatalog-agents-core@0.3.3
+  - autocatalog-agents-adapter-autotel@0.3.3
+
 ## 0.2.10
 
 ### Patch Changes
