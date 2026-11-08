@@ -394,4 +394,4 @@ export function pagesSource(pages: readonly ChatPage[]): ChatSource {
   };
 }
 
-export { CHAT_ICON_NAMES, type ChatIconName, type ChatText, DEFAULT_CHAT_TEXT } from './text';
+export { CHAT_ICON_NAMES, type ChatIconName, type ChatText, DEFAULT_CHAT_TEXT } from './text.ts';

@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import type { CSSProperties, ReactNode } from 'react';
 import { z } from 'zod';
-import type { ChatIconName } from '../text';
+import type { ChatIconName } from '../text.ts';
 
 /**
  * An icon as a React node, or as a string: an SVG's URL or its markup, drawn

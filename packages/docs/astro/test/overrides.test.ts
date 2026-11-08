@@ -28,7 +28,7 @@ describe('PageTitleChrome states', () => {
     const html = render(PageTitleChrome, docHead);
 
     expect(html).toContain('data-copy-from="/payments-service/runbook.md"');
-    expect(html).toContain('<span data-label="">Copy page as Markdown</span>');
+    expect(html).toMatch(/<span [^>]*data-label="">Copy page as Markdown<\/span>/);
     expect(html).toContain('href="/payments-service/runbook.md"');
     expect(html).toContain('data-copy-status');
   });

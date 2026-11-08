@@ -550,8 +550,8 @@ export async function runSite(input: RunSiteOptions): Promise<number> {
   const title = opts.title ?? config.title;
   const description = opts.description ?? config.description;
 
-  // The site's own packages first, then autocatalog's: see site-resolve.ts.
-  const resolveFrom = [process.cwd(), ...(await siteDependencyDirs())];
+  // autocatalog's packages; the site's own project answers for what it names. See site-resolve.ts.
+  const resolveFrom = await siteDependencyDirs();
 
   const code = await new Promise<number>((resolve) => {
     // Run from that root: Astro resolves some of its build output against the
@@ -590,6 +590,7 @@ export async function runSite(input: RunSiteOptions): Promise<number> {
           }),
           AUTOCATALOG_REACT_FROM: import.meta.resolve('autocatalog-docs-astro'),
           AUTOCATALOG_RESOLVE_FROM: resolveFrom.join(path.delimiter),
+          AUTOCATALOG_RESOLVE_SITE: process.cwd(),
           ...(opts.site && { AUTOCATALOG_SITE_URL: opts.site }),
           ...(opts.base && { AUTOCATALOG_SITE_BASE: opts.base }),
           ...(title && { AUTOCATALOG_DOCS_TITLE: title }),
@@ -622,6 +623,8 @@ export async function runSite(input: RunSiteOptions): Promise<number> {
           ...(config.repo && { AUTOCATALOG_DOCS_REPO: config.repo }),
           ...(config.atRoot && { AUTOCATALOG_DOCS_AT_ROOT: 'true' }),
           ...(config.pageActions === false && { AUTOCATALOG_SITE_PAGE_ACTIONS: 'false' }),
+          ...(config.apiReference && { AUTOCATALOG_SITE_API_REFERENCE: config.apiReference }),
+          ...(config.mcp === false && { AUTOCATALOG_SITE_MCP: 'false' }),
           ...(eventcatalog && { AUTOCATALOG_EVENTCATALOG: eventcatalog.embedsFile }),
           ...(opts.liveUrl && { AUTOCATALOG_DOCS_LIVE_URL: opts.liveUrl }),
           ...(opts.liveEvent && { AUTOCATALOG_DOCS_LIVE_EVENT: opts.liveEvent }),
@@ -704,6 +707,9 @@ async function writeServerStart(out: string, resolveFrom: string[]): Promise<voi
     [
       '// Written by `ac site`. Run it to serve the site.',
       `process.env.AUTOCATALOG_RESOLVE_FROM ??= ${JSON.stringify(resolveFrom.join(path.delimiter))};`,
+      `process.env.AUTOCATALOG_RESOLVE_SITE ??= ${JSON.stringify(process.cwd())};`,
+      // Where this file is, so the built chunks beside it resolve as autocatalog's code.
+      `process.env.AUTOCATALOG_RESOLVE_OUT ??= import.meta.dirname;`,
       `await import(${JSON.stringify(SITE_RESOLVE)});`,
       "await import('./server/entry.mjs');",
       '',

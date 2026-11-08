@@ -50,6 +50,10 @@ export interface DocsSiteConfig {
   access: SiteAccessConfig | undefined;
   /** Whether each page offers to copy, view and pin its Markdown. */
   pageActions: boolean;
+  /** Scalar with its own sidebar and search below the header, or inside the site's navigation. */
+  apiReference: 'full' | 'embedded';
+  /** Whether a site rendered per request serves its MCP endpoint at `/mcp`. */
+  mcp: boolean;
   navigation: SiteNavigation | undefined;
   /** A server-sent events feed the maps can follow live. */
   live: { url: string; event: string } | undefined;
@@ -80,6 +84,15 @@ export function docsSiteConfig(): DocsSiteConfig {
     title: process.env.AUTOCATALOG_DOCS_TITLE ?? 'Documentation',
     audience: process.env.AUTOCATALOG_SITE_AUDIENCE || undefined,
     pageActions: process.env.AUTOCATALOG_SITE_PAGE_ACTIONS !== 'false',
+    mcp: process.env.AUTOCATALOG_SITE_MCP !== 'false',
+    // Developers outside come for the reference itself; the company reads it beside the rest.
+    apiReference:
+      process.env.AUTOCATALOG_SITE_API_REFERENCE === 'full' ||
+      process.env.AUTOCATALOG_SITE_API_REFERENCE === 'embedded'
+        ? process.env.AUTOCATALOG_SITE_API_REFERENCE
+        : process.env.AUTOCATALOG_SITE_AUDIENCE
+          ? 'full'
+          : 'embedded',
     access: process.env.AUTOCATALOG_SITE_ACCESS
       ? siteAccessSchema.parse(JSON.parse(process.env.AUTOCATALOG_SITE_ACCESS))
       : undefined,

@@ -1,5 +1,32 @@
 import type { SiteNavLink } from 'autocatalog-docs-core';
 
+/**
+ * The two sections of a developer portal, for a site for readers outside that
+ * has guides and an API and names no `nav` of its own: Documentation, current on
+ * the home page and every guide's section, and API reference, which opens the
+ * one API directly. From the reference, the guides are one click away.
+ */
+export function portalNav(docPages: string[], apiPaths: string[]): SiteNavLink[] {
+  if (docPages.length === 0 || apiPaths.length === 0) return [];
+
+  const sections = [
+    ...new Set(docPages.flatMap((page) => page.split('/').filter(Boolean).slice(0, 1))),
+  ];
+
+  return [
+    {
+      label: 'Documentation',
+      href: '/',
+      match: ['/', ...sections.map((section) => `/${section}/`)],
+    },
+    {
+      label: 'API reference',
+      href: apiPaths.length === 1 ? `/${apiPaths[0]}` : '/apis/',
+      match: '/apis/',
+    },
+  ];
+}
+
 /** A header link as it renders on one page. */
 export interface NavLinkView {
   label: string;

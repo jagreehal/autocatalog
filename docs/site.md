@@ -599,6 +599,11 @@ Every token `theme.css` can set, each for `:root` and `[data-theme='dark']`:
 Your `theme.css` loads after the built-in theme, so a token you set wins and one
 you leave keeps its default.
 
+Dark tokens can sit under `.dark`, as shadcn themes and the apps they come from
+write them: the site keeps a `.dark` class on `<html>` in step with the theme
+switch, so a `theme.css` copied from your app works as it is. The API reference
+reads the same tokens, so Scalar takes your colours, font and corners too.
+
 The provenance colours (declared, extracted, inferred) carry meaning on every
 page, so keep them.
 
@@ -660,11 +665,13 @@ To take options, export a function from the package and call it from your own
 
 `"output": "server"` renders documents when they are requested, so middleware
 can decide what each reader sees and pages under `--pages` can be API routes
-that take requests. The catalog's own pages are still built once. A copy built
-ahead would skip that middleware, so a server site publishes no Markdown twin of
-a document and no `llms-full.txt`, and its `llms.txt` lists no documents. With
-[`access`](#who-may-read-what) they render per request instead, through its
-rule. Pagefind indexes only pages built ahead, so the header's search box asks
+that take requests. The catalog's own pages are still built once. Each
+document's Markdown twin, `llms.txt`, `llms-full.txt` and `/mcp` render per
+request too, so your middleware runs before any of them answers. With
+[`access`](#who-may-read-what) they follow its rule. A gate that covers only
+part of the site, such as `/handbook/internal/`, also needs to cover
+`/llms.txt`, `/llms-full.txt` and `/mcp`, which list and read every document.
+Pagefind indexes only pages built ahead, so the header's search box asks
 the server, and `/search` lists the pages with any of the words, those with
 more of them first. The build carries the catalog it read, so you deploy `dist/`
 without the repositories. It writes `server.mjs` beside the site:
@@ -725,7 +732,51 @@ audience: [public]
 ```
 
 Each OpenAPI document publishes with Scalar's reference, request client and
-code samples. Mark what stays internal with `x-internal: true`, which most
+code samples. Scalar takes the page below the header, with its own sidebar and
+search, and the site's header, search and theme stay around it. With one API,
+**API reference** in the navigation opens it directly. To set the reference
+inside the site's navigation instead, as the company's own site does:
+
+```json
+{ "apiReference": "embedded" }
+```
+
+`"apiReference": "full"` gives the company's site the same layout.
+
+The header carries **Documentation** and **API reference**, so a reader in the
+reference is one click from the guides, whichever page they are on. A site
+names its own sections with `nav`, and restyles them from `theme.css`: the
+current one is `.ac-top-nav a[aria-current='page']`.
+
+### Let agents connect
+
+A site with `"output": "server"` serves an [MCP](https://modelcontextprotocol.io)
+endpoint at `/mcp`, so Claude, Cursor and other agents can connect by URL and
+answer from your docs. It offers `search_docs`, `list_pages` and `read_page`
+over the pages, and `list_operations` and `get_operation` over each API: one
+operation comes back with its parameters, bodies, responses, the auth it takes,
+the servers it is called on and every schema it refers to. With several APIs,
+`list_operations` names each operation's API and `get_operation` takes `api`.
+A `read_page` that misses names the closest pages.
+
+It serves what the site shows: the audience's guides, the API without its
+`x-internal` operations, and with `access`, what that reader may open. A
+connector that sends no sign-in reads what a signed-out reader sees.
+`llms.txt` names it, and Scalar's **Connect MCP** button installs it in Cursor
+or VS Code. In Claude Code:
+
+```bash
+claude mcp add --transport http acme-docs https://developers.acme.com/mcp
+```
+
+`"mcp": false` leaves it out. A static site has no endpoint; `llms.txt` and each
+`openapi.json` remain for agents that read files.
+
+On a server site, each guide's Markdown copy, `llms.txt` and `llms-full.txt`
+render per request, behind the same middleware as the pages. See
+[per-request pages](#per-request-pages) for a gate that covers part of the site.
+
+Mark what stays internal with `x-internal: true`, which most
 generators can set:
 
 - on the document, and the API is left out;

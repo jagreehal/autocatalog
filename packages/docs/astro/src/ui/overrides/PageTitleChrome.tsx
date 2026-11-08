@@ -2,7 +2,6 @@
 import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Badge } from '#ui/components/ui/badge.tsx';
 import { Button, LinkButton } from '#ui/components/ui/button.tsx';
-import { ButtonGroup } from '#ui/components/ui/button-group.tsx';
 import { Separator } from '#ui/components/ui/separator.tsx';
 import { COPY_MARKDOWN_LABEL, type PageAction, type PillTone } from '../../shell';
 import { Icon } from '../components/Icon';
@@ -112,9 +111,17 @@ function CopyAction({
   };
 
   return (
-    <Button variant="outline" size="sm" data-copy-from={action.href} onPress={copy}>
-      <Icon name={action.icon} />
-      <span data-label="">{message ?? action.label}</span>
+    <Button variant="ghost" size="sm" data-copy-from={action.href} onPress={copy}>
+      <Icon name={message === 'Copied' ? 'check' : action.icon} />
+      {/* The label holds its width, so "Copied" does not shift the buttons after it. */}
+      <span className="grid text-left">
+        <span aria-hidden="true" className="invisible col-start-1 row-start-1">
+          {action.label}
+        </span>
+        <span className="col-start-1 row-start-1" data-label="">
+          {message ?? action.label}
+        </span>
+      </span>
     </Button>
   );
 }
@@ -159,14 +166,22 @@ function CopyMarkdownButton({
 
   return (
     <Button
-      variant="outline"
+      variant="ghost"
       size="sm"
       data-copy-markdown=""
       {...(href ? { 'data-copy-from': href } : {})}
       onPress={copy}
     >
-      <Icon name="copy" />
-      <span data-label="">{message ?? COPY_MARKDOWN_LABEL}</span>
+      <Icon name={message === 'Copied' ? 'check' : 'copy'} />
+      {/* The label holds its width, so "Copied" does not shift the buttons after it. */}
+      <span className="grid text-left">
+        <span aria-hidden="true" className="invisible col-start-1 row-start-1">
+          {COPY_MARKDOWN_LABEL}
+        </span>
+        <span className="col-start-1 row-start-1" data-label="">
+          {message ?? COPY_MARKDOWN_LABEL}
+        </span>
+      </span>
     </Button>
   );
 }
@@ -262,36 +277,56 @@ export function PageTitleChrome({
         </dl>
       )}
       {(markdownActions || actions.length > 0) && (
-        <ButtonGroup aria-label="Page actions" data-pagefind-ignore="">
-          {actions.map((action) =>
-            action.copy && action.label === COPY_MARKDOWN_LABEL ? (
-              <CopyMarkdownButton
-                key={`${action.href}|${action.label}`}
-                href={action.href}
-                onStatus={setAnnouncement}
-              />
-            ) : action.copy ? (
-              <CopyAction
-                key={`${action.href}|${action.label}`}
-                action={action}
-                onStatus={setAnnouncement}
-              />
-            ) : (
-              <LinkButton
-                key={`${action.href}|${action.label}`}
-                variant="outline"
-                size="sm"
-                href={action.href}
-              >
-                <Icon name={action.icon} />
-                {action.label}
-              </LinkButton>
+        <div
+          role="group"
+          aria-label="Page actions"
+          className="-ml-2.5 flex flex-wrap items-center gap-1 text-muted-foreground"
+          data-pagefind-ignore=""
+        >
+          {[
+            ...actions.map((action) =>
+              action.copy && action.label === COPY_MARKDOWN_LABEL ? (
+                <CopyMarkdownButton
+                  key={`${action.href}|${action.label}`}
+                  href={action.href}
+                  onStatus={setAnnouncement}
+                />
+              ) : action.copy ? (
+                <CopyAction
+                  key={`${action.href}|${action.label}`}
+                  action={action}
+                  onStatus={setAnnouncement}
+                />
+              ) : (
+                <LinkButton
+                  key={`${action.href}|${action.label}`}
+                  variant="ghost"
+                  size="sm"
+                  href={action.href}
+                >
+                  <Icon name={action.icon} />
+                  {action.label}
+                </LinkButton>
+              ),
             ),
+            // Pages with no Markdown twin still get a copy of the page itself.
+            ...(markdownActions && !hasMarkdownCopy
+              ? [<CopyMarkdownButton key="copy-page" onStatus={setAnnouncement} />]
+              : []),
+          ].flatMap((button, index) =>
+            index === 0
+              ? [button]
+              : [
+                  <Separator
+                    key={`divider-${index}`}
+                    orientation="vertical"
+                    className="h-4 aria-[orientation=vertical]:self-center"
+                  />,
+                  button,
+                ],
           )}
-          {/* Pages with no Markdown twin still get a copy of the page itself. */}
-          {markdownActions && !hasMarkdownCopy && <CopyMarkdownButton onStatus={setAnnouncement} />}
-          {markdownActions && <FavoriteToggle catalogKey={catalogKey} label={title} />}
-        </ButtonGroup>
+          {markdownActions && <FavoriteToggle catalogKey={catalogKey} label={title} divided />}
+        </div>
       )}
       <Separator className="mt-1" />
       {/* A screen reader hears the result of a copy, not only a changed label. */}

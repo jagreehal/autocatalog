@@ -18,8 +18,8 @@ export {
   ChatWindow,
   SUPPORT_EVENT,
   useChatPanel,
-} from './ChatPanel';
+} from './ChatPanel.tsx';
 
-export { type ChatIcon, DEFAULT_CHAT_ICONS } from './customize';
+export { type ChatIcon, DEFAULT_CHAT_ICONS } from './customize.tsx';
 
-export { type ChatIconName, type ChatText, DEFAULT_CHAT_TEXT } from '../text';
+export { type ChatIconName, type ChatText, DEFAULT_CHAT_TEXT } from '../text.ts';

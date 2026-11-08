@@ -417,19 +417,8 @@ function spellings(word: string, glossaries: Glossary[]): string[] {
   return [...new Set([stem(word), ...found])];
 }
 
-/**
- * Word matching, with stems and the glossary's aliases. An alias teaches it that
- * `vacation` means `holiday`, and a miss returns the contents for the agent to
- * judge. Reads every file per question: add an index if a company outgrows that.
- */
-export async function ask(
-  catalog: CatalogSnapshot,
-  question: string,
-  scope: AskScope = {},
-  limit = 8,
-) {
-  const { items, glossaries, leftOut } = await candidates(catalog, scope);
-
+/** Score every candidate against the words of a question, with stems and the glossary's aliases. */
+function rank(items: Candidate[], glossaries: Glossary[], question: string) {
   const words = [...new Set(question.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? [])].filter(
     (word) => !STOP_WORDS.has(word),
   );
@@ -451,6 +440,31 @@ export async function ask(
   });
 
   scored.sort((a, b) => b.score - a.score || a.candidate.source.localeCompare(b.candidate.source));
+
+  return { groups, scored };
+}
+
+/** What a reader can browse: pages, flows, entities, teams and endpoints, not single events or terms. */
+const contentsOf = (items: Candidate[]) =>
+  items.flatMap(({ type, title, summary, repository, source }) =>
+    type === 'event' || type === 'term' || type === 'user'
+      ? []
+      : [{ type, title, summary, repository, source }],
+  );
+
+/**
+ * Word matching, with stems and the glossary's aliases. An alias teaches it that
+ * `vacation` means `holiday`, and a miss returns the contents for the agent to
+ * judge. Reads every file per question: add an index if a company outgrows that.
+ */
+export async function ask(
+  catalog: CatalogSnapshot,
+  question: string,
+  scope: AskScope = {},
+  limit = 8,
+) {
+  const { items, glossaries, leftOut } = await candidates(catalog, scope);
+  const { groups, scored } = rank(items, glossaries, question);
 
   const results = scored.slice(0, limit).map(({ candidate }) => ({
     type: candidate.type,
@@ -475,15 +489,7 @@ export async function ask(
     }),
     ...(!answered && {
       gap: 'Nothing matched these words. Read `contents`: a page may use different words for the same thing, and read_document fetches one. If none fits, say nobody has written this down.',
-      contents: items
-        .filter(({ type }) => type !== 'event' && type !== 'term' && type !== 'user')
-        .slice(0, 80)
-        .map(({ title, summary, repository, source }) => ({
-          title,
-          summary,
-          repository,
-          source,
-        })),
+      contents: contentsOf(items).slice(0, 80),
     }),
   };
 }
@@ -501,22 +507,76 @@ export async function searchCompany(catalog: CatalogSnapshot, query: string, sco
   );
 }
 
-/** One document whole, for when an excerpt is not enough. */
+/**
+ * Everything a reader may open, optionally under one folder, for browsing
+ * without a question. `under` matches the start of `<repository>/<source>`.
+ */
+export async function listDocuments(
+  catalog: CatalogSnapshot,
+  scope: AskScope = {},
+  under?: string,
+  limit = 500,
+) {
+  const { items } = await candidates(catalog, scope);
+  const prefix = under?.replace(/^\/+/, '');
+
+  const all = contentsOf(items).filter(
+    ({ repository, source }) =>
+      !prefix || source.startsWith(prefix) || `${repository}/${source}`.startsWith(prefix),
+  );
+
+  all.sort((a, b) => `${a.repository}/${a.source}`.localeCompare(`${b.repository}/${b.source}`));
+
+  return {
+    documents: all.slice(0, limit),
+    ...(all.length > limit && { omitted: all.length - limit }),
+    next: 'Open one with read_document, or ask a question with ask.',
+  };
+}
+
+/**
+ * One document whole, for when an excerpt is not enough. The repository can be
+ * left out when only one has that source, and `.md` can be left off. A miss
+ * names the closest pages instead of a bare error.
+ */
 export async function readDocument(
   catalog: CatalogSnapshot,
-  repository: string,
+  repository: string | undefined,
   source: string,
   scope: AskScope = {},
 ) {
-  const { items } = await candidates(catalog, scope);
+  const { items, glossaries } = await candidates(catalog, scope);
+  const wanted = source.replace(/^\/+/, '');
 
-  const found = items.filter(
-    (candidate) => candidate.repository === repository && candidate.source === source,
-  );
+  const matches = (candidate: Candidate) =>
+    (!repository || candidate.repository === repository) &&
+    (candidate.source === wanted || candidate.source === `${wanted}.md`);
+
+  const found = items.filter(matches);
+  const repositories = [...new Set(found.map((item) => item.repository))].sort();
+
+  if (repositories.length > 1) {
+    throw new Error(`${wanted} is in ${repositories.join(' and ')}. Name the repository.`);
+  }
 
   const [first] = found;
 
-  if (!first) throw new Error(`No document ${source} in ${repository}`);
+  if (!first) {
+    const { scored } = rank(items, glossaries, wanted.replace(/[/._-]+/g, ' '));
+
+    const near = scored
+      .filter(({ candidate }) => candidate.type !== 'event' && candidate.type !== 'term')
+      .slice(0, 5)
+      .map(({ candidate }) => `- ${candidate.repository} ${candidate.source}: ${candidate.title}`);
+
+    throw new Error(
+      [
+        `No document ${wanted}${repository ? ` in ${repository}` : ''}.`,
+        ...(near.length > 0 ? ['Closest:', ...near] : []),
+        'list_documents shows everything there is.',
+      ].join('\n'),
+    );
+  }
 
   // A glossary is one file holding many terms, and the whole file was asked for.
   const text =
@@ -526,7 +586,7 @@ export async function readDocument(
 
   return {
     ...first,
-    ...(found.length > 1 && { title: source }),
+    ...(found.length > 1 && { title: first.source }),
     text,
     howToRead: HOW_TO_READ,
   };

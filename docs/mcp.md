@@ -1,7 +1,7 @@
 ---
 title: MCP for coding agents
 owner: Maintainers
-summary: Fourteen tools that let an AI coding agent query the catalog, ask what a change breaks, and draw the architecture in the conversation.
+summary: Tools that let an AI coding agent query the catalog, ask what a change breaks, and draw the architecture in the conversation.
 tags:
   - agents
   - reference
@@ -51,6 +51,8 @@ status to stderr, and speaks over stdio. No network access is involved.
 | `define`                   | What a word means here: glossary terms and the entities named for it  |
 | `flow_context`             | A flow's transitions, rules, stuck signs, findings and evidence       |
 | `ask`                      | Any question, across every kind of document, with source and trust    |
+| `list_documents`           | Every page there is to read, optionally under one folder              |
+| `read_document`            | One page whole, by its source; a miss lists the closest pages         |
 | `propose_finding`          | Save a draft finding or a gap, with `--allow-writes`                  |
 | `show_map`                 | The catalog, a flow, a design or a data product as a diagram          |
 | `task_context`             | What to read before a task: matches, owners, decisions, gaps          |
@@ -69,7 +71,11 @@ autocatalog-mcp --root ./handbook --company ./repos
 findings, flows, entities and glossary terms. Each result gives its source and how far
 to trust it. `answered: false` means nothing matched, and the answer then lists the
 `contents`, so an agent can spot a page that uses other words and open it with
-`read_document`. `search`, `define`, `flow_context` and `show_map` cover every
+`read_document`. `list_documents` browses without a question: pass `under` for one
+folder, such as `handbook/docs/people`. `read_document` takes a source with or without
+`.md`, needs the repository only when two share that source, and on a miss names the
+closest pages. On connect the server tells the client to start with `ask`, so an agent
+knows the order before it lists the tools. `search`, `define`, `flow_context` and `show_map` cover every
 repository too. Where two repositories share an id, name one as `<repository>/<id>`.
 
 Matching is by word and stem, plus your glossary: give a term `aliases`, and a search

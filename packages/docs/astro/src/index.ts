@@ -57,10 +57,13 @@ import { eventCatalogEmbeds } from './eventcatalog';
 import { reactRendererIntegration, siteHasReact } from './react-integration';
 import { EMBED_SCRIPT } from './embed';
 import { SIDEBAR_SCRIPT } from './sidebar-state';
+import { DARK_CLASS_SCRIPT } from './dark-class';
 import { MERMAID_SCRIPT, remarkMermaid } from './mermaid';
 import { remarkWikiRefs } from './wiki-refs';
 import { mdxComponents } from './mdx';
 import { DEFAULT_FAVICON } from './favicon';
+import { apiPath } from './apis';
+import { portalNav } from './nav';
 import { RESERVED_SEGMENTS } from './kinds';
 import { docPage } from './ui/lib/docs';
 
@@ -114,6 +117,17 @@ export interface AutocatalogDocsOptions {
    * naming them, and the API references without `x-internal` operations.
    */
   audience?: string;
+  /**
+   * `full` gives each OpenAPI reference the page below the header, with
+   * Scalar's own sidebar, search and request client; `embedded` sets it in the
+   * site's navigation. `full` when there is an `audience`, else `embedded`.
+   */
+  apiReference?: 'full' | 'embedded';
+  /**
+   * `false` leaves out the MCP endpoint a site with `output: 'server'` serves at
+   * `/mcp`, where agents search its pages and read its APIs' operations.
+   */
+  mcp?: boolean;
   /**
    * A server-sent events URL the maps follow in their live mode: each frame's
    * JSON names the event that fired (`{ "name": "order.placed", "producer"? }`).
@@ -186,17 +200,6 @@ export default function autocatalogDocs(opts: AutocatalogDocsOptions = {}): Star
 
         const nav = opts.nav ?? siteNav(process.env.AUTOCATALOG_SITE_NAV);
 
-        // TopNav reads the links from here, at build time: a server site has
-        // no build environment left when it renders.
-        addIntegration({
-          name: 'autocatalog-docs-nav',
-          hooks: {
-            'astro:config:setup': ({ updateConfig: updateAstroConfig }) => {
-              updateAstroConfig({ vite: { plugins: [navModule(nav)] } });
-            },
-          },
-        });
-
         if (opts.navigation) {
           process.env.AUTOCATALOG_SITE_NAVIGATION ??= JSON.stringify(opts.navigation);
         }
@@ -204,6 +207,10 @@ export default function autocatalogDocs(opts: AutocatalogDocsOptions = {}): Star
         const theme = opts.theme ?? process.env.AUTOCATALOG_SITE_THEME;
 
         if (opts.audience) process.env.AUTOCATALOG_SITE_AUDIENCE ??= opts.audience;
+
+        if (opts.apiReference) process.env.AUTOCATALOG_SITE_API_REFERENCE ??= opts.apiReference;
+
+        if (opts.mcp === false) process.env.AUTOCATALOG_SITE_MCP ??= 'false';
 
         if (opts.atRoot) process.env.AUTOCATALOG_DOCS_AT_ROOT ??= 'true';
 
@@ -274,6 +281,26 @@ export default function autocatalogDocs(opts: AutocatalogDocsOptions = {}): Star
 
         if (rootRepo) refuseRootClashes(catalog.docs);
 
+        // TopNav reads the links from here, at build time: a server site has
+        // no build environment left when it renders. A portal for readers
+        // outside gets Documentation and API reference unless it names its own.
+        const sections =
+          nav.length > 0 || !effective.audience
+            ? nav
+            : portalNav(
+                catalog.docs.map((doc) => docPage(doc.id)),
+                catalog.apis.map(apiPath),
+              );
+
+        addIntegration({
+          name: 'autocatalog-docs-nav',
+          hooks: {
+            'astro:config:setup': ({ updateConfig: updateAstroConfig }) => {
+              updateAstroConfig({ vite: { plugins: [navModule(sections)] } });
+            },
+          },
+        });
+
         // Documents the catalog left out have no pages, twins or navigation
         // either: the content collection and the twins read this back.
         const exclude = catalog.failures.flatMap((failure) =>
@@ -332,7 +359,12 @@ export default function autocatalogDocs(opts: AutocatalogDocsOptions = {}): Star
         // Readers outside get the references; the rest of the catalog is the company's.
         const catalogPages = effective.audience
           ? [
-              ...(catalog.apis.length > 0 ? [{ label: 'API reference', link: '/apis' }] : []),
+              // One API is the reference itself, not a list of one.
+              ...(catalog.apis.length === 1
+                ? [{ label: 'API reference', id: 'apis', link: `/${apiPath(catalog.apis[0]!)}` }]
+                : catalog.apis.length > 1
+                  ? [{ label: 'API reference', link: '/apis' }]
+                  : []),
               ...catalog.kinds.map((kind) => ({ label: kind.label, link: `/${kind.path}` })),
             ]
           : [
@@ -402,6 +434,7 @@ export default function autocatalogDocs(opts: AutocatalogDocsOptions = {}): Star
             ...(config.head ?? []),
             { tag: 'script', content: EMBED_SCRIPT },
             { tag: 'script', content: SIDEBAR_SCRIPT },
+            { tag: 'script', content: DARK_CLASS_SCRIPT },
             { tag: 'script', attrs: { type: 'module' }, content: MERMAID_SCRIPT },
           ],
           components: {
@@ -417,7 +450,7 @@ export default function autocatalogDocs(opts: AutocatalogDocsOptions = {}): Star
             // here so they stay outside the pane Starlight hides when collapsed.
             ThemeSelect: 'autocatalog-docs-astro/overrides/ThemeSelect.astro',
             // The site's sections beside the title, when it has any.
-            ...(nav.length > 0 && { Header: 'autocatalog-docs-astro/overrides/Header.astro' }),
+            ...(sections.length > 0 && { Header: 'autocatalog-docs-astro/overrides/Header.astro' }),
             // Pagefind indexes only prerendered pages, so a site that renders per
             // request searches on the server, as each reader may.
             ...(config.prerender === false && {
@@ -481,6 +514,11 @@ export default function autocatalogDocs(opts: AutocatalogDocsOptions = {}): Star
         // gone, so what the build was told goes into the bundle. The assistant's
         // pages are taken now for the same reason.
         const { chat } = effective;
+
+        // Agents connect by URL, so the endpoint needs a server; llms.txt names it.
+        const servesMcp = astroConfig.output === 'server' && effective.mcp;
+
+        if (servesMcp) process.env.AUTOCATALOG_SITE_MCP_ENDPOINT = 'mcp';
 
         const snapshot =
           command === 'build' && astroConfig.output === 'server'
@@ -550,6 +588,7 @@ export default function autocatalogDocs(opts: AutocatalogDocsOptions = {}): Star
                 [config.prerender === false, '/search', './pages/search.astro'],
                 [access?.denied === 'teaser', '/no-access', './pages/no-access.astro'],
                 [chat !== undefined, '/api/chat', './pages/chat.ts'],
+                [servesMcp, '/mcp', './pages/mcp.ts'],
               ];
 
               for (const [wanted, pattern, file] of routes) {

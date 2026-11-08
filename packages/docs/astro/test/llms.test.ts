@@ -37,6 +37,15 @@ describe('renderLlmsTxt', () => {
     expect(text).toContain(`[llms-full.txt](${base}/llms-full.txt)`);
   });
 
+  it('names the MCP endpoint, for an agent that can connect, only when the site serves one', () => {
+    const input = { title: 'Acme', description: 'Docs.', base, items: [] };
+
+    expect(renderLlmsTxt({ ...input, mcp: `${base}/mcp` })).toContain(
+      `Connect an agent to search these pages and read the APIs over MCP: ${base}/mcp\n`,
+    );
+    expect(renderLlmsTxt(input)).not.toContain('MCP');
+  });
+
   it('links each API to its spec, and names no owner where the site has none', () => {
     const text = renderLlmsTxt({
       title: 'Acme Developers',

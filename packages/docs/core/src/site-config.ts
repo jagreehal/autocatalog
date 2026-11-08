@@ -159,6 +159,19 @@ export const siteConfigSchema = z.strictObject({
   pages: z.string().min(1).optional(),
   /** `false` leaves out the Markdown copy, view and pin each page offers. */
   pageActions: z.boolean().optional(),
+  /**
+   * How an OpenAPI reference is laid out. `full` gives Scalar the page below
+   * the header, with its own sidebar, search and request client; `embedded`
+   * sets it inside the site's navigation. A site with an `audience` is `full`
+   * unless it says otherwise.
+   */
+  apiReference: z.enum(['full', 'embedded']).optional(),
+  /**
+   * `false` leaves out the MCP endpoint at `/mcp`, which a site with
+   * `"output": "server"` serves so Claude and other agents can search its
+   * pages and read its APIs' operations.
+   */
+  mcp: z.boolean().optional(),
   /** `server` renders documents per request, behind the extensions' middleware. */
   output: z.enum(['static', 'server']).optional(),
   /** Where the site is deployed, such as `https://help.example.com`: for the sitemap and llms.txt. `--site` overrides it. */
