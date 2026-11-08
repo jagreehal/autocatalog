@@ -1,0 +1,12 @@
+---
+// The header's search on a site that renders per request. See SiteSearch.
+import { SiteSearch } from '../ui/overrides/SiteSearch';
+
+const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+---
+
+<SiteSearch
+  action={`${base}search`}
+  label={Astro.locals.t('search.label')}
+  query={Astro.url.searchParams.get('q') ?? undefined}
+/>

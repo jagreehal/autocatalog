@@ -72,7 +72,7 @@ it('draws a mermaid fence in an .mdx file as JSX, which MDX keeps verbatim', () 
   });
 });
 
-it('routes a folder of pages as src/pages/ would, and refuses one the catalog publishes', async () => {
+it('routes a folder of pages as src/pages/ would', async () => {
   await fs.mkdir(path.join(dir, 'api'));
   await fs.writeFile(path.join(dir, 'index.astro'), '');
   await fs.writeFile(path.join(dir, 'team.mdx'), '');
@@ -80,17 +80,11 @@ it('routes a folder of pages as src/pages/ would, and refuses one the catalog pu
   await fs.writeFile(path.join(dir, '_layout.astro'), '');
   await fs.writeFile(path.join(dir, 'notes.txt'), '');
 
-  expect(ownPageRoutes(dir, new Set(['/catalog']))).toEqual([
+  expect(ownPageRoutes(dir)).toEqual([
     ['/api/status.json', path.join(dir, 'api/status.json.ts')],
     ['/', path.join(dir, 'index.astro')],
     ['/team', path.join(dir, 'team.mdx')],
   ]);
-
-  await fs.writeFile(path.join(dir, 'glossary.astro'), '');
-
-  expect(() => ownPageRoutes(dir, new Set())).toThrow(
-    `${path.join(dir, 'glossary.astro')}: /glossary is a page the catalog publishes; rename the file`,
-  );
 });
 
 const person = (

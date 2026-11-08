@@ -1,0 +1,35 @@
+{
+  "$schema": "../../packages/docs/core/contracts/autocatalog.site.schema.json",
+  "title": "Acme Developers",
+  "description": "Move money with the Acme Payments API: guides, the reference, and a client to try it.",
+  "theme": "orange",
+  "audience": "public",
+  "navigation": {
+    "groups": [
+      {
+        "label": "Developers",
+        "items": [
+          "apis",
+          {
+            "label": "Status",
+            "href": "https://status.example.com"
+          },
+          {
+            "label": "Get an API key",
+            "href": "https://example.com/register"
+          }
+        ]
+      }
+    ]
+  },
+  "chat": {
+    "module": "./site/chat.ts",
+    "title": "Ask Acme",
+    "description": "Answers from these guides and the API reference.",
+    "suggestions": ["How do I authenticate?", "How do I create a payment?"],
+    "text": {
+      "emptyTitle": "Ask about the Payments API",
+      "placeholder": "How do I\u2026"
+    }
+  }
+}

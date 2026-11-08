@@ -32,6 +32,108 @@ const doc = (title: string, extra = ''): string =>
   `---\ntitle: ${title}\nowner: Payments\n${extra}---\n\nBody text.\n`;
 
 describe('readDocs', () => {
+  it('publishes outside only the documents that name that audience', async () => {
+    await write('api/docs/open.md', doc('Open'));
+    await write('api/docs/guide.md', doc('Guide', 'audience: [public]\n'));
+    await write('api/docs/runbook.md', doc('Runbook', 'audience: [oncall]\n'));
+
+    const titles = (options: Parameters<typeof readDocs>[1]) =>
+      readDocs(root, options).map((d) => d.data.title);
+
+    expect(titles({})).toEqual(['Open']);
+    expect(titles({ audience: ['public'] })).toEqual(['Guide', 'Open']);
+    expect(titles({ audience: ['public'], audienceRequired: true })).toEqual(['Guide']);
+  });
+
+  it("gives a document its folder's access from meta.json, unless it names its own", async () => {
+    await write(
+      'help/docs/meta.json',
+      JSON.stringify({
+        access: ['signed-in'],
+        sidebar: [{ directory: 'payments', label: 'Payments', access: ['payments'] }],
+      }),
+    );
+    await write('help/docs/start.md', doc('Start'));
+    await write('help/docs/payments/paid.md', doc('Paid'));
+    await write('help/docs/payments/open.md', doc('Open', 'access: []\n'));
+
+    expect(readDocs(root, {}).map((d) => [d.id, d.data.access])).toEqual([
+      ['help/payments/open', []],
+      ['help/payments/paid', ['payments']],
+      ['help/start', ['signed-in']],
+    ]);
+  });
+
+  it('leaves out every document of a repository whose meta.json is not valid', async () => {
+    await write('help/docs/meta.json', JSON.stringify({ access: ['payments'], label: 123 }));
+    await write('help/docs/paid.md', doc('Paid'));
+    await write('open/docs/start.md', doc('Start'));
+
+    const unreadable: string[] = [];
+
+    const ids = readDocs(root, {
+      onUnreadable: (d, message) => unreadable.push(`${d.repo} ${message}`),
+    }).map((d) => d.id);
+
+    expect(ids).toEqual(['open/start']);
+    expect(unreadable).toEqual([expect.stringMatching(/^help docs\/meta\.json is not valid/)]);
+    expect(() => readDocs(root)).toThrow(/help\/docs\/meta\.json is not valid/);
+    expect(checkDocs(root).failures.join('\n')).toMatch(/meta\.json[^]*at label/);
+  });
+
+  it('leaves out a repository whose meta.json gives access to a folder that is not one', async () => {
+    await write(
+      'help/docs/meta.json',
+      JSON.stringify({
+        sidebar: [{ directory: 'payments/', label: 'Payments', access: ['payments'] }],
+      }),
+    );
+    await write('help/docs/payments/paid.md', doc('Paid'));
+
+    expect(readDocs(root, { onUnreadable: () => undefined })).toEqual([]);
+    expect(checkDocs(root).failures.join('\n')).toMatch(
+      /meta\.json: sidebar names "payments\/", which is not a folder under docs\//,
+    );
+
+    // A name that differs only in case is not the folder either.
+    await write(
+      'help/docs/meta.json',
+      JSON.stringify({
+        sidebar: [{ directory: 'Payments', label: 'Payments', access: ['payments'] }],
+      }),
+    );
+
+    expect(readDocs(root, { onUnreadable: () => undefined })).toEqual([]);
+  });
+
+  it('takes access and audience from the deepest folder that says, then the repository', async () => {
+    await write(
+      'help/docs/meta.json',
+      JSON.stringify({
+        audience: ['customers'],
+        sidebar: [
+          { directory: 'labels', label: 'Labels', access: ['label'] },
+          { directory: 'labels/payments', label: 'Payments', access: ['label', 'payments'] },
+        ],
+      }),
+    );
+    await write('help/docs/labels/start.md', doc('Start'));
+    await write('help/docs/labels/payments/paid.md', doc('Paid'));
+    await write('help/docs/labels/payments/deep/fx.md', doc('FX'));
+
+    expect(
+      readDocs(root, { audience: ['customers'], audienceRequired: true }).map((d) => [
+        d.id,
+        d.data.access,
+        d.data.audience,
+      ]),
+    ).toEqual([
+      ['help/labels/payments/deep/fx', ['label', 'payments'], ['customers']],
+      ['help/labels/payments/paid', ['label', 'payments'], ['customers']],
+      ['help/labels/start', ['label'], ['customers']],
+    ]);
+  });
+
   it('addresses a doc by its path, across sibling repos', async () => {
     await write('payments-service/docs/runbook.md', doc('Runbook'));
     await write('payments-service/docs/ops/replay.md', doc('Replay'));

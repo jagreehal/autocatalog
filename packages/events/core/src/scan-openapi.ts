@@ -9,7 +9,7 @@ import {
   type ProvenanceValue,
 } from './adapter-event';
 import { isJsonObject, jsonObjectSchema, type JsonObject, type JsonValue } from './json';
-import { derefLocal } from './json-ref';
+import { derefLocal, rewriteObjectRefs, rewriteRefs } from './json-ref';
 import type {
   DiscoveryOutput,
   DiscoveryAdapter,
@@ -112,7 +112,40 @@ function jsonBodySchema(doc: Doc, operation: Doc): Doc | undefined {
 
   if (!mediaType) return undefined;
 
-  return derefObject(doc, objectOrEmpty(content[mediaType]).schema);
+  const schema = derefObject(doc, objectOrEmpty(content[mediaType]).schema);
+
+  return schema && standalone(doc, schema);
+}
+
+const COMPONENT_SCHEMA = '#/components/schemas/';
+
+/**
+ * The schema as its own document: each component schema it reaches, however
+ * deep, is carried under `$defs`, because the event is read without the spec.
+ */
+function standalone(doc: Doc, schema: Doc): Doc {
+  const defs: Doc = {};
+
+  const to = (ref: string): string => {
+    if (!ref.startsWith(COMPONENT_SCHEMA)) return ref;
+
+    const pointer = ref.slice(COMPONENT_SCHEMA.length);
+    const name = pointer.replace(/~1/g, '/').replace(/~0/g, '~');
+
+    if (!(name in defs)) {
+      // Claimed first, so a schema that refers to itself ends here.
+      defs[name] = {};
+      defs[name] = rewriteRefs(derefLocal<JsonValue>(doc, { $ref: ref }), to);
+    }
+
+    return `#/$defs/${pointer}`;
+  };
+
+  const rewritten = rewriteObjectRefs(schema, to);
+
+  if (Object.keys(defs).length === 0) return rewritten;
+
+  return { ...rewritten, $defs: { ...objectOrEmpty(rewritten.$defs), ...defs } };
 }
 
 function extensionMeta(operation: Doc): AdapterEventMeta | undefined {

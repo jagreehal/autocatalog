@@ -122,6 +122,28 @@ describe('eventsFromOpenApiDocument', () => {
     expect(found[0]!.event.provenance?.fields?.version).toBe('inferred');
   });
 
+  it('carries the schemas a payload reaches, so the event reads without the spec', () => {
+    const payment = { $ref: '#/components/schemas/Payment' };
+
+    const nested = {
+      openapi: '3.1.0',
+      webhooks: {
+        paid: { post: { requestBody: { content: { 'application/json': { schema: payment } } } } },
+      },
+      components: {
+        schemas: {
+          Payment: { allOf: [{ $ref: '#/components/schemas/Request' }] },
+          Request: { properties: { next: { $ref: '#/components/schemas/Request' } } },
+        },
+      },
+    };
+
+    expect(eventsFromOpenApiDocument(nested, 'openapi.yaml')[0]!.event.schema).toEqual({
+      allOf: [{ $ref: '#/$defs/Request' }],
+      $defs: { Request: { properties: { next: { $ref: '#/$defs/Request' } } } },
+    });
+  });
+
   it('throws a named error rather than hanging on a circular $ref', () => {
     const circular = {
       openapi: '3.1.0',

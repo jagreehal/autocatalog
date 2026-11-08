@@ -1,0 +1,155 @@
+openapi: 3.1.0
+info:
+  title: Payments API
+  version: 1.4.0
+  description: Hold balances in many currencies and pay anyone, anywhere.
+x-autocatalog:
+  service: payments-service
+servers:
+  - url: https://api.example.com/v1
+    description: Production
+  - url: https://sandbox.example.com/v1
+    description: Sandbox
+security:
+  - bearer: []
+tags:
+  - name: Balances
+    description: What you hold, by currency.
+  - name: Payments
+    description: Money out, to a beneficiary.
+  - name: Operations
+    description: Internal tooling.
+paths:
+  /balances:
+    get:
+      tags: [Balances]
+      operationId: listBalances
+      summary: List balances
+      responses:
+        '200':
+          description: One balance per currency.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Balance'
+  /payments:
+    post:
+      tags: [Payments]
+      operationId: createPayment
+      summary: Create a payment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentRequest'
+      responses:
+        '201':
+          description: The payment, pending until it settles.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payment'
+  /payments/{id}:
+    get:
+      tags: [Payments]
+      operationId: getPayment
+      summary: Get a payment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The payment.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payment'
+    delete:
+      tags: [Operations]
+      operationId: purgePayment
+      summary: Purge a payment
+      x-internal: true
+      responses:
+        '204':
+          description: Gone.
+  /reconcile:
+    post:
+      tags: [Operations]
+      operationId: reconcile
+      summary: Run reconciliation
+      x-internal: true
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReconcileJob'
+      responses:
+        '202':
+          description: Started.
+webhooks:
+  paymentCompleted:
+    post:
+      summary: Payment completed
+      x-autocatalog:
+        id: payment.completed
+        version: 1.0.0
+        domain: payments
+        producers: [payments-service]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Payment'
+      responses:
+        '200':
+          description: Received.
+components:
+  securitySchemes:
+    bearer:
+      type: http
+      scheme: bearer
+  schemas:
+    Money:
+      type: object
+      required: [amount, currency]
+      properties:
+        amount:
+          type: string
+          examples: ['125.00']
+        currency:
+          type: string
+          examples: [GBP]
+    Balance:
+      type: object
+      properties:
+        available:
+          $ref: '#/components/schemas/Money'
+    PaymentRequest:
+      type: object
+      required: [beneficiary, amount]
+      properties:
+        beneficiary:
+          type: string
+        amount:
+          $ref: '#/components/schemas/Money'
+    Payment:
+      allOf:
+        - $ref: '#/components/schemas/PaymentRequest'
+        - type: object
+          properties:
+            id:
+              type: string
+            status:
+              type: string
+              enum: [pending, completed, failed]
+    ReconcileJob:
+      type: object
+      properties:
+        ledger:
+          type: string

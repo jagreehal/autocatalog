@@ -1,6 +1,7 @@
 import { type Doc, readDocs } from 'autocatalog-docs-core';
+import { audienceReader, docForAudience } from './audience';
 import { docsSiteConfig } from './config';
-import { docPage } from './ui/lib/docs';
+import { docPage, entryId } from './ui/lib/docs';
 
 /**
  * The documents as they were authored, for the raw markdown twin.
@@ -14,11 +15,18 @@ import { docPage } from './ui/lib/docs';
  * pages Starlight renders.
  */
 export function docPaths() {
-  const { root, repo, repository, exclude } = docsSiteConfig();
+  const { root, repo, repository, exclude, audience } = docsSiteConfig();
 
   // An index document is served at its folder, so its twin answers there as well.
-  return readDocs(root, { repo, repository, exclude }).flatMap((doc) =>
-    [...new Set([doc.id, docPage(doc.id)])].map((slug) => ({ params: { slug }, props: { doc } })),
+  return readDocs(root, { repo, repository, exclude, ...audienceReader(audience) }).flatMap(
+    (read) => {
+      const doc = audience ? docForAudience(read) : read;
+
+      return [...new Set([entryId(doc.id), docPage(doc.id)])].map((slug) => ({
+        params: { slug },
+        props: { doc },
+      }));
+    },
   );
 }
 

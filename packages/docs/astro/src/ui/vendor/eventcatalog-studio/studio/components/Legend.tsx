@@ -76,7 +76,11 @@ export const Legend = memo(function Legend({
               className={`flex cursor-pointer items-center gap-2 text-[10px] text-[rgb(var(--ec-page-text))] transition-opacity hover:text-[rgb(var(--ec-accent))] hover:underline ${hidden ? 'opacity-40' : ''}`}
             >
               {look ? (
-                <look.icon aria-hidden className={`h-3 w-3 shrink-0 ${look.className}`} strokeWidth={2} />
+                <look.icon
+                  aria-hidden
+                  className={`h-3 w-3 shrink-0 ${look.className}`}
+                  strokeWidth={2}
+                />
               ) : (
                 <span className="block h-2 w-2 bg-[rgb(var(--ec-page-text-muted))]" />
               )}

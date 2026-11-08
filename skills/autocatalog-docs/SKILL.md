@@ -76,6 +76,8 @@ After an investigation, write what you learned in `docs/findings/`: `nature` (be
 
 Add `audience: [group]` to a page only some groups may read. The site, `llms.txt` and other readers leave it out.
 
+On a site with `access`, write `access: [feature]` on a page only readers holding that feature may open. For a whole folder, set `access` on its `sidebar` entry in `docs/meta.json`, or at the top of `meta.json` for the repository. A page's own `access:` wins, and `access: []` opens one page in a closed folder.
+
 ### The domain model
 
 These sit beside `docs/`, in the repository that owns the domain, and `ac docs check` checks each one.

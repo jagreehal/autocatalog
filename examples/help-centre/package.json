@@ -1,0 +1,20 @@
+{
+  "name": "@autocatalog-example/help-centre",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "A help centre `ac site` builds as a server: each account opens the guides on its plan, and the assistant answers from those. Nothing from Astro is installed here.",
+  "scripts": {
+    "build": "node ../../packages/events/cli/dist/bin.js site .",
+    "dev": "node ../../packages/events/cli/dist/bin.js site . --dev",
+    "start": "node dist/server.mjs",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "autocatalog-cli": "workspace:*"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.64.0",
+    "executable-stories-playwright": "8.11.0"
+  }
+}

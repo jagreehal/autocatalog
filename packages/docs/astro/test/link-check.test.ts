@@ -83,3 +83,11 @@ it("leaves EventCatalog's output to EventCatalog: links into it, and links insid
 
   expect(await brokenLinks(out, '/docs/')).toEqual([]);
 });
+
+it('trusts a link to a page the server renders per request', async () => {
+  await write('index.html', '<a href="/team/runbook">served</a><a href="/team/gone/">gone</a>');
+
+  expect(await brokenLinks(out, '/', new Set(['/team/runbook/']))).toEqual([
+    { page: '/', href: '/team/gone/', kind: 'page' },
+  ]);
+});

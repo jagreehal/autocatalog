@@ -34,7 +34,8 @@ export interface CatalogGroup {
 interface Page extends SidebarLink {
   order: number;
   index: boolean;
-  folder: string | undefined;
+  /** The folders it is in under `docs/`, outermost first. */
+  folders: string[];
 }
 
 const titleCase = (name: string) =>
@@ -45,30 +46,48 @@ const links = (pages: Page[]): SidebarLink[] =>
     .sort((a, b) => Number(b.index) - Number(a.index) || a.order - b.order)
     .map(({ label, link }) => ({ label, link }));
 
-/** A repository's pages: its own first, then its folders, listed ones in the order it gave. */
-function repositoryItems(pages: Page[], meta: RepositoryMeta): SidebarGroup['items'] {
-  const inFolder = (name: string) => pages.filter(({ folder }) => folder === name);
-  const listed = meta.sidebar ?? [];
+/**
+ * A folder's pages: its own first, then a group for each folder in it, the
+ * ones `meta.json` lists in its order and with its labels, then the rest.
+ */
+function repositoryItems(
+  pages: Page[],
+  meta: RepositoryMeta,
+  within: string[] = [],
+): SidebarGroup['items'] {
+  const depth = within.length;
+  const here = pages.filter(({ folders }) => folders.length === depth);
+  const below = (name: string) => pages.filter(({ folders }) => folders[depth] === name);
+  const pathOf = (name: string) => [...within, name].join('/');
+
+  // The folders meta.json lists directly in this one.
+  const listed = (meta.sidebar ?? []).filter(
+    ({ directory }) => directory.split('/').slice(0, -1).join('/') === within.join('/'),
+  );
+
   const named = new Set(listed.map(({ directory }) => directory));
 
-  const others = [...new Set(pages.flatMap(({ folder }) => folder ?? []))]
-    .filter((folder) => !named.has(folder))
+  const others = [...new Set(pages.flatMap(({ folders }) => folders[depth] ?? []))]
+    .filter((folder) => !named.has(pathOf(folder)))
     .sort();
 
+  const group = (name: string, label: string, collapsed: boolean): SidebarGroup => ({
+    label,
+    collapsed,
+    items: repositoryItems(below(name), meta, [...within, name]),
+  });
+
   return [
-    ...links(pages.filter(({ folder }) => folder === undefined)),
+    ...links(here),
     ...listed
-      .filter(({ directory }) => inFolder(directory).length > 0)
       .map(({ directory, label, collapsed = false }) => ({
+        name: directory.split('/').at(-1)!,
         label,
         collapsed,
-        items: links(inFolder(directory)),
-      })),
-    ...others.map((folder) => ({
-      label: titleCase(folder),
-      collapsed: true,
-      items: links(inFolder(folder)),
-    })),
+      }))
+      .filter(({ name }) => below(name).length > 0)
+      .map(({ name, label, collapsed }) => group(name, label, collapsed)),
+    ...others.map((folder) => group(folder, titleCase(folder), true)),
   ];
 }
 
@@ -102,7 +121,7 @@ export function docsSidebar(root: string, options: ReadDocsOptions = {}): Sideba
       link: `/${docPage(doc.id)}`,
       order: order ?? Number.MAX_VALUE,
       index,
-      folder: parts.length > 1 ? parts[0] : undefined,
+      folders: parts.slice(0, -1),
     });
     repositories.set(doc.repo, pages);
   }

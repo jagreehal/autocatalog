@@ -1,0 +1,61 @@
+{
+  "name": "autocatalog-chatbot",
+  "version": "0.0.0",
+  "description": "An assistant for a docs site that answers only from the pages it may read, with the AI SDK and shadcn/ui.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jagreehal/autocatalog.git",
+    "directory": "packages/docs/chatbot"
+  },
+  "homepage": "https://jagreehal.github.io/autocatalog",
+  "bugs": {
+    "url": "https://github.com/jagreehal/autocatalog/issues"
+  },
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./react": "./src/react/index.ts",
+    "./styles.css": "./src/styles.css"
+  },
+  "imports": {
+    "#ui/*": "./src/ui/*"
+  },
+  "files": [
+    "README.md",
+    "src"
+  ],
+  "engines": {
+    "node": ">=24"
+  },
+  "dependencies": {
+    "@ai-sdk/react": "4.0.168",
+    "@shadcn/react": "0.3.1",
+    "ai": "7.0.164",
+    "class-variance-authority": "0.7.1",
+    "cn": "0.4.0",
+    "lucide-react": "1.55.0",
+    "react": "19.3.1",
+    "react-aria-components": "1.22.1",
+    "react-dom": "19.3.1",
+    "react-markdown": "10.1.0",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@ai-sdk/provider": "4.0.36",
+    "@testing-library/react": "16.3.2",
+    "@types/node": "^26.6.4",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "jsdom": "27.0.1",
+    "shadcn": "4.21.4",
+    "tailwindcss": "4.3.3",
+    "typescript": "^6.0.3",
+    "vitest": "^5.0.3"
+  },
+  "scripts": {
+    "test": "vitest run"
+  }
+}

@@ -43,6 +43,30 @@ it('loads nothing when every repository with documents is excluded', async () =>
   expect(clear).toHaveBeenCalled();
 });
 
+it('ignores an unreadable file outside its repositories, such as one in a folder made after it started', async () => {
+  await fs.mkdir(path.join(root, 'docs'));
+
+  const layout = resolveDocsLayout(root, { exclude: [path.basename(root)] });
+  const deleted: string[] = [];
+
+  const context: Pick<LoaderContext, 'meta'> & {
+    store: Pick<LoaderContext['store'], 'clear' | 'delete'>;
+  } = {
+    store: { clear: () => undefined, delete: (id) => void deleted.push(id) },
+    meta: {
+      get: () => undefined,
+      set: () => undefined,
+      has: () => false,
+      delete: () => undefined,
+    },
+  };
+
+  // SAFETY: with nothing to load, the loader reads only the store and meta given here.
+  await docsLoader(layout, () => ['later/docs/page.md']).load(context as LoaderContext);
+
+  expect(deleted).toEqual([]);
+});
+
 it('removes what a later update hides, and stores the rest', () => {
   const entries = new Map<string, unknown>([['open', {}]]);
   const hidden = new Set<string>();

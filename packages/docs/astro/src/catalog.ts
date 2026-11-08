@@ -1,4 +1,9 @@
 import fs from 'node:fs';
+import { parse } from 'devalue';
+import { z } from 'zod';
+import { type AccessDoc, readableCatalog } from './access';
+import { readerView } from './reader-view';
+import { docPage } from './ui/lib/docs';
 import path from 'node:path';
 import {
   createAgentsResourceGraph,
@@ -97,7 +102,8 @@ import { repositorySpecifications, type CatalogSpecification } from './specifica
 import { publishedKinds, RESERVED_SEGMENTS } from './kinds';
 import { catalogModels, modelPath, type CatalogModel } from './data-models';
 import { termAnchor } from './model';
-import { docsSiteConfig } from './config';
+import { audienceReader, catalogForAudience } from './audience';
+import { docsSiteConfig, type DocsSiteConfig } from './config';
 import type { ShellLink } from './shell';
 import { catalogHref } from './view';
 
@@ -995,18 +1001,103 @@ function documentsManifest(root: string, options: BuildDocsCatalogOptions): Docs
   }
 }
 
+/**
+ * The catalog a site publishes: everything, or for a site with an audience,
+ * only what that audience may read.
+ */
+export async function buildSiteCatalog(
+  site: DocsSiteConfig,
+  options: BuildDocsCatalogOptions = {},
+): Promise<DocsCatalog> {
+  const { root, repo, repository, schemaPath, conventionsPath, audience } = site;
+
+  const catalog = await buildDocsCatalog(root, {
+    repo,
+    repository,
+    schemaPath,
+    conventionsPath,
+    ...audienceReader(audience),
+    ...options,
+  });
+
+  const published = withPageUrls(catalog);
+
+  return audience ? catalogForAudience(published) : published;
+}
+
+/**
+ * Each document in the graph linked where its page is: without the repository's
+ * name on a site that publishes it at the root (`atRoot`).
+ */
+function withPageUrls(catalog: DocsCatalog): DocsCatalog {
+  if (!process.env.AUTOCATALOG_DOCS_ROOT_REPO) return catalog;
+
+  const resources = catalog.graph.resources.map((resource) =>
+    resource.ref.kind === 'document' && resource.url
+      ? {
+          ...resource,
+          url: `/${docPage(`${resource.ref.namespace}/${resource.ref.id}`)
+            .split('/')
+            .map(encodeURIComponent)
+            .join('/')}`,
+        }
+      : resource,
+  );
+
+  return { ...catalog, graph: { ...catalog.graph, resources } };
+}
+
 let cached: Promise<DocsCatalog> | undefined;
 
 let cachedAt = 0;
 
-export function docsCatalog(): Promise<DocsCatalog> {
+/**
+ * The catalog the pages are built from, as the reader a page renders for may
+ * see it on a site with `access`: their documents only. Outside a request, such
+ * as in `getStaticPaths`, it is what a signed-out reader may open.
+ */
+export async function docsCatalog(): Promise<DocsCatalog> {
+  const catalog = await fullCatalog();
+  const view = readerView.getStore() ?? openToEveryone();
+
+  return view ? readableCatalog(catalog, view) : catalog;
+}
+
+/**
+ * The guides a signed-out reader may open, from the build that tried the
+ * access rule. A site with `access` whose build could not try it has none.
+ */
+function openToEveryone(): ((doc: AccessDoc) => boolean) | undefined {
+  if (!process.env.AUTOCATALOG_SITE_ACCESS) return undefined;
+
+  const open = new Set(
+    z
+      .array(z.string())
+      .catch([])
+      .parse(JSON.parse(process.env.AUTOCATALOG_DOCS_OPEN ?? '[]')),
+  );
+
+  return (doc) => open.has(doc.id);
+}
+
+/** Every document, whoever is reading: for the access rule itself. */
+export function fullCatalog(): Promise<DocsCatalog> {
+  // A server build carries the catalog it was built from, so a deployment
+  // answers without the repositories beside it. See `catalogSnapshot`.
+  const snapshot = import.meta.env.AUTOCATALOG_CATALOG;
+
+  if (snapshot) {
+    cached ??= Promise.resolve<DocsCatalog>(parse(snapshot));
+
+    return cached;
+  }
+
   // `ac site` dev: a design changed on disk since this catalog was read.
   if (designsChangedAt() > cachedAt) cached = undefined;
 
   if (!cached) {
     cachedAt = Date.now();
-    const { root, repo, repository, schemaPath, conventionsPath } = docsSiteConfig();
-    cached = buildDocsCatalog(root, { repo, repository, schemaPath, conventionsPath });
+    cached = buildSiteCatalog(docsSiteConfig());
   }
 
   return cached;

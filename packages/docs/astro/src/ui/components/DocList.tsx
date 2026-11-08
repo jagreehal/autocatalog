@@ -22,6 +22,10 @@ export interface DocListProps {
 /** Who keeps a document and when it last changed, said as a sentence. */
 function byline(item: DocListItem, showRepo: boolean): string {
   const updated = day(item.updated);
+
+  // A site for readers outside names no owner.
+  if (!item.owner) return updated ? `Updated ${updated}` : '';
+
   const owned = `${showRepo ? `In ${item.repo}, owned` : 'Owned'} by ${item.owner}`;
 
   return updated ? `${owned}, updated ${updated}` : owned;
@@ -42,7 +46,9 @@ export function DocList({ items, showRepo = false }: DocListProps) {
             </ItemMedia>
             <ItemContent>
               <ItemTitle>{item.title}</ItemTitle>
-              <ItemDescription>{byline(item, showRepo)}</ItemDescription>
+              {byline(item, showRepo) && (
+                <ItemDescription>{byline(item, showRepo)}</ItemDescription>
+              )}
             </ItemContent>
             <ItemActions className="self-start">
               {item.tags.length > 0 && (

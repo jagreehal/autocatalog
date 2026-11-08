@@ -46,7 +46,34 @@ export function docHref(id: string): string {
   return `${import.meta.env.BASE_URL.replace(/\/$/, '')}/${docPage(id)}`;
 }
 
+/**
+ * The repository a site publishes at its root, without its name in the path:
+ * `atRoot` in autocatalog.site.json. The build defines it for every page; the
+ * build's own code reads the environment.
+ */
+function rootRepository(): string | undefined {
+  return (
+    import.meta.env.AUTOCATALOG_DOCS_ROOT_REPO ||
+    globalThis.process?.env?.AUTOCATALOG_DOCS_ROOT_REPO ||
+    undefined
+  );
+}
+
+/** A document's id as Starlight routes it: without the repository a site publishes at its root. */
+export function entryId(id: string): string {
+  const root = rootRepository();
+
+  return root && id.startsWith(`${root}/`) ? id.slice(root.length + 1) : id;
+}
+
+/** The catalog's id for the document Starlight routes as `entry`. */
+export function catalogId(entry: string): string {
+  const root = rootRepository();
+
+  return root ? `${root}/${entry}` : entry;
+}
+
 /** Where a document is served: an index document at its folder. */
 export function docPage(id: string): string {
-  return id.replace(/\/index$/, '');
+  return entryId(id).replace(/(^|\/)index$/, '');
 }

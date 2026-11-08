@@ -1,0 +1,49 @@
+{
+  "$schema": "../../packages/docs/core/contracts/autocatalog.site.schema.json",
+  "title": "Example Co Help",
+  "extend": "./site/extend.ts",
+  "output": "server",
+  "brand": "./brand",
+  "social": [
+    {
+      "icon": "github",
+      "label": "GitHub",
+      "href": "https://github.com/example"
+    }
+  ],
+  "head": [
+    {
+      "tag": "meta",
+      "attrs": {
+        "name": "robots",
+        "content": "noindex"
+      }
+    },
+    {
+      "tag": "link",
+      "attrs": {
+        "rel": "apple-touch-icon",
+        "href": "/apple-touch-icon.png"
+      }
+    }
+  ],
+  "strings": {
+    "search.label": "Search help",
+    "tableOfContents.onThisPage": "In this article"
+  },
+  "nav": [
+    {
+      "label": "Docs",
+      "href": "/site-extension/guide/",
+      "match": "/site-extension/"
+    },
+    {
+      "label": "Catalog",
+      "href": "/catalog/"
+    },
+    {
+      "label": "Status",
+      "href": "https://status.example.com"
+    }
+  ]
+}

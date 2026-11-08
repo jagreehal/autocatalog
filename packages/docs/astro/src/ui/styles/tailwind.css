@@ -22,6 +22,8 @@
 
 /* Installed as a package, these files sit in node_modules, which Tailwind skips. */
 @source '../';
+/* The assistant's panel, from autocatalog-chatbot. */
+@import 'autocatalog-chatbot/styles.css';
 
 /* Starlight marks the theme on <html data-theme>, not with a .dark class. */
 @custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));

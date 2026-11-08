@@ -1,0 +1,49 @@
+---
+// Search on a site that renders per request, where Pagefind has nothing to
+// index: the pages the assistant answers from, as many as this reader may open.
+// A site's own `search.astro` replaces it, built from `autocatalog-docs-astro/search`.
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import { DEFAULT_CHAT_TEXT } from 'autocatalog-chatbot';
+import { chatPanel } from 'virtual:autocatalog-docs-build';
+import { searchSite } from '../search';
+import { buttonVariants } from '../ui/components/ui/button';
+import { SearchPage } from '../ui/pages/SearchPage';
+
+export const prerender = false;
+
+const SHOWN = 30;
+
+const query = (Astro.url.searchParams.get('q') ?? '').trim().slice(0, 200);
+
+const { words, results } = await searchSite(query, Astro.locals.canRead);
+
+// The site's words, then any the middleware set for this reader, as the panel takes them.
+const askAbout =
+  Astro.locals.chat?.text?.askAbout ?? chatPanel?.text?.askAbout ?? DEFAULT_CHAT_TEXT.askAbout;
+
+const ask = askAbout.replace('{query}', () => query);
+---
+
+<StarlightPage
+  frontmatter={{
+    title: query ? `Results for “${query}”` : 'Search',
+    tableOfContents: false,
+    pagefind: false,
+  }}
+>
+  <SearchPage query={query} words={words} results={results.slice(0, SHOWN)} total={results.length}>
+    {
+      chatPanel && (
+        <button
+          type="button"
+          slot="empty"
+          class={buttonVariants()}
+          onclick="window.dispatchEvent(new CustomEvent('autocatalog:ask', { detail: this.dataset.ask }))"
+          data-ask={query}
+        >
+          {ask}
+        </button>
+      )
+    }
+  </SearchPage>
+</StarlightPage>

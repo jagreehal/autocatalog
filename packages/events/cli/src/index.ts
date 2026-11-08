@@ -673,6 +673,10 @@ export function buildProgram(): Command {
     .option('--description <text>', 'one sentence for the home page and llms.txt')
     .option('--brand <dir>', 'your logo.*, logo-dark.*, favicon.svg and theme.css')
     .option('--theme <name>', 'an accent colour: teal, blue, orange, green or purple')
+    .option(
+      '--audience <name>',
+      'build for readers outside, e.g. public: the documents naming them and the API references',
+    )
     .option('--fingerprint', 'print a hash of what is enrolled, and build nothing', false)
     .option('--dev', 'serve with live reload instead of building', false)
     .option('--eventcatalog', 'install EventCatalog and embed its diagrams in the site', false)
@@ -719,6 +723,7 @@ export function buildProgram(): Command {
           pages?: string;
           brand?: string;
           theme?: string;
+          audience?: string;
           fingerprint: boolean;
           description?: string;
           liveUrl?: string;

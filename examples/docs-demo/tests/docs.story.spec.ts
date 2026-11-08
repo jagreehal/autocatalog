@@ -456,4 +456,77 @@ test.describe('The company documentation index', () => {
     expect(markdown).toMatch(/^url: https:\/\/docs\.acme\.example\/payments-service\/runbook\/$/m);
     expect(schema.type).toBe('object');
   });
+
+  test('collapsing the sidebar leaves "On this page" readable', async ({ page }, testInfo) => {
+    story.init(testInfo, { tags: ['docs', 'navigation'] });
+
+    given('a document wide enough to show "On this page" beside it');
+    await page.goto('/payments-service/runbook');
+
+    // The controls set data-sidebar once hydrated; a press before that is lost.
+    await expect(page.locator('html')).toHaveAttribute('data-sidebar', 'open');
+
+    const heading = page.getByRole('heading', { name: 'On this page' });
+
+    const open = await heading.boundingBox();
+
+    when('the reader clicks collapse');
+    // A plain click: the resize handle runs down the same edge and once took it.
+    await page.getByRole('button', { name: 'Collapse sidebar' }).locator('visible=true').click();
+    await expect(page.locator('html')).toHaveAttribute('data-sidebar', 'collapsed');
+
+    then('the heading still sits on one line, not one letter per line');
+    // Starlight sizes the list from --sl-sidebar-width, which collapsing zeroes.
+    const collapsed = await heading.boundingBox();
+    expect(collapsed!.height).toBe(open!.height);
+  });
+
+  test('a collapsed sidebar is already collapsed when the next page paints', async ({
+    page,
+  }, testInfo) => {
+    story.init(testInfo, { tags: ['docs', 'navigation'] });
+
+    given('a reader who collapsed the sidebar');
+    await page.goto('/payments-service/runbook');
+    await expect(page.locator('html')).toHaveAttribute('data-sidebar', 'open');
+    await page.getByRole('button', { name: 'Collapse sidebar' }).locator('visible=true').click();
+
+    when('they open another page, before any island has run');
+    await page.route('**/_astro/**/*.js', (route) => route.abort());
+    await page.goto('/reporter/daily-reconciliation');
+
+    then('it opens collapsed, rather than opening and then closing');
+    await expect(page.locator('html')).toHaveAttribute('data-sidebar', 'collapsed');
+  });
+
+  test('a sidebar group stays as the reader left it', async ({ page }, testInfo) => {
+    story.init(testInfo, { tags: ['docs', 'navigation'] });
+
+    const group = (name: string) =>
+      page
+        .locator('#starlight__sidebar details')
+        .filter({ has: page.locator('summary', { hasText: name }) })
+        .first();
+
+    given('a document whose repository group opened because the reader is on it');
+    await page.goto('/payments-service/runbook');
+    await expect(page.locator('html')).toHaveAttribute('data-sidebar', 'open');
+    await expect(group('payments-service')).toHaveAttribute('open');
+
+    when('the reader opens a document in another repository');
+    await group('reporter').locator('summary').first().click();
+    await page.locator('#starlight__sidebar a[href^="/reporter/"]').first().click();
+    await page.waitForURL(/\/reporter\//);
+
+    then('the group they left is still open, since they never closed it');
+    await expect(group('payments-service')).toHaveAttribute('open');
+    await expect(group('reporter')).toHaveAttribute('open');
+
+    when('they close it and move on again');
+    await group('payments-service').locator('summary').first().click();
+    await page.goto('/');
+
+    then('it stays closed');
+    await expect(group('payments-service')).not.toHaveAttribute('open');
+  });
 });

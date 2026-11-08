@@ -1,0 +1,19 @@
+/* Acme's shadcn/ui tokens: every page, and the assistant's panel, read these. */
+:root {
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --radius: 0.75rem;
+  --primary: oklch(0.55 0.2 265);
+  --ring: oklch(0.55 0.2 265);
+  --chat-width: 30rem;
+}
+
+[data-theme='dark'] {
+  --primary: oklch(0.7 0.16 265);
+  --ring: oklch(0.7 0.16 265);
+}
+
+/* The link the site's own panel adds under the suggestions. */
+[data-slot='chat-empty'] a {
+  color: var(--primary);
+  font-size: 0.875rem;
+}

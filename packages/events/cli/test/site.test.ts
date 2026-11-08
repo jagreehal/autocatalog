@@ -3,7 +3,13 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { afterAll, afterEach, describe, expect, it, vi } from 'vitest';
-import { readBrand, runSite, siteEnvironment } from '../src/commands/site';
+import {
+  readBrand,
+  resolveExtension,
+  runSite,
+  sharesAFolder,
+  siteEnvironment,
+} from '../src/commands/site';
 
 const base = { root: '.', cache: '.autocatalog/repos', out: 'dist', dev: false };
 
@@ -135,6 +141,21 @@ describe('a brand folder', () => {
     });
   });
 
+  it('takes a favicon in any format browsers read, an SVG first, and files to serve as they are', async () => {
+    const dir = await folder(['favicon.ico', 'favicon.png']);
+
+    await fs.mkdir(path.join(dir, 'public'));
+
+    expect(await readBrand(dir)).toEqual({
+      favicon: path.join(dir, 'favicon.png'),
+      public: path.join(dir, 'public'),
+    });
+
+    await fs.writeFile(path.join(dir, 'favicon.svg'), '');
+
+    expect((await readBrand(dir)).favicon).toBe(path.join(dir, 'favicon.svg'));
+  });
+
   it('takes any part of a brand on its own', async () => {
     const dir = await folder(['theme.css']);
 
@@ -144,7 +165,7 @@ describe('a brand folder', () => {
   it('refuses a folder with no brand in it', async () => {
     const dir = await folder(['notes.txt']);
 
-    await expect(readBrand(dir)).rejects.toThrow(/logo, logo-dark, favicon\.svg or theme\.css/);
+    await expect(readBrand(dir)).rejects.toThrow(/logo, logo-dark, favicon, theme\.css or public/);
   });
 });
 
@@ -282,4 +303,32 @@ describe('ac site arguments', () => {
       await fs.rm(work, { recursive: true, force: true });
     }
   });
+});
+
+describe('extend', () => {
+  it('takes a module path as given and a package by the module its package.json names', async () => {
+    const dir = await tempDir('ac-extend-');
+    const pkg = path.join(dir, 'node_modules/@acme/site-kit');
+
+    await fs.mkdir(pkg, { recursive: true });
+    await fs.writeFile(path.join(dir, 'package.json'), '{}');
+    await fs.writeFile(path.join(dir, 'extend.ts'), 'export default {};');
+    await fs.writeFile(
+      path.join(pkg, 'package.json'),
+      JSON.stringify({ name: '@acme/site-kit', autocatalog: { site: './site.js' } }),
+    );
+
+    expect(await resolveExtension(path.join(dir, 'extend.ts'), dir)).toBe(
+      path.join(dir, 'extend.ts'),
+    );
+    expect(await resolveExtension('@acme/site-kit', dir)).toBe(path.join(pkg, 'site.js'));
+    await expect(resolveExtension('missing-kit', dir)).rejects.toThrow(
+      "Cannot find package 'missing-kit'",
+    );
+  });
+});
+
+it('knows when Astro could not build a site from its folder', () => {
+  expect(sharesAFolder('/Users/a/site', '/Users/a/node_modules/x')).toBe(true);
+  expect(sharesAFolder('/app', '/usr/local/lib/node_modules/x')).toBe(false);
 });

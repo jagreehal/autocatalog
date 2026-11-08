@@ -1,0 +1,7 @@
+/*
+ * The stylesheet shadcn/ui and @shadcn/lint read for this package. A site
+ * compiles the assistant with its own Tailwind entry and imports
+ * `autocatalog-chatbot/styles.css` there; this file is not published.
+ */
+@import 'tailwindcss';
+@import './src/styles.css';

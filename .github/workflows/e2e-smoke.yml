@@ -8,6 +8,8 @@ on:
       - 'packages/**'
       - 'python/**'
       - 'examples/docs-demo/**'
+      - 'examples/site-extension/**'
+      - 'examples/help-centre/**'
       - 'scripts/e2e-smoke.sh'
       - 'scripts/pack-smoke.sh'
       - 'package.json'
@@ -22,6 +24,8 @@ on:
       - 'packages/**'
       - 'python/**'
       - 'examples/docs-demo/**'
+      - 'examples/site-extension/**'
+      - 'examples/help-centre/**'
       - 'scripts/e2e-smoke.sh'
       - 'scripts/pack-smoke.sh'
       - 'package.json'
@@ -73,6 +77,18 @@ jobs:
         timeout-minutes: 15
         run: pnpm --filter @autocatalog-example/docs test:e2e
 
+      # A site `ac site` builds as a server, white-labelled and extended with
+      # a company's own code, on a desktop and a phone.
+      - name: Run white-label and extension stories
+        timeout-minutes: 15
+        run: pnpm --filter @autocatalog-example/site-extension test:e2e
+
+      # A help centre where one access module decides, per request, which
+      # guides each account opens, and every page, list and copy follows it.
+      - name: Run help centre stories
+        timeout-minutes: 15
+        run: pnpm --filter @autocatalog-example/help-centre test:e2e
+
       - name: Upload story reports
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -81,4 +97,8 @@ jobs:
           path: |
             examples/docs-demo/reports
             examples/docs-demo/test-results
+            examples/site-extension/reports
+            examples/site-extension/test-results
+            examples/help-centre/reports
+            examples/help-centre/test-results
           if-no-files-found: ignore

@@ -1,6 +1,7 @@
 import type { DomainModel, FlowNote } from 'autocatalog-docs-core';
 import { dataProductPath, entityPath } from './model';
 import { twinPath } from './twins';
+import { docPage } from './ui/lib/docs';
 import { groupByRepo, type DocListItem } from './view';
 
 export interface LlmsTxtInput {
@@ -9,6 +10,8 @@ export interface LlmsTxtInput {
   /** Site origin without a trailing slash. Empty when no `site` is configured. */
   base: string;
   items: DocListItem[];
+  /** OpenAPI references, each linked to its spec as JSON. */
+  apis?: Array<{ path: string; title: string; summary?: string | undefined }>;
   /** Current events, each linked to its Markdown twin. */
   events?: Array<{ path: string; name: string; summary: string; owner?: string }>;
   /** Documents attached to flows, which an agent must not read as settled fact. */
@@ -23,6 +26,8 @@ export interface LlmsTxtInput {
   }>;
   /** The domain model: each term with its meaning, and the entities and data products with their pages. */
   model?: DomainModel;
+  /** Whether llms-full.txt is published beside it. */
+  full?: boolean;
 }
 
 /**
@@ -39,18 +44,19 @@ export function renderLlmsTxt({
   description,
   base,
   items,
+  apis = [],
   events = [],
   components = [],
   model,
   notes = [],
+  full = true,
 }: LlmsTxtInput): string {
   const lines = [
     `# ${title}`,
     '',
     `> ${description}`,
     '',
-    `Every page below in one file: [llms-full.txt](${base}/llms-full.txt)`,
-    '',
+    ...(full ? [`Every page below in one file: [llms-full.txt](${base}/llms-full.txt)`, ''] : []),
   ];
 
   for (const [repo, docs] of groupByRepo(items)) {
@@ -60,9 +66,23 @@ export function renderLlmsTxt({
       // A decision's state and date are what an agent asks of it first.
       const kind = doc.kind ? [doc.kind, doc.status, doc.date].filter(Boolean).join(', ') : '';
 
-      lines.push(
-        `- [${doc.title}](${base}/${doc.id}.md): owned by ${doc.owner}${kind && `; ${kind}`}`,
-      );
+      // A site for readers outside names no owner.
+      const notes = [doc.owner && `owned by ${doc.owner}`, kind].filter(Boolean).join('; ');
+
+      lines.push(`- [${doc.title}](${base}/${docPage(doc.id)}.md)${notes && `: ${notes}`}`);
+    }
+
+    lines.push('');
+  }
+
+  // The spec is what a client generator or an agent writing a request reads.
+  if (apis.length > 0) {
+    lines.push('## APIs', '');
+
+    for (const api of apis) {
+      const about = api.summary?.replace(/\.$/, '');
+
+      lines.push(`- [${api.title}](${base}/${api.path}openapi.json)${about ? `: ${about}` : ''}`);
     }
 
     lines.push('');
@@ -147,7 +167,9 @@ export function renderLlmsTxt({
       const facts = [note.nature, note.status, note.hotspot && 'open'].filter(Boolean).join(', ');
       const where = note.step ? `${note.flow}, step ${note.step}` : note.flow;
 
-      lines.push(`- [${note.title}](${base}/${note.id}.md): ${where}${facts && `; ${facts}`}`);
+      lines.push(
+        `- [${note.title}](${base}/${docPage(note.id)}.md): ${where}${facts && `; ${facts}`}`,
+      );
     }
 
     lines.push('');

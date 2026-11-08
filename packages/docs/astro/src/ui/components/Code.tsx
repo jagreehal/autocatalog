@@ -1,5 +1,6 @@
 /** @jsxImportSource react */
 import { highlightAll } from 'microlighter';
+import 'microlighter/themes/github.css';
 import { useEffect } from 'react';
 
 export interface CodeProps {

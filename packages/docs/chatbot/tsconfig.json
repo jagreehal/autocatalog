@@ -1,0 +1,12 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    // Published as source, so no declarations are ever emitted from here.
+    "declaration": false,
+    // shadcn imports its components by subpath (#ui/...) with their extension.
+    "allowImportingTsExtensions": true,
+    "jsx": "react-jsx"
+  },
+  "include": ["src", "test"]
+}

@@ -2,19 +2,24 @@
 import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
 import { apisPageProps } from '../apis';
 import { docsCatalog } from '../catalog';
+import { docsSiteConfig } from '../config';
 import { ApisPage } from '../ui/pages/ApisPage';
 
 const catalog = await docsCatalog();
 
 const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+
+const outside = docsSiteConfig().audience !== undefined;
 ---
 
 <StarlightPage
   frontmatter={{
-    title: 'APIs',
-    description: 'The OpenAPI specs each repository commits under contracts/, each with its reference.',
+    title: outside ? 'API reference' : 'APIs',
+    description: outside
+      ? 'Every API, with its operations, examples and a client to try them.'
+      : 'The OpenAPI specs each repository commits under contracts/, each with its reference.',
     tableOfContents: false,
   }}
 >
-  <ApisPage {...apisPageProps(catalog.apis, base)} />
+  <ApisPage {...apisPageProps(catalog.apis, base, outside)} />
 </StarlightPage>

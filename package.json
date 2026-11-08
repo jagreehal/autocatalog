@@ -52,7 +52,7 @@
     "@modelcontextprotocol/sdk": "^1.32.1",
     "@oxlint/plugins": "1.87.0",
     "@playwright/test": "^1.64.0",
-    "@shadcn/lint": "0.2.1",
+    "@shadcn/lint": "0.2.5",
     "executable-stories-playwright": "8.11.0",
     "executable-stories-vitest": "8.10.2",
     "oxlint": "1.87.0",

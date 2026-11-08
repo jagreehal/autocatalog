@@ -1,0 +1,53 @@
+/*
+ * Import this into the site's Tailwind entry so the assistant's classes are
+ * generated: installed as a package, these files sit in node_modules, which
+ * Tailwind skips. The site's own shadcn/ui tokens theme it.
+ */
+@source './';
+
+/*
+ * The panel's size and place, from the variables a site sets in its theme:
+ * --chat-width, --chat-height, --chat-inset and --chat-radius.
+ */
+@layer components {
+  [data-slot='chat-panel'] {
+    border-radius: var(--chat-radius, 0.75rem);
+  }
+
+  [data-slot='chat-panel'][data-layout='inline'] {
+    width: 100%;
+    height: var(--chat-height, 42rem);
+  }
+
+  [data-slot='chat-panel'][data-layout='floating'] {
+    position: fixed;
+    z-index: 50;
+    bottom: var(--chat-inset, 1rem);
+    width: min(var(--chat-width, 28rem), calc(100vw - 2rem));
+    height: min(var(--chat-height, 42rem), calc(100dvh - 2rem));
+  }
+
+  [data-slot='chat-launcher'] {
+    position: fixed;
+    z-index: 50;
+    bottom: calc(var(--chat-inset, 1rem) + 0.5rem);
+  }
+
+  :is(
+    [data-slot='chat-panel'][data-layout='floating'],
+    [data-slot='chat-launcher']
+  )[data-side='right'] {
+    right: var(--chat-inset, 1rem);
+  }
+
+  :is(
+    [data-slot='chat-panel'][data-layout='floating'],
+    [data-slot='chat-launcher']
+  )[data-side='left'] {
+    left: var(--chat-inset, 1rem);
+  }
+
+  [data-slot='chat-icon'] {
+    mask: var(--chat-icon) center / contain no-repeat;
+  }
+}

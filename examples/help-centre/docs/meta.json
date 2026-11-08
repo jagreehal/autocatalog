@@ -1,0 +1,8 @@
+{
+  "label": "Guides",
+  "owner": "support",
+  "sidebar": [
+    { "directory": "invoices", "label": "Invoices", "access": ["invoicing"] },
+    { "directory": "payments", "label": "Payments", "access": ["payments"] }
+  ]
+}

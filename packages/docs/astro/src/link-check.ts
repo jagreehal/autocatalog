@@ -27,7 +27,12 @@ const EVENTCATALOG = 'eventcatalog/';
  * Attributes are read with a regex, which holds for the quoted markup Astro
  * emits. hast-util-from-html would also read hand-written unquoted attributes.
  */
-export async function brokenLinks(outDir: string, base = '/'): Promise<BrokenLink[]> {
+export async function brokenLinks(
+  outDir: string,
+  base = '/',
+  /** Paths the server renders per request, such as `/team/runbook/`: no file holds them. */
+  served: ReadonlySet<string> = new Set(),
+): Promise<BrokenLink[]> {
   const prefix = `/${base.replace(/^\/+|\/+$/g, '')}`.replace(/^\/$/, '');
 
   const files = new Set(
@@ -91,7 +96,12 @@ export async function brokenLinks(outDir: string, base = '/'): Promise<BrokenLin
         target.pathname.startsWith(`${prefix}/${EVENTCATALOG}`);
 
       if (target.origin !== ORIGIN || outside) continue;
-      const found = fileFor(target.pathname.slice(prefix.length) || '/');
+
+      const pathname = target.pathname.slice(prefix.length) || '/';
+
+      if (served.has(decode(pathname).replace(/\/?$/, '/'))) continue;
+
+      const found = fileFor(pathname);
 
       if (!found) {
         broken.push({ page, href, kind: 'page' });

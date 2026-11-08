@@ -1,3 +1,5 @@
+import { createRequire } from 'node:module';
+import { stringify } from 'devalue';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import react from '@astrojs/react';
@@ -5,27 +7,62 @@ import tailwindcss from '@tailwindcss/vite';
 import type { StarlightPlugin } from '@astrojs/starlight/types';
 import { z } from 'astro/zod';
 import { isUnifiedProcessor } from '@astrojs/markdown-remark';
-import type { SiteNavigationInput, SITE_THEMES } from 'autocatalog-docs-core';
+import {
+  type Doc,
+  resolveDocsLayout,
+  siteNavLinkSchema,
+  type SiteAccessConfig,
+  type SiteNavigationInput,
+  type SiteNavLink,
+  type SITE_THEMES,
+} from 'autocatalog-docs-core';
 import type { PluginOption } from 'vite';
-import { docsSiteConfig } from './config';
+import { type DocsSiteConfig, docsSiteConfig } from './config';
+import { ownPageRoutes } from './own-pages';
 import { autocatalogDocsRoutes } from './routes';
 
 export { rehypeDocsBase } from './links';
 
+export {
+  loadSiteExtensions,
+  mergeSiteExtensions,
+  type SiteExtension,
+  type SiteExtensions,
+} from './extensions';
+
 /** The catalog every page is built from, for a site's own pages and API routes. */
 export { docsCatalog, type DocsCatalog } from './catalog';
 
-import { buildDocsCatalog } from './catalog';
+/** What a site's assistant module default-exports; see `chat` in autocatalog.site.json. */
+export type { SiteChatOptions, SiteChatRequest } from './chat';
+
+/** What a site's access module default-exports; see `access` in autocatalog.site.json. */
+export { type AccessDoc, type AccessReader, defaultCanRead, type SiteAccess } from './access';
+
+export { loadSiteAccess } from './access-report';
+
+export { ownPageRoutes } from './own-pages';
+
+import { accessTable, closedLinks, formatAccessTable } from './access-report';
+import type { SiteAccess } from './access';
+import { buildSiteCatalog } from './catalog';
+import type { ChatPage } from 'autocatalog-chatbot';
+import type { ChatPanelProps } from 'autocatalog-chatbot/react';
+import { chatIcons, chatPages, chatText } from './chat';
+import { audienceReader } from './audience';
 import { graphOwners } from './owners';
 import { retirementsPageProps } from './retirements';
 import { catalogSidebar, docsSidebar, navigationGroups } from './sidebar';
 import { eventCatalogEmbeds } from './eventcatalog';
 import { reactRendererIntegration, siteHasReact } from './react-integration';
 import { EMBED_SCRIPT } from './embed';
+import { SIDEBAR_SCRIPT } from './sidebar-state';
 import { MERMAID_SCRIPT, remarkMermaid } from './mermaid';
 import { remarkWikiRefs } from './wiki-refs';
 import { mdxComponents } from './mdx';
 import { DEFAULT_FAVICON } from './favicon';
+import { RESERVED_SEGMENTS } from './kinds';
+import { docPage } from './ui/lib/docs';
 
 export interface AutocatalogDocsOptions {
   /**
@@ -73,6 +110,11 @@ export interface AutocatalogDocsOptions {
   /** Groups to show in place of the catalog's own. */
   navigation?: SiteNavigationInput;
   /**
+   * Build for readers outside the company, such as `public`: only documents
+   * naming them, and the API references without `x-internal` operations.
+   */
+  audience?: string;
+  /**
    * A server-sent events URL the maps follow in their live mode: each frame's
    * JSON names the event that fired (`{ "name": "order.placed", "producer"? }`).
    * `event` is the SSE event name frames arrive under; `message` by default.
@@ -84,6 +126,29 @@ export interface AutocatalogDocsOptions {
    * on the site wins over this.
    */
   favicon?: string;
+  /** The site's own words for its interface, by Starlight's translation key. */
+  strings?: Record<string, string>;
+  /** Sections in the header, beside the title, and atop the menu on a phone. */
+  nav?: SiteNavLink[];
+  /**
+   * Who may open each document, per request, on a site with `output: 'server'`:
+   * `module` default-exports `SiteAccess`, and `denied` is what a closed
+   * document answers with, `hide` (a 404) or `teaser` (its title, a 403).
+   */
+  /**
+   * Publish the one repository's documents at the site's root, without its
+   * name: `docs/labels/start.md` at `/labels/start/`. Ids keep the name.
+   */
+  atRoot?: boolean;
+  access?: {
+    module: string;
+    denied?: 'hide' | 'teaser';
+    /**
+     * The module, loaded with `loadSiteAccess` at the top of astro.config.mjs.
+     * Given, the build prints what each of its sample `readers` may open.
+     */
+    rule?: SiteAccess<unknown>;
+  };
 }
 
 /**
@@ -119,11 +184,37 @@ export default function autocatalogDocs(opts: AutocatalogDocsOptions = {}): Star
 
         if (opts.description) process.env.AUTOCATALOG_DOCS_DESCRIPTION ??= opts.description;
 
+        const nav = opts.nav ?? siteNav(process.env.AUTOCATALOG_SITE_NAV);
+
+        // TopNav reads the links from here, at build time: a server site has
+        // no build environment left when it renders.
+        addIntegration({
+          name: 'autocatalog-docs-nav',
+          hooks: {
+            'astro:config:setup': ({ updateConfig: updateAstroConfig }) => {
+              updateAstroConfig({ vite: { plugins: [navModule(nav)] } });
+            },
+          },
+        });
+
         if (opts.navigation) {
           process.env.AUTOCATALOG_SITE_NAVIGATION ??= JSON.stringify(opts.navigation);
         }
 
         const theme = opts.theme ?? process.env.AUTOCATALOG_SITE_THEME;
+
+        if (opts.audience) process.env.AUTOCATALOG_SITE_AUDIENCE ??= opts.audience;
+
+        if (opts.atRoot) process.env.AUTOCATALOG_DOCS_AT_ROOT ??= 'true';
+
+        if (opts.access) {
+          const { rule: _rule, ...settings } = opts.access;
+
+          process.env.AUTOCATALOG_SITE_ACCESS ??= JSON.stringify({
+            ...settings,
+            module: path.resolve(projectRoot, settings.module),
+          });
+        }
 
         if (opts.repo) process.env.AUTOCATALOG_DOCS_REPO ??= opts.repo;
 
@@ -151,20 +242,37 @@ export default function autocatalogDocs(opts: AutocatalogDocsOptions = {}): Star
         // pages is worse than no sidebar.
         const effective = docsSiteConfig();
 
+        // One repository at the root: every link and route drops its name.
+        const rootRepo =
+          process.env.AUTOCATALOG_DOCS_AT_ROOT === 'true' ? onlyRepository(effective) : undefined;
+
+        if (rootRepo) process.env.AUTOCATALOG_DOCS_ROOT_REPO = rootRepo;
+
+        addIntegration({
+          name: 'autocatalog-docs-root',
+          hooks: {
+            'astro:config:setup': ({ updateConfig: updateAstroConfig }) => {
+              updateAstroConfig({
+                vite: {
+                  define: {
+                    'import.meta.env.AUTOCATALOG_DOCS_ROOT_REPO': JSON.stringify(rootRepo ?? ''),
+                  },
+                },
+              });
+            },
+          },
+        });
+
         // Navigation comes from the validated catalog, not from raw files: a
         // repository whose catalog does not compile is quarantined here exactly
         // as it is on the pages, instead of failing the whole site.
-        const catalog = await buildDocsCatalog(effective.root, {
-          repo: effective.repo,
-          repository: effective.repository,
-          schemaPath: effective.schemaPath,
-          conventionsPath: effective.conventionsPath,
-          includeDates: false,
-        });
+        const catalog = await buildSiteCatalog(effective, { includeDates: false });
 
         // Configuration is the one place a build compiles the catalog exactly
         // once, so it is where the build says what the catalog left out.
         for (const warning of catalog.warnings) logger.warn(warning);
+
+        if (rootRepo) refuseRootClashes(catalog.docs);
 
         // Documents the catalog left out have no pages, twins or navigation
         // either: the content collection and the twins read this back.
@@ -178,6 +286,7 @@ export default function autocatalogDocs(opts: AutocatalogDocsOptions = {}): Star
           repo: effective.repo,
           repository: effective.repository,
           exclude,
+          ...audienceReader(effective.audience),
         });
 
         // A site with every document left out would replace the last good one.
@@ -197,11 +306,15 @@ export default function autocatalogDocs(opts: AutocatalogDocsOptions = {}): Star
 
         if (sidebar.length === 0) {
           logger.warn(
-            `No documents found under ${effective.root}. A repository publishes by committing docs/*.md.`,
+            effective.audience
+              ? `No document names audience ${effective.audience}. Add \`audience: [${effective.audience}]\` to the frontmatter of each one to publish.`
+              : `No documents found under ${effective.root}. A repository publishes by committing docs/*.md.`,
           );
         }
 
-        const contentSidebar = config.sidebar ?? sidebar;
+        // One repository at the root has its folders at the top, as its pages are.
+        const contentSidebar =
+          config.sidebar ?? (rootRepo && sidebar.length === 1 ? sidebar[0]!.items : sidebar);
 
         // Starlight opens the group holding the current page.
         const eventsSidebar = catalogSidebar(catalog.events, catalog.apis).map((group) => ({
@@ -216,43 +329,53 @@ export default function autocatalogDocs(opts: AutocatalogDocsOptions = {}): Star
             ? opts.favicon
             : undefined;
 
-        const catalogPages = [
-          { label: 'Knowledge graph', link: '/catalog' },
-          ...(eventCatalogEmbeds() ? [{ label: 'Architecture', link: '/architecture' }] : []),
-          ...(eventsSidebar.length > 0
-            ? [
-                { label: 'Domains', link: '/domains' },
-                { label: 'Schemas', link: '/schemas' },
-                { label: 'Fields', link: '/fields' },
-              ]
-            : []),
-          ...(retirementsPageProps(catalog, '/').retirements.length > 0
-            ? [{ label: 'Retirements', link: '/retirements' }]
-            : []),
-          ...(catalog.apis.length > 0 ? [{ label: 'APIs', link: '/apis' }] : []),
-          ...(catalog.graph.resources.some(({ ref }) => ref.kind === 'mcp-server')
-            ? [{ label: 'MCP servers', link: '/mcp-servers' }]
-            : []),
-          ...(catalog.flows.length > 0 ? [{ label: 'Flows', link: '/flows' }] : []),
-          // `ac site` dev starts designs there, so it is listed before there are any.
-          ...(catalog.designs.length > 0 || command === 'dev'
-            ? [{ label: 'Designs', link: '/designs' }]
-            : []),
-          ...(catalog.model.glossaries.length > 0
-            ? [{ label: 'Glossary', link: '/glossary' }]
-            : []),
-          ...(catalog.model.entities.length > 0 ? [{ label: 'Entities', link: '/entities' }] : []),
-          ...(catalog.model.dataProducts.length > 0
-            ? [{ label: 'Data products', link: '/data-products' }]
-            : []),
-          ...(catalog.specifications.length > 0
-            ? [{ label: 'Specifications', link: '/specs' }]
-            : []),
-          // Decisions, runbooks, incidents: each kind with documents.
-          ...catalog.kinds.map((kind) => ({ label: kind.label, link: `/${kind.path}` })),
-          ...(catalog.models.length > 0 ? [{ label: 'Data models', link: '/data' }] : []),
-          ...(graphOwners(catalog.graph).length > 0 ? [{ label: 'Owners', link: '/owners' }] : []),
-        ];
+        // Readers outside get the references; the rest of the catalog is the company's.
+        const catalogPages = effective.audience
+          ? [
+              ...(catalog.apis.length > 0 ? [{ label: 'API reference', link: '/apis' }] : []),
+              ...catalog.kinds.map((kind) => ({ label: kind.label, link: `/${kind.path}` })),
+            ]
+          : [
+              { label: 'Knowledge graph', link: '/catalog' },
+              ...(eventCatalogEmbeds() ? [{ label: 'Architecture', link: '/architecture' }] : []),
+              ...(eventsSidebar.length > 0
+                ? [
+                    { label: 'Domains', link: '/domains' },
+                    { label: 'Schemas', link: '/schemas' },
+                    { label: 'Fields', link: '/fields' },
+                  ]
+                : []),
+              ...(retirementsPageProps(catalog, '/').retirements.length > 0
+                ? [{ label: 'Retirements', link: '/retirements' }]
+                : []),
+              ...(catalog.apis.length > 0 ? [{ label: 'APIs', link: '/apis' }] : []),
+              ...(catalog.graph.resources.some(({ ref }) => ref.kind === 'mcp-server')
+                ? [{ label: 'MCP servers', link: '/mcp-servers' }]
+                : []),
+              ...(catalog.flows.length > 0 ? [{ label: 'Flows', link: '/flows' }] : []),
+              // `ac site` dev starts designs there, so it is listed before there are any.
+              ...(catalog.designs.length > 0 || command === 'dev'
+                ? [{ label: 'Designs', link: '/designs' }]
+                : []),
+              ...(catalog.model.glossaries.length > 0
+                ? [{ label: 'Glossary', link: '/glossary' }]
+                : []),
+              ...(catalog.model.entities.length > 0
+                ? [{ label: 'Entities', link: '/entities' }]
+                : []),
+              ...(catalog.model.dataProducts.length > 0
+                ? [{ label: 'Data products', link: '/data-products' }]
+                : []),
+              ...(catalog.specifications.length > 0
+                ? [{ label: 'Specifications', link: '/specs' }]
+                : []),
+              // Decisions, runbooks, incidents: each kind with documents.
+              ...catalog.kinds.map((kind) => ({ label: kind.label, link: `/${kind.path}` })),
+              ...(catalog.models.length > 0 ? [{ label: 'Data models', link: '/data' }] : []),
+              ...(graphOwners(catalog.graph).length > 0
+                ? [{ label: 'Owners', link: '/owners' }]
+                : []),
+            ];
 
         updateConfig({
           ...(favicon && { favicon }),
@@ -278,6 +401,7 @@ export default function autocatalogDocs(opts: AutocatalogDocsOptions = {}): Star
           head: [
             ...(config.head ?? []),
             { tag: 'script', content: EMBED_SCRIPT },
+            { tag: 'script', content: SIDEBAR_SCRIPT },
             { tag: 'script', attrs: { type: 'module' }, content: MERMAID_SCRIPT },
           ],
           components: {
@@ -292,6 +416,13 @@ export default function autocatalogDocs(opts: AutocatalogDocsOptions = {}): Star
             // Sun-and-moon theme control, plus sidebar collapse/resize mounts
             // here so they stay outside the pane Starlight hides when collapsed.
             ThemeSelect: 'autocatalog-docs-astro/overrides/ThemeSelect.astro',
+            // The site's sections beside the title, when it has any.
+            ...(nav.length > 0 && { Header: 'autocatalog-docs-astro/overrides/Header.astro' }),
+            // Pagefind indexes only prerendered pages, so a site that renders per
+            // request searches on the server, as each reader may.
+            ...(config.prerender === false && {
+              Search: 'autocatalog-docs-astro/overrides/Search.astro',
+            }),
             // A document's own `# Title` would repeat the title above it.
             MarkdownContent: 'autocatalog-docs-astro/overrides/MarkdownContent.astro',
             // A site that already overrides one of these keeps its own.
@@ -299,9 +430,139 @@ export default function autocatalogDocs(opts: AutocatalogDocsOptions = {}): Star
           },
         });
 
+        const { access } = effective;
+
+        // A page built ahead is the same for every reader, so no rule reaches it.
+        if (access && (astroConfig.output !== 'server' || config.prerender !== false)) {
+          throw new Error(
+            "access decides per request, so the site needs output: 'server' in Astro and prerender: false in Starlight",
+          );
+        }
+
+        // What each sample reader may open, and the links that would lead
+        // one of them to a document they may not open.
+        const rule = opts.access?.rule;
+
+        if (rule) {
+          const table = accessTable(catalog.docs, rule);
+
+          // What a page shared by every reader may list: see `docsCatalog`.
+          process.env.AUTOCATALOG_DOCS_OPEN = JSON.stringify(
+            table.rows.flatMap((row) => (row.opens[0] ? [row.id] : [])),
+          );
+
+          if (command === 'build') {
+            logger.info(
+              rule.readers
+                ? `Who may open each document:\n${formatAccessTable(table)}`
+                : 'Name sample readers in the access module (readers) to see who may open each document.',
+            );
+
+            for (const link of closedLinks(catalog.docs, table)) logger.warn(link);
+          }
+        } else if (access) {
+          logger.warn(
+            'The access module was not loaded at build, so pages built ahead list no documents. Load it with loadSiteAccess in astro.config.mjs.',
+          );
+        }
+
         addIntegration(
-          autocatalogDocsRoutes(effective.root, process.env.AUTOCATALOG_DOCS_PAGES || undefined),
+          autocatalogDocsRoutes(
+            effective.root,
+            process.env.AUTOCATALOG_DOCS_PAGES || undefined,
+            effective.audience,
+            // Each reader's lists are their own, so kind pages render per request.
+            access && catalog.kinds.map((kind) => kind.path),
+            rootRepo !== undefined && catalog.docs.some((doc) => docPage(doc.id) === ''),
+          ),
         );
+
+        // A page rendered per request runs after the build's environment is
+        // gone, so what the build was told goes into the bundle. The assistant's
+        // pages are taken now for the same reason.
+        const { chat } = effective;
+
+        const snapshot =
+          command === 'build' && astroConfig.output === 'server'
+            ? await catalogSnapshot(effective)
+            : {};
+
+        addIntegration({
+          name: 'autocatalog-docs-build',
+          hooks: {
+            'astro:config:setup': ({
+              updateConfig: updateAstroConfig,
+              injectRoute,
+              addMiddleware,
+            }) => {
+              const base = astroConfig.base.replace(/\/?$/, '/');
+
+              updateAstroConfig({
+                vite: {
+                  ...(command === 'build' && {
+                    define: {
+                      ...builtSettings(process.env),
+                      ...snapshot,
+                    },
+                  }),
+                  // The site's own panel is served to the browser in dev.
+                  ...(chat?.panel && { server: { fs: { allow: [path.dirname(chat.panel)] } } }),
+                  plugins: [
+                    buildModules(
+                      chat && {
+                        module: chat.module,
+                        component: chat.panel,
+                        pages: chatPages(catalog, base),
+                        panel: {
+                          api: `${base}api/chat`,
+                          title: chat.title,
+                          description: chat.description,
+                          suggestions: chat.suggestions,
+                          support: chat.support,
+                          side: chat.side,
+                          text: chatText(chat.text),
+                          icons: chatIcons(chat.icons),
+                        },
+                      },
+                      astroConfig.output === 'server',
+                      access,
+                    ),
+                  ],
+                },
+              });
+
+              // Before the site's own middleware, which can read `locals.reader`.
+              if (access) {
+                addMiddleware({
+                  entrypoint: fileURLToPath(new URL('./access-middleware.ts', import.meta.url)),
+                  order: 'pre',
+                });
+              }
+
+              // The site's own page at one of these addresses replaces ours.
+              const own = new Set(
+                process.env.AUTOCATALOG_DOCS_PAGES
+                  ? ownPageRoutes(process.env.AUTOCATALOG_DOCS_PAGES).map(([pattern]) => pattern)
+                  : [],
+              );
+
+              const routes: Array<[boolean, string, string]> = [
+                [config.prerender === false, '/search', './pages/search.astro'],
+                [access?.denied === 'teaser', '/no-access', './pages/no-access.astro'],
+                [chat !== undefined, '/api/chat', './pages/chat.ts'],
+              ];
+
+              for (const [wanted, pattern, file] of routes) {
+                if (wanted && !own.has(pattern)) {
+                  injectRoute({
+                    pattern,
+                    entrypoint: fileURLToPath(new URL(file, import.meta.url)),
+                  });
+                }
+              }
+            },
+          },
+        });
 
         // Joins the site's own Markdown processor, the way Starlight adds its
         // asides. Another processor leaves the fence as a highlighted code block.
@@ -382,10 +643,160 @@ export default function autocatalogDocs(opts: AutocatalogDocsOptions = {}): Star
       // Search finds more than documents here, so its box says so. A site's
       // own translation of the label still wins.
       'i18n:setup': ({ injectTranslations }) => {
-        injectTranslations({ en: { 'search.label': 'Search docs, events, services…' } });
+        const outside = opts.audience ?? process.env.AUTOCATALOG_SITE_AUDIENCE;
+
+        injectTranslations({
+          en: {
+            'search.label': outside ? 'Search guides and APIs…' : 'Search docs, events, services…',
+            // The site's own words win over ours.
+            ...(opts.strings ?? siteStrings(process.env.AUTOCATALOG_SITE_STRINGS)),
+          },
+        });
       },
     },
   };
+}
+
+const stringsSchema = z.record(z.string(), z.string());
+
+/** Header links `ac site` passes as JSON; none when unset. */
+function siteNav(json: string | undefined): SiteNavLink[] {
+  return json ? z.array(siteNavLinkSchema).parse(JSON.parse(json)) : [];
+}
+
+const CHAT_MODULE = 'virtual:autocatalog-chat';
+
+const BUILD_MODULE = 'virtual:autocatalog-docs-build';
+
+const ACCESS_MODULE = 'virtual:autocatalog-access';
+
+const PANEL_MODULE = 'virtual:autocatalog-chat-panel';
+
+const require = createRequire(import.meta.url);
+
+/**
+ * The site's settings as Vite replacements for `process.env.<name>`, so a
+ * server site renders each request from what it was built with. The dev
+ * server's design signals change while it runs, so they are left to read live.
+ */
+/** The repository a site publishes at its root: there must be exactly one. */
+function onlyRepository(site: DocsSiteConfig): string {
+  const { roots } = resolveDocsLayout(site.root, { repo: site.repo, repository: site.repository });
+
+  if (roots.length !== 1) {
+    throw new Error(
+      `atRoot publishes one repository at the site's root, and this site has ${roots.length}: ${roots.map((root) => root.name).join(', ') || 'none'}`,
+    );
+  }
+
+  return roots[0]!.name;
+}
+
+/** The addresses the catalog and its pages use, which a document at the root cannot take. */
+const ROOT_TAKEN = new Set([...RESERVED_SEGMENTS, 'search', 'no-access', 'api', '404']);
+
+/** A document at the root whose first folder is an address of the catalog's own. */
+function refuseRootClashes(docs: readonly Doc[]): void {
+  const clashes = docs.flatMap((doc) => {
+    const first = docPage(doc.id).split('/')[0] ?? '';
+
+    return ROOT_TAKEN.has(first) ? [`${doc.id} (/${first}/)`] : [];
+  });
+
+  if (clashes.length > 0) {
+    throw new Error(
+      `atRoot: these documents would take an address the site uses itself; move them into a folder of another name: ${clashes.join(', ')}`,
+    );
+  }
+}
+
+/**
+ * The catalog a server build renders every request from, so it never reads the
+ * repositories at runtime: a deployment ships without them.
+ */
+async function catalogSnapshot(site: DocsSiteConfig): Promise<Record<string, string>> {
+  return {
+    'import.meta.env.AUTOCATALOG_CATALOG': JSON.stringify(stringify(await buildSiteCatalog(site))),
+  };
+}
+
+export function builtSettings(env: NodeJS.ProcessEnv): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(env).flatMap(([name, value]) =>
+      /^AUTOCATALOG_((DOCS|SITE)_|EVENTCATALOG$)/.test(name) && value !== undefined
+        ? [[`process.env.${name}`, JSON.stringify(value)]]
+        : [],
+    ),
+  );
+}
+
+/**
+ * What the build decided, for code that runs per request: the audience and
+ * the assistant's panel for every page, and for the assistant's endpoint the
+ * site's model module and the pages it answers from.
+ */
+function buildModules(
+  chat:
+    | { module: string; component: string | undefined; pages: ChatPage[]; panel: ChatPanelProps }
+    | undefined,
+  documentsPerRequest: boolean,
+  access: SiteAccessConfig | undefined,
+): PluginOption {
+  return {
+    name: 'autocatalog-docs-build',
+    resolveId: (id) =>
+      [CHAT_MODULE, BUILD_MODULE, ACCESS_MODULE, PANEL_MODULE].includes(id) ? `\0${id}` : undefined,
+    load: (id) => {
+      // The panel the browser renders: the site's own component, or the default.
+      if (id === `\0${PANEL_MODULE}`) {
+        return chat?.component
+          ? `export { default } from ${JSON.stringify(chat.component)};`
+          : `export { ChatPanel as default } from ${JSON.stringify(require.resolve('autocatalog-chatbot/react'))};`;
+      }
+
+      if (id === `\0${ACCESS_MODULE}`) {
+        if (!access) throw new Error('The site has no access: set access in autocatalog.site.json');
+
+        return [
+          `export { default as access } from ${JSON.stringify(access.module)};`,
+          `export const denied = ${JSON.stringify(access.denied ?? 'hide')};`,
+        ].join('\n');
+      }
+
+      if (id === `\0${BUILD_MODULE}`) {
+        return [
+          `export const chatPanel = ${JSON.stringify(chat?.panel ?? null)};`,
+          `export const documentsPerRequest = ${documentsPerRequest};`,
+        ].join('\n');
+      }
+
+      if (id !== `\0${CHAT_MODULE}`) return undefined;
+
+      if (!chat) throw new Error('The site has no assistant: set chat in autocatalog.site.json');
+
+      return [
+        `export { default as options } from ${JSON.stringify(chat.module)};`,
+        `export const pages = ${JSON.stringify(chat.pages)};`,
+      ].join('\n');
+    },
+  };
+}
+
+const NAV_MODULE = 'virtual:autocatalog-docs-nav';
+
+/** The header's links as a module, so pages read what the build was given. */
+function navModule(links: SiteNavLink[]): PluginOption {
+  return {
+    name: 'autocatalog-docs-nav',
+    resolveId: (id) => (id === NAV_MODULE ? `\0${NAV_MODULE}` : undefined),
+    load: (id) =>
+      id === `\0${NAV_MODULE}` ? `export default ${JSON.stringify(links)};` : undefined,
+  };
+}
+
+/** Strings `ac site` passes as JSON; none when unset. */
+function siteStrings(json: string | undefined): Record<string, string> {
+  return json ? stringsSchema.parse(JSON.parse(json)) : {};
 }
 
 /** Bundles microlighter's grammars, and leaves every other dependency as Vite would. */

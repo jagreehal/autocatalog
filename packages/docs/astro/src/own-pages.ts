@@ -1,7 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import type { Plugin } from 'vite';
-import { RESERVED_SEGMENTS } from './kinds';
 
 /** What Astro routes from a file: pages, Markdown, and endpoints such as `status.json.ts`. */
 const ROUTED = /\.(astro|md|mdx|ts|js)$/;
@@ -14,10 +13,9 @@ const MARKDOWN_MODULE = 'virtual:autocatalog-docs-own-markdown';
 /**
  * A site's own pages and API routes, from a folder laid out as `src/pages/`
  * is: `team.astro` at `/team/`, `api/status.json.ts` at `/api/status.json`.
- * The site refuses a route it already publishes and names the file to rename,
- * so each catalog page keeps its route.
+ * One at an address the catalog publishes replaces the catalog's page.
  */
-export function ownPageRoutes(dir: string, taken: Set<string>): Array<[string, string]> {
+export function ownPageRoutes(dir: string): Array<[string, string]> {
   if (!fs.statSync(dir, { throwIfNoEntry: false })?.isDirectory()) {
     throw new Error(`--pages ${dir}: not a folder`);
   }
@@ -29,16 +27,10 @@ export function ownPageRoutes(dir: string, taken: Set<string>): Array<[string, s
 
     if (!ROUTED.test(file) || file.split('/').some((part) => part.startsWith('_'))) continue;
 
-    const pattern = `/${file.replace(ROUTED, '').replace(/(^|\/)index$/, '')}`;
-    const first = pattern.split('/')[1] ?? '';
-
-    if (taken.has(pattern) || RESERVED_SEGMENTS.has(first)) {
-      throw new Error(
-        `${path.join(dir, entry)}: ${pattern} is a page the catalog publishes; rename the file`,
-      );
-    }
-
-    routes.push([pattern, path.join(dir, entry)]);
+    routes.push([
+      `/${file.replace(ROUTED, '').replace(/(^|\/)index$/, '')}`,
+      path.join(dir, entry),
+    ]);
   }
 
   return routes;
