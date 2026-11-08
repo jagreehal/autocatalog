@@ -16,7 +16,11 @@ import { docPage } from './ui/lib/docs';
 export interface SidebarLink {
   label: string;
   link: string;
+  /** The catalog page a site names it by, when the link goes somewhere more useful. */
+  id?: string;
 }
+
+const starlightLink = ({ label, link }: SidebarLink): SidebarLink => ({ label, link });
 
 export interface SidebarGroup {
   label: string;
@@ -147,15 +151,15 @@ export function navigationGroups(
   pages: SidebarLink[],
   navigation?: SiteNavigation,
 ): SidebarGroup[] {
-  if (!navigation) return [{ label: 'Catalog', items: pages }];
+  if (!navigation) return [{ label: 'Catalog', items: pages.map(starlightLink) }];
 
   return navigation.groups.flatMap(({ label, collapsed, items }) => {
     const resolved = items.flatMap((item): SidebarLink[] => {
       if ('href' in item) return [{ label: item.label, link: item.href }];
 
-      const found = pages.find(({ link }) => link === `/${item.id}`);
+      const found = pages.find(({ id, link }) => (id ?? link.slice(1)) === item.id);
 
-      return found ? [{ ...found, ...(item.label && { label: item.label }) }] : [];
+      return found ? [{ ...starlightLink(found), ...(item.label && { label: item.label }) }] : [];
     });
 
     return resolved.length > 0

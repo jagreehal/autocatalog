@@ -2,7 +2,7 @@
 import { act, cleanup, render, screen } from '@testing-library/react';
 import { createElement } from 'react';
 import { renderToString } from 'react-dom/server';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, describe, expect, it, vi } from 'vitest';
 import { Graph } from '../src/ui/components/Graph';
 
 // React Flow measures its box; jsdom has no layout, so the measure is empty.
@@ -36,6 +36,10 @@ afterEach(() => {
   cleanup();
   intersect.length = 0;
 });
+
+// The visualiser fits its view 150ms after it mounts, on a timer it never clears,
+// so the file waits that out before jsdom is torn down.
+afterAll(() => new Promise((done) => setTimeout(done, 200)));
 
 const props = {
   id: 'flow',

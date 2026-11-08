@@ -10,6 +10,8 @@ export interface LlmsTxtInput {
   /** Site origin without a trailing slash. Empty when no `site` is configured. */
   base: string;
   items: DocListItem[];
+  /** The site's MCP endpoint, for an agent that can connect rather than read. */
+  mcp?: string | undefined;
   /** OpenAPI references, each linked to its spec as JSON. */
   apis?: Array<{ path: string; title: string; summary?: string | undefined }>;
   /** Current events, each linked to its Markdown twin. */
@@ -50,6 +52,7 @@ export function renderLlmsTxt({
   model,
   notes = [],
   full = true,
+  mcp,
 }: LlmsTxtInput): string {
   const lines = [
     `# ${title}`,
@@ -57,6 +60,9 @@ export function renderLlmsTxt({
     `> ${description}`,
     '',
     ...(full ? [`Every page below in one file: [llms-full.txt](${base}/llms-full.txt)`, ''] : []),
+    ...(mcp
+      ? [`Connect an agent to search these pages and read the APIs over MCP: ${mcp}`, '']
+      : []),
   ];
 
   for (const [repo, docs] of groupByRepo(items)) {

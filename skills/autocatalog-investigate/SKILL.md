@@ -57,7 +57,7 @@ the runtime verification still unresolved.
 
 ## Use what the company knows
 
-Ask `flow_context` for the flow behind the problem. It returns each step's transition, rules, stuck signs, notes and evidence, with `observe` hints for reading the runtime. Treat draft findings as hypotheses. `ask` searches every kind of document, and `read_document` opens one.
+Ask `flow_context` for the flow behind the problem. It returns each step's transition, rules, stuck signs, notes and evidence, with `observe` hints for reading the runtime. Treat draft findings as hypotheses. `ask` searches every kind of document, `list_documents` lists them, and `read_document` opens one.
 
 When the work ends, save what you learned with `propose_finding`, which needs a server started with `--allow-writes`. Fill the fields `stillNeeds` lists, then open a pull request so a person can confirm the draft.
 

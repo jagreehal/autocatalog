@@ -64,6 +64,19 @@ describe('navigationGroups', () => {
     ]);
   });
 
+  it('finds a page by the id a site names it by, wherever its link goes', () => {
+    const apis = { label: 'API reference', id: 'apis', link: '/apis/payments/openapi/' };
+
+    expect(
+      navigationGroups([apis], { groups: [{ label: 'Developers', items: [{ id: 'apis' }] }] }),
+    ).toEqual([
+      { label: 'Developers', items: [{ label: 'API reference', link: '/apis/payments/openapi/' }] },
+    ]);
+    expect(navigationGroups([apis])).toEqual([
+      { label: 'Catalog', items: [{ label: 'API reference', link: '/apis/payments/openapi/' }] },
+    ]);
+  });
+
   it('leaves out a page this catalog has nothing for, and a group left empty', () => {
     expect(
       navigationGroups(pages, {

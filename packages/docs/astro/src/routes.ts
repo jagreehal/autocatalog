@@ -30,8 +30,8 @@ const OUTSIDE_ROUTES = new Set([
   '/[...slug].md',
 ]);
 
-/** Every document's text, built ahead of any request. */
-const DOCUMENT_COPIES = new Set(['/[...slug].md', '/llms-full.txt']);
+/** The files that list or copy every document for agents: per request on a server site. */
+const DOCUMENT_LISTS = new Set(['llms.txt.ts', 'llms-full.txt.ts']);
 
 /** The catalog's pages that list or copy documents, rendered per reader on a site with `access`. */
 const PER_READER_PAGES = new Set(['index.astro', 'kind.astro', 'llms.txt.ts', 'llms-full.txt.ts']);
@@ -69,6 +69,8 @@ export function autocatalogDocsRoutes(
     hooks: {
       'astro:config:setup': ({ command, config, injectRoute, updateConfig }) => {
         projectRoot = fileURLToPath(config.root);
+        // Read here as well as at config:done: routes are set up before that runs.
+        output = config.output;
         updateConfig({
           vite: {
             // The documents usually live above this project, and Vite's dev
@@ -158,19 +160,15 @@ export function autocatalogDocsRoutes(
           // so the twin wins over a page whose slug happens to end in `.md`.
           [
             '/[...slug].md',
-            // Behind `access` the rule decides each twin per request.
-            path.join(here, perReaderKinds ? 'pages/doc-twin.ts' : 'pages/[...slug].md.ts'),
+            // Documents rendered per request may be gated, by `access` or by the
+            // site's own middleware, so their twins render per request too and
+            // pass the same gate. Built ahead, a twin would skip it.
+            path.join(
+              here,
+              config.output === 'server' ? 'pages/doc-twin.ts' : 'pages/[...slug].md.ts',
+            ),
           ],
         ];
-
-        // Documents rendered per request may be gated per reader, so no copy of
-        // them is built ahead: a prerendered twin would skip that gate. With
-        // `access` the copies render per request too, through the same rule.
-        if (config.output === 'server' && !perReaderKinds) {
-          const kept = pages.filter(([pattern]) => !DOCUMENT_COPIES.has(pattern));
-
-          pages.splice(0, pages.length, ...kept);
-        }
 
         // A site for readers outside has their guides and the API references.
         // Every other page is about the company's own systems.
@@ -246,7 +244,14 @@ export function autocatalogDocsRoutes(
 
         if (!file.startsWith(path.join(here, 'pages')) || PRERENDER_EXPORT.test(read(file))) return;
 
-        route.prerender = !(perReaderKinds && PER_READER_PAGES.has(path.basename(file)));
+        const name = path.basename(file);
+
+        // With `access`, every page that lists or copies documents is the reader's own.
+        // On any server site, the copies of them are rendered per request, behind its gate.
+        route.prerender = !(
+          (perReaderKinds && PER_READER_PAGES.has(name)) ||
+          (output === 'server' && DOCUMENT_LISTS.has(name))
+        );
       },
       // The dev server reloads every page when a file under the catalog changes.
       // A design changing is told to the pages instead (`autocatalog:design-changed`):

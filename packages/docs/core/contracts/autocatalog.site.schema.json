@@ -239,6 +239,16 @@
     "pageActions": {
       "type": "boolean"
     },
+    "apiReference": {
+      "type": "string",
+      "enum": [
+        "full",
+        "embedded"
+      ]
+    },
+    "mcp": {
+      "type": "boolean"
+    },
     "output": {
       "type": "string",
       "enum": [

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { navLinks } from '../src/nav';
+import { navLinks, portalNav } from '../src/nav';
 
 const links = [
   { label: 'Home', href: '/' },
@@ -53,5 +53,32 @@ describe('header links', () => {
     ];
 
     expect(navLinks(twins, '/a/').map((link) => link.current)).toEqual([true, false]);
+  });
+});
+
+describe('a developer portal', () => {
+  const docs = ['api/start', 'api/guides/auth', 'help/faq'];
+
+  it('is Documentation and API reference, the one API opened directly', () => {
+    expect(portalNav(docs, ['apis/api/openapi/'])).toEqual([
+      { label: 'Documentation', href: '/', match: ['/', '/api/', '/help/'] },
+      { label: 'API reference', href: '/apis/api/openapi/', match: '/apis/' },
+    ]);
+    expect(portalNav(docs, ['apis/a/one/', 'apis/b/two/'])[1]!.href).toBe('/apis/');
+  });
+
+  it('marks Documentation on the guides and API reference on the reference', () => {
+    const sections = portalNav(docs, ['apis/api/openapi/']);
+
+    const current = (page: string) => navLinks(sections, page).find((link) => link.current)?.label;
+
+    expect(current('/')).toBe('Documentation');
+    expect(current('/api/guides/auth/')).toBe('Documentation');
+    expect(current('/apis/api/openapi/')).toBe('API reference');
+  });
+
+  it('is nothing without both guides and an API', () => {
+    expect(portalNav([], ['apis/api/openapi/'])).toEqual([]);
+    expect(portalNav(docs, [])).toEqual([]);
   });
 });

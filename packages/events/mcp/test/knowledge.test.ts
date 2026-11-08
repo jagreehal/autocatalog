@@ -9,6 +9,7 @@ import {
   answerGraph,
   ask,
   endpointImpact,
+  listDocuments,
   proposeFinding,
   readDocument,
   searchCompany,
@@ -365,6 +366,46 @@ it('reads a whole document, with its trust', async () => {
   expect(doc.trust).toContain('Not checked');
 });
 
+describe('browsing and reading by path', () => {
+  it('lists what there is, and one folder of it', async () => {
+    const all = await listDocuments(catalog, { company: root });
+
+    expect(all.documents.map((d) => `${d.repository}/${d.source}`)).toEqual(
+      expect.arrayContaining(['handbook/docs/people/holiday.md', 'marketing/docs/team.md']),
+    );
+
+    const people = await listDocuments(catalog, { company: root }, 'handbook/docs/people');
+
+    expect(people.documents.map((d) => d.source)).toEqual(['docs/people/holiday.md']);
+    expect((await listDocuments(catalog, { company: root }, undefined, 1)).omitted).toBeGreaterThan(
+      0,
+    );
+  });
+
+  it('opens a page without its repository or .md', async () => {
+    const doc = await readDocument(catalog, undefined, 'docs/people/holiday', { company: root });
+
+    expect(doc.repository).toBe('handbook');
+    expect(doc.text).toContain('28 days');
+  });
+
+  it('names the closest pages on a miss', async () => {
+    await expect(
+      readDocument(catalog, undefined, 'docs/holiday-policy.md', { company: root }),
+    ).rejects.toThrow(
+      /No document docs\/holiday-policy\.md[\s\S]*handbook docs\/people\/holiday\.md/,
+    );
+  });
+
+  it('asks which repository when two share a source', async () => {
+    await write('marketing/docs/people/holiday.md', '---\ntitle: Other\nowner: M\n---\n\nx\n');
+
+    await expect(
+      readDocument(catalog, undefined, 'docs/people/holiday.md', { company: root }),
+    ).rejects.toThrow('handbook and marketing');
+  });
+});
+
 it('searches events across the company', async () => {
   expect(await searchCompany(catalog, 'nothing here', { company: root })).toEqual([]);
 });
@@ -598,6 +639,18 @@ const toolsOf = async (options: ServerOptions) => {
 
   return tools.map((tool) => tool.name);
 };
+
+it('tells a client where to start, and its real version', async () => {
+  const [client, server] = InMemoryTransport.createLinkedPair();
+  const mcp = new Client({ name: 'test', version: '0' });
+
+  await createServer(catalog, undefined, { company: root }).connect(server);
+  await mcp.connect(client);
+
+  expect(mcp.getInstructions()).toContain('list_documents');
+  expect(mcp.getServerVersion()?.version).not.toBe('0.0.1');
+  await mcp.close();
+});
 
 it('offers a tool that writes only when asked to', async () => {
   expect(await toolsOf({ company: root })).toContain('ask');

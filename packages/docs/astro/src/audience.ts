@@ -285,7 +285,7 @@ function withoutUnusedTags(document: JsonObject): JsonObject {
 }
 
 /** `#/components/schemas/Order` as `['schemas', 'Order']`. */
-function componentRef(ref: string): [string, string] | undefined {
+export function componentRef(ref: string): [string, string] | undefined {
   const match = /^#\/components\/([^/]+)\/([^/]+)$/.exec(ref);
 
   if (!match) return undefined;

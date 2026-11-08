@@ -1,6 +1,7 @@
 /** @jsxImportSource react */
 import { StarIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { Separator } from '#ui/components/ui/separator.tsx';
 import { Button } from '#ui/components/ui/button.tsx';
 import {
   FAVORITES_KEY,
@@ -61,9 +62,12 @@ function useFavorites() {
 export function FavoriteToggle({
   catalogKey,
   label,
+  divided = false,
 }: {
   catalogKey?: string | undefined;
   label?: string | undefined;
+  /** Draw a divider before it, as a row of page actions has between each. */
+  divided?: boolean;
 }) {
   const { favorites, ready, update } = useFavorites();
 
@@ -73,25 +77,30 @@ export function FavoriteToggle({
   const pinned = isFavorite(favorites, catalogKey);
 
   return (
-    <Button
-      variant="outline"
-      size="sm"
-      aria-label={pinned ? 'Unpin page' : 'Pin page'}
-      aria-pressed={pinned}
-      data-favorite-toggle=""
-      onPress={() =>
-        update(
-          toggleFavorite(favorites, {
-            key: catalogKey,
-            href,
-            label: label ?? document.title,
-          }),
-        )
-      }
-    >
-      <StarIcon className={pinned ? 'fill-current' : undefined} />
-      {pinned ? 'Pinned' : 'Pin'}
-    </Button>
+    <>
+      {divided && (
+        <Separator orientation="vertical" className="h-4 aria-[orientation=vertical]:self-center" />
+      )}
+      <Button
+        variant="ghost"
+        size="sm"
+        aria-label={pinned ? 'Unpin page' : 'Pin page'}
+        aria-pressed={pinned}
+        data-favorite-toggle=""
+        onPress={() =>
+          update(
+            toggleFavorite(favorites, {
+              key: catalogKey,
+              href,
+              label: label ?? document.title,
+            }),
+          )
+        }
+      >
+        <StarIcon className={pinned ? 'fill-current' : undefined} />
+        {pinned ? 'Pinned' : 'Pin'}
+      </Button>
+    </>
   );
 }
 

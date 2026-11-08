@@ -42,9 +42,9 @@ import {
   TraceTitle,
 } from '#ui/components/ui/trace.tsx';
 import { cn } from '#ui/lib/utils.ts';
-import type { ChatMessage } from '../index';
-import { type ChatIconName, type ChatText, DEFAULT_CHAT_TEXT, fill } from '../text';
-import { type ChatIcon, DEFAULT_CHAT_ICONS, renderIcon } from './customize';
+import type { ChatMessage } from '../index.ts';
+import { type ChatIconName, type ChatText, DEFAULT_CHAT_TEXT, fill } from '../text.ts';
+import { type ChatIcon, DEFAULT_CHAT_ICONS, renderIcon } from './customize.tsx';
 
 type Part = ChatMessage['parts'][number];
 

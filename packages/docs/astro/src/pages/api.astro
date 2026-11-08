@@ -24,7 +24,12 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
 
 const catalog = await docsCatalog();
 
-const outside = docsSiteConfig().audience !== undefined;
+const site = docsSiteConfig();
+
+const outside = site.audience !== undefined;
+
+// Full, Scalar's sidebar is the navigation, so the site's steps aside.
+const full = site.apiReference === 'full';
 
 const page = outside
   ? apiPageProps(api, [], base, true)
@@ -43,6 +48,14 @@ setPageHeader(Astro.locals, {
       (outside ? 'The API reference.' : `The OpenAPI reference ${api.repository} commits at ${api.file}.`),
     tableOfContents: false,
   }}
+  hasSidebar={!full}
 >
-  <ApiPage client:load {...page} />
+  <ApiPage
+    client:load
+    {...page}
+    layout={site.apiReference}
+    mcp={process.env.AUTOCATALOG_SITE_MCP_ENDPOINT
+      ? { name: site.title, path: `${base}${process.env.AUTOCATALOG_SITE_MCP_ENDPOINT}` }
+      : undefined}
+  />
 </StarlightPage>
