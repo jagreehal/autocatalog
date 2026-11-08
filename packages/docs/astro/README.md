@@ -50,6 +50,7 @@ about, because it assumes one repository:
 | `/schemas`                      | Every event schema with its format, version, domain and owner                                       |
 | `/<repo>/<path>.md`             | A raw markdown twin of every document, event and service page                                       |
 | `/llms.txt`, `/llms-full.txt`   | The whole index in the llms.txt format, and the full text of every document and event               |
+| `/mcp`                          | On a server site with `access` or an `audience`: an MCP endpoint over its pages and APIs            |
 | `/contracts/docs-manifest.json` | The aggregated docs index that each repository's `ac docs check` resolves links against             |
 | The title block                 | An override of Starlight's `PageTitle`: a resource's catalog key, and where its definition was read |
 

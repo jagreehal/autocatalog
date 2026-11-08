@@ -52,11 +52,44 @@ export interface DocsSiteConfig {
   pageActions: boolean;
   /** Scalar with its own sidebar and search below the header, or inside the site's navigation. */
   apiReference: 'full' | 'embedded';
-  /** Whether a site rendered per request serves its MCP endpoint at `/mcp`. */
-  mcp: boolean;
+  /**
+   * Whether a site rendered per request serves its MCP endpoint at `/mcp`. Unset,
+   * a site with `access` or an `audience` serves it, as each knows what a reader may open.
+   */
+  mcp: boolean | undefined;
   navigation: SiteNavigation | undefined;
   /** A server-sent events feed the maps can follow live. */
   live: { url: string; event: string } | undefined;
+}
+
+/**
+ * Whether a site serves each document's Markdown twin and `llms-full.txt`. A
+ * site built ahead does. One rendered per request does with `access` or an
+ * `audience`; without either, only its own middleware decides who reads what,
+ * and a copy at another address would skip that.
+ */
+export function servesDocumentCopies({
+  perRequest,
+  access,
+  audience,
+}: {
+  perRequest: boolean;
+  access: boolean;
+  audience: string | undefined;
+}): boolean {
+  return !perRequest || access || audience !== undefined;
+}
+
+/**
+ * Whether a site serves `/mcp`: only per request, and by default only with
+ * `access` or an `audience`. Without either, the site's own middleware decides
+ * who reads what, so the endpoint waits for `"mcp": true`.
+ */
+export function servesMcp(
+  { mcp, access, audience }: Pick<DocsSiteConfig, 'mcp' | 'access' | 'audience'>,
+  output: string,
+): boolean {
+  return output === 'server' && (mcp ?? (access !== undefined || audience !== undefined));
 }
 
 export function docsSiteConfig(): DocsSiteConfig {
@@ -84,7 +117,7 @@ export function docsSiteConfig(): DocsSiteConfig {
     title: process.env.AUTOCATALOG_DOCS_TITLE ?? 'Documentation',
     audience: process.env.AUTOCATALOG_SITE_AUDIENCE || undefined,
     pageActions: process.env.AUTOCATALOG_SITE_PAGE_ACTIONS !== 'false',
-    mcp: process.env.AUTOCATALOG_SITE_MCP !== 'false',
+    mcp: process.env.AUTOCATALOG_SITE_MCP ? process.env.AUTOCATALOG_SITE_MCP === 'true' : undefined,
     // Developers outside come for the reference itself; the company reads it beside the rest.
     apiReference:
       process.env.AUTOCATALOG_SITE_API_REFERENCE === 'full' ||

@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import type { AstroIntegration } from 'astro';
 import { DOCS_MANIFEST_PATH } from 'autocatalog-docs-core';
 import { z } from 'zod';
+import { servesDocumentCopies } from './config';
 import { DESIGN_CHANGED } from './ui/lib/canvas-model';
 import { markDesignsChanged, savedBy } from './dev-signals';
 import { eventCatalogEmbeds } from './eventcatalog';
@@ -30,8 +31,11 @@ const OUTSIDE_ROUTES = new Set([
   '/[...slug].md',
 ]);
 
-/** The files that list or copy every document for agents: per request on a server site. */
+/** The files that list or copy every document for agents. */
 const DOCUMENT_LISTS = new Set(['llms.txt.ts', 'llms-full.txt.ts']);
+
+/** The routes that copy a document whole, which a server site leaves out unless it knows who reads. */
+const DOCUMENT_COPIES = new Set(['/[...slug].md', '/llms-full.txt']);
 
 /** The catalog's pages that list or copy documents, rendered per reader on a site with `access`. */
 const PER_READER_PAGES = new Set(['index.astro', 'kind.astro', 'llms.txt.ts', 'llms-full.txt.ts']);
@@ -170,6 +174,18 @@ export function autocatalogDocsRoutes(
           ],
         ];
 
+        if (
+          !servesDocumentCopies({
+            perRequest: config.output === 'server',
+            access: perReaderKinds !== undefined,
+            audience,
+          })
+        ) {
+          const kept = pages.filter(([pattern]) => !DOCUMENT_COPIES.has(pattern));
+
+          pages.splice(0, pages.length, ...kept);
+        }
+
         // A site for readers outside has their guides and the API references.
         // Every other page is about the company's own systems.
         if (audience) {
@@ -247,10 +263,10 @@ export function autocatalogDocsRoutes(
         const name = path.basename(file);
 
         // With `access`, every page that lists or copies documents is the reader's own.
-        // On any server site, the copies of them are rendered per request, behind its gate.
+        // A server site for an audience renders them per request, behind its middleware.
         route.prerender = !(
           (perReaderKinds && PER_READER_PAGES.has(name)) ||
-          (output === 'server' && DOCUMENT_LISTS.has(name))
+          (output === 'server' && audience && DOCUMENT_LISTS.has(name))
         );
       },
       // The dev server reloads every page when a file under the catalog changes.

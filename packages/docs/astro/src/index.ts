@@ -17,7 +17,7 @@ import {
   type SITE_THEMES,
 } from 'autocatalog-docs-core';
 import type { PluginOption } from 'vite';
-import { type DocsSiteConfig, docsSiteConfig } from './config';
+import { type DocsSiteConfig, docsSiteConfig, servesMcp as siteServesMcp } from './config';
 import { ownPageRoutes } from './own-pages';
 import { autocatalogDocsRoutes } from './routes';
 
@@ -124,8 +124,9 @@ export interface AutocatalogDocsOptions {
    */
   apiReference?: 'full' | 'embedded';
   /**
-   * `false` leaves out the MCP endpoint a site with `output: 'server'` serves at
-   * `/mcp`, where agents search its pages and read its APIs' operations.
+   * The MCP endpoint at `/mcp` on a site with `output: 'server'`, where agents
+   * search its pages and read its APIs' operations. On by default with `access`
+   * or an `audience`; `true` serves it on any server site, `false` leaves it out.
    */
   mcp?: boolean;
   /**
@@ -210,7 +211,7 @@ export default function autocatalogDocs(opts: AutocatalogDocsOptions = {}): Star
 
         if (opts.apiReference) process.env.AUTOCATALOG_SITE_API_REFERENCE ??= opts.apiReference;
 
-        if (opts.mcp === false) process.env.AUTOCATALOG_SITE_MCP ??= 'false';
+        if (opts.mcp !== undefined) process.env.AUTOCATALOG_SITE_MCP ??= String(opts.mcp);
 
         if (opts.atRoot) process.env.AUTOCATALOG_DOCS_AT_ROOT ??= 'true';
 
@@ -516,7 +517,7 @@ export default function autocatalogDocs(opts: AutocatalogDocsOptions = {}): Star
         const { chat } = effective;
 
         // Agents connect by URL, so the endpoint needs a server; llms.txt names it.
-        const servesMcp = astroConfig.output === 'server' && effective.mcp;
+        const servesMcp = siteServesMcp(effective, astroConfig.output);
 
         if (servesMcp) process.env.AUTOCATALOG_SITE_MCP_ENDPOINT = 'mcp';
 

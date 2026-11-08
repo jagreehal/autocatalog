@@ -74,3 +74,24 @@ it('lists only what a signed-out reader may open outside a request, and the read
     await fs.rm(root, { recursive: true, force: true });
   }
 });
+
+it('builds the catalog again after a build that failed', async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'autocatalog-retry-'));
+
+  try {
+    const notAFolder = path.join(root, 'file');
+
+    await fs.writeFile(notAFolder, '');
+    vi.stubEnv('AUTOCATALOG_DOCS_ROOT', notAFolder);
+
+    const { fullCatalog } = await import('../src/catalog');
+
+    await expect(fullCatalog()).rejects.toThrow('ENOTDIR');
+
+    vi.stubEnv('AUTOCATALOG_DOCS_ROOT', root);
+
+    await expect(fullCatalog()).resolves.toMatchObject({ docs: [] });
+  } finally {
+    await fs.rm(root, { recursive: true, force: true });
+  }
+});

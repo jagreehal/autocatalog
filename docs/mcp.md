@@ -72,7 +72,8 @@ findings, flows, entities and glossary terms. Each result gives its source and h
 to trust it. `answered: false` means nothing matched, and the answer then lists the
 `contents`, so an agent can spot a page that uses other words and open it with
 `read_document`. `list_documents` browses without a question: pass `under` for one
-folder, such as `handbook/docs/people`. `read_document` takes a source with or without
+folder, such as `handbook/docs/people`. It answers 50 at a time, up to 100 with
+`limit`, and `nextCursor` fetches the next page. `read_document` takes a source with or without
 `.md`, needs the repository only when two share that source, and on a miss names the
 closest pages. On connect the server tells the client to start with `ask`, so an agent
 knows the order before it lists the tools. `search`, `define`, `flow_context` and `show_map` cover every

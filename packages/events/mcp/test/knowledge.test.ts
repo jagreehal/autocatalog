@@ -377,9 +377,29 @@ describe('browsing and reading by path', () => {
     const people = await listDocuments(catalog, { company: root }, 'handbook/docs/people');
 
     expect(people.documents.map((d) => d.source)).toEqual(['docs/people/holiday.md']);
-    expect((await listDocuments(catalog, { company: root }, undefined, 1)).omitted).toBeGreaterThan(
-      0,
-    );
+  });
+
+  it('pages through the list with the cursor each answer gives', async () => {
+    const all = (await listDocuments(catalog, { company: root }, undefined, { limit: 100 }))
+      .documents;
+
+    const first = await listDocuments(catalog, { company: root }, undefined, { limit: 1 });
+
+    expect(first).toMatchObject({ nextCursor: '1', remaining: all.length - 1 });
+
+    const second = await listDocuments(catalog, { company: root }, undefined, {
+      limit: 1,
+      cursor: first.nextCursor,
+    });
+
+    expect([...first.documents, ...second.documents]).toEqual(all.slice(0, 2));
+
+    const unreadable = await listDocuments(catalog, { company: root }, undefined, {
+      limit: 1,
+      cursor: 'abc',
+    });
+
+    expect(unreadable.documents).toEqual(all.slice(0, 1));
   });
 
   it('opens a page without its repository or .md', async () => {

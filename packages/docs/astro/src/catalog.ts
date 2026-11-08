@@ -1097,7 +1097,16 @@ export function fullCatalog(): Promise<DocsCatalog> {
 
   if (!cached) {
     cachedAt = Date.now();
-    cached = buildSiteCatalog(docsSiteConfig());
+
+    const building = buildSiteCatalog(docsSiteConfig());
+
+    cached = building;
+
+    // A build that fails is not kept, so the next request tries again. Callers
+    // still get the rejection from `building` itself.
+    building.catch(() => {
+      if (cached === building) cached = undefined;
+    });
   }
 
   return cached;

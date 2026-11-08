@@ -167,9 +167,10 @@ export const siteConfigSchema = z.strictObject({
    */
   apiReference: z.enum(['full', 'embedded']).optional(),
   /**
-   * `false` leaves out the MCP endpoint at `/mcp`, which a site with
-   * `"output": "server"` serves so Claude and other agents can search its
-   * pages and read its APIs' operations.
+   * The MCP endpoint at `/mcp` on a site with `"output": "server"`, where Claude
+   * and other agents search its pages and read its APIs' operations. On by
+   * default with `access` or an `audience`; `true` serves it on any server site,
+   * `false` leaves it out.
    */
   mcp: z.boolean().optional(),
   /** `server` renders documents per request, behind the extensions' middleware. */
