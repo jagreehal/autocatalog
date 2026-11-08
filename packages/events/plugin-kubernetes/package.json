@@ -1,6 +1,6 @@
 {
   "name": "autocatalog-plugin-kubernetes",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "ac from-kubernetes: check calls against who a cluster lets reach whom.",
   "license": "MIT",
   "repository": {

@@ -1,6 +1,6 @@
 {
   "name": "autocatalog-plugin-storybook",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "ac from-storybook: list a team's Storybook components on the company site.",
   "license": "MIT",
   "repository": {
