@@ -479,18 +479,16 @@ starlight-toc a[aria-current='true'] {
     display: none;
   }
 
-  /* Above the resize handle, which runs down the same edge and would take its clicks. */
+  /* Beside the sidebar and level with its first row, above the resize handle on its edge. */
   [data-sidebar-toggle] {
     position: fixed;
     z-index: var(--sl-z-index-navbar);
-    top: calc(var(--sl-nav-height) + 0.5rem);
-    inset-inline-start: calc(var(--sl-sidebar-width) - 1rem);
-    background: var(--sl-color-bg-sidebar, var(--background, #fff));
-    border: 1px solid var(--sl-color-hairline, var(--border, #e5e5e5));
-    box-shadow: 0 1px 2px rgb(0 0 0 / 6%);
+    top: calc(var(--sl-nav-height) + 0.75rem);
+    inset-inline-start: calc(var(--sl-sidebar-width) + 0.5rem);
+    color: var(--sl-color-gray-3);
   }
   :root[data-sidebar='collapsed'] [data-sidebar-toggle] {
-    inset-inline-start: 0.35rem;
+    inset-inline-start: 0.5rem;
   }
 
   [data-sidebar-resizer] {
@@ -550,7 +548,6 @@ starlight-toc a[aria-current='true'] {
 :root[data-embed='1'] .sidebar-pane,
 :root[data-embed='1'] [data-sidebar-toggle],
 :root[data-embed='1'] [data-sidebar-resizer],
-:root[data-embed='1'] [data-favorites-list],
 :root[data-embed='1'] footer,
 :root[data-embed='1'] .right-sidebar {
   display: none !important;
@@ -571,50 +568,6 @@ starlight-toc a[aria-current='true'] {
 }
 .ac-wiki-ref[data-wiki-ref='service'] {
   color: var(--sl-color-text-accent, inherit);
-}
-
-[data-favorites-list] {
-  margin-bottom: 0.5rem;
-}
-[data-favorites-label] {
-  display: flex;
-  align-items: center;
-  gap: 0.375rem;
-  margin: 0;
-  padding: 0.2em 0.5rem;
-  font-size: var(--sl-text-base);
-  font-weight: 600;
-  line-height: 1.4;
-  color: var(--sl-color-white);
-}
-[data-favorites-list] ul {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-[data-favorites-list] li {
-  margin-inline-start: 0.5rem;
-  padding-inline-start: 0.5rem;
-  border-inline-start: 1px solid var(--sl-color-hairline-light);
-  overflow-wrap: anywhere;
-}
-[data-favorites-list] a {
-  display: block;
-  padding: 0.3em 0.5rem;
-  border-radius: 0.25rem;
-  font-size: var(--sl-text-sm);
-  line-height: 1.4;
-  color: var(--sl-color-gray-2);
-  text-decoration: none;
-}
-[data-favorites-list] a:hover,
-[data-favorites-list] a:focus {
-  color: var(--sl-color-white);
-}
-[data-favorites-list] a[aria-current='page'] {
-  font-weight: 600;
-  color: var(--sl-color-text-invert);
-  background-color: var(--sl-color-text-accent);
 }
 
 [data-graph-fullscreen] > div {

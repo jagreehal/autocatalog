@@ -1,48 +1,9 @@
 ---
 import Default from '@astrojs/starlight/components/Sidebar.astro';
-import { FavoritesRail } from '../ui/overrides/Favorites';
 import TopNav from './TopNav.astro';
 
-// Pins live in this browser's storage, so they render only in the browser, as an
-// island above the navigation Starlight builds on the server. On a phone the header has no room
-// for the site's sections, so they lead the menu instead.
+// On a phone the header has no room for the site's sections, so they lead the menu instead.
 ---
 
 <TopNav variant="menu" />
-<FavoritesRail client:only="react" />
 <Default />
-
-<script>
-  // Starlight remembers only the groups a reader clicked, so a group it opened
-  // for the current page closes again on the next one. Remember every group as
-  // the reader left it: only the reader closes a group. The current page's
-  // group still opens, since that is where the reader is.
-  const KEY = 'sl-sidebar-state';
-
-  const root = document.querySelector('sl-sidebar-state-persist');
-
-  for (const link of root?.querySelectorAll('a[aria-current="page"]') ?? []) {
-    for (let group = link.closest('details'); group; group = group.parentElement?.closest('details') ?? null) {
-      group.open = true;
-    }
-  }
-
-  // Before Starlight's own visibilitychange save, which keeps what this writes.
-  addEventListener('pagehide', () => {
-    if (!(root instanceof HTMLElement)) return;
-
-    try {
-      const open: boolean[] = [];
-
-      for (const group of root.querySelectorAll('details')) {
-        const index = Number(group.querySelector<HTMLElement>('sl-sidebar-restore')?.dataset.index);
-
-        if (Number.isInteger(index)) open[index] = group.open;
-      }
-
-      const stored = JSON.parse(sessionStorage.getItem(KEY) || '{}');
-
-      sessionStorage.setItem(KEY, JSON.stringify({ ...stored, hash: root.dataset.hash, open }));
-    } catch {}
-  });
-</script>

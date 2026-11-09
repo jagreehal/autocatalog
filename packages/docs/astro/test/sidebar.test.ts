@@ -34,6 +34,7 @@ describe('navigationGroups', () => {
 
   it('keeps the catalog group when nothing is configured', () => {
     expect(navigationGroups(pages)).toEqual([{ label: 'Catalog', items: pages }]);
+    expect(navigationGroups([])).toEqual([]);
   });
 
   it('replaces it with the groups a site names, in their order, with its own links', () => {

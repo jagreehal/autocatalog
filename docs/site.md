@@ -406,9 +406,7 @@ keeps the last good site.
   and a deprecated one says since when. The home page counts what needs
   review, events with no producer or consumer, and resources with no owner;
   each count opens the Catalog filtered to them.
-- Pin a page with the star beside its title. Pins sit at the top of the
-  sidebar, in this browser only. Drag the sidebar's edge to resize it, or
-  collapse it.
+- Drag the sidebar's edge to resize it, or collapse it.
 - Add `?embed=1` to any page to hide the header, sidebar and footer, for a
   frame in another tool.
 - `/contracts/docs-manifest.json` lists every document and who links to it.
@@ -660,6 +658,30 @@ and a site lists the package by name in `extend`:
 
 To take options, export a function from the package and call it from your own
 `extend.ts`.
+
+`routeMiddleware` changes what Starlight renders for each page. A help centre with
+one section per product can show only the current section's guides in the
+sidebar:
+
+```ts
+// site/route-data.ts
+import { defineRouteMiddleware, type StarlightRouteData } from '@astrojs/starlight/route-data';
+
+type Entry = StarlightRouteData['sidebar'][number];
+
+const leadsInto = (entry: Entry, prefix: string): boolean =>
+  entry.type === 'link'
+    ? entry.href.startsWith(prefix)
+    : entry.entries.some((e) => leadsInto(e, prefix));
+
+export const onRequest = defineRouteMiddleware((context) => {
+  const prefix = `/${context.url.pathname.split('/')[1]}/`;
+  const route = context.locals.starlightRoute;
+  const [section, ...others] = route.sidebar.filter((entry) => leadsInto(entry, prefix));
+
+  if (section?.type === 'group' && others.length === 0) route.sidebar = section.entries;
+});
+```
 
 ### Per-request pages
 
