@@ -13,6 +13,7 @@ import {
   withMarkdownCopy,
 } from '../shell';
 import { PageTitleChrome } from '../ui/overrides/PageTitleChrome';
+import { documentTwinsServed } from '../document-twins';
 import { docHref } from '../view';
 import { catalogId } from '../ui/lib/docs';
 
@@ -61,9 +62,7 @@ const view = listed.find((action) => action.label === 'View as Markdown');
 
 const site = docsSiteConfig();
 
-// Every document has a twin to copy and view: built ahead on a static site, and
-// per request, behind the same gate as the page, on a server site.
-const markdownActions = site.pageActions;
+const markdownActions = site.pageActions && (!isDoc || documentTwinsServed());
 
 // A site can leave the Markdown actions out; what a page itself offers stays.
 const actions: PageAction[] = !markdownActions

@@ -16,13 +16,25 @@ afterEach(async () => {
   await fs.rm(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
 });
 
-function patterns(): string[] {
+function patterns({
+  output = 'static',
+  audience,
+  perReaderKinds,
+}: { output?: string; audience?: string; perReaderKinds?: string[] } = {}): string[] {
   const injected: string[] = [];
-  const setup = autocatalogDocsRoutes(root).hooks['astro:config:setup'];
-  // SAFETY: the hook reads only config.root, config.srcDir, injectRoute and
-  // updateConfig, all supplied here; the rest of Astro's context is never touched.
+
+  const setup = autocatalogDocsRoutes(root, undefined, audience, perReaderKinds).hooks[
+    'astro:config:setup'
+  ];
+
+  // SAFETY: the hook reads only config.root, config.srcDir, config.output,
+  // injectRoute and updateConfig, all supplied here; the rest of Astro's context is never touched.
   setup?.({
-    config: { root: pathToFileURL(`${root}/`), srcDir: pathToFileURL(`${root}/src/`) },
+    config: {
+      root: pathToFileURL(`${root}/`),
+      srcDir: pathToFileURL(`${root}/src/`),
+      output,
+    },
     injectRoute: ({ pattern }: { pattern: string }) => injected.push(pattern),
     updateConfig: () => undefined,
   } as never);
@@ -88,4 +100,20 @@ it("keeps a document kind's index from taking the address of a page the site pub
   // A kind index sits at /<path>/, below every static page in priority.
   expect(patterns()).toContain('/[kind]');
   expect(segments).toEqual([]);
+});
+
+it('leaves out whole-document copies on a server site that does not know who reads', () => {
+  const copies = ['/[...slug].md', '/llms-full.txt'];
+
+  const unscoped = patterns({ output: 'server' });
+
+  for (const copy of copies) expect(unscoped).not.toContain(copy);
+  expect(unscoped).toContain('/llms.txt');
+  expect(patterns({ output: 'server', perReaderKinds: ['runbooks'] })).toEqual(
+    expect.arrayContaining(copies),
+  );
+  expect(patterns({ output: 'server', audience: 'public' })).toEqual(
+    expect.arrayContaining(copies),
+  );
+  expect(patterns()).toEqual(expect.arrayContaining(copies));
 });

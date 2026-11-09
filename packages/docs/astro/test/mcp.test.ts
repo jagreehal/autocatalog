@@ -8,7 +8,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import { buildSiteCatalog, type DocsCatalog } from '../src/catalog';
 import { docsSiteConfig } from '../src/config';
-import { docsMcpServer, getOperation, listOperations } from '../src/mcp';
+import { docsMcpServer, getOperation, listOperations, pageOf } from '../src/mcp';
 
 const spec = `openapi: 3.1.0
 info:
@@ -144,7 +144,15 @@ describe('the MCP server', () => {
       '- Authenticating: https://developers.example.com/api/auth/: Send a bearer token.',
     );
     expect(await call('list_pages', { under: '/nowhere/' })).toMatch(/^No pages under/);
-    expect(await call('list_pages', { limit: 1 })).toMatch(/more\. Pass under/);
+
+    const first = await call('list_pages', { limit: 1 });
+    const next = first.match(/cursor "(\d+)"/)?.[1] ?? '';
+
+    expect(first.split('\n')).toHaveLength(2);
+    expect(next).toBe('1');
+    expect(await call('list_pages', { limit: 1, cursor: next })).not.toContain(
+      first.split('\n')[0]!,
+    );
   });
 
   it('names the closest pages when a read misses', async () => {
@@ -293,4 +301,25 @@ describe('operations a spec reaches by $ref', () => {
 
 it('reads a relative path that starts with "http" as a path', async () => {
   expect(await call('read_page', { url: 'http-caching/' })).toMatch(/^No page at http-caching\//);
+});
+
+describe('pageOf', () => {
+  it('pages through a list and says where the next page starts', () => {
+    const items = Array.from({ length: 120 }, (_, n) => n);
+
+    expect(pageOf(items).items).toHaveLength(50);
+    expect(pageOf(items).more).toEqual(['70 more. Call again with cursor "50".']);
+    expect(pageOf(items, '100', 50)).toEqual({ items: items.slice(100), more: [] });
+    expect(pageOf(items, '500')).toEqual({
+      items: [],
+      more: ['Nothing past cursor "500": 120 in all.'],
+    });
+    expect(pageOf(items, 'not a number').items).toEqual(items.slice(0, 50));
+  });
+});
+
+it('refuses a page larger than the maximum', async () => {
+  const result = await client.callTool({ name: 'list_pages', arguments: { limit: 1000 } });
+
+  expect(result.isError).toBe(true);
 });

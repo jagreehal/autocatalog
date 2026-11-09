@@ -33,6 +33,8 @@ import {
   ask,
   endpointImpact,
   FIELD_NAME,
+  LIST_MAX_PAGE_SIZE,
+  LIST_PAGE_SIZE,
   listDocuments,
   proposeFinding,
   readDocument,
@@ -403,14 +405,24 @@ export function createServer(
         limit: z
           .number()
           .int()
-          .positive()
+          .min(1)
+          .max(LIST_MAX_PAGE_SIZE)
           .optional()
-          .describe('Most documents to return (default 500). `omitted` counts the rest.'),
+          .describe(
+            `Most documents to return (default ${LIST_PAGE_SIZE}, max ${LIST_MAX_PAGE_SIZE})`,
+          ),
+        cursor: z
+          .string()
+          .regex(/^\d+$/)
+          .optional()
+          .describe('The `nextCursor` the previous answer gave, for the next page'),
       },
     },
-    async ({ under, limit }) => {
+    async ({ under, limit, cursor }) => {
       try {
-        return asText(await listDocuments(catalog, { company, audience }, under, limit));
+        return asText(
+          await listDocuments(catalog, { company, audience }, under, { limit, cursor }),
+        );
       } catch (e) {
         return asError(e);
       }

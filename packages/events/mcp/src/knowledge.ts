@@ -507,6 +507,11 @@ export async function searchCompany(catalog: CatalogSnapshot, query: string, sco
   );
 }
 
+/** How many documents one list answers with, so a company's pages do not fill an agent's context. */
+export const LIST_PAGE_SIZE = 50;
+
+export const LIST_MAX_PAGE_SIZE = 100;
+
 /**
  * Everything a reader may open, optionally under one folder, for browsing
  * without a question. `under` matches the start of `<repository>/<source>`.
@@ -515,7 +520,7 @@ export async function listDocuments(
   catalog: CatalogSnapshot,
   scope: AskScope = {},
   under?: string,
-  limit = 500,
+  { limit = LIST_PAGE_SIZE, cursor }: { limit?: number; cursor?: string } = {},
 ) {
   const { items } = await candidates(catalog, scope);
   const prefix = under?.replace(/^\/+/, '');
@@ -527,9 +532,12 @@ export async function listDocuments(
 
   all.sort((a, b) => `${a.repository}/${a.source}`.localeCompare(`${b.repository}/${b.source}`));
 
+  const start = Math.max(0, Number(cursor) || 0);
+  const end = start + limit;
+
   return {
-    documents: all.slice(0, limit),
-    ...(all.length > limit && { omitted: all.length - limit }),
+    documents: all.slice(start, end),
+    ...(end < all.length && { nextCursor: String(end), remaining: all.length - end }),
     next: 'Open one with read_document, or ask a question with ask.',
   };
 }

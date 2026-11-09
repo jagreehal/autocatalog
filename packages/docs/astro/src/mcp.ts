@@ -197,6 +197,43 @@ export function getOperation(
   return found[0];
 }
 
+/** How many lines a list answers with, so a large site does not fill an agent's context. */
+const PAGE_SIZE = 50;
+
+const MAX_PAGE_SIZE = 100;
+
+const paging = {
+  limit: z
+    .number()
+    .int()
+    .min(1)
+    .max(MAX_PAGE_SIZE)
+    .optional()
+    .describe(`Most to list (default ${PAGE_SIZE}, max ${MAX_PAGE_SIZE})`),
+  cursor: z
+    .string()
+    .regex(/^\d+$/)
+    .optional()
+    .describe('The cursor the previous answer gave, for the next page'),
+};
+
+/** One page of a list, and the line that says how to get the next. */
+export function pageOf<T>(items: T[], cursor?: string, limit = PAGE_SIZE) {
+  const start = Math.max(0, Number(cursor) || 0);
+  const end = start + limit;
+  const page = items.slice(start, end);
+
+  return {
+    items: page,
+    more:
+      end < items.length
+        ? [`${items.length - end} more. Call again with cursor "${end}".`]
+        : page.length === 0 && items.length > 0
+          ? [`Nothing past cursor "${start}": ${items.length} in all.`]
+          : [],
+  };
+}
+
 const reply = (body: string) => ({ content: [{ type: 'text' as const, text: body }] });
 
 /** An MCP server over this site's pages and API references, for one request. */
@@ -258,30 +295,28 @@ export function docsMcpServer(catalog: DocsCatalog, site: DocsMcpSite): McpServe
           .string()
           .optional()
           .describe('Only pages whose path starts with this, such as "/guides/"'),
-        limit: z.number().int().positive().optional().describe('Most pages to list (default 500)'),
+        ...paging,
       },
       annotations: { readOnlyHint: true, openWorldHint: false },
     },
-    ({ under, limit = 500 }) => {
+    ({ under, limit, cursor }) => {
       const prefix = under && `${site.base}${under.replace(/^\/+/, '')}`;
 
       const listed = pages.filter(
         (page) => !prefix || page.href.startsWith(prefix) || page.href.startsWith(under),
       );
 
-      const omitted = listed.length - limit;
+      const { items, more } = pageOf(listed, cursor, limit);
 
       return reply(
         listed.length === 0
           ? `No pages under ${under}. Call list_pages without arguments to see them all.`
           : [
-              ...listed
-                .slice(0, limit)
-                .map(
-                  (page) =>
-                    `- ${page.title}: ${absolute(page.href)}${page.summary ? `: ${page.summary}` : ''}`,
-                ),
-              ...(omitted > 0 ? [`${omitted} more. Pass under or a higher limit.`] : []),
+              ...items.map(
+                (page) =>
+                  `- ${page.title}: ${absolute(page.href)}${page.summary ? `: ${page.summary}` : ''}`,
+              ),
+              ...more,
             ].join('\n'),
       );
     },
@@ -344,10 +379,11 @@ export function docsMcpServer(catalog: DocsCatalog, site: DocsMcpSite): McpServe
             .string()
             .optional()
             .describe('Only operations whose path or summary contains this'),
+          ...paging,
         },
         annotations: { readOnlyHint: true, openWorldHint: false },
       },
-      ({ api, tag, match }) => {
+      ({ api, tag, match, limit, cursor }) => {
         const wanted = match?.toLowerCase();
 
         const several = catalog.apis.length > 1;
@@ -360,17 +396,20 @@ export function docsMcpServer(catalog: DocsCatalog, site: DocsMcpSite): McpServe
               `${operation.path} ${operation.summary ?? ''}`.toLowerCase().includes(wanted)),
         );
 
+        const { items, more } = pageOf(operations, cursor, limit);
+
         return reply(
           operations.length === 0
             ? 'No operation matches. Call list_operations without arguments to see them all.'
-            : operations
-                .map(
+            : [
+                ...items.map(
                   (operation) =>
                     `${several ? `${operation.apiId}: ` : ''}${operation.method} ${operation.path}${operation.operationId ? ` (${operation.operationId})` : ''}` +
                     `${operation.summary ? `: ${operation.summary}` : ''}${operation.deprecated ? ' [deprecated]' : ''}` +
                     `${operation.tags.length > 0 ? ` [${operation.tags.join(', ')}]` : ''}`,
-                )
-                .join('\n'),
+                ),
+                ...more,
+              ].join('\n'),
         );
       },
     );

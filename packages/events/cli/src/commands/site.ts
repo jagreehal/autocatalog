@@ -624,7 +624,7 @@ export async function runSite(input: RunSiteOptions): Promise<number> {
           ...(config.atRoot && { AUTOCATALOG_DOCS_AT_ROOT: 'true' }),
           ...(config.pageActions === false && { AUTOCATALOG_SITE_PAGE_ACTIONS: 'false' }),
           ...(config.apiReference && { AUTOCATALOG_SITE_API_REFERENCE: config.apiReference }),
-          ...(config.mcp === false && { AUTOCATALOG_SITE_MCP: 'false' }),
+          ...(config.mcp !== undefined && { AUTOCATALOG_SITE_MCP: String(config.mcp) }),
           ...(eventcatalog && { AUTOCATALOG_EVENTCATALOG: eventcatalog.embedsFile }),
           ...(opts.liveUrl && { AUTOCATALOG_DOCS_LIVE_URL: opts.liveUrl }),
           ...(opts.liveEvent && { AUTOCATALOG_DOCS_LIVE_EVENT: opts.liveEvent }),

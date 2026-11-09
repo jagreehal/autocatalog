@@ -4,6 +4,7 @@ import type { StarlightRouteData } from '@astrojs/starlight/route-data';
 import type { AccessDoc } from './access';
 import { docsCatalog } from './catalog';
 import { servedDoc } from './served-docs';
+import { documentTwinsServed } from './document-twins';
 import { catalogId } from './ui/lib/docs';
 
 let built: Promise<Set<string>> | undefined;
@@ -57,9 +58,7 @@ export const onRequest = defineRouteMiddleware(async (context) => {
     }
   }
 
-  // A document rendered per request has no twin (see DOCUMENT_COPIES), unless
-  // `access` serves it per request through the same rule.
-  if (!(id in catalog.manifest) || !(context.isPrerendered || canRead)) return;
+  if (!(id in catalog.manifest) || !documentTwinsServed()) return;
 
   const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
 

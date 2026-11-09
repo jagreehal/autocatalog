@@ -230,4 +230,36 @@ test.describe('The company’s own code', () => {
     await page.goto('/catalog/');
     await expect(page.getByRole('heading').first()).toBeVisible();
   });
+
+  test('offers agents no copy its own middleware would not see', async ({
+    page,
+    request,
+  }, testInfo) => {
+    story.init(testInfo, { tags: ['server', 'agents'] });
+
+    given('a server site with neither `access` nor an audience');
+
+    when('a reader opens a guide');
+    await page.goto(GUIDE);
+
+    then('the page offers no Markdown copy and names no twin');
+    await expect(page.locator('[data-copy-markdown]')).toHaveCount(0);
+    await expect(page.locator('link[rel="alternate"][type="text/markdown"]')).toHaveCount(0);
+
+    then('there is no twin, no llms-full.txt and no MCP endpoint to fetch');
+
+    for (const address of ['/site-extension/guide.md', '/llms-full.txt']) {
+      const response = await request.get(address);
+
+      expect(response.headers()['content-type']).not.toContain('text/markdown');
+      expect(response.headers()['content-type']).not.toContain('text/plain');
+    }
+
+    const mcp = await request.post('/mcp', {
+      headers: { accept: 'application/json, text/event-stream' },
+      data: { jsonrpc: '2.0', id: 1, method: 'tools/list' },
+    });
+
+    expect(mcp.headers()['content-type']).not.toContain('application/json');
+  });
 });
