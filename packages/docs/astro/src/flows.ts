@@ -2,6 +2,7 @@ import { createMarkdownProcessor } from '@astrojs/markdown-remark';
 import type { ResourceRef } from 'autocatalog-core';
 import type { WorkflowStepObservation } from 'autocatalog-core';
 import {
+  bigPicture,
   flowDiagram,
   type FlowEvidence,
   type FlowNote,
@@ -9,6 +10,9 @@ import {
   sameValue,
   stepEvidence,
   flowWorkflow,
+  stormBoard,
+  type StormSticky,
+  stormed,
   type Flow,
   type FlowStep,
   type TransitionEvidence,
@@ -16,6 +20,7 @@ import {
 import type { DocsCatalog } from './catalog';
 import { remarkMermaid } from './mermaid';
 import type { ResourceLinksProps } from './ui/components/ResourceLinks';
+import type { StormColumnView } from './ui/components/Storm';
 import type { VisualiserGraph } from './ui/lib/visualiser';
 import { docPage } from './ui/lib/docs';
 import type {
@@ -23,6 +28,7 @@ import type {
   FlowPageEvidenceSummary,
   FlowPageNote,
   FlowPageProps,
+  FlowStormView,
   FlowsPageProps,
 } from './ui/pages';
 import { pageOf, type CatalogGraphOptions } from './visualiser';
@@ -168,9 +174,72 @@ const narrative = () =>
 export const renderNarrative = async (body: string) =>
   (await (await narrative()).render(body)).code;
 
+/** Where a step sits in its flow page's list, so a sticky can lead to its facts. */
+export const stepAnchor = (id: string) => `step-${id.replace(/[^\w-]+/g, '-')}`;
+
+/**
+ * A flow as an EventStorming board, with each sticky leading to its step, each
+ * hotspot to the finding that raised it, and each zoom-in to its own board.
+ */
+export function flowStormView(
+  flow: Flow,
+  catalog: Pick<DocsCatalog, 'flows' | 'flowNotes'>,
+  base: string,
+): FlowStormView {
+  const board = stormBoard(flow, catalog.flowNotes);
+  const titles = new Map(flow.steps.map((step) => [step.id, step.title]));
+
+  const view = (stickies: StormSticky[]) =>
+    stickies.map((sticky) => ({
+      kind: sticky.kind,
+      text: sticky.text,
+      summary: sticky.summary,
+      hotspots: sticky.hotspots,
+      code: sticky.code,
+      href: sticky.step && `${base}${flowPath(flow)}#${stepAnchor(sticky.step)}`,
+    }));
+
+  const columns: StormColumnView[] = board.columns.map((column) => {
+    const zoom = column.subflow
+      ? catalog.flows.find(
+          (candidate) => `${candidate.repository}/${candidate.id}` === column.subflow,
+        )
+      : undefined;
+
+    return {
+      stage: column.stage,
+      repeats: column.repeats,
+      subflow: zoom && { title: zoom.title, href: `${base}${flowPath(zoom)}` },
+      rows: {
+        who: view(column.rows.who),
+        command: view(column.rows.command),
+        decidedBy: view(column.rows.decidedBy),
+        happy: view(column.rows.happy),
+        failure: view(column.rows.failure),
+        policy: view(column.rows.policy),
+      },
+    };
+  });
+
+  return {
+    stormed: stormed(flow),
+    columns,
+    hotspots: board.hotspots.map((hotspot) => ({
+      title: hotspot.title,
+      step: hotspot.step && titles.get(hotspot.step),
+      href: hotspot.note ? `${base}${docPage(hotspot.note)}/` : undefined,
+      nature: hotspot.nature,
+      status: hotspot.status,
+      derived: hotspot.derived,
+    })),
+    endings: board.endings,
+    scenarios: board.scenarios,
+  };
+}
+
 export async function flowPageProps(
   flow: Flow,
-  catalog: Pick<DocsCatalog, 'graph' | 'workflows' | 'flowNotes' | 'flowEvidence'>,
+  catalog: Pick<DocsCatalog, 'graph' | 'workflows' | 'flowNotes' | 'flowEvidence' | 'flows'>,
   base: string,
   pages: Pick<CatalogGraphOptions, 'servicePages' | 'eventPages'>,
   now = Date.now(),
@@ -200,12 +269,14 @@ export async function flowPageProps(
     repository: flow.repository,
     file: flow.file,
     visualiser,
+    storm: flowStormView(flow, catalog, base),
     notes: notes.filter((note) => !note.step).map((note) => noteRow(note, base)),
     evidence: evidence && evidenceSummary(evidence, flow, now),
     // The same steps as a list: for a reader without JavaScript, and for one
     // who would rather read the process than look at it.
     steps: flow.steps.map((step) => ({
       id: step.id,
+      anchor: stepAnchor(step.id),
       title: step.title,
       kind: step.kind,
       summary: step.summary,
@@ -249,8 +320,23 @@ const stepLine = (ran: WorkflowStepObservation | undefined) =>
     [ran.compensationFailed, 'failed to compensate'],
   ]);
 
-export function flowsPageProps(flows: Flow[], base: string): FlowsPageProps {
+export function flowsPageProps(
+  flows: Flow[],
+  base: string,
+  notes: FlowNote[] = [],
+): FlowsPageProps {
+  const byKey = new Map(flows.map((flow) => [`${flow.repository}/${flow.id}`, flow]));
+
   return {
+    bigPicture: bigPicture(flows, notes).map((lane) => ({
+      title: lane.title,
+      summary: lane.summary,
+      repository: lane.repository,
+      events: lane.events,
+      failures: lane.failures,
+      hotspots: lane.hotspots,
+      href: `${base}${flowPath(byKey.get(`${lane.repository}/${lane.id}`)!)}`,
+    })),
     flows: flows.map((flow) => ({
       title: flow.title,
       summary: flow.summary,

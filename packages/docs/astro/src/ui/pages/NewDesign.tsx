@@ -1,4 +1,5 @@
 /** @jsxImportSource react */
+import { useFieldValue } from '#ui/lib/field.ts';
 import { useState } from 'react';
 import { z } from 'zod';
 import { Button } from '#ui/components/ui/button.tsx';
@@ -22,7 +23,7 @@ const started = z.discriminatedUnion('ok', [
  * It opens on the canvas, saved as an empty `designs/<id>.md` to fill in.
  */
 export function NewDesign({ repositories, startUrl }: NewDesignProps) {
-  const [title, setTitle] = useState('');
+  const { value: title, field: titleField } = useFieldValue();
   const [error, setError] = useState<string>();
   const [starting, setStarting] = useState(false);
 
@@ -54,8 +55,7 @@ export function NewDesign({ repositories, startUrl }: NewDesignProps) {
         <Input
           id="new-design-title"
           placeholder="Refunds v2"
-          value={title}
-          onChange={(event) => setTitle(event.target.value)}
+          {...titleField}
           aria-invalid={error ? true : undefined}
         />
         <FieldDescription>

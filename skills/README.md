@@ -8,6 +8,7 @@ An agent writing documentation is fast and confident, which is exactly the probl
 
 - [`autocatalog-docs`](./autocatalog-docs/SKILL.md) — write or update documentation from source, in the repository that owns the code, against the committed frontmatter contract
 - [`autocatalog-docs-enroll`](./autocatalog-docs-enroll/SKILL.md) — join a repository to the company index, or stand that index up for the first time
+- [`autocatalog-storm`](./autocatalog-storm/SKILL.md) — storm a business process from its code into an EventStorming board, raising every undecided failure as a finding
 - [`autocatalog-bootstrap`](./autocatalog-bootstrap/SKILL.md) — stand a catalog up on a repository that never had one, by fixing the source until the scan is true
 - [`autocatalog-scan`](./autocatalog-scan/SKILL.md) — generate an event catalog from a codebase, then review what was extracted versus inferred
 - [`autocatalog-drift`](./autocatalog-drift/SKILL.md) — find out who a schema change breaks before making it

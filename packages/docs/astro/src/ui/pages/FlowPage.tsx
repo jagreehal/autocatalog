@@ -1,4 +1,5 @@
 /** @jsxImportSource react */
+import type { ReactNode } from 'react';
 import {
   Card,
   CardContent,
@@ -17,10 +18,23 @@ import type { IconName } from '../../icons';
 import { Badge } from '#ui/components/ui/badge.tsx';
 import { Graph } from '../components/Graph';
 import { IconTile } from '../components/IconTile';
+import {
+  StormBoard,
+  type StormColumnView,
+  type StormEndingView,
+  StormEndings,
+  type StormHotspotView,
+  StormHotspots,
+  StormLegend,
+  type StormScenarioView,
+  StormScenarios,
+} from '../components/Storm';
 import type { VisualiserGraph } from '../lib/visualiser';
 
 export interface FlowPageStep {
   id: string;
+  /** Its element id in the list, which a sticky on the board links to. */
+  anchor?: string | undefined;
   title: string;
   kind: 'event' | 'service' | 'agent' | 'actor' | 'external' | 'custom';
   summary?: string | undefined;
@@ -75,11 +89,22 @@ export interface FlowRuntime {
   sampleTraceIds: string[];
 }
 
+/** The flow as an EventStorming board, and what the board raises. */
+export interface FlowStormView {
+  /** Written for a board: it names stages, commands or policies. Others show the map first. */
+  stormed: boolean;
+  columns: StormColumnView[];
+  hotspots: StormHotspotView[];
+  endings: StormEndingView[];
+  scenarios: StormScenarioView[];
+}
+
 export interface FlowPageProps {
   repository: string;
   /** Where the repository keeps it. */
   file: string;
   visualiser: VisualiserGraph;
+  storm?: FlowStormView | undefined;
   steps: FlowPageStep[];
   runtime?: FlowRuntime | undefined;
   notes?: FlowPageNote[] | undefined;
@@ -196,7 +221,7 @@ function StepList({ steps }: { steps: FlowPageStep[] }) {
   return (
     <ol className="m-0 flex list-none flex-col gap-1 p-0" aria-label="Steps">
       {steps.map((step, i) => (
-        <li key={step.id}>
+        <li key={step.id} id={step.anchor} className="scroll-mt-24">
           <Item size="sm" {...(step.href && { href: step.href })} data-kind={step.kind}>
             <ItemMedia>
               <IconTile name={ICONS[step.kind]} />
@@ -230,7 +255,50 @@ function StepList({ steps }: { steps: FlowPageStep[] }) {
   );
 }
 
-/** A business process: the map, grouped by domain or team on request, then each step in order. */
+function Section({ id, title, children }: { id: string; title: string; children: ReactNode }) {
+  return (
+    <div className="not-content">
+      <Card id={id}>
+        <CardHeader>
+          <CardTitle role="heading" aria-level={2}>
+            {title}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>{children}</CardContent>
+      </Card>
+    </div>
+  );
+}
+
+/** The board, then what it raises: open problems, how a run ends, and cases to test. */
+function StormSections({ storm }: { storm: FlowStormView }) {
+  return (
+    <>
+      <Section id="board" title="Event storm">
+        <div className="flex flex-col gap-4">
+          <StormLegend />
+          <StormBoard columns={storm.columns} />
+        </div>
+      </Section>
+      {storm.hotspots.length > 0 && (
+        <Section id="hotspots" title="Hotspots to decide on">
+          <StormHotspots hotspots={storm.hotspots} />
+        </Section>
+      )}
+      {storm.endings.length > 0 && (
+        <Section id="endings" title="How it can end">
+          <StormEndings endings={storm.endings} />
+        </Section>
+      )}
+      {storm.scenarios.length > 0 && (
+        <Section id="scenarios" title="Scenarios to test">
+          <StormScenarios scenarios={storm.scenarios} />
+        </Section>
+      )}
+    </>
+  );
+}
+
 function RuntimeCard({ runtime }: { runtime: FlowRuntime }) {
   return (
     <div className="not-content">
@@ -276,17 +344,23 @@ export function FlowPage({
   repository,
   file,
   visualiser,
+  storm,
   steps,
   runtime,
   notes = [],
   evidence,
   narrativeHtml,
 }: FlowPageProps) {
+  // A flow written for a board opens on it; any other shows it after its steps.
+  const boardFirst = storm?.stormed === true;
+
   return (
     <div className="flex flex-col gap-8" data-wide>
       <p className="not-content m-0 max-w-prose">
         Declared in <code>{file}</code> in the {repository} repository.
       </p>
+
+      {storm && boardFirst && <StormSections storm={storm} />}
 
       <Graph
         id="flow"
@@ -308,6 +382,8 @@ export function FlowPage({
           </CardContent>
         </Card>
       </div>
+
+      {storm && !boardFirst && storm.columns.length > 1 && <StormSections storm={storm} />}
 
       {runtime && <RuntimeCard runtime={runtime} />}
 

@@ -106,6 +106,8 @@ export function SidebarControls() {
         aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         aria-pressed={collapsed}
         data-sidebar-toggle=""
+        // Present once the control responds, for anything that waits on it.
+        data-ready={ready || undefined}
         onPress={toggle}
       >
         {collapsed ? <PanelLeftOpenIcon /> : <PanelLeftCloseIcon />}

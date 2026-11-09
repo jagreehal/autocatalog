@@ -51,7 +51,11 @@ type Part = ChatMessage['parts'][number];
 /** Dispatch on `window` with the question as `detail` to open the panel and ask it. */
 export const ASK_EVENT = 'autocatalog:ask';
 
-/** Dispatch on `window` to open the panel at the support form. */
+/**
+ * Dispatch on `window` to open the panel at the support form. A page that may
+ * ask before the panel has loaded also sets `data-ac-support` on `<html>`, and
+ * the panel opens on it once it loads.
+ */
 export const SUPPORT_EVENT = 'autocatalog:support';
 
 export interface ChatPanelProps {
@@ -230,6 +234,8 @@ function Root({
     };
 
     const toSupport = () => {
+      delete document.documentElement.dataset.acSupport;
+
       if (!support) return;
 
       setOpen(true);
@@ -239,6 +245,9 @@ function Root({
 
     window.addEventListener(ASK_EVENT, ask);
     window.addEventListener(SUPPORT_EVENT, toSupport);
+
+    // Asked before the panel loaded.
+    if (document.documentElement.dataset.acSupport !== undefined) toSupport();
 
     return () => {
       window.removeEventListener(ASK_EVENT, ask);

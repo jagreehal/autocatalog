@@ -70,6 +70,7 @@ import type {
   OwnerPageProps,
   OwnersPageProps,
   ServicePageProps,
+  ServicesPageProps,
 } from './ui/pages';
 import { catalogAnchor, docHref, groupByRepo, groupByTag, type DocListItem } from './view';
 import { buildDomains, domainHref, type Domain } from './domains';
@@ -93,38 +94,93 @@ const plurals = new Map<string, string>([
 const label = (kind: string, count: number) =>
   count === 1 ? kind : (plurals.get(kind) ?? `${kind}s`);
 
+// What a catalog is asked about first; the rest follow by how many it holds.
+const LEADING_COUNTS = ['service', 'event', 'domain', 'document'];
+
+const HOME_COUNTS = 6;
+
+/**
+ * The counts the home page leads with: the site's own choice, in its order, or
+ * six, services, events, domains and documents first, then the kinds the
+ * catalog holds most of, relationships last. Every kind stays a click away in
+ * the catalog.
+ */
+export function homeCounts<Stat extends { label: string; value: number; kind?: string }>(
+  all: Stat[],
+  chosen?: readonly string[],
+): Stat[] {
+  const present = all.filter(({ value }) => value > 0);
+
+  const key = (stat: Stat) => stat.kind ?? stat.label;
+
+  if (chosen) {
+    return chosen.flatMap((name) =>
+      present.filter((stat) => key(stat) === name || stat.label === name),
+    );
+  }
+
+  const rank = (stat: Stat) => {
+    const leading = LEADING_COUNTS.indexOf(key(stat));
+
+    if (leading >= 0) return leading;
+
+    return key(stat) === 'relationship' ? Number.MAX_SAFE_INTEGER : LEADING_COUNTS.length;
+  };
+
+  return [...present].sort((a, b) => rank(a) - rank(b) || b.value - a.value).slice(0, HOME_COUNTS);
+}
+
 export function homePageProps(
   catalog: DocsCatalog,
   items: DocListItem[],
   base: string,
   metas: ReadonlyMap<string, RepositoryMeta> = new Map(),
+  {
+    counts,
+    outside = false,
+  }: {
+    /** The kinds the home page counts, in order: `homeCounts`. */
+    counts?: readonly string[] | undefined;
+    /** A site for readers outside the company, which draws no map of its systems. */
+    outside?: boolean;
+  } = {},
 ): HomePageProps {
   const domains = buildDomains(catalog.events).length;
 
-  const stats = [
+  const all = [
     ...Object.entries(catalog.summary.resourcesByKind).map(([kind, count]) => ({
-      label: label(kind, count),
+      // A card names the kind, as a heading would: always plural.
+      label: label(kind, 2),
       value: count,
       kind,
-      href: `${base}catalog/?kind=${encodeURIComponent(kind)}`,
+      // Services have a page listing them all; every other kind is the graph, filtered.
+      href:
+        kind === 'service'
+          ? `${base}services/`
+          : `${base}catalog/?kind=${encodeURIComponent(kind)}`,
     })),
     // Decisions, runbooks and incidents are documents too, counted again here
     // because "how many incidents" is a question the index is asked.
     ...[...kindCounts(catalog)].map(([kind, count]) => ({
-      label: kindNoun(kind, count),
+      label: kindNoun(kind, 2),
       value: count,
+      kind: kind.id,
       href: kindHref(base, kind),
     })),
     {
-      label: label('domain', domains),
+      label: label('domain', 2),
       value: domains,
+      kind: 'domain',
       href: `${base}domains/`,
     },
     {
-      label: label('relationship', catalog.summary.relationships),
+      label: label('relationship', 2),
       value: catalog.summary.relationships,
+      kind: 'relationship',
     },
   ];
+
+  const stats = homeCounts(all, counts);
 
   // Every way into the catalog this build actually made, and nothing it did not.
   const explore: HomePageProps['explore'] = [
@@ -180,8 +236,8 @@ export function homePageProps(
       ? [
           {
             title: 'Services',
-            text: 'What each service publishes and consumes, inferred from the events.',
-            href: `${base}catalog/?kind=service`,
+            text: 'Every service with its owner, the APIs it serves, and what it sends and receives.',
+            href: `${base}services/`,
             icon: 'service' as const,
             kind: 'service',
           },
@@ -303,6 +359,14 @@ export function homePageProps(
 
   const attention = attentionSnapshot(catalog, base);
 
+  const map = outside
+    ? undefined
+    : catalogGraph(catalog.graph, base, {
+        servicePages: servicePages(catalog),
+        eventPages: eventPages(catalog),
+        ...mapEvidence(catalog),
+      });
+
   return {
     stats,
     explore,
@@ -323,6 +387,7 @@ export function homePageProps(
       .sort((a, b) => a.label.localeCompare(b.label)),
     tags: groupByTag(items),
     attention,
+    ...(map && { map, catalogHref: `${base}catalog/` }),
   };
 }
 
@@ -564,6 +629,113 @@ export function diagramProps(
   };
 }
 
+/**
+ * Every service, one row each, from its events and the OpenAPI specs it serves:
+ * its owner, what it serves, what it receives, and what it sends or calls.
+ */
+export function servicesPageProps(catalog: DocsCatalog, base: string): ServicesPageProps {
+  const services = catalogServices(catalog);
+  const { graph, events } = catalog;
+
+  const endpoints = (name: string) =>
+    graph.relationships.filter(
+      ({ type, to }) => type === 'exposedBy' && to.kind === 'service' && to.id === name,
+    ).length;
+
+  // Calls between services, each way: a call to an endpoint names its service too.
+  const serviceCalls = graph.relationships.flatMap(({ type, from, to }) =>
+    type === 'calls' && from.kind === 'service' && to.kind === 'service'
+      ? [{ caller: from.id, called: to.id }]
+      : [],
+  );
+
+  const calls = (name: string) => [
+    ...new Set(serviceCalls.flatMap(({ caller, called }) => (caller === name ? [called] : []))),
+  ];
+
+  const callers = (name: string) => [
+    ...new Set(serviceCalls.flatMap(({ caller, called }) => (called === name ? [caller] : []))),
+  ];
+
+  const serviceLinks = (names: string[]) =>
+    names.flatMap((name) =>
+      services.has(name) ? [{ label: name, href: `${base}services/${name}/` }] : [],
+    );
+
+  const eventLinks = (list: CatalogEvent[]) =>
+    list.map((entry) => ({
+      label: entry.event.frontmatter.name,
+      href: `${base}${eventPath(entry)}`,
+    }));
+
+  return {
+    services: [...services.values()]
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map((service) => {
+        const facts = serviceFacts(graph, service.name);
+
+        return {
+          name: service.name,
+          href: `${base}services/${service.name}/`,
+          summary: facts.summary,
+          owner: facts.owner,
+          domains: service.domains,
+          apis: apisForService(catalog.apis, events, service.name).map((api) => ({
+            label: apiTitle(api),
+            href: `${base}${apiPath(api)}`,
+          })),
+          endpoints: endpoints(service.name),
+          receives: eventLinks(eventsForService(events, service.name, 'consumers')),
+          sends: eventLinks(eventsForService(events, service.name, 'producers')),
+          calls: serviceLinks(calls(service.name)),
+          calledBy: serviceLinks(callers(service.name)),
+        };
+      }),
+  };
+}
+
+/** How the catalog came to know a service: from events, from OpenAPI specs, or both. */
+export interface ServiceBasis {
+  /** After "Inferred", on the page's evidence rule. */
+  evidence: string;
+  /** What the page is, for its description and its Markdown twin. */
+  description: string;
+}
+
+export function serviceBasis(
+  catalog: Pick<DocsCatalog, 'events' | 'apis'>,
+  name: string,
+): ServiceBasis {
+  const events =
+    eventsForService(catalog.events, name, 'producers').length +
+      eventsForService(catalog.events, name, 'consumers').length >
+    0;
+
+  const specs = apisForService(catalog.apis, catalog.events, name).length > 0;
+
+  if (events && specs) {
+    return {
+      evidence: 'from the events that name it and the OpenAPI specs it serves',
+      description:
+        'Inferred from the events it produces and consumes and the OpenAPI specs it serves. Nobody writes this page; change a contract and it changes.',
+    };
+  }
+
+  if (specs) {
+    return {
+      evidence: 'from the OpenAPI specs it serves',
+      description:
+        'Inferred from the OpenAPI specs it serves. Nobody writes this page; change a spec and it changes.',
+    };
+  }
+
+  return {
+    evidence: 'from the events that name it as a producer or consumer',
+    description:
+      "Inferred from the producers and consumers that each event declares. Nobody writes this page; change an event's contract and it changes.",
+  };
+}
+
 export function servicePageProps(
   catalog: DocsCatalog,
   service: { name: string },
@@ -644,6 +816,7 @@ export function servicePageProps(
 
   return {
     flow,
+    basis: serviceBasis(catalog, service.name).evidence,
     visualiser: catalogGraph(catalog.graph, base, {
       only: serviceNeighbourhood(catalog.graph, service.name),
       servicePages: servicePages(catalog),

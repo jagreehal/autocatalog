@@ -3,7 +3,7 @@ import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
 import type { InferGetStaticPropsType } from 'astro';
 import { catalogServices } from '../apis';
 import { docsCatalog } from '../catalog';
-import { serviceFacts, servicePageProps } from '../page-models';
+import { serviceBasis, serviceFacts, servicePageProps } from '../page-models';
 import { setResourceContext, withMarkdownCopy } from '../shell';
 import { twinPath } from '../twins';
 import { ServicePage } from '../ui/pages/ServicePage';
@@ -59,9 +59,7 @@ const headings = [
     title: service.name,
     head: [{ tag: 'link', attrs: { rel: 'alternate', type: 'text/markdown', href: markdownHref } }],
     // Its own summary when it has one; else what the page is, since nobody wrote it.
-    description:
-      facts.summary ??
-      "Inferred from the producers and consumers that each event declares. Nobody writes this page; change an event's contract and it changes.",
+    description: facts.summary ?? serviceBasis(catalog, service.name).description,
   }}
   headings={headings}
 >

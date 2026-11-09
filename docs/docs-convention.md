@@ -87,7 +87,8 @@ covers a repository and a page can still name another team. `access` and
 sets one applies, then the repository's, to each document that names none.
 `sidebar` orders the folders of `docs/`, and labels nested ones by their path,
 such as `labels/faqs`; a folder it leaves out still appears, last and
-collapsed, so a new section is never hidden. `ac docs check` fails a file that
+collapsed, so a new section is never hidden. Its label is then the folder's name
+in words, with acronyms in capitals: `it` is IT, `faqs` FAQs, `on-call` On Call. `ac docs check` fails a file that
 does not parse or a `directory` that is not a folder under `docs/`. A site leaves out every document of a repository whose `meta.json` fails, rather than publish them without the owner and access it gives them.
 
 ## Decisions, runbooks and incidents

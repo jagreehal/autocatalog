@@ -384,33 +384,43 @@ function ServicePage() {
           catalog.acme.dev/services/PaymentService/
         </span>
       </div>
-      <div className="grid sm:grid-cols-4">
+      <div className="flex">
         <div
-          className="hidden flex-col gap-0.5 border-r px-2.5 py-4 text-xs text-muted-foreground sm:flex"
+          className="hidden w-11 shrink-0 flex-col items-center gap-1 border-r py-3 text-muted-foreground sm:flex"
           aria-hidden="true"
         >
-          <span className="px-2 font-bold text-foreground">Catalog</span>
-          {['Docs', 'Decisions', 'Runbooks', 'Incidents', 'Events', 'Services'].map((n) => (
+          {(['home', 'catalog', 'doc'] as const).map((name, index) => (
+            <span
+              key={name}
+              className={cn(
+                'grid size-7 place-items-center rounded-md',
+                index === 1 && 'bg-muted text-foreground',
+              )}
+            >
+              <Icon name={name} className="size-3.5" />
+            </span>
+          ))}
+        </div>
+        <div
+          className="hidden w-36 shrink-0 flex-col gap-0.5 border-r px-2.5 py-4 text-xs text-muted-foreground sm:flex"
+          aria-hidden="true"
+        >
+          <span className="px-2 text-xs font-medium text-muted-foreground">Catalog</span>
+          {['Domains', 'Services', 'Events', 'APIs', 'Owners'].map((n) => (
             <span className="truncate px-2 py-0.5" key={n}>
               {n}
             </span>
           ))}
-          <span className="truncate rounded-md bg-muted px-2 py-0.5 text-foreground ring-1 ring-border">
+          <span className="truncate rounded-md bg-muted px-2 py-0.5 text-foreground">
             PaymentService
           </span>
-          {['Domains', 'APIs', 'Data', 'Owners'].map((n) => (
-            <span className="truncate px-2 py-0.5" key={n}>
-              {n}
-            </span>
-          ))}
-          <span className="mt-2.5 px-2 font-bold text-foreground">Repositories</span>
-          {['payments-service', 'ledger', 'notifications', 'reporter'].map((n) => (
+          {['Flows', 'Schemas'].map((n) => (
             <span className="truncate px-2 py-0.5" key={n}>
               {n}
             </span>
           ))}
         </div>
-        <div className="flex min-w-0 flex-col gap-3.5 p-4 sm:col-span-3 sm:p-5">
+        <div className="flex min-w-0 flex-1 flex-col gap-3.5 p-4 sm:p-5">
           <div>
             <div className="text-xs text-muted-foreground">Services / payments</div>
             <p className="m-0 mt-0.5 mb-1.5 text-xl font-extrabold tracking-tighter">

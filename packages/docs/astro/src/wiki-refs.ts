@@ -106,7 +106,7 @@ const REF = /\[\[[a-z]+\|[^\]]+\]\]/gi;
  * Split a text node on wiki refs and replace each match with a link that
  * carries `data-wiki-ref` for the hover card style.
  */
-function splitText(node: TextNode, base: string): Array<TextNode | LinkNode> {
+export function splitText(node: TextNode, base: string): Array<TextNode | LinkNode> {
   const out: Array<TextNode | LinkNode> = [];
   let last = 0;
 
@@ -155,7 +155,7 @@ function walk(node: ParentNode, base: string): void {
     if (child.type === 'text') {
       // SAFETY: an mdast node of type `text` is a text node.
       next.push(...splitText(child as TextNode, base));
-    } else if (child.type !== 'link' && 'children' in child) {
+    } else if (child.type !== 'link' && child.type !== 'linkReference' && 'children' in child) {
       // SAFETY: an mdast node with `children` is a parent.
       walk(child as ParentNode, base);
       next.push(child);

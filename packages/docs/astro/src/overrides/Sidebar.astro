@@ -1,9 +1,17 @@
 ---
 import Default from '@astrojs/starlight/components/Sidebar.astro';
+import links from 'virtual:autocatalog-docs-nav';
+import { navLinks } from '../nav';
+import { SidebarSection } from '../ui/overrides/SidebarSection';
 import TopNav from './TopNav.astro';
 
-// On a phone the header has no room for the site's sections, so they lead the menu instead.
+// On a phone the header has no room for the site's sections, so they lead the
+// menu instead. Beside the rail, the sidebar is headed with the section it holds.
+const section = navLinks(links, Astro.url.pathname, import.meta.env.BASE_URL).find(
+  (link) => link.current,
+);
 ---
 
 <TopNav variant="menu" />
+{section && <SidebarSection label={section.label} icon={section.icon} />}
 <Default />

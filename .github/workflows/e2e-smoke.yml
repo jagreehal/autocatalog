@@ -10,6 +10,8 @@ on:
       - 'examples/docs-demo/**'
       - 'examples/site-extension/**'
       - 'examples/help-centre/**'
+      - 'examples/event-storming/**'
+      - 'examples/public-api/**'
       - 'scripts/e2e-smoke.sh'
       - 'scripts/pack-smoke.sh'
       - 'package.json'
@@ -26,6 +28,8 @@ on:
       - 'examples/docs-demo/**'
       - 'examples/site-extension/**'
       - 'examples/help-centre/**'
+      - 'examples/event-storming/**'
+      - 'examples/public-api/**'
       - 'scripts/e2e-smoke.sh'
       - 'scripts/pack-smoke.sh'
       - 'package.json'
@@ -89,6 +93,22 @@ jobs:
         timeout-minutes: 15
         run: pnpm --filter @autocatalog-example/help-centre test:e2e
 
+      # A process drafted from Effect code, drawn as an EventStorming board.
+      - name: Run event storming stories
+        timeout-minutes: 15
+        run: pnpm --filter @autocatalog-example/event-storming test:e2e
+
+      # API docs for readers outside, with Scalar's reference framed beside the site.
+      - name: Run public API stories
+        timeout-minutes: 15
+        run: pnpm --filter @autocatalog-example/public-api test:e2e
+
+      # The journeys the README's screenshots and GIFs are recorded from, run
+      # fast and unrecorded: a journey that stops passing is media gone stale.
+      - name: Run media journeys
+        timeout-minutes: 15
+        run: pnpm --filter autocatalog-media test:e2e
+
       - name: Upload story reports
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -101,4 +121,8 @@ jobs:
             examples/site-extension/test-results
             examples/help-centre/reports
             examples/help-centre/test-results
+            examples/event-storming/reports
+            examples/event-storming/test-results
+            examples/public-api/reports
+            examples/public-api/test-results
           if-no-files-found: ignore

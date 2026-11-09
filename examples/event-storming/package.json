@@ -1,0 +1,24 @@
+{
+  "name": "@autocatalog-example/event-storming",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "An EventStorming board drafted from an Effect v4 program, kept in a flow beside the code, with its hotspots as findings.",
+  "scripts": {
+    "draft": "node ../../packages/events/cli/dist/bin.js flows draft src/import.ts --program runImport --id catalogue-import",
+    "check": "node ../../packages/events/cli/dist/bin.js docs check .",
+    "build": "node ../../packages/events/cli/dist/bin.js site .",
+    "typecheck": "tsc -p .",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "autocatalog-cli": "workspace:*",
+    "effect": "4.1.2"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.64.0",
+    "effect-analyzer": "3.11.0",
+    "executable-stories-playwright": "8.11.0",
+    "typescript": "^6.0.3"
+  }
+}

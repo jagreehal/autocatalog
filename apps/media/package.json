@@ -1,0 +1,20 @@
+{
+  "name": "autocatalog-media",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Screenshots and GIFs of the example sites for the README and docs, recorded from passing executable stories.",
+  "scripts": {
+    "test:e2e": "playwright test",
+    "media": "DEMO=1 playwright test --workers=1 && executable-stories gif reports/raw-run.json --output-dir ../../docs/media",
+    "media:one": "sh -c 'DEMO=1 playwright test --workers=1 -g \"${1:?usage: pnpm media:one \\\"<scenario title>\\\"}\" && executable-stories gif reports/raw-run.json --output-dir ../../docs/media' --",
+    "typecheck": "tsc --noEmit -p ."
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.64.0",
+    "@types/node": "26.6.4",
+    "executable-stories-formatters": "1.30.1",
+    "executable-stories-playwright": "8.14.2",
+    "executable-stories-showcase": "0.3.2"
+  }
+}

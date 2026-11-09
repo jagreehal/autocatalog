@@ -1,7 +1,7 @@
 ---
 import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
 import type { InferGetStaticPropsType } from 'astro';
-import { apiDescription, apiPageProps, apiTitle, servicesForApi } from '../apis';
+import { apiDescription, apiPageProps, apiPath, apiTitle, servicesForApi } from '../apis';
 import { docsCatalog } from '../catalog';
 import { docsSiteConfig } from '../config';
 import { setPageHeader } from '../shell';
@@ -28,7 +28,8 @@ const site = docsSiteConfig();
 
 const outside = site.audience !== undefined;
 
-// Full, Scalar's sidebar is the navigation, so the site's steps aside.
+// Full, Scalar's sidebar is the navigation, so the site's steps aside. Framed,
+// both stay: the site's beside the frame, Scalar's within it.
 const full = site.apiReference === 'full';
 
 const page = outside
@@ -54,6 +55,8 @@ setPageHeader(Astro.locals, {
     client:load
     {...page}
     layout={site.apiReference}
+    referenceHref={`${base}${apiPath(api)}reference/`}
+    title={`${apiTitle(api)} reference`}
     mcp={process.env.AUTOCATALOG_SITE_MCP_ENDPOINT
       ? { name: site.title, path: `${base}${process.env.AUTOCATALOG_SITE_MCP_ENDPOINT}` }
       : undefined}

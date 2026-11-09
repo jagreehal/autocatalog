@@ -1,7 +1,8 @@
 /** @jsxImportSource react */
+import { useFieldValue } from '#ui/lib/field.ts';
 import { cn } from 'cn';
 import { ChevronRightIcon, SearchIcon } from 'lucide-react';
-import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react';
+import { useEffect, useState, type MouseEvent, type ReactNode } from 'react';
 import { flushSync } from 'react-dom';
 import { Button } from '#ui/components/ui/button.tsx';
 import { Card, CardContent } from '#ui/components/ui/card.tsx';
@@ -32,13 +33,11 @@ export interface CatalogExplorerProps {
 }
 
 export function CatalogExplorer({ model }: CatalogExplorerProps) {
-  const [query, setQuery] = useState('');
+  const { value: query, setValue: setQuery, field: queryField } = useFieldValue();
 
   const [kind, setKind] = useState('all');
 
   const [reviewOnly, setReviewOnly] = useState(false);
-
-  const search = useRef<HTMLInputElement>(null);
 
   // `?kind=service` opens the explorer on one kind, which is how the rail's
   // Services entry lands here; `?q=` and `?review=1` arrive from wiki links and
@@ -107,13 +106,11 @@ export function CatalogExplorer({ model }: CatalogExplorerProps) {
             <SearchIcon />
           </InputGroupAddon>
           <InputGroupInput
-            ref={search}
             type="search"
             aria-label="Find anything"
             placeholder="Filter by name, owner, kind…"
             autoComplete="off"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
+            {...queryField}
           />
         </InputGroup>
         {model.kinds.length > 0 && (
@@ -195,7 +192,7 @@ export function CatalogExplorer({ model }: CatalogExplorerProps) {
                   size="sm"
                   onPress={() => {
                     showAll();
-                    search.current?.focus();
+                    queryField.ref.current?.focus();
                   }}
                 >
                   Clear filters

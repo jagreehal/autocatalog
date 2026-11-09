@@ -39,6 +39,30 @@ export { SourceLinks, type SourceLinksProps } from './SourceLinks';
 
 export { Stats, type Stat, type StatsProps } from './Stats';
 
+export {
+  BigPicture,
+  type BigPictureLaneView,
+  InlineSticky,
+  Sticky,
+  STICKY_KINDS,
+  STICKY_LABELS,
+  type StickyKind,
+  type StickyProps,
+  StormBoard,
+  type StormBoardProps,
+  type StormColumnView,
+  type StormEndingView,
+  StormEndings,
+  type StormHotspotView,
+  StormHotspots,
+  StormLegend,
+  STORM_ROW_LABELS,
+  type StormRowName,
+  type StormScenarioView,
+  StormScenarios,
+  type StormStickyView,
+} from './Storm';
+
 export { TransportFacts, type TransportEntry, type TransportFactsProps } from './TransportFacts';
 
 export { default as Visualiser } from './Visualiser';

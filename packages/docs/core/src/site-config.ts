@@ -34,13 +34,15 @@ export const siteNavigationSchema = z.strictObject({
 });
 
 /**
- * A link in the header, beside the site's title. `match` is the paths it stands
- * for, so a section stays current on its pages: `/guides/` lights up on
- * `/guides/setup/`. It defaults to `href`.
+ * A section of the site, in the rail beside the sidebar (or the header, on a
+ * page with no sidebar). `match` is the paths it stands for, so a section stays
+ * current on its pages: `/guides/` lights up on `/guides/setup/`. It defaults to
+ * `href`. `icon` names one of the catalog's icons, such as `book` or `api`.
  */
 export const siteNavLinkSchema = z.strictObject({
   label: z.string().min(1),
   href: z.string().min(1),
+  icon: z.string().min(1).optional(),
   match: z.union([z.string().min(1), z.array(z.string().min(1))]).optional(),
 });
 
@@ -160,12 +162,24 @@ export const siteConfigSchema = z.strictObject({
   /** `false` leaves out the Markdown copy, view and pin each page offers. */
   pageActions: z.boolean().optional(),
   /**
-   * How an OpenAPI reference is laid out. `full` gives Scalar the page below
-   * the header, with its own sidebar, search and request client; `embedded`
-   * sets it inside the site's navigation. A site with an `audience` is `full`
-   * unless it says otherwise.
+   * How an OpenAPI reference is laid out. `frame`, the default, keeps the
+   * site's header and sidebar and gives Scalar the rest of the page, with its
+   * own sidebar, search and request client, in a frame. `full` gives Scalar
+   * the whole page below the header; `embedded` sets it inside the site's
+   * content column.
    */
-  apiReference: z.enum(['full', 'embedded']).optional(),
+  apiReference: z.enum(['frame', 'full', 'embedded']).optional(),
+  /**
+   * What the sidebar calls the link to each API's reference, under its
+   * service. `Scalar` unless a site says otherwise.
+   */
+  apiReferenceLabel: z.string().trim().min(1).optional(),
+  /**
+   * The kinds the home page counts, in order, such as `["service", "event",
+   * "domain"]`. Six by default: services, events, domains and documents
+   * first, then what the catalog holds most of.
+   */
+  homeCounts: z.array(z.string().trim().min(1)).optional(),
   /**
    * The MCP endpoint at `/mcp` on a site with `"output": "server"`, where Claude
    * and other agents search its pages and read its APIs' operations. On by
@@ -177,7 +191,7 @@ export const siteConfigSchema = z.strictObject({
   output: z.enum(['static', 'server']).optional(),
   /** Where the site is deployed, such as `https://help.example.com`: for the sitemap and llms.txt. `--site` overrides it. */
   url: z.url().optional(),
-  /** Sections in the header, beside the title, and atop the menu on a phone. */
+  /** The site's sections, in the rail beside the sidebar and atop the menu on a phone. `[]` names none. */
   nav: z.array(siteNavLinkSchema).optional(),
   /** Links in the header, as Starlight takes them: `{ icon: 'github', label, href }`. */
   social: z

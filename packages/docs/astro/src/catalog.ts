@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import { parse } from 'devalue';
 import { z } from 'zod';
 import { type AccessDoc, readableCatalog } from './access';
+import { withCodeowners } from './codeowned';
 import { readerView } from './reader-view';
 import { docPage } from './ui/lib/docs';
 import path from 'node:path';
@@ -639,6 +640,14 @@ export async function buildDocsCatalog(
 
   // Calls and gateway exposure, checked against who the network lets reach whom.
   await withNetworkPolicies(composed, composedRepositories, (message) => notes.push(message));
+
+  // Owners from each repository's CODEOWNERS, for everything composed from it.
+  composed = await withCodeowners(
+    composed,
+    composedRepositories.map(({ repository, dir }) => ({ name: repository, root: dir })),
+    apis,
+    root,
+  );
 
   const about = createDescribesRelationships(docs, composed.resources, {
     repositories: identities,

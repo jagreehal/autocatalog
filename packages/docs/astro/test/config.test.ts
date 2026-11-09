@@ -6,18 +6,21 @@ afterEach(() => {
 });
 
 describe('apiReference', () => {
-  it('is embedded on the company’s own site, beside the rest of the catalog', () => {
-    vi.stubEnv('AUTOCATALOG_SITE_AUDIENCE', '');
+  it('frames the reference beside the site’s navigation, for readers inside and out', () => {
     vi.stubEnv('AUTOCATALOG_SITE_API_REFERENCE', '');
 
-    expect(docsSiteConfig().apiReference).toBe('embedded');
+    for (const audience of ['', 'public']) {
+      vi.stubEnv('AUTOCATALOG_SITE_AUDIENCE', audience);
+      expect(docsSiteConfig().apiReference).toBe('frame');
+    }
   });
 
-  it('is full for readers outside, who come for the reference itself', () => {
-    vi.stubEnv('AUTOCATALOG_SITE_AUDIENCE', 'public');
-    vi.stubEnv('AUTOCATALOG_SITE_API_REFERENCE', '');
+  it('calls the link to a reference Scalar, unless the site names it', () => {
+    vi.stubEnv('AUTOCATALOG_SITE_API_REFERENCE_LABEL', '');
+    expect(docsSiteConfig().apiReferenceLabel).toBe('Scalar');
 
-    expect(docsSiteConfig().apiReference).toBe('full');
+    vi.stubEnv('AUTOCATALOG_SITE_API_REFERENCE_LABEL', 'API reference');
+    expect(docsSiteConfig().apiReferenceLabel).toBe('API reference');
   });
 
   it('is what the site says, whoever reads it', () => {

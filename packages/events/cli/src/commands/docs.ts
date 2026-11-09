@@ -31,6 +31,7 @@ import {
   flowNotes,
   readDocs,
   readFlows,
+  stormWarnings,
   syncFrontmatterContract,
 } from 'autocatalog-docs-core';
 import { githubAnnotation } from './annotation';
@@ -162,7 +163,12 @@ export async function runDocsCheck(opts: DocsCommandOptions): Promise<number> {
   }
 
   if (!opts.quiet) {
-    for (const warning of [...model.warnings, ...lifecycles.warnings, ...notes.warnings]) {
+    for (const warning of [
+      ...model.warnings,
+      ...lifecycles.warnings,
+      ...notes.warnings,
+      ...stormWarnings(flows.flows),
+    ]) {
       console.warn(`${kleur.yellow('!')} ${warning}`);
     }
 

@@ -17,5 +17,5 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
     tableOfContents: false,
   }}
 >
-  <DomainsPage {...domainsPageProps(catalog, base)} />
+  <DomainsPage client:load {...domainsPageProps(catalog, base)} />
 </StarlightPage>

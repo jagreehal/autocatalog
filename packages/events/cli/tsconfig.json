@@ -2,7 +2,13 @@
   "extends": "../../../tsconfig.base.json",
   "compilerOptions": {
     "outDir": "dist",
-    "ignoreDeprecations": "6.0"
+    "ignoreDeprecations": "6.0",
+    "plugins": [
+      {
+        "name": "@effect/language-service",
+        "diagnostics": false
+      }
+    ]
   },
   "include": ["src", "test"]
 }

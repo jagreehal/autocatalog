@@ -82,10 +82,15 @@ keeps the last good site.
 
 ## What each page shows
 
+![A service page: where it was read from, and a map of the services around it](./media/service-light.png)
+
 - `/` lists every document by repository, with its owner and last change.
 - `/<repo>/<path>/` is one document: its owner, the date git last saw it change,
   a link to the file on its repository, and the documents on either side of its
   `related` edges.
+
+  ![A document page, under the Docs section](./media/document-light.png)
+
 - `/events/<repository>/<domain>/<id>/` is one event: where its contract was
   found, its schema as a tree, its examples, any narrative the team wrote beside
   it, and the services that produce and consume it. The repository and domain
@@ -108,9 +113,18 @@ keeps the last good site.
   contract history from git still works. Only a regular file inside the
   repository is read, never a symlink. A snapshot that does not read is a
   warning in the build, and the repository's events publish without evidence.
-- `/services/<name>/` lists what one service produces and consumes. The pages
-  come from each event's `producers` and `consumers`, so declaring
-  `producers: ['InventoryManager']` on an event creates the InventoryManager page.
+- `/services/` lists every service with its owner, the APIs it serves and
+  their endpoints, the events it receives and sends, and the services it calls
+  and is called by, with a filter. The sidebar lists each one under Services,
+  open from the start.
+- `/services/<name>/` lists what one service produces and consumes and the
+  APIs it serves. A service comes from each event's `producers` and
+  `consumers`, so declaring `producers: ['InventoryManager']` on an event
+  creates the InventoryManager page, or from an OpenAPI spec that serves it, so
+  a repository of APIs and no events has a page for each service. Its owner
+  comes from its own record, or else from CODEOWNERS for the spec that defines
+  it. Endpoints and gateways take the owner of the file each was read from, and
+  a repository takes the owner of its catch-all rule, such as `*`.
 - `/domains/<domain>/` gathers the events in one domain, the services around
   them and their owners, with a map of the domain. `/domains` lists them all.
 - Maps on service and domain pages use EventCatalog's MIT visualiser. A service
@@ -156,7 +170,10 @@ keeps the last good site.
 - `/flows/<repository>/<id>/` draws a business process a repository declares in
   `flows/<id>.md`: each step, the branches between them and the Markdown below
   the frontmatter. The map walks through it one step at a time, and groups it by
-  domain or by owning team, as boxes or lanes. Each step names an event as
+  domain or by owning team, as boxes or lanes. A flow that names stages,
+  commands or policies opens on its EventStorming board instead ([Storm a
+  process](/docs/flows#storm-a-process)), and `/flows/` lines every flow up as
+  a lane of facts. Each step names an event as
   `domain/id`, a service or an agent, or someone outside the catalog:
 
   ```yaml
@@ -415,7 +432,7 @@ keeps the last good site.
 
 ## Write in MDX
 
-A document can be `.mdx` as well as `.md`. Four components draw from the
+A document can be `.mdx` as well as `.md`. These components draw from the
 catalog, and you use them without importing anything:
 
 ```mdx
@@ -435,6 +452,9 @@ catalog, and you use them without importing anything:
 - `<Term id="…">` links a glossary term and shows its meaning on hover. Add
   `domain` when two domains define it.
 - `<Owner name="…">` links the owner's page.
+- `<Storm flow="…">` draws a flow's EventStorming board, `<Storm stages={…}>`
+  one sketched by hand, and `<Sticky kind="…">` one sticky in a sentence. See
+  [Storm a process](/docs/flows#storm-a-process).
 
 In `.md` and `.mdx` alike, `[[kind|id]]` links a catalog page:
 `[[service|PaymentService]]`, `[[event|payments/payment.captured]]`,
@@ -493,26 +513,51 @@ has nothing for is left out, so a group can list everything you might want. Each
 repository's documents follow, arranged by its
 [`docs/meta.json`](/docs/docs-convention#a-repository-describes-itself).
 
-`nav` puts the site's sections in the header, beside its title, and at the top
-of the menu on a phone. The section a reader is in is marked as the current
-page. `match` is the paths a section stands for, one or several, and defaults
-to `href`; when two match, the longer wins, so `/guides/api/` beats `/guides/`
-on its own pages. `/` is current on the home page only. A link to another site
-says so with ↗:
+`nav` names the site's sections. Each one is an icon in the rail beside the
+sidebar, named in a tooltip, and the sidebar, headed with the section's name,
+holds the groups of the section the reader is in. Moving to another section
+slides the sidebar across. A group belongs to the section most of its links fall
+in; a group no section claims shows in every section, and a section with no
+group of its own keeps the whole sidebar. On a page with no sidebar the sections
+sit beside the title, and on a phone they lead the menu.
+
+The section a reader is in is marked as the current page. `match` is the paths
+a section stands for, one or several, and defaults to `href`; when two match,
+the longer wins, so `/guides/api/` beats `/guides/` on its own pages. `/` is
+current on the home page only. `icon` is one of the catalog's icons, such as
+`book`, `api`, `service`, `runbook` or `external`, and the build warns about one
+it does not know. A link to another site says so with ↗:
 
 ```json
 {
   "nav": [
-    { "label": "Guides", "href": "/", "match": ["/labels/", "/publishers/"] },
-    { "label": "Academy", "href": "/academy/", "match": "/academy/" },
-    { "label": "Status", "href": "https://status.acme.com" }
+    { "label": "Guides", "href": "/", "icon": "book", "match": ["/labels/", "/publishers/"] },
+    { "label": "Academy", "href": "/academy/", "icon": "layers", "match": "/academy/" },
+    { "label": "Status", "href": "https://status.acme.com", "icon": "external" }
   ]
 }
 ```
 
-Site paths take the `--base` the site is served under. A site that overrides
-Starlight's `Header` itself places the links with
+A site that names no `nav` gets **Home**, **Catalog** for the pages the catalog
+compiles, and **Docs** for its repositories' documents. A portal for readers
+outside gets **Documentation** and **API reference**. `"nav": []` turns the rail
+off, and the sidebar takes its room.
+
+Site paths take the `--base` the site is served under. Restyle the rail from
+`theme.css`: it is `[data-icon-rail]`, the current section is
+`[data-icon-rail] a[aria-current='page']`, and `--ac-rail-width` sets its width.
+A site that overrides Starlight's `Header` itself places the links with
 `autocatalog-docs-astro/overrides/TopNav.astro`.
+
+`homeCounts` chooses the cards that open the home page, by kind and in order:
+
+```json
+{ "homeCounts": ["service", "event", "domain", "repository"] }
+```
+
+Without it the home page counts six: services, events, domains and documents
+first, then the kinds the catalog holds most of. Every kind stays a click away
+in the catalog.
 
 `social` puts links in the header, with any of
 [Starlight's icons](https://starlight.astro.build/reference/icons/). `head` adds
@@ -754,21 +799,34 @@ audience: [public]
 ```
 
 Each OpenAPI document publishes with Scalar's reference, request client and
-code samples. Scalar takes the page below the header, with its own sidebar and
-search, and the site's header, search and theme stay around it. With one API,
-**API reference** in the navigation opens it directly. To set the reference
-inside the site's navigation instead, as the company's own site does:
+code samples. The site's header and sidebar stay, and Scalar has the rest of
+the page in a frame, with its own sidebar and search, in the site's theme. The
+reader's place in the reference is in the page's address, so a link to an
+operation opens the reference there, and the back button walks through it.
+
+![An API's Scalar reference, framed beside the site's navigation](./media/api-reference-light.png)
+On the company's own site, each service under **Services** that serves an API
+has **Overview**, its page, and **Scalar**, its reference. Name that link for
+your site:
 
 ```json
-{ "apiReference": "embedded" }
+{ "apiReferenceLabel": "API reference" }
 ```
 
-`"apiReference": "full"` gives the company's site the same layout.
+A service with two APIs gets one link for each, named with the API's title. To
+give Scalar the whole page below the header instead:
 
-The header carries **Documentation** and **API reference**, so a reader in the
+```json
+{ "apiReference": "full" }
+```
+
+`"apiReference": "embedded"` sets it in the content column. With one API,
+**API reference** in the rail opens it directly.
+
+The rail carries **Documentation** and **API reference**, so a reader in the
 reference is one click from the guides, whichever page they are on. A site
 names its own sections with `nav`, and restyles them from `theme.css`: the
-current one is `.ac-top-nav a[aria-current='page']`.
+current one is `[data-icon-rail] a[aria-current='page']`.
 
 ### Let agents connect
 

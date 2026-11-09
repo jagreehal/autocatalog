@@ -16,5 +16,5 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
     tableOfContents: false,
   }}
 >
-  <FlowsPage {...flowsPageProps(catalog.flows, base)} />
+  <FlowsPage {...flowsPageProps(catalog.flows, base, catalog.flowNotes)} />
 </StarlightPage>

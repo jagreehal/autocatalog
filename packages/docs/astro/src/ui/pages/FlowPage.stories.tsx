@@ -1,5 +1,11 @@
 /** @jsxImportSource react */
 import type { Meta, StoryObj } from '@storybook/react-vite';
+import {
+  importColumns,
+  importEndings,
+  importHotspots,
+  importScenarios,
+} from '../components/storm.fixture';
 import { FlowPage } from './FlowPage';
 
 const meta = {
@@ -101,6 +107,19 @@ export const WithEvidence: Story = {
       commit: 'abc1234',
       stale: true,
       undeclared: ['captured → authorised, recorded 2 times via unknown, is in no flow.'],
+    },
+  },
+};
+
+/** A flow written for a board opens on it, with what the board raises below. */
+export const Stormed: Story = {
+  args: {
+    storm: {
+      stormed: true,
+      columns: importColumns,
+      hotspots: importHotspots,
+      endings: importEndings,
+      scenarios: importScenarios,
     },
   },
 };

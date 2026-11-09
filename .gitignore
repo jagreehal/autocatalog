@@ -55,3 +55,6 @@ examples/frameworks/**/obj/
 
 # A run of ac site builds in a root of its own, removed when it ends.
 packages/docs/astro/site/.run-*/
+
+# Recorded by `pnpm media`; only the media in docs/media is kept.
+apps/media/reports/

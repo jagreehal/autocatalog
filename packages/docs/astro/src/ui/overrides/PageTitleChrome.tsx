@@ -208,9 +208,9 @@ export function PageTitleChrome({
   );
 
   return (
-    <div className="mt-5 flex flex-col gap-4" data-page-title>
+    <div className="mt-6 flex flex-col gap-4" data-page-title>
       <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
-        <div className="flex min-w-0 flex-col gap-2">
+        <div className="flex min-w-0 flex-col gap-2.5">
           {children}
           {(catalogKey || pills.length > 0 || status) && (
             <div className="flex flex-wrap items-center gap-x-3 gap-y-2" data-pagefind-ignore="">

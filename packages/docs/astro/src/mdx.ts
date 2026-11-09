@@ -18,7 +18,7 @@ import { schemaTree, type PropNode } from './ui/lib/schema-tree';
 import { catalogGraph } from './visualiser';
 
 /** The components every `.mdx` document can use without importing them. */
-export const MDX_COMPONENTS = ['Map', 'Schema', 'Term', 'Owner'] as const;
+export const MDX_COMPONENTS = ['Map', 'Schema', 'Term', 'Owner', 'Storm', 'Sticky'] as const;
 
 /** By file path, so a document outside the site's project resolves it too. */
 export const MDX_MODULE = fileURLToPath(new URL('./mdx/index.ts', import.meta.url));

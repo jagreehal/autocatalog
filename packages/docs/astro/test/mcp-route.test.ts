@@ -3,6 +3,10 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, expect, it, vi } from 'vitest';
 
+// Each test imports the endpoint afresh and builds a catalog: under a full
+// parallel run that cold start can take longer than the default five seconds.
+vi.setConfig({ testTimeout: 30_000 });
+
 afterEach(() => {
   vi.unstubAllEnvs();
   vi.resetModules();

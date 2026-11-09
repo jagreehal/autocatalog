@@ -169,7 +169,7 @@ export function DocFooterChrome({
       {children}
 
       {/* Starlight's own footer is the landmark; this sits inside its region. */}
-      <div className="mt-10 flex flex-col gap-4 text-xs text-muted-foreground">
+      <div className="mt-10 flex flex-col gap-4 text-xs text-muted-foreground" data-site-footer>
         <Separator />
         <div className="flex flex-wrap justify-between gap-x-6 gap-y-2 pb-2">
           <span>{siteTitle}</span>

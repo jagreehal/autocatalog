@@ -54,6 +54,14 @@ function ownersOf(resource: CatalogResource): string[] {
 
 const KIND_ORDER = ['document', 'event'];
 
+/** A kind with no heading of its own, as a column says it: `repository` is Repositories. */
+function pluralHeading(kind: string): string {
+  const words = kind.replace(/[-_]+/g, ' ');
+  const plural = words.endsWith('y') ? `${words.slice(0, -1)}ies` : `${words}s`;
+
+  return `${plural[0]!.toUpperCase()}${plural.slice(1)}`;
+}
+
 const KIND_HEADINGS = new Map([
   ['service', 'Services'],
   ['collection', 'Collections'],
@@ -88,7 +96,7 @@ export function byKind(
 
   return [...groups].map(([kind, resources]) => ({
     kind,
-    heading: KIND_HEADINGS.get(kind) ?? kind,
+    heading: KIND_HEADINGS.get(kind) ?? pluralHeading(kind),
     resources,
   }));
 }

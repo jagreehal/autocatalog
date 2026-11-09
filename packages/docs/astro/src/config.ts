@@ -50,8 +50,12 @@ export interface DocsSiteConfig {
   access: SiteAccessConfig | undefined;
   /** Whether each page offers to copy, view and pin its Markdown. */
   pageActions: boolean;
-  /** Scalar with its own sidebar and search below the header, or inside the site's navigation. */
-  apiReference: 'full' | 'embedded';
+  /** Scalar in a frame beside the site's sidebar, on the whole page below the header, or in the content column. */
+  apiReference: 'frame' | 'full' | 'embedded';
+  /** The sidebar's label for the link to an API's reference under its service. */
+  apiReferenceLabel: string;
+  /** The kinds the home page counts, in order; unset, six chosen for it. */
+  homeCounts: string[] | undefined;
   /**
    * Whether a site rendered per request serves its MCP endpoint at `/mcp`. Unset,
    * a site with `access` or an `audience` serves it, as each knows what a reader may open.
@@ -118,14 +122,16 @@ export function docsSiteConfig(): DocsSiteConfig {
     audience: process.env.AUTOCATALOG_SITE_AUDIENCE || undefined,
     pageActions: process.env.AUTOCATALOG_SITE_PAGE_ACTIONS !== 'false',
     mcp: process.env.AUTOCATALOG_SITE_MCP ? process.env.AUTOCATALOG_SITE_MCP === 'true' : undefined,
-    // Developers outside come for the reference itself; the company reads it beside the rest.
+    // A frame keeps the site's navigation beside Scalar's own, for readers inside and out.
     apiReference:
       process.env.AUTOCATALOG_SITE_API_REFERENCE === 'full' ||
       process.env.AUTOCATALOG_SITE_API_REFERENCE === 'embedded'
         ? process.env.AUTOCATALOG_SITE_API_REFERENCE
-        : process.env.AUTOCATALOG_SITE_AUDIENCE
-          ? 'full'
-          : 'embedded',
+        : 'frame',
+    apiReferenceLabel: process.env.AUTOCATALOG_SITE_API_REFERENCE_LABEL || 'Scalar',
+    homeCounts: process.env.AUTOCATALOG_SITE_HOME_COUNTS
+      ? z.array(z.string()).parse(JSON.parse(process.env.AUTOCATALOG_SITE_HOME_COUNTS))
+      : undefined,
     access: process.env.AUTOCATALOG_SITE_ACCESS
       ? siteAccessSchema.parse(JSON.parse(process.env.AUTOCATALOG_SITE_ACCESS))
       : undefined,

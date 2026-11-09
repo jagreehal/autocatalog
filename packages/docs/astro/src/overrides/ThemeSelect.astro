@@ -2,11 +2,14 @@
 import { SidebarControls } from '../ui/overrides/SidebarControls';
 import { ThemeSelect } from '../ui/overrides/ThemeSelect';
 
-// Theme stays in the header. Sidebar collapse / resize mount here so they
-// live outside `.sidebar-pane` (collapsed hides that pane). A splash page has
-// no sidebar to collapse.
+// Theme stays in the header. The sidebar's collapse and resize mount here,
+// outside `.sidebar-pane`, which collapsing hides. A splash page has no sidebar.
 const { hasSidebar } = Astro.locals.starlightRoute;
 ---
 
 <ThemeSelect client:load />
-{hasSidebar && <SidebarControls client:load />}
+{
+  hasSidebar && (
+    <SidebarControls client:load />
+  )
+}

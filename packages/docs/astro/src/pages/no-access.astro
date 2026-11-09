@@ -22,7 +22,7 @@ const { denied } = Astro.locals;
   {
     chatPanel?.support && (
       <p>
-        <button type="button" class={buttonVariants()} onclick="window.dispatchEvent(new Event('autocatalog:support'))">
+        <button type="button" class={buttonVariants()} onclick="document.documentElement.dataset.acSupport = ''; window.dispatchEvent(new Event('autocatalog:support'))">
           Ask us about it
         </button>
       </p>

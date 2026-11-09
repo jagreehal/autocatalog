@@ -239,6 +239,12 @@ such as a Notion or Google Docs export saved as Markdown, adding a title and the
 `--owner` you give. `.md`, `.markdown` and `.txt` only. It never overwrites a page, so
 an edited one stays edited.
 
+**`ac flows draft <file> --program <name>`**: drafts an EventStorming flow from an
+Effect v4 program with effect-analyzer: a stage per step, a failure per error, and
+the services each step needs. It prints the flow; `--write` saves `flows/<id>.md`
+(`--id`, default the program's name) and `--force` replaces one. `--tsconfig` names
+the config that resolves `effect`. See [Storm a process](/docs/flows#storm-a-process).
+
 **`ac flows verify [root]`**: compares each flow's transitions with the entity's
 lifecycle, its schema, the code a step links to and, with `--observed <file>`, what
 ran. `--write` saves `flows/evidence.json`. Exits 1 when a claim is contradicted;

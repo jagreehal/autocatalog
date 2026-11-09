@@ -6,6 +6,8 @@ export interface Stat {
   label: string;
   value: number;
   href?: string;
+  /** The resource kind it counts, for its icon. */
+  kind?: string;
 }
 
 export interface StatsProps {

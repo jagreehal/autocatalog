@@ -61,6 +61,9 @@ it('gives an agent a flow with each finding’s status, and how to read the coun
   expect(context.steps[0].notes).toMatchObject([
     { title: 'One', nature: 'question', status: 'draft', hotspot: true },
   ]);
+  expect(context.steps[0]).toMatchObject({ track: 'happy', policies: [] });
+  expect(context.hotspots).toMatchObject([{ title: 'One', step: 'a', derived: false }]);
+  expect(context.endings).toMatchObject([{ step: 'a', status: 'done' }]);
   expect(context.observe).toEqual([
     {
       tool: 'autotel-mcp get_state_transitions',

@@ -52,7 +52,8 @@ test.describe('The company documentation index', () => {
     await page.goto('/payments-service/runbook');
 
     then('each is a navigation group, titled from its own frontmatter');
-    const nav = page.getByRole('navigation').first();
+    // Primary is the icon rail; Main is the secondary Starlight tree.
+    const nav = page.getByRole('navigation', { name: 'Main' });
     await expect(nav.getByText('acme-handbook', { exact: true })).toBeVisible();
 
     // The open page's repository starts open, and a folder opens onto its documents.
@@ -329,7 +330,10 @@ test.describe('The company documentation index', () => {
       'acme-platform declares Order to dispatch under flows/, naming payments-service resources',
     );
     await page.goto('/flows/');
-    await page.getByRole('link', { name: 'Order to dispatch' }).click();
+    await page
+      .getByRole('grid', { name: 'Flows' })
+      .getByRole('link', { name: 'Order to dispatch' })
+      .click();
 
     then('every step is listed in order, each linked to its page in the catalog');
     const steps = page.locator('#steps');
@@ -360,11 +364,8 @@ test.describe('The company documentation index', () => {
     when('the reader walks through the flow from the start');
     // Ten steps, beside the lanes they sit in.
     await expect(map.locator('.react-flow__node:not(.react-flow__node-swimlane)')).toHaveCount(10);
-    // Pressed again until the walkthrough has hydrated and listens.
-    await expect(async () => {
-      await map.getByTitle('Start walking through the flow').click();
-      await expect(map.getByTitle('Stop (Esc)')).toBeVisible({ timeout: 500 });
-    }).toPass();
+    await map.getByRole('button', { name: 'Walk through' }).click();
+    await expect(map.getByTitle('Stop (Esc)')).toBeVisible();
     await map.getByTitle('Next (→)').first().click();
 
     then('each step is called by its title, not its id');
@@ -463,8 +464,8 @@ test.describe('The company documentation index', () => {
     given('a document wide enough to show "On this page" beside it');
     await page.goto('/payments-service/runbook');
 
-    // The controls set data-sidebar once hydrated; a press before that is lost.
-    await expect(page.locator('html')).toHaveAttribute('data-sidebar', 'open');
+    // The control marks itself ready once it responds to a press.
+    await expect(page.locator('[data-sidebar-toggle][data-ready]').first()).toBeAttached();
 
     const heading = page.getByRole('heading', { name: 'On this page' });
 
@@ -488,8 +489,9 @@ test.describe('The company documentation index', () => {
 
     given('a reader who collapsed the sidebar');
     await page.goto('/payments-service/runbook');
-    await expect(page.locator('html')).toHaveAttribute('data-sidebar', 'open');
+    await expect(page.locator('[data-sidebar-toggle][data-ready]').first()).toBeAttached();
     await page.getByRole('button', { name: 'Collapse sidebar' }).locator('visible=true').click();
+    await expect(page.locator('html')).toHaveAttribute('data-sidebar', 'collapsed');
 
     when('they open another page, before any island has run');
     await page.route('**/_astro/**/*.js', (route) => route.abort());
@@ -527,5 +529,57 @@ test.describe('The company documentation index', () => {
 
     then('it stays closed');
     await expect(group('reporter')).not.toHaveAttribute('open');
+  });
+  test('the domains filter narrows the list as the reader types, even before the page has loaded', async ({
+    page,
+  }, testInfo) => {
+    story.init(testInfo, { tags: ['catalog', 'domains'] });
+
+    given('the domains page, its script still on its way');
+    const { promise: held, resolve: arrive } = Promise.withResolvers<void>();
+
+    await page.route('**/_astro/DomainsPage*.js', async (route) => {
+      await held;
+      await route.continue();
+    });
+    await page.goto('/domains/');
+
+    when('the reader types a domain straight away');
+    const filter = page.getByRole('searchbox', { name: 'Filter domains' });
+    await filter.fill('pay');
+    arrive();
+
+    then('once the page has loaded, only that domain is left, and what they typed stays');
+    const table = page.getByRole('grid', { name: 'Domains' });
+    await expect(table.getByRole('link', { name: 'orders' })).toHaveCount(0);
+    await expect(table.getByRole('link', { name: 'payments' })).toBeVisible();
+    await expect(filter).toHaveValue('pay');
+
+    when('nothing matches');
+    await filter.fill('zzz');
+
+    then('the page says so');
+    await expect(page.getByText('No domain matches “zzz”.')).toBeVisible();
+  });
+  test('previous and next stay within the section the sidebar shows', async ({
+    page,
+  }, testInfo) => {
+    story.init(testInfo, { tags: ['docs', 'navigation'] });
+
+    given('a document, in the Docs section');
+    await page.goto('/acme-handbook/incident-communications/');
+
+    then('every previous or next link is a page in its sidebar');
+
+    const hrefs = (selector: string) =>
+      page.locator(selector).evaluateAll((links) => links.map((link) => link.getAttribute('href')));
+
+    const shown = await hrefs('.sidebar-content a');
+
+    const paged = await hrefs('.pagination-links a');
+
+    expect(paged.length).toBeGreaterThan(0);
+
+    for (const path of paged) expect(shown).toContain(path);
   });
 });

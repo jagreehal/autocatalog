@@ -1,4 +1,5 @@
 /** @jsxImportSource react */
+import { useFieldValue } from '#ui/lib/field.ts';
 import { SearchIcon } from 'lucide-react';
 import { type ReactNode, useState } from 'react';
 import { Badge } from '#ui/components/ui/badge.tsx';
@@ -62,7 +63,7 @@ const link =
 const plural = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
 
 export function FieldsPage({ fields, eventCount, conflicts, eventsHref }: FieldsPageProps) {
-  const [query, setQuery] = useState('');
+  const { value: query, setValue: setQuery, field: queryField } = useFieldValue();
 
   const [onlyConflicts, setOnlyConflicts] = useState(false);
 
@@ -116,8 +117,7 @@ export function FieldsPage({ fields, eventCount, conflicts, eventsHref }: Fields
               aria-label="Filter fields"
               placeholder="Filter by field, event or service"
               autoComplete="off"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
+              {...queryField}
             />
           </InputGroup>
           {conflicts > 0 && (

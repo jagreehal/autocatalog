@@ -1,6 +1,7 @@
 /** @jsxImportSource react */
+import { useFieldValue } from '#ui/lib/field.ts';
 import { SearchIcon } from 'lucide-react';
-import { useState } from 'react';
+
 import { Button } from '#ui/components/ui/button.tsx';
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from '#ui/components/ui/card.tsx';
 import {
@@ -47,7 +48,7 @@ const link =
 const plural = (count: number) => `${count} ${count === 1 ? 'schema' : 'schemas'}`;
 
 export function SchemasPage({ schemas }: SchemasPageProps) {
-  const [query, setQuery] = useState('');
+  const { value: query, setValue: setQuery, field: queryField } = useFieldValue();
 
   const needle = query.trim().toLowerCase();
 
@@ -85,8 +86,7 @@ export function SchemasPage({ schemas }: SchemasPageProps) {
           aria-label="Filter schemas"
           placeholder="Filter by event, domain, format or owner"
           autoComplete="off"
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
+          {...queryField}
         />
       </InputGroup>
 
