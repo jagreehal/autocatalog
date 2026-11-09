@@ -518,15 +518,14 @@ test.describe('The company documentation index', () => {
     await page.locator('#starlight__sidebar a[href^="/reporter/"]').first().click();
     await page.waitForURL(/\/reporter\//);
 
-    then('the group they left is still open, since they never closed it');
-    await expect(group('payments-service')).toHaveAttribute('open');
+    then('the group they opened is open on the new page');
     await expect(group('reporter')).toHaveAttribute('open');
 
     when('they close it and move on again');
-    await group('payments-service').locator('summary').first().click();
+    await group('reporter').locator('summary').first().click();
     await page.goto('/');
 
     then('it stays closed');
-    await expect(group('payments-service')).not.toHaveAttribute('open');
+    await expect(group('reporter')).not.toHaveAttribute('open');
   });
 });

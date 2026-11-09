@@ -151,7 +151,9 @@ export function navigationGroups(
   pages: SidebarLink[],
   navigation?: SiteNavigation,
 ): SidebarGroup[] {
-  if (!navigation) return [{ label: 'Catalog', items: pages.map(starlightLink) }];
+  if (!navigation) {
+    return pages.length > 0 ? [{ label: 'Catalog', items: pages.map(starlightLink) }] : [];
+  }
 
   return navigation.groups.flatMap(({ label, collapsed, items }) => {
     const resolved = items.flatMap((item): SidebarLink[] => {

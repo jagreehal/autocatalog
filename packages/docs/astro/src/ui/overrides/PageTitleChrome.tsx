@@ -6,7 +6,6 @@ import { Separator } from '#ui/components/ui/separator.tsx';
 import { COPY_MARKDOWN_LABEL, type PageAction, type PillTone } from '../../shell';
 import { Icon } from '../components/Icon';
 import { statusVariant } from '../lib/status';
-import { FavoriteToggle } from './Favorites';
 
 export interface PageTitleChromeProps {
   /** `doc`, or the resource kind; drives Search's Kind tabs. */
@@ -17,8 +16,6 @@ export interface PageTitleChromeProps {
   catalogKey?: string;
   /** A call to action level with the title, such as "Explore catalog". */
   primary?: { label: string; href: string };
-  /** The page's title, as a pin in the sidebar names it. */
-  title?: string;
   /** The sentence that says what the page is for. */
   summary?: string;
   /** States worth flagging beside the key: a version, deprecated. */
@@ -28,7 +25,7 @@ export interface PageTitleChromeProps {
   /** What a document of a kind records about itself: its kind, date, what it applies to. */
   facts?: TitleFact[] | undefined;
   actions: PageAction[];
-  /** Whether the page offers to copy and pin itself, beside `actions`. */
+  /** Whether the page offers to copy itself, beside `actions`. */
   markdownActions?: boolean;
   /** Starlight's own `<h1>`, rendered by the Astro shell. */
   children?: ReactNode;
@@ -196,7 +193,6 @@ export function PageTitleChrome({
   kindLabel,
   catalogKey,
   primary,
-  title,
   summary,
   pills,
   status,
@@ -325,7 +321,6 @@ export function PageTitleChrome({
                   button,
                 ],
           )}
-          {markdownActions && <FavoriteToggle catalogKey={catalogKey} label={title} divided />}
         </div>
       )}
       <Separator className="mt-1" />

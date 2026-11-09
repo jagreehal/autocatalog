@@ -98,7 +98,6 @@ const outside = site.audience !== undefined;
   kindLabel={kindLabel}
   catalogKey={outside ? undefined : (resource?.key ?? (isDoc ? `document:${id}` : undefined))}
   primary={header?.primary}
-  title={entry.data.title}
   summary={summary}
   pills={resource?.pills ?? []}
   status={record?.status}

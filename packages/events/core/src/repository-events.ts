@@ -71,15 +71,16 @@ function isCatalogFolder(folder: string): boolean {
   if (fs.existsSync(path.join(folder, 'package.json'))) return false;
 
   try {
-    return (
-      !holdsOnlyCode(folder) &&
-      !fs
-        .readdirSync(folder, { withFileTypes: true })
-        .some(
-          (entry) =>
-            entry.isDirectory() && fs.existsSync(path.join(folder, entry.name, 'package.json')),
-        )
-    );
+    // A folder of packages is decided from its own entries, before any listing
+    // of the whole tree, which a build writing below it can interrupt.
+    const packages = fs
+      .readdirSync(folder, { withFileTypes: true })
+      .some(
+        (entry) =>
+          entry.isDirectory() && fs.existsSync(path.join(folder, entry.name, 'package.json')),
+      );
+
+    return !packages && !holdsOnlyCode(folder);
   } catch {
     return true;
   }

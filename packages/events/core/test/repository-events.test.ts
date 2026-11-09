@@ -37,6 +37,27 @@ it('enrols a gateway, and not a folder of gateway configuration named teams/', a
   expect(publishesCatalogContent(repo)).toBe(true);
 });
 
+it('never takes a folder of packages for a repository, even while files under it change', async () => {
+  // A monorepo's packages/ beside packages/docs/ and packages/events/, each a folder of packages.
+  for (const folder of ['docs/site', 'events/cli']) {
+    await fs.mkdir(path.join(repo, 'packages', folder), { recursive: true });
+    await fs.writeFile(path.join(repo, 'packages', folder, 'package.json'), '{}');
+    await fs.writeFile(path.join(repo, 'packages', folder, 'README.md'), '# A package\n');
+  }
+
+  // A folder a build is writing, which a full listing of the tree cannot read.
+  const busy = path.join(repo, 'packages/docs/site/.cache');
+
+  await fs.mkdir(busy);
+  await fs.chmod(busy, 0o000);
+
+  try {
+    expect(publishesCatalogContent(path.join(repo, 'packages'))).toBe(false);
+  } finally {
+    await fs.chmod(busy, 0o755);
+  }
+});
+
 it('enrols a repository that has only a Prisma schema', async () => {
   await fs.mkdir(path.join(repo, 'prisma'));
   expect(publishesCatalogContent(repo)).toBe(false);
