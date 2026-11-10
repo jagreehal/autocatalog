@@ -1,5 +1,11 @@
 # autocatalog-agents-adapter-autotel
 
+## 0.3.4
+
+### Patch Changes
+
+- autocatalog-agents-core@0.3.4
+
 ## 0.3.3
 
 ### Patch Changes

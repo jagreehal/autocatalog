@@ -1,5 +1,37 @@
 # autocatalog-docs-core
 
+## 0.11.0
+
+### Minor Changes
+
+- ac55524: A public site gives each OpenAPI reference Scalar's full layout below the site's header, with its own sidebar, search and request client. With one API, **API reference** opens it directly, and a site with guides and an API gets **Documentation** and **API reference** in the header. `"apiReference": "embedded"` keeps the reference inside the site's navigation.
+
+  A site with `"output": "server"` serves an MCP endpoint at `/mcp`. Agents connect by URL and get `search_docs`, `list_pages` and `read_page` over the pages, and `list_operations` and `get_operation` over each API, with the API it belongs to and the auth, servers and schemas it needs. It follows `access`, `llms.txt` names it, and Scalar's Connect MCP button installs it. `"mcp": false` leaves it out. Markdown copies, `llms.txt` and `llms-full.txt` render per request on a server site, behind the site's own gate.
+
+  Scalar takes the site's colours, font and corners, and a `theme.css` copied from a shadcn app works as it is. Page actions sit in a light row with dividers, and Copy shows a tick when it copies.
+
+  `autocatalog-mcp` adds `list_documents`. `read_document` takes a source without `.md` or a repository and names the closest pages when it misses. Both MCP servers tell a client which tool to call first.
+
+  A server site resolves the packages its own package.json names from its project, and everything else from autocatalog's.
+
+- 8258ffd: Flows draw as EventStorming boards: stages, actors, commands, policies, read models, tracks and Given, When, Then scenarios, with a hotspot for each failure that has no policy. `ac flows draft` drafts a flow from an Effect v4 program, and `<Storm>` and `<Sticky>` work in MDX.
+
+  `/services/` lists every service with its owner, APIs, events and calls, from events, OpenAPI specs or both. CODEOWNERS sets the owner of services, endpoints, gateways and repositories.
+
+  Each API's Scalar reference opens in a frame beside the site's navigation, in its theme, with the reader's place in the address. The sidebar link reads "Scalar" unless you set `apiReferenceLabel`.
+
+  A rail holds the site's sections, from `nav` with an optional `icon`, and the sidebar shows the current section under its name. Page changes fade, and a change of section slides the sidebar. The sidebar draws repositories as headings, folders with folder icons and pages with their kind's icon.
+
+  Sites use grey neutrals, Inter for text and JetBrains Mono for code. The home page opens with count cards, chosen by `homeCounts`, and the architecture map. Maps size to their graph, a flow's walkthrough starts from a button above its map, filters keep text typed while the page loads, and asking a person for help works before the assistant has loaded.
+
+  On Sätteri, Astro's default Markdown processor, Mermaid diagrams, `[[kind|id]]` links, a document's repeated title and scrollable tables work as they do on unified.
+
+### Patch Changes
+
+- b517a68: A server site with `access` or an `audience` serves Markdown twins, `llms-full.txt`, the documents in `llms.txt` and `/mcp`. Any other server site turns `/mcp` on with `"mcp": true`. `/mcp` takes requests from other origins on a site for an audience, answers lists 50 at a time with a cursor for the next page, and returns a JSON-RPC error when a request fails. `list_documents` pages the same way.
+- Updated dependencies [7e8b1e0]
+  - autocatalog-core@0.10.2
+
 ## 0.10.0
 
 ### Minor Changes
