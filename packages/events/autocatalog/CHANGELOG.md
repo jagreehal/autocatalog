@@ -1,5 +1,14 @@
 # autocatalog
 
+## 0.1.15
+
+### Patch Changes
+
+- Updated dependencies [ac55524]
+- Updated dependencies [8258ffd]
+- Updated dependencies [b517a68]
+  - autocatalog-cli@0.12.0
+
 ## 0.1.14
 
 ### Patch Changes

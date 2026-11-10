@@ -1,6 +1,6 @@
 {
   "name": "autocatalog-chatbot",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "An assistant for a docs site that answers only from the pages it may read, with the AI SDK and shadcn/ui.",
   "license": "MIT",
   "repository": {
