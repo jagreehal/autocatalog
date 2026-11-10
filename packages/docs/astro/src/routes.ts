@@ -27,6 +27,7 @@ const OUTSIDE_ROUTES = new Set([
   '/apis',
   '/apis/[repository]/[name]',
   '/apis/[repository]/[name]/openapi.json',
+  '/apis/[repository]/[name]/reference',
   '/[kind]',
   '/[...slug].md',
 ]);
@@ -121,6 +122,7 @@ export function autocatalogDocsRoutes(
             '/events/[repository]/[domain]/[id]/v/[version]/schema.json',
             path.join(here, 'pages/event-version-schema.json.ts'),
           ],
+          ['/services', path.join(here, 'pages/services.astro')],
           ['/services/[name]', path.join(here, 'pages/service.astro')],
           ['/services/[name].md', path.join(here, 'pages/service.md.ts')],
           ['/fields', path.join(here, 'pages/fields.astro')],
@@ -128,6 +130,7 @@ export function autocatalogDocsRoutes(
           ['/retirements', path.join(here, 'pages/retirements.astro')],
           ['/apis', path.join(here, 'pages/apis.astro')],
           ['/apis/[repository]/[name]', path.join(here, 'pages/api.astro')],
+          ['/apis/[repository]/[name]/reference', path.join(here, 'pages/api-reference.astro')],
           ['/apis/[repository]/[name]/openapi.json', path.join(here, 'pages/api-spec.json.ts')],
           ['/flows', path.join(here, 'pages/flows.astro')],
           ['/flows/[repository]/[id]', path.join(here, 'pages/flow.astro')],

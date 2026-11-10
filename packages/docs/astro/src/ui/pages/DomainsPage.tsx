@@ -1,4 +1,5 @@
 /** @jsxImportSource react */
+import { SearchIcon } from 'lucide-react';
 import { Card, CardContent } from '#ui/components/ui/card.tsx';
 import {
   Empty,
@@ -7,6 +8,7 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from '#ui/components/ui/empty.tsx';
+import { InputGroup, InputGroupAddon, InputGroupInput } from '#ui/components/ui/input-group.tsx';
 import {
   Table,
   TableBody,
@@ -15,16 +17,24 @@ import {
   TableHeader,
   TableRow,
 } from '#ui/components/ui/table.tsx';
+import { useFieldValue } from '#ui/lib/field.ts';
 import { Icon } from '../components/Icon';
+import { SectionHeading } from '../components/SectionHeading';
 
 export interface DomainsPageProps {
   domains: Array<{ name: string; href: string; events: number; services: number; owners: number }>;
 }
 
 export function DomainsPage({ domains }: DomainsPageProps) {
-  return (
-    <div className="not-content" data-wide>
-      {domains.length === 0 ? (
+  const { value: query, field } = useFieldValue();
+
+  const shown = query.trim()
+    ? domains.filter((domain) => domain.name.toLowerCase().includes(query.trim().toLowerCase()))
+    : domains;
+
+  if (domains.length === 0) {
+    return (
+      <div className="not-content">
         <Empty>
           <EmptyHeader>
             <EmptyMedia variant="icon">
@@ -37,20 +47,50 @@ export function DomainsPage({ domains }: DomainsPageProps) {
             </EmptyDescription>
           </EmptyHeader>
         </Empty>
-      ) : (
-        <Card>
-          <CardContent>
+      </div>
+    );
+  }
+
+  return (
+    <div className="not-content flex flex-col gap-6" data-wide>
+      <SectionHeading
+        id="domains-list"
+        count={`${domains.length.toLocaleString('en-GB')} ${domains.length === 1 ? 'domain' : 'domains'}`}
+      >
+        Domains
+      </SectionHeading>
+
+      <InputGroup className="max-w-md">
+        <InputGroupAddon>
+          <SearchIcon />
+        </InputGroupAddon>
+        <InputGroupInput
+          type="search"
+          aria-label="Filter domains"
+          placeholder="Filter by domain"
+          autoComplete="off"
+          {...field}
+        />
+      </InputGroup>
+
+      <Card>
+        <CardContent>
+          {shown.length === 0 ? (
+            <p className="m-0 text-muted-foreground">No domain matches “{query}”.</p>
+          ) : (
             <Table aria-label="Domains">
               <TableHeader>
-                <TableHead isRowHeader>Domain</TableHead>
-                <TableHead>Events</TableHead>
-                <TableHead>Services</TableHead>
-                <TableHead>Owners</TableHead>
+                <TableHead id="domain" isRowHeader>
+                  Domain
+                </TableHead>
+                <TableHead id="events">Events</TableHead>
+                <TableHead id="services">Services</TableHead>
+                <TableHead id="owners">Owners</TableHead>
               </TableHeader>
               <TableBody>
-                {domains.map((domain) => (
+                {shown.map((domain) => (
                   <TableRow key={domain.href} id={domain.href}>
-                    <TableCell>
+                    <TableCell id={`${domain.href}:domain`}>
                       <a
                         href={domain.href}
                         className="font-medium text-foreground no-underline underline-offset-4 hover:underline"
@@ -59,16 +99,22 @@ export function DomainsPage({ domains }: DomainsPageProps) {
                         {domain.name}
                       </a>
                     </TableCell>
-                    <TableCell>{domain.events}</TableCell>
-                    <TableCell>{domain.services}</TableCell>
-                    <TableCell>{domain.owners}</TableCell>
+                    <TableCell id={`${domain.href}:events`}>
+                      {domain.events.toLocaleString('en-GB')}
+                    </TableCell>
+                    <TableCell id={`${domain.href}:services`}>
+                      {domain.services.toLocaleString('en-GB')}
+                    </TableCell>
+                    <TableCell id={`${domain.href}:owners`}>
+                      {domain.owners.toLocaleString('en-GB')}
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
-          </CardContent>
-        </Card>
-      )}
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

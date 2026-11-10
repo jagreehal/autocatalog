@@ -119,6 +119,134 @@ Two steps can share a transition and mean different things. If an operator can s
 `via` tells the two apart. `ac docs check` fails a transition using a state the
 lifecycle lacks, and warns about a non-initial state no flow reaches.
 
+## Storm a process
+
+A flow page draws an EventStorming board: a column per stage, read left to right,
+with rows for who takes part, the command, what decides, the facts on the happy
+and failure tracks, and the policies under them.
+
+![An EventStorming board: a column per stage, a sticky per actor, command, event and policy](./media/event-storm-light.png)
+
+Every flow also draws as a map of its steps and branches. **Walk through**, above
+the map, steps through it one hop at a time, choosing a branch where the flow
+splits:
+
+![Walking through a flow one step at a time](./media/gif/walk-through-a-flow.gif)
+Write the board in the flow's
+frontmatter, beside the code it describes:
+
+```yaml
+---
+title: Catalogue import
+entity: import
+field: status
+steps:
+  - id: download
+    stage: Download file
+    title: Catalogue file downloaded
+    command: Download catalogue file
+    systems:
+      - { name: Object storage, summary: the file at the import's key }
+    decidedBy: Import
+    code: [{ file: src/import.ts, contains: downloadFile }]
+    next_steps:
+      - parse
+      - { id: file-missing, label: nothing at that key }
+  - id: file-missing
+    title: Catalogue file missing
+    policy: Whenever the file can't be fetched, fail the import
+    next_step: errored
+  - id: ingest
+    stage: Ingest each product
+    title: Product created or updated
+    repeats: once per parsed product
+    flow: ingest-product
+scenarios:
+  - given: No file at the import's key
+    when: The import runs
+    then: The status is errored and the user is told
+    step: errored
+---
+```
+
+| Field                             | On the board                                                  |
+| --------------------------------- | ------------------------------------------------------------- |
+| `stage`                           | The column. Steps that share a stage stack in one column      |
+| `command`                         | The request, or `{ ref: <domain>/<id> }` for a catalog one    |
+| `actors`, `systems`, `readModels` | Who takes part, and what people see                           |
+| `decidedBy`                       | What decides; a step with a transition defaults to its entity |
+| `policy`                          | "Whenever X, do Y": one, or a list                            |
+| `track`                           | `happy` or `failure`, over what the board works out           |
+| `repeats`, `flow`                 | A stage that loops, and the flow that zooms into it           |
+| `scenarios` (on the flow)         | Given, When, Then, with `expected` where today differs        |
+
+The happy track follows the first branch out of each step from the start, and
+every other step is a failure. A failure is still a fact. One with no policy, no
+next step and no status change is a hotspot: the board shows it in the policy
+row, and `ac docs check` warns. A finding on a step with `nature: question` or
+`defect` tags its sticky and joins the hotspots below the board, beside how each
+run can end and the scenarios to test. These checks apply to a flow that uses
+any field above; an older flow's branches may be alternatives, so it draws a
+board and raises nothing.
+
+`/flows/` lines every flow up as a lane of facts, the big picture, with how many
+ways each can fail and how many hotspots are open. `flow_context` gives an agent
+each step's track, stage and policies, with the hotspots, endings and scenarios.
+
+### Draft a board from Effect code
+
+`ac flows draft` reads an [Effect](https://effect.website) v4 program with
+[effect-analyzer](https://github.com/jagreehal/effect-analyzer) and prints a
+flow: a stage per call, a failure per error the call can fail with, and the
+services it needs as systems. What follows a failure depends on the handler that
+catches it. A handler on the call that can succeed carries on to the next step;
+one that fails with another error leads to that failure, which joins the board
+unless a handler after it on the same call recovers;
+a handler around the whole program stops the run. An error nothing catches has
+no policy, so it lands on the board as a hotspot to decide, and so does one
+caught by a handler the draft cannot read. A program that makes the same call
+twice gets two steps, and when the last call can fail, the run's success is an
+ending of its own.
+
+```bash
+npm install -D effect-analyzer
+ac flows draft src/import.ts --program runImport --id catalogue-import --write
+```
+
+Rename each fact in the business's words, add the policies the team agrees, and
+commit it. `ac flows verify` then checks each step's `code:` is still there.
+
+### Boards in MDX
+
+Three components work in any `.mdx` document without an import:
+
+```mdx
+Every run starts with <Sticky kind="event">Import loaded</Sticky>.
+
+<Storm flow="catalogue-import" show={['hotspots', 'endings']} />
+
+<Storm
+  label="Catalogue export"
+  stages={[
+    { stage: 'Request export', actor: 'Supplier user', command: 'Export catalogue' },
+    {
+      stage: 'Write file',
+      event: 'Catalogue file written',
+      failure: { text: 'Export too large', hotspot: true },
+      hotspot: 'What is too large?',
+    },
+  ]}
+/>
+```
+
+`<Storm flow>` draws a flow's board, by id or `<repository>/<id>`. `<Storm
+stages>` draws one you sketch by hand before there is code: each stage takes
+`actor`, `system`, `readModel`, `command`, `decidedBy`, `event`, `failure`,
+`policy` and `hotspot`, each a sticky or a list. `<Sticky kind>` puts one in a
+sentence. On a page of your own, import the React parts from
+`autocatalog-docs-astro/ui/components`: `StormBoard`, `Sticky`, `StormLegend`,
+`StormHotspots`, `StormEndings`, `StormScenarios` and `BigPicture`.
+
 ## What verified means
 
 There is no overall status, because each kind of evidence proves something different:

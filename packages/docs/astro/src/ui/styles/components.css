@@ -1,8 +1,11 @@
 /*
  * EventCatalog's visualiser reads its colours from --ec-* properties as
- * comma-separated RGB, which shadcn's oklch tokens can't be turned into in CSS.
- * These are preset b0's neutral values, so the map sits on the page; re-derive
- * them if the preset changes.
+ * RGB channels, which shadcn's oklch tokens can't be turned into in CSS. They
+ * are space-separated, as the visualiser's own are, so its `rgb(var(…) / 0.15)`
+ * tints stay valid.
+ * These are the theme's neutral values, so the map sits on the page; re-derive
+ * them if the theme changes. Important, as the visualiser's own values are
+ * unlayered.
  */
 [data-graph] .eventcatalog-visualizer {
   /* Nodes sit on the page's own card colour, not a tint per kind. */
@@ -11,22 +14,39 @@
   --ec-channel-node-bg: var(--card) !important;
   --ec-agent-node-bg: var(--card) !important;
   --ec-data-node-bg: var(--card) !important;
-  --ec-page-bg: 255, 255, 255;
-  --ec-card-bg: 255, 255, 255;
-  --ec-page-border: 229, 229, 229;
-  --ec-page-text: 10, 10, 10;
-  --ec-page-text-muted: 115, 115, 115;
-  --ec-accent: 23, 23, 23;
-  --ec-bg-dots: #d4d4d4;
+  --ec-page-bg: 255 255 255 !important;
+  --ec-card-bg: 255 255 255 !important;
+  --ec-page-border: 229 229 229 !important;
+  --ec-page-text: 10 10 10 !important;
+  --ec-page-text-muted: 85 85 85 !important;
+  /* Its walkthrough button puts white text on the accent, so it stays dark. */
+  --ec-accent: 23 23 23 !important;
+  --ec-accent-hover: 64 64 64 !important;
+  --ec-catalog-accent: 23 23 23 !important;
+  --ec-bg-dots: #d4d4d4 !important;
 }
 [data-theme='dark'] [data-graph] .eventcatalog-visualizer {
-  --ec-page-bg: 10, 10, 10;
-  --ec-card-bg: 23, 23, 23;
-  --ec-page-border: 38, 38, 38;
-  --ec-page-text: 250, 250, 250;
-  --ec-page-text-muted: 161, 161, 161;
-  --ec-accent: 229, 229, 229;
-  --ec-bg-dots: #404040;
+  --ec-page-bg: 10 10 10 !important;
+  --ec-card-bg: 23 23 23 !important;
+  --ec-page-border: 38 38 38 !important;
+  --ec-page-text: 250 250 250 !important;
+  --ec-page-text-muted: 161 161 161 !important;
+  --ec-accent: 64 64 64 !important;
+  --ec-accent-hover: 82 82 82 !important;
+  --ec-catalog-accent: 229 229 229 !important;
+  --ec-bg-dots: #404040 !important;
+}
+/* The visualiser's toolbar buttons sit on the toolbar's own colour; the active
+   one keeps its tint. */
+[data-graph] .eventcatalog-visualizer button {
+  background-color: transparent;
+}
+/* The map's node search, sized like the site's other inputs rather than a full-screen canvas's. */
+[data-graph] .eventcatalog-visualizer input[type='text'],
+[data-graph] .eventcatalog-visualizer input[type='search'] {
+  height: 2.25rem !important;
+  padding-block: 0 !important;
+  font-size: var(--text-sm) !important;
 }
 /* React Flow's attribution; EventCatalog hides it with the same global rule. */
 [data-graph] .react-flow__attribution {
@@ -121,27 +141,56 @@
 :root:has([data-eventcatalog]) {
   --sl-content-width: 100%;
 }
-/* ApiPage, full: Scalar brings its own sidebar, search and title, so it gets
- * the whole page below the header. Starlight sizes a page without a sidebar
- * with an unlayered rule, hence !important. */
-:root:has([data-api-reference='full']) {
+/* ApiPage, full and framed: Scalar brings its own sidebar, search and title,
+ * so it gets the whole content area below the header, beside the site's
+ * sidebar when framed. Starlight sizes a page without a sidebar with an
+ * unlayered rule, hence !important. */
+:root:has([data-api-reference='full']),
+:root:has([data-api-reference='frame']) {
   --sl-content-width: 100% !important;
+}
+:root:has([data-api-reference='full']) {
   /* Scalar's sticky sidebar sits under the site's header, not behind it. */
   --scalar-custom-header-height: var(--sl-nav-height);
 }
-:root:has([data-api-reference='full']) main > .content-panel:first-child {
-  display: none;
+/* Important: the footer's own utilities sit in a later layer than these rules. */
+:root:has([data-api-reference='full']) main > .content-panel:first-child,
+:root:has([data-api-reference='frame']) main > .content-panel:first-child,
+:root:has([data-api-reference='frame']) main footer,
+:root:has([data-api-reference='frame']) [data-site-footer] {
+  display: none !important;
 }
-:root:has([data-api-reference='full']) main > .content-panel {
+:root:has([data-api-reference='full']) main > .content-panel,
+:root:has([data-api-reference='frame']) main > .content-panel {
   padding: 0;
 }
-:root:has([data-api-reference='full']) main .sl-container {
+/* Starlight pads the foot of main with an unlayered rule; the frame needs the space. */
+:root:has([data-api-reference='frame']) main {
+  padding-bottom: 0 !important;
+}
+:root:has([data-api-reference='full']) main .sl-container,
+:root:has([data-api-reference='frame']) main .sl-container {
   max-width: none;
 }
 /* Starlight spaces Markdown blocks apart; here that margin would push Scalar off the header. */
 :root:has([data-api-reference='full']) main .sl-markdown-content > *,
-[data-api-reference='full'] {
+:root:has([data-api-reference='frame']) main .sl-markdown-content > *,
+[data-api-reference='full'],
+[data-api-reference='frame'] {
   margin-top: 0;
+}
+/* Framed, the reference fills the viewport below the header and scrolls inside
+ * itself, so the page around it never scrolls as well. */
+[data-api-reference='frame'] iframe {
+  height: calc(100dvh - var(--sl-nav-height));
+}
+/* Beside the sidebar, the frame keeps a rail for the sidebar's toggle, so the
+ * toggle never sits over Scalar's own menu or search. */
+@media (min-width: 50rem) {
+  [data-api-reference='frame'] {
+    padding-inline-start: 3rem;
+    border-inline-start: 1px solid var(--border);
+  }
 }
 /* The rest of the viewport below the header and title; no utility says that. */
 [data-eventcatalog] iframe {
@@ -205,4 +254,18 @@
 .ac-top-nav--menu a {
   width: 100%;
   font-size: var(--sl-text-base);
+}
+
+/* A flow's walkthrough begins from the Walk through button above the map
+   (Visualiser.tsx), so its intro card stays hidden rather than covering the
+   flow; once the walk has begun its controls show, clear of the zoom buttons
+   and above the bar along the bottom. Important, because the visualiser's
+   own styles are unlayered. */
+.eventcatalog-visualizer
+  .react-flow__panel.bottom.left:has(button[title='Start walking through the flow']) {
+  display: none !important;
+}
+.eventcatalog-visualizer .react-flow__panel.bottom.left:not(.react-flow__controls) {
+  left: 3rem !important;
+  bottom: 3.5rem !important;
 }

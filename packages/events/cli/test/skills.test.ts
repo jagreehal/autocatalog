@@ -86,6 +86,7 @@ describe('every skill is well formed', () => {
       'autocatalog-impact',
       'autocatalog-investigate',
       'autocatalog-scan',
+      'autocatalog-storm',
     ]);
   });
 

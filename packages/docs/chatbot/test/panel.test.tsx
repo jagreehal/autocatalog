@@ -102,3 +102,12 @@ it('composes from its parts and a part of the site’s own', async () => {
 
   expect(screen.getByText('1 messages')).toBeTruthy();
 });
+
+it('opens at the support form for a reader who asked before it loaded', async () => {
+  document.documentElement.dataset.acSupport = '';
+
+  render(<ChatPanel api="/api/chat" title="Ask Acme" support={{ api: '/api/support' }} />);
+
+  expect(await screen.findByText('Message a person')).toBeTruthy();
+  expect(document.documentElement.dataset.acSupport).toBeUndefined();
+});

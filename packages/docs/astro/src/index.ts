@@ -6,7 +6,6 @@ import react from '@astrojs/react';
 import tailwindcss from '@tailwindcss/vite';
 import type { StarlightPlugin } from '@astrojs/starlight/types';
 import { z } from 'astro/zod';
-import { isUnifiedProcessor } from '@astrojs/markdown-remark';
 import {
   type Doc,
   resolveDocsLayout,
@@ -57,14 +56,16 @@ import { eventCatalogEmbeds } from './eventcatalog';
 import { reactRendererIntegration, siteHasReact } from './react-integration';
 import { EMBED_SCRIPT } from './embed';
 import { SIDEBAR_SCRIPT } from './sidebar-state';
+import { SECTION_TRANSITION_SCRIPT } from './section-transition';
 import { DARK_CLASS_SCRIPT } from './dark-class';
-import { MERMAID_SCRIPT, remarkMermaid } from './mermaid';
-import { remarkWikiRefs } from './wiki-refs';
+import { registerMarkdownPlugins } from './markdown-plugins';
+import { MERMAID_SCRIPT } from './mermaid';
 import { mdxComponents } from './mdx';
 import { DEFAULT_FAVICON } from './favicon';
-import { apiPath } from './apis';
-import { portalNav } from './nav';
-import { RESERVED_SEGMENTS } from './kinds';
+import { apiPath, catalogServices } from './apis';
+import { isIcon } from './icons';
+import { catalogNav, portalNav } from './nav';
+import { docKindIcon, RESERVED_SEGMENTS } from './kinds';
 import { docPage } from './ui/lib/docs';
 
 export interface AutocatalogDocsOptions {
@@ -118,11 +119,17 @@ export interface AutocatalogDocsOptions {
    */
   audience?: string;
   /**
-   * `full` gives each OpenAPI reference the page below the header, with
-   * Scalar's own sidebar, search and request client; `embedded` sets it in the
-   * site's navigation. `full` when there is an `audience`, else `embedded`.
+   * How each OpenAPI reference is laid out. `frame`, the default, keeps the
+   * site's header and sidebar and gives Scalar the rest of the page in a
+   * frame, with its own sidebar, search and request client. `full` gives
+   * Scalar the whole page below the header; `embedded` sets it inside the
+   * content column.
    */
-  apiReference?: 'full' | 'embedded';
+  apiReference?: 'frame' | 'full' | 'embedded';
+  /** What the sidebar calls the link to an API's reference under its service: `Scalar` by default. */
+  apiReferenceLabel?: string;
+  /** The kinds the home page counts, in order: six chosen for it by default. */
+  homeCounts?: string[];
   /**
    * The MCP endpoint at `/mcp` on a site with `output: 'server'`, where agents
    * search its pages and read its APIs' operations. On by default with `access`
@@ -143,7 +150,7 @@ export interface AutocatalogDocsOptions {
   favicon?: string;
   /** The site's own words for its interface, by Starlight's translation key. */
   strings?: Record<string, string>;
-  /** Sections in the header, beside the title, and atop the menu on a phone. */
+  /** The site's sections, in the rail beside the sidebar and atop the menu on a phone. `[]` names none. */
   nav?: SiteNavLink[];
   /**
    * Who may open each document, per request, on a site with `output: 'server'`:
@@ -210,6 +217,14 @@ export default function autocatalogDocs(opts: AutocatalogDocsOptions = {}): Star
         if (opts.audience) process.env.AUTOCATALOG_SITE_AUDIENCE ??= opts.audience;
 
         if (opts.apiReference) process.env.AUTOCATALOG_SITE_API_REFERENCE ??= opts.apiReference;
+
+        if (opts.apiReferenceLabel) {
+          process.env.AUTOCATALOG_SITE_API_REFERENCE_LABEL ??= opts.apiReferenceLabel;
+        }
+
+        if (opts.homeCounts) {
+          process.env.AUTOCATALOG_SITE_HOME_COUNTS ??= JSON.stringify(opts.homeCounts);
+        }
 
         if (opts.mcp !== undefined) process.env.AUTOCATALOG_SITE_MCP ??= String(opts.mcp);
 
@@ -282,16 +297,29 @@ export default function autocatalogDocs(opts: AutocatalogDocsOptions = {}): Star
 
         if (rootRepo) refuseRootClashes(catalog.docs);
 
-        // TopNav reads the links from here, at build time: a server site has
-        // no build environment left when it renders. A portal for readers
-        // outside gets Documentation and API reference unless it names its own.
+        // The rail and TopNav read the sections from here, at build time: a
+        // server site has no build environment left when it renders. A site
+        // that names none gets Home, Catalog and Docs, or, for readers
+        // outside, Documentation and API reference; `nav: []` names none.
+        const docPages = catalog.docs.map((doc) => docPage(doc.id));
+
         const sections =
-          nav.length > 0 || !effective.audience
-            ? nav
-            : portalNav(
-                catalog.docs.map((doc) => docPage(doc.id)),
-                catalog.apis.map(apiPath),
-              );
+          nav ??
+          (effective.audience
+            ? portalNav(docPages, catalog.apis.map(apiPath))
+            : catalogNav(docPages, [
+                ...RESERVED_SEGMENTS,
+                ...catalog.kinds.map((kind) => kind.path),
+                'search',
+              ]));
+
+        for (const { label, icon } of sections) {
+          if (icon && !isIcon(icon)) {
+            logger.warn(
+              `nav: "${label}" names the icon "${icon}", which the catalog does not have`,
+            );
+          }
+        }
 
         addIntegration({
           name: 'autocatalog-docs-nav',
@@ -344,11 +372,10 @@ export default function autocatalogDocs(opts: AutocatalogDocsOptions = {}): Star
         const contentSidebar =
           config.sidebar ?? (rootRepo && sidebar.length === 1 ? sidebar[0]!.items : sidebar);
 
-        // Starlight opens the group holding the current page.
-        const eventsSidebar = catalogSidebar(catalog.events, catalog.apis).map((group) => ({
-          ...group,
-          collapsed: true,
-        }));
+        // Starlight also opens whichever group holds the current page.
+        const eventsSidebar = catalogSidebar(catalog.events, catalog.apis, {
+          apiLabel: effective.apiReferenceLabel,
+        });
 
         // A plugin `favicon` fills Starlight when the site did not set one.
         // `ac site` ships `public/favicon.svg` and reads AUTOCATALOG_SITE_FAVICON.
@@ -362,51 +389,77 @@ export default function autocatalogDocs(opts: AutocatalogDocsOptions = {}): Star
           ? [
               // One API is the reference itself, not a list of one.
               ...(catalog.apis.length === 1
-                ? [{ label: 'API reference', id: 'apis', link: `/${apiPath(catalog.apis[0]!)}` }]
+                ? [
+                    {
+                      label: 'API reference',
+                      id: 'apis',
+                      link: `/${apiPath(catalog.apis[0]!)}`,
+                      icon: 'api' as const,
+                    },
+                  ]
                 : catalog.apis.length > 1
-                  ? [{ label: 'API reference', link: '/apis' }]
+                  ? [{ label: 'API reference', link: '/apis', icon: 'api' as const }]
                   : []),
-              ...catalog.kinds.map((kind) => ({ label: kind.label, link: `/${kind.path}` })),
+              ...catalog.kinds.map((kind) => ({
+                label: kind.label,
+                link: `/${kind.path}`,
+                icon: docKindIcon(kind),
+              })),
             ]
           : [
-              { label: 'Knowledge graph', link: '/catalog' },
-              ...(eventCatalogEmbeds() ? [{ label: 'Architecture', link: '/architecture' }] : []),
-              ...(eventsSidebar.length > 0
+              { label: 'Knowledge graph', link: '/catalog', icon: 'catalog' as const },
+              ...(eventCatalogEmbeds()
+                ? [{ label: 'Architecture', link: '/architecture', icon: 'architecture' as const }]
+                : []),
+              ...(catalog.events.length > 0
                 ? [
-                    { label: 'Domains', link: '/domains' },
-                    { label: 'Schemas', link: '/schemas' },
-                    { label: 'Fields', link: '/fields' },
+                    { label: 'Domains', link: '/domains', icon: 'domain' as const },
+                    { label: 'Schemas', link: '/schemas', icon: 'braces' as const },
+                    { label: 'Fields', link: '/fields', icon: 'fields' as const },
                   ]
                 : []),
               ...(retirementsPageProps(catalog, '/').retirements.length > 0
-                ? [{ label: 'Retirements', link: '/retirements' }]
+                ? [{ label: 'Retirements', link: '/retirements', icon: 'layers' as const }]
                 : []),
-              ...(catalog.apis.length > 0 ? [{ label: 'APIs', link: '/apis' }] : []),
+              ...(catalogServices(catalog).size > 0
+                ? [{ label: 'Services', link: '/services', icon: 'service' as const }]
+                : []),
+              ...(catalog.apis.length > 0
+                ? [{ label: 'APIs', link: '/apis', icon: 'api' as const }]
+                : []),
               ...(catalog.graph.resources.some(({ ref }) => ref.kind === 'mcp-server')
-                ? [{ label: 'MCP servers', link: '/mcp-servers' }]
+                ? [{ label: 'MCP servers', link: '/mcp-servers', icon: 'mcp-server' as const }]
                 : []),
-              ...(catalog.flows.length > 0 ? [{ label: 'Flows', link: '/flows' }] : []),
+              ...(catalog.flows.length > 0
+                ? [{ label: 'Flows', link: '/flows', icon: 'flow' as const }]
+                : []),
               // `ac site` dev starts designs there, so it is listed before there are any.
               ...(catalog.designs.length > 0 || command === 'dev'
-                ? [{ label: 'Designs', link: '/designs' }]
+                ? [{ label: 'Designs', link: '/designs', icon: 'design' as const }]
                 : []),
               ...(catalog.model.glossaries.length > 0
-                ? [{ label: 'Glossary', link: '/glossary' }]
+                ? [{ label: 'Glossary', link: '/glossary', icon: 'glossary' as const }]
                 : []),
               ...(catalog.model.entities.length > 0
-                ? [{ label: 'Entities', link: '/entities' }]
+                ? [{ label: 'Entities', link: '/entities', icon: 'entity' as const }]
                 : []),
               ...(catalog.model.dataProducts.length > 0
-                ? [{ label: 'Data products', link: '/data-products' }]
+                ? [{ label: 'Data products', link: '/data-products', icon: 'dataProduct' as const }]
                 : []),
               ...(catalog.specifications.length > 0
-                ? [{ label: 'Specifications', link: '/specs' }]
+                ? [{ label: 'Specifications', link: '/specs', icon: 'book' as const }]
                 : []),
               // Decisions, runbooks, incidents: each kind with documents.
-              ...catalog.kinds.map((kind) => ({ label: kind.label, link: `/${kind.path}` })),
-              ...(catalog.models.length > 0 ? [{ label: 'Data models', link: '/data' }] : []),
+              ...catalog.kinds.map((kind) => ({
+                label: kind.label,
+                link: `/${kind.path}`,
+                icon: docKindIcon(kind),
+              })),
+              ...(catalog.models.length > 0
+                ? [{ label: 'Data models', link: '/data', icon: 'data' as const }]
+                : []),
               ...(graphOwners(catalog.graph).length > 0
-                ? [{ label: 'Owners', link: '/owners' }]
+                ? [{ label: 'Owners', link: '/owners', icon: 'owners' as const }]
                 : []),
             ];
 
@@ -435,6 +488,7 @@ export default function autocatalogDocs(opts: AutocatalogDocsOptions = {}): Star
             ...(config.head ?? []),
             { tag: 'script', content: EMBED_SCRIPT },
             { tag: 'script', content: SIDEBAR_SCRIPT },
+            { tag: 'script', content: SECTION_TRANSITION_SCRIPT },
             { tag: 'script', content: DARK_CLASS_SCRIPT },
             { tag: 'script', attrs: { type: 'module' }, content: MERMAID_SCRIPT },
           ],
@@ -447,11 +501,12 @@ export default function autocatalogDocs(opts: AutocatalogDocsOptions = {}): Star
             PageTitle: 'autocatalog-docs-astro/overrides/PageTitle.astro',
             // Pinned pages, as the first group of the navigation.
             Sidebar: 'autocatalog-docs-astro/overrides/Sidebar.astro',
-            // Sun-and-moon theme control, plus sidebar collapse/resize mounts
-            // here so they stay outside the pane Starlight hides when collapsed.
+            // Sun-and-moon theme control, plus icon rail and sidebar
+            // collapse/resize outside the pane Starlight hides when collapsed.
             ThemeSelect: 'autocatalog-docs-astro/overrides/ThemeSelect.astro',
-            // The site's sections beside the title, when it has any.
-            ...(sections.length > 0 && { Header: 'autocatalog-docs-astro/overrides/Header.astro' }),
+            // Product chrome: title, dominant search, utilities. Section links
+            // live in the icon rail.
+            Header: 'autocatalog-docs-astro/overrides/Header.astro',
             // Pagefind indexes only prerendered pages, so a site that renders per
             // request searches on the server, as each reader may.
             ...(config.prerender === false && {
@@ -604,18 +659,13 @@ export default function autocatalogDocs(opts: AutocatalogDocsOptions = {}): Star
           },
         });
 
-        // Joins the site's own Markdown processor, the way Starlight adds its
-        // asides. Another processor leaves the fence as a highlighted code block.
+        // Joins the site's own Markdown processor, Sätteri or unified, the way
+        // Starlight adds its asides (markdown-plugins.ts).
         addIntegration({
-          name: 'autocatalog-docs-mermaid',
+          name: 'autocatalog-docs-markdown',
           hooks: {
-            'astro:config:setup': ({ config: astro }) => {
-              const processor = astro.markdown?.processor;
-
-              if (processor && isUnifiedProcessor(processor)) {
-                processor.options.remarkPlugins.push(remarkMermaid);
-                processor.options.remarkPlugins.push([remarkWikiRefs, { base: astro.base }]);
-              }
+            'astro:config:setup': ({ config: astro, logger: markdownLogger }) => {
+              registerMarkdownPlugins(astro.markdown?.processor, astro.base, markdownLogger);
             },
           },
         });
@@ -700,8 +750,8 @@ export default function autocatalogDocs(opts: AutocatalogDocsOptions = {}): Star
 const stringsSchema = z.record(z.string(), z.string());
 
 /** Header links `ac site` passes as JSON; none when unset. */
-function siteNav(json: string | undefined): SiteNavLink[] {
-  return json ? z.array(siteNavLinkSchema).parse(JSON.parse(json)) : [];
+function siteNav(json: string | undefined): SiteNavLink[] | undefined {
+  return json ? z.array(siteNavLinkSchema).parse(JSON.parse(json)) : undefined;
 }
 
 const CHAT_MODULE = 'virtual:autocatalog-chat';

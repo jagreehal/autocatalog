@@ -1,0 +1,91 @@
+---
+import type { InferGetStaticPropsType } from 'astro';
+import '../styles/index.css';
+import { apiPageProps, apiTitle, servicesForApi } from '../apis';
+import { docsCatalog } from '../catalog';
+import { docsSiteConfig } from '../config';
+import { ApiPage } from '../ui/pages/ApiPage';
+
+// Scalar on a page of its own, for the API page to frame: its sidebar, search
+// and request client have the whole frame, and the site's navigation stays
+// around it.
+export async function getStaticPaths() {
+  const catalog = await docsCatalog();
+
+  return catalog.apis.map((api) => ({
+    params: { repository: api.repository, name: api.name },
+    props: { api },
+  }));
+}
+
+type Props = InferGetStaticPropsType<typeof getStaticPaths>;
+
+const { api } = Astro.props;
+
+const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+
+const catalog = await docsCatalog();
+
+const site = docsSiteConfig();
+
+const outside = site.audience !== undefined;
+
+const page = outside
+  ? apiPageProps(api, [], base, true)
+  : apiPageProps(api, servicesForApi(api, catalog.events), base);
+---
+
+<!doctype html>
+<html lang="en" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>{apiTitle(api)} reference</title>
+    <script is:inline>
+      // Before anything else runs: the place the page framing this one is open
+      // at, so Scalar starts there, and the theme before the first paint (that
+      // page's, else the reader's choice on this site, else their system's).
+      (() => {
+        let theme;
+
+        try {
+          if (window.parent !== window) {
+            const place = window.parent.location.hash;
+
+            if (place && !location.hash) history.replaceState(history.state, '', place);
+            theme = window.parent.document.documentElement.dataset.theme;
+          }
+        } catch {}
+
+        theme ??= localStorage.getItem('starlight-theme') || undefined;
+        theme ??= matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        document.documentElement.dataset.theme = theme === 'dark' ? 'dark' : 'light';
+      })();
+    </script>
+    <style>
+      html,
+      body {
+        margin: 0;
+        min-height: 100%;
+        background: var(--background);
+        color: var(--foreground);
+      }
+    </style>
+  </head>
+  <body>
+    <ApiPage
+      client:load
+      {...page}
+      layout="standalone"
+      mcp={process.env.AUTOCATALOG_SITE_MCP_ENDPOINT
+        ? { name: site.title, path: `${base}${process.env.AUTOCATALOG_SITE_MCP_ENDPOINT}` }
+        : undefined}
+    />
+    <script>
+      import { followFramingPage } from '../ui/lib/frame-sync';
+
+      followFramingPage();
+    </script>
+  </body>
+</html>

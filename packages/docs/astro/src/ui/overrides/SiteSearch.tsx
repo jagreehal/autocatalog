@@ -16,8 +16,8 @@ export interface SiteSearchProps {
  */
 export function SiteSearch({ action, label, query }: SiteSearchProps) {
   return (
-    <form method="get" action={action} role="search" className="w-full max-w-sm">
-      <InputGroup>
+    <form method="get" action={action} role="search" className="w-full">
+      <InputGroup className="h-10">
         <InputGroupAddon>
           <SearchIcon />
         </InputGroupAddon>

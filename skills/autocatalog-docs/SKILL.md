@@ -30,7 +30,7 @@ When `docs/meta.json` names an `owner`, a page takes it unless the page names it
 
 `<owning-repo>/docs/<path>.md`. The id readers and links use is derived from that path — `payments-service/docs/ops/replay.md` is `payments-service/ops/replay` — so the path is the URL and the permanent name. Choose it once, deliberately.
 
-In a monorepo the owning folder is the package: `services/orders/docs/runbook.md` publishes as `orders/runbook`.
+In a monorepo the owning folder is the package: `services/orders/docs/runbook.md` publishes as `orders/runbook`. A folder under `docs/` shows in the sidebar by its name in words, acronyms in capitals (`it` is IT); give it a `label` in `docs/meta.json`'s `sidebar` for anything else. A page may open with a `# Title` that matches its `title`, so it reads well on GitHub; the site shows the title once.
 
 Never write documentation into the aggregating site's repository. A document there has no owning team and no code to stay true to.
 

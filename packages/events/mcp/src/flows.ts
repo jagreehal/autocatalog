@@ -7,6 +7,7 @@ import {
   readFlowEvidence,
   readFlows,
   stepEvidence,
+  stormBoard,
 } from 'autocatalog-docs-core';
 import { checkouts, pickOne } from './knowledge.js';
 import type { CatalogSnapshot } from './tools.js';
@@ -61,6 +62,7 @@ export function flowContext(
 
   const notes = flowNotes(documents, [flow]).notes;
   const evidence = readFlowEvidence(dir);
+  const board = stormBoard(flow, notes);
 
   const lifecycles = new Map(
     flow.steps.flatMap(({ transition }) =>
@@ -78,11 +80,16 @@ export function flowContext(
   return {
     flow: { id: flow.id, title: flow.title, summary: flow.summary, repository },
     howToRead:
-      'A draft finding or a question is a hypothesis, not established behaviour. Each evidence dimension stands alone: a count says a transition was recorded, not why, and not instrumented does not mean broken.',
+      'A draft finding or a question is a hypothesis, not established behaviour. Each evidence dimension stands alone: a count says a transition was recorded, not why, and not instrumented does not mean broken. A step on the failure track is still a fact; one with no policy is a hotspot until someone decides what happens after it.',
     steps: flow.steps.map((step) => ({
       id: step.id,
       title: step.title,
       summary: step.summary,
+      track: board.tracks.get(step.id),
+      stage: step.stage,
+      command: step.command?.name,
+      policies: step.policies.map(({ text }) => text),
+      subflow: step.subflow,
       transition: step.transition,
       rules: step.rules,
       stuck: step.stuck,
@@ -93,6 +100,10 @@ export function flowContext(
         (step.transition && evidence ? 'not checked' : undefined),
     })),
     notes: notes.filter((note) => !note.step),
+    // What the EventStorming board raises: a hotspot is open, an ending is where a run stops.
+    hotspots: board.hotspots,
+    endings: board.endings,
+    scenarios: board.scenarios,
     evidence: evidence && {
       checkedAt: evidence.checkedAt,
       commit: evidence.commit,

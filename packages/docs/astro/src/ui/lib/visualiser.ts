@@ -122,3 +122,51 @@ export function groupCardHref(path: string, hrefs: Record<string, string>): stri
 
   return (id !== undefined && hrefs[id]) || path;
 }
+
+// The map's own chrome: the room its fit leaves above and below the drawing
+// (EventCatalog's DIAGRAM_FIT_VIEW_OPTIONS, 100px and 80px), and a row of nodes
+// in its left-to-right layout, at full size.
+const MAP_CHROME_PX = 180;
+
+const MAP_ROW_PX = 96;
+
+const MAP_MIN_REM = 16;
+
+/**
+ * How tall a map's box should be, in rem, so its drawing opens near full size:
+ * the room the fit keeps, and a row for each node in the layout's busiest
+ * column, no taller than `max`. Read from the graph before it is laid out, so
+ * the box is sized up front and nothing on the page moves when the map arrives.
+ */
+export function mapHeight(
+  graph: { nodes: Array<{ id: string }>; edges: Array<{ source: string; target: string }> },
+  max: number,
+): number {
+  const ids = new Set(graph.nodes.map(({ id }) => id));
+  const column = new Map([...ids].map((id) => [id, 0]));
+
+  // Longest path from a source, as a layered layout places each node; a pass
+  // per node is enough, and a cycle stops growing when the passes run out.
+  for (let pass = 0; pass < ids.size; pass += 1) {
+    let moved = false;
+
+    for (const { source, target } of graph.edges) {
+      const next = (column.get(source) ?? 0) + 1;
+
+      if (ids.has(target) && next > (column.get(target) ?? 0) && next < ids.size) {
+        column.set(target, next);
+        moved = true;
+      }
+    }
+
+    if (!moved) break;
+  }
+
+  const perColumn = new Map<number, number>();
+
+  for (const at of column.values()) perColumn.set(at, (perColumn.get(at) ?? 0) + 1);
+
+  const rows = Math.max(1, ...perColumn.values());
+
+  return Math.min(max, Math.max(MAP_MIN_REM, (MAP_CHROME_PX + rows * MAP_ROW_PX) / 16));
+}

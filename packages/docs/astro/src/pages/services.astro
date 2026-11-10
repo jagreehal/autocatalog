@@ -1,0 +1,21 @@
+---
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import { docsCatalog } from '../catalog';
+import { servicesPageProps } from '../page-models';
+import { ServicesPage } from '../ui/pages/ServicesPage';
+
+const catalog = await docsCatalog();
+
+const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+---
+
+<StarlightPage
+  frontmatter={{
+    title: 'Services',
+    description:
+      'Every service with its owner, the APIs it serves, and what it sends and receives.',
+    tableOfContents: false,
+  }}
+>
+  <ServicesPage client:load {...servicesPageProps(catalog, base)} />
+</StarlightPage>

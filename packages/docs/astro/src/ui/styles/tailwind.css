@@ -14,7 +14,10 @@
 @import 'tailwindcss/utilities.css' layer(utilities);
 @import 'tw-animate-css';
 @import 'shadcn/tailwind.css';
-/* Self-hosted: the font ships with the site, so a page makes no request to a font CDN. */
+/* Self-hosted: the fonts ship with the site, so a page makes no request to a font CDN.
+ * Inter for the interface and prose; JetBrains Mono for code, keys and ids. */
+@import '@fontsource-variable/inter';
+@import '@fontsource-variable/inter/wght-italic.css';
 @import '@fontsource-variable/jetbrains-mono';
 @import '@fontsource-variable/jetbrains-mono/wght-italic.css';
 /* `prose`, for Markdown rendered inside components (a version's changes). */
@@ -72,29 +75,29 @@
 
 /*
  * Contrast, measured against WCAG 2.1 AA (4.5:1 for text) in both themes:
- * muted text is 7.05:1 on the light background and 8.37:1 on the dark one,
+ * muted text is 7.55:1 on the light background and 7.98:1 on the dark one,
  * destructive is 5.3:1 and 6:1 on its own 10% tint, and primary text on primary
  * is above 14:1 in both. Re-check these after changing a token (DESIGN.md).
  */
 :root {
-  /* Blueprint-tinted neutrals: paper, ink and rules share one cool hue (DESIGN.md). */
-  --background: oklch(0.982 0.005 225);
-  --foreground: oklch(0.235 0.028 248);
-  --card: oklch(0.996 0.003 225);
-  --card-foreground: oklch(0.235 0.028 248);
-  --popover: oklch(0.996 0.003 225);
-  --popover-foreground: oklch(0.235 0.028 248);
-  --primary: oklch(0.26 0.03 248);
-  --primary-foreground: oklch(0.98 0.005 225);
-  --secondary: oklch(0.962 0.008 228);
-  --secondary-foreground: oklch(0.235 0.028 248);
-  --muted: oklch(0.962 0.008 228);
-  --muted-foreground: oklch(0.45 0.022 245);
-  --accent: oklch(0.95 0.012 228);
-  --accent-foreground: oklch(0.235 0.028 248);
+  /* Pure greys, so the only colour on a page is provenance (DESIGN.md). */
+  --background: oklch(0.99 0 0);
+  --foreground: oklch(0 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0 0 0);
+  --primary: oklch(0 0 0);
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.94 0 0);
+  --secondary-foreground: oklch(0 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.44 0 0);
+  --accent: oklch(0.94 0 0);
+  --accent-foreground: oklch(0 0 0);
   --destructive: oklch(0.53 0.19 27);
-  --border: oklch(0.875 0.013 240);
-  --input: oklch(0.875 0.013 240);
+  --border: oklch(0.92 0 0);
+  --input: oklch(0.92 0 0);
   --ring: oklch(0.51 0.095 185);
   --chart-1: oklch(0.855 0.138 181.071);
   --chart-2: oklch(0.704 0.14 182.503);
@@ -102,48 +105,48 @@
   --chart-4: oklch(0.511 0.096 186.391);
   --chart-5: oklch(0.437 0.078 188.216);
   --radius: 0.625rem;
-  --sidebar: oklch(0.975 0.007 228);
-  --sidebar-foreground: oklch(0.235 0.028 248);
-  --sidebar-primary: oklch(0.26 0.03 248);
-  --sidebar-primary-foreground: oklch(0.98 0.005 225);
-  --sidebar-accent: oklch(0.95 0.012 228);
-  --sidebar-accent-foreground: oklch(0.235 0.028 248);
-  --sidebar-border: oklch(0.875 0.013 240);
+  --sidebar: oklch(0.99 0 0);
+  --sidebar-foreground: oklch(0 0 0);
+  --sidebar-primary: oklch(0 0 0);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(0.94 0 0);
+  --sidebar-accent-foreground: oklch(0 0 0);
+  --sidebar-border: oklch(0.94 0 0);
   --sidebar-ring: oklch(0.51 0.095 185);
 }
 
 [data-theme='dark'] {
-  /* Deep slate, not black, with the same hue as the light theme's rules. */
-  --background: oklch(0.205 0.032 250);
-  --foreground: oklch(0.945 0.012 230);
-  --card: oklch(0.235 0.034 250);
-  --card-foreground: oklch(0.945 0.012 230);
-  --popover: oklch(0.235 0.034 250);
-  --popover-foreground: oklch(0.945 0.012 230);
-  --primary: oklch(0.93 0.015 225);
-  --primary-foreground: oklch(0.21 0.03 250);
-  --secondary: oklch(0.26 0.034 250);
-  --secondary-foreground: oklch(0.945 0.012 230);
-  --muted: oklch(0.26 0.034 250);
-  --muted-foreground: oklch(0.76 0.022 235);
-  --accent: oklch(0.27 0.036 250);
-  --accent-foreground: oklch(0.945 0.012 230);
+  /* Near-black, not black: easier on the eye over a long page. */
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.185 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.985 0 0);
+  --primary-foreground: oklch(0.145 0 0);
+  --secondary: oklch(0.25 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.23 0 0);
+  --muted-foreground: oklch(0.72 0 0);
+  --accent: oklch(0.27 0 0);
+  --accent-foreground: oklch(0.985 0 0);
   --destructive: oklch(0.73 0.16 25);
-  --border: oklch(0.34 0.032 248);
-  --input: oklch(0.38 0.032 248);
+  --border: oklch(0.27 0 0);
+  --input: oklch(0.32 0 0);
   --ring: oklch(0.79 0.11 185);
   --chart-1: oklch(0.855 0.138 181.071);
   --chart-2: oklch(0.704 0.14 182.503);
   --chart-3: oklch(0.6 0.118 184.704);
   --chart-4: oklch(0.511 0.096 186.391);
   --chart-5: oklch(0.437 0.078 188.216);
-  --sidebar: oklch(0.19 0.03 250);
-  --sidebar-foreground: oklch(0.945 0.012 230);
-  --sidebar-primary: oklch(0.93 0.015 225);
-  --sidebar-primary-foreground: oklch(0.21 0.03 250);
-  --sidebar-accent: oklch(0.27 0.036 250);
-  --sidebar-accent-foreground: oklch(0.945 0.012 230);
-  --sidebar-border: oklch(0.34 0.032 248);
+  --sidebar: oklch(0.175 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.985 0 0);
+  --sidebar-primary-foreground: oklch(0.145 0 0);
+  --sidebar-accent: oklch(0.27 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(0.27 0 0);
   --sidebar-ring: oklch(0.79 0.11 185);
 }
 
@@ -167,6 +170,15 @@
   --color-extracted: var(--ac-extracted);
   --color-inferred: var(--ac-inferred);
   --color-overridden: var(--sl-color-blue-high);
+  --color-storm-ink: var(--ac-storm-ink);
+  --color-storm-event: var(--ac-storm-event);
+  --color-storm-command: var(--ac-storm-command);
+  --color-storm-aggregate: var(--ac-storm-aggregate);
+  --color-storm-policy: var(--ac-storm-policy);
+  --color-storm-read-model: var(--ac-storm-read-model);
+  --color-storm-system: var(--ac-storm-system);
+  --color-storm-actor: var(--ac-storm-actor);
+  --color-storm-hotspot: var(--ac-storm-hotspot);
 }
 
 /*
@@ -203,7 +215,7 @@
  * sits outside `inline` so utilities read the variable, and a site can set it.
  */
 @theme {
-  --font-sans: 'JetBrains Mono Variable', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
   --breakpoint-md: 50rem;
 }
 

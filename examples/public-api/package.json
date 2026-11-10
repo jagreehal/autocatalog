@@ -1,0 +1,19 @@
+{
+  "name": "@autocatalog-example/public-api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Branded API docs for developers outside the company: guides and Scalar's reference in a frame beside the site's navigation.",
+  "scripts": {
+    "build": "node ../../packages/events/cli/dist/bin.js site .",
+    "start": "node dist/server.mjs",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "autocatalog-cli": "workspace:*"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.64.0",
+    "executable-stories-playwright": "8.11.0"
+  }
+}

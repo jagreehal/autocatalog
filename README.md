@@ -15,6 +15,11 @@ that breaks another team fails, naming the service it breaks.
 
 **[Documentation](https://jagreehal.github.io/autocatalog)**
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/media/home-dark.png">
+  <img alt="An autocatalog site's home page: counts of what the catalog holds, and its architecture map" src="docs/media/home-light.png">
+</picture>
+
 ## The setup you skip
 
 We started from two files: one JSON Schema and one Markdown page.
@@ -145,6 +150,14 @@ edits a list or approves anything. The site gives you:
 
 Search, navigation and dark mode come from
 [Starlight](https://starlight.astro.build).
+
+![Browsing a catalog: the home page, the services, one service and a document](docs/media/gif/browse-a-catalog.gif)
+
+| A service, and the services around it                                                                                                                                             | A document from a team's repository                                                                                                                                                                                             |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| <picture> <source media="(prefers-color-scheme: dark)" srcset="docs/media/service-dark.png"> <img alt="A service page with its map" src="docs/media/service-light.png"></picture> | <picture> <source media="(prefers-color-scheme: dark)" srcset="docs/media/document-dark.png"> <img alt="A document page with its owner" src="docs/media/document-light.png"></picture>                                          |
+| **A flow, walked one step at a time**                                                                                                                                             | **An API's reference beside the site**                                                                                                                                                                                          |
+| ![Walking through a flow](docs/media/gif/walk-through-a-flow.gif)                                                                                                                 | <picture> <source media="(prefers-color-scheme: dark)" srcset="docs/media/api-reference-dark.png"> <img alt="An API's Scalar reference framed beside the site's navigation" src="docs/media/api-reference-light.png"></picture> |
 
 ### Make it yours
 
@@ -299,6 +312,19 @@ pnpm release:check   # lint, build, type-check, tests and smoke checks
 ```
 
 A change to a published package needs a changeset: `pnpm changeset`.
+
+The screenshots and GIFs here and in `docs/` are recorded from passing
+stories against the example sites: `pnpm --filter autocatalog-media media`
+records them all, and `pnpm --filter autocatalog-media media:one "<title>"`
+one journey (it needs ffmpeg). The journeys are in `apps/media/journeys/`.
+
+New code is written in [Effect](https://effect.website) v4. `pnpm lint:effect`,
+part of `pnpm lint`, runs the Effect rules from `@effect/tsgo` through
+type-aware Oxlint over every package that depends on `effect`: floating
+Effects, unhandled errors and requirements, and the rest. A package that adopts
+Effect is checked without any change to the script. For the same checks in your
+editor, point a TypeScript 7 language server at the path
+`pnpm exec effect-tsgo get-exe-path` prints.
 
 ## License
 

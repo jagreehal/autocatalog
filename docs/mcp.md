@@ -49,7 +49,7 @@ status to stderr, and speaks over stdio. No network access is involved.
 | `catalog_status`           | Catalog revision, working-tree freshness and review state             |
 | `get_investigation_bundle` | Impact, compatibility and a handoff to autotel-mcp                    |
 | `define`                   | What a word means here: glossary terms and the entities named for it  |
-| `flow_context`             | A flow's transitions, rules, stuck signs, findings and evidence       |
+| `flow_context`             | A flow's steps and tracks, policies, hotspots, findings and evidence  |
 | `ask`                      | Any question, across every kind of document, with source and trust    |
 | `list_documents`           | Every page there is to read, optionally under one folder              |
 | `read_document`            | One page whole, by its source; a miss lists the closest pages         |

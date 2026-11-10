@@ -2,14 +2,14 @@
 import type { ReactNode } from 'react';
 import { Separator } from '#ui/components/ui/separator.tsx';
 
-/** A section's heading, a quiet rule, and its count on the right. */
+/** A section's heading, a quiet rule, and its count (or action) on the right. */
 export function SectionHeading({
   id,
   count,
   children,
 }: {
   id: string;
-  count?: string | undefined;
+  count?: ReactNode | undefined;
   children: ReactNode;
 }) {
   return (
@@ -18,7 +18,9 @@ export function SectionHeading({
         {children}
       </h2>
       <Separator className="w-auto flex-1" />
-      {count && <span className="text-xs text-muted-foreground">{count}</span>}
+      {count != null && count !== false && (
+        <span className="text-xs text-muted-foreground">{count}</span>
+      )}
     </div>
   );
 }

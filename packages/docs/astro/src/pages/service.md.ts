@@ -4,7 +4,7 @@ import type { APIRoute, InferGetStaticPropsType } from 'astro';
 import { catalogServices } from '../apis';
 import { docsCatalog } from '../catalog';
 import { eventsForService } from '../event-path';
-import { serviceFacts } from '../page-models';
+import { serviceBasis, serviceFacts } from '../page-models';
 import { pageUrl, serviceTwin } from '../twins';
 
 export async function getStaticPaths() {
@@ -19,13 +19,18 @@ export const GET: APIRoute<InferGetStaticPropsType<typeof getStaticPaths>> = asy
   site,
 }) => {
   const { name } = props;
-  const { events, graph } = await docsCatalog();
+  const catalog = await docsCatalog();
+  const { events, graph } = catalog;
   const facts = serviceFacts(graph, name);
   const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
 
   return new Response(
     serviceTwin(
-      { name, summary: facts.summary, owner: facts.owner?.team },
+      {
+        name,
+        summary: facts.summary ?? serviceBasis(catalog, name).description,
+        owner: facts.owner?.team,
+      },
       {
         produces: eventsForService(events, name, 'producers'),
         consumes: eventsForService(events, name, 'consumers'),

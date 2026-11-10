@@ -30,6 +30,8 @@ export interface ServiceEvent {
 }
 
 export interface ServicePageProps {
+  /** Where the catalog read it from, after "Inferred": its events, its OpenAPI specs, or both. */
+  basis?: string | undefined;
   /** One hop of the message flow around the service. */
   flow: Omit<FlowStripProps, 'label'>;
   visualiser?: VisualiserGraph | undefined;
@@ -49,6 +51,7 @@ export interface ServicePageProps {
 }
 
 export function ServicePage({
+  basis = 'from the events that name it as a producer or consumer',
   flow,
   visualiser,
   sections,
@@ -67,7 +70,7 @@ export function ServicePage({
         symbol={null}
         confidence={null}
         needsReview={false}
-        basis="from the events that name it as a producer or consumer"
+        basis={basis}
       />
 
       {(owner || system) && (

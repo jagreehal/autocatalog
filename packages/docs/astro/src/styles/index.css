@@ -29,11 +29,13 @@
 }
 
 /*
- * Moving between pages cross-fades the content while the header and the
- * sidebar stay where they are, with no client router: the browser keeps the
- * old page on screen until the new one paints. A browser without cross-document
- * view transitions navigates as before. Unlayered, because an at-rule in a
- * layer is not one every browser reads.
+ * Moving between pages, the header and the section rail stay where they are and
+ * the content fades across, with no client router: the browser keeps the old
+ * page on screen until the new one paints. Within a section the sidebar swaps
+ * at once, so only its highlight moves; into another section it slides, as a
+ * menu does when it opens a level. A browser without cross-document view
+ * transitions navigates as before. Unlayered, because an at-rule in a layer is
+ * not one every browser reads.
  */
 @media (prefers-reduced-motion: no-preference) {
   @view-transition {
@@ -42,7 +44,40 @@
   .header {
     view-transition-name: ac-header;
   }
+  [data-icon-rail] {
+    view-transition-name: ac-rail;
+  }
   .sidebar-pane {
     view-transition-name: ac-sidebar;
+  }
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: 160ms;
+  }
+  ::view-transition-old(ac-rail),
+  ::view-transition-new(ac-rail),
+  ::view-transition-old(ac-sidebar),
+  ::view-transition-new(ac-sidebar) {
+    animation: none;
+  }
+  html:active-view-transition-type(ac-section)::view-transition-old(ac-sidebar) {
+    animation: 180ms ease-in both ac-sidebar-out;
+  }
+  html:active-view-transition-type(ac-section)::view-transition-new(ac-sidebar) {
+    animation: 220ms cubic-bezier(0.16, 1, 0.3, 1) both ac-sidebar-in;
+  }
+}
+
+@keyframes ac-sidebar-out {
+  to {
+    opacity: 0;
+    transform: translateX(-0.75rem);
+  }
+}
+
+@keyframes ac-sidebar-in {
+  from {
+    opacity: 0;
+    transform: translateX(0.75rem);
   }
 }

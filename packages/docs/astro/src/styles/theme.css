@@ -35,6 +35,21 @@
   --ac-inferred: oklch(0.81 0.12 72);
   --ac-warn: #fbbf24;
 
+  /*
+   * EventStorming's sticky colours, the one place kinds have colour: readers of
+   * a board know orange is a fact. Paper colours with dark ink in both themes,
+   * a shade deeper on a dark page; each sticky also names its kind in words.
+   */
+  --ac-storm-ink: oklch(0.22 0.02 250);
+  --ac-storm-event: oklch(0.76 0.13 62);
+  --ac-storm-command: oklch(0.76 0.09 245);
+  --ac-storm-aggregate: oklch(0.85 0.12 98);
+  --ac-storm-policy: oklch(0.77 0.09 310);
+  --ac-storm-read-model: oklch(0.8 0.1 150);
+  --ac-storm-system: oklch(0.79 0.09 350);
+  --ac-storm-actor: oklch(0.9 0.08 100);
+  --ac-storm-hotspot: oklch(0.76 0.16 18);
+
   --ac-radius: var(--radius);
 
   --sl-color-white: var(--ac-heading);
@@ -61,11 +76,13 @@
   --sl-color-hairline-shade: var(--ac-line);
 
   --sl-nav-height: 3.75rem;
+  /* The section rail, when the site has sections; the sidebar is --ac-sidebar-width. */
+  --ac-rail-width: 0rem;
   /* One face for everything; weight and size carry the hierarchy (DESIGN.md). */
   --sl-text-base: 0.9375rem;
-  --sl-line-height: 1.76;
+  --sl-line-height: 1.65;
   --sl-font: var(--font-sans);
-  --sl-font-mono: var(--font-sans);
+  --sl-font-mono: 'JetBrains Mono Variable', ui-monospace, SFMono-Regular, Menlo, monospace;
   --sl-text-h1: 2rem;
   --sl-text-h2: 1.375rem;
   --sl-text-h3: 1.125rem;
@@ -82,11 +99,20 @@
   --ac-inferred: oklch(0.55 0.12 62);
   --ac-warn: #b45309;
 
+  --ac-storm-event: oklch(0.83 0.13 65);
+  --ac-storm-command: oklch(0.83 0.09 245);
+  --ac-storm-aggregate: oklch(0.92 0.13 100);
+  --ac-storm-policy: oklch(0.83 0.09 310);
+  --ac-storm-read-model: oklch(0.87 0.1 150);
+  --ac-storm-system: oklch(0.85 0.09 350);
+  --ac-storm-actor: oklch(0.95 0.08 100);
+  --ac-storm-hotspot: oklch(0.76 0.16 18);
+
   --sl-color-gray-6: var(--ac-panel-2);
   --sl-color-gray-7: var(--ac-panel-2);
 
   /* Dark text on a light page needs a little less leading than the reverse. */
-  --sl-line-height: 1.7;
+  --sl-line-height: 1.6;
 
   color-scheme: light;
 }
@@ -117,11 +143,8 @@ body {
   background: var(--ac-bg);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  /* Prose types "->" and "!=" as written; code keeps its ligatures. */
-  font-feature-settings:
-    'calt' 0,
-    'liga' 0;
 }
+/* Code types "->" and "!=" with its ligatures, and a slashed zero. */
 :where(code, pre, kbd, samp) {
   font-feature-settings:
     'calt' 1,
@@ -132,12 +155,12 @@ body {
 }
 .sl-markdown-content :is(h1, h2, h3, h4, h5):not(:where(.not-content *)) {
   color: var(--ac-heading);
-  font-weight: 750;
-  letter-spacing: -0.04em;
+  font-weight: 650;
+  letter-spacing: -0.02em;
 }
 :is(h1#_top, .sl-markdown-content h1:not(:where(.not-content *))) {
-  font-weight: 800;
-  letter-spacing: -0.05em;
+  font-weight: 700;
+  letter-spacing: -0.025em;
 }
 .sl-markdown-content h2:not(:where(.not-content *)) {
   margin-top: 2.25rem;
@@ -165,8 +188,8 @@ body {
 .site-title {
   color: var(--ac-heading);
   font-size: var(--sl-text-base);
-  font-weight: 750;
-  letter-spacing: -0.04em;
+  font-weight: 650;
+  letter-spacing: -0.01em;
 }
 
 /* The search box. Starlight's, so ⌘K, Pagefind and the dialog are unchanged. */
@@ -175,14 +198,16 @@ site-search button[data-open-modal] {
 }
 @media (min-width: 50rem) {
   site-search button[data-open-modal] {
+    width: 100%;
     max-width: none;
-    height: 2.25rem;
-    padding-inline: 0.75rem 0.375rem;
+    height: 2.5rem;
+    padding-inline: 0.875rem 0.5rem;
     border: 1px solid var(--ac-line);
     border-radius: var(--radius);
-    background: var(--ac-side);
+    background: var(--card);
     color: var(--ac-muted);
     font-size: var(--sl-text-sm);
+    box-shadow: 0 1px 0 color-mix(in oklab, var(--foreground) 4%, transparent);
   }
   site-search button[data-open-modal]:hover {
     border-color: var(--ac-line-strong);
@@ -385,12 +410,12 @@ starlight-toc a[aria-current='true'] {
   }
 }
 
-/* Asides as cards with a coloured edge, tinted rather than filled. */
+/* Asides as shadcn's Alert: a card with a hairline all round. The kind's
+   colour is on its icon and title, where it says what kind of aside it is. */
 .starlight-aside {
   border: 1px solid var(--ac-line);
-  border-inline-start: 3px solid var(--sl-color-asides-border);
   border-radius: var(--ac-radius);
-  background: color-mix(in srgb, var(--sl-color-asides-border) 7%, var(--ac-panel));
+  background: var(--ac-panel);
   font-size: var(--sl-text-sm);
 }
 .starlight-aside__title {
@@ -455,28 +480,51 @@ starlight-toc a[aria-current='true'] {
  */
 @media (max-width: 49.999rem) {
   [data-sidebar-toggle],
-  [data-sidebar-resizer] {
+  [data-sidebar-resizer],
+  [data-icon-rail],
+  [data-sidebar-section] {
     display: none !important;
   }
 }
 
 @media (min-width: 50rem) {
-  :root {
-    --sl-sidebar-width: var(--ac-sidebar-width, 18.75rem);
+  :root[data-has-sidebar]:has([data-icon-rail]) {
+    --ac-rail-width: 3rem;
   }
-  :root[data-sidebar='collapsed'] {
-    --sl-sidebar-width: 0px;
+  :root[data-has-sidebar] {
+    --sl-sidebar-width: calc(var(--ac-rail-width) + var(--ac-sidebar-width, 18.75rem));
+  }
+  :root[data-has-sidebar][data-sidebar='collapsed'] {
+    --sl-sidebar-width: var(--ac-rail-width);
   }
   :root[data-sidebar='collapsed'] .sidebar-pane {
     visibility: hidden;
     pointer-events: none;
   }
-  /* Starlight sizes "On this page" from --sl-sidebar-width too; keep it at the open width. */
+  /* Starlight sizes "On this page" from --sl-sidebar-width too; keep it at the open tree width. */
   :root[data-sidebar='collapsed'] .right-sidebar-panel .sl-container {
     width: calc(var(--ac-sidebar-width, 18.75rem) - 2 * var(--sl-sidebar-pad-x));
   }
   :root[data-sidebar='collapsed'] [data-sidebar-resizer] {
     display: none;
+  }
+
+  /* The section rail stays when the sidebar collapses. */
+  [data-icon-rail] {
+    position: fixed;
+    z-index: var(--sl-z-index-navbar);
+    top: var(--sl-nav-height);
+    bottom: 0;
+    inset-inline-start: 0;
+    width: var(--ac-rail-width);
+    border-inline-end: 1px solid var(--ac-line);
+    background: var(--ac-side);
+  }
+
+  /* The sidebar sits beside the rail. */
+  :root[data-has-sidebar] .sidebar-pane {
+    inset-inline-start: var(--ac-rail-width);
+    width: var(--ac-sidebar-width, 18.75rem);
   }
 
   /* Beside the sidebar and level with its first row, above the resize handle on its edge. */
@@ -488,7 +536,7 @@ starlight-toc a[aria-current='true'] {
     color: var(--sl-color-gray-3);
   }
   :root[data-sidebar='collapsed'] [data-sidebar-toggle] {
-    inset-inline-start: 0.5rem;
+    inset-inline-start: calc(var(--ac-rail-width) + 0.5rem);
   }
 
   [data-sidebar-resizer] {
@@ -546,6 +594,7 @@ starlight-toc a[aria-current='true'] {
  */
 :root[data-embed='1'] header,
 :root[data-embed='1'] .sidebar-pane,
+:root[data-embed='1'] [data-icon-rail],
 :root[data-embed='1'] [data-sidebar-toggle],
 :root[data-embed='1'] [data-sidebar-resizer],
 :root[data-embed='1'] footer,
@@ -553,6 +602,7 @@ starlight-toc a[aria-current='true'] {
   display: none !important;
 }
 :root[data-embed='1'] {
+  --ac-rail-width: 0px;
   --sl-sidebar-width: 0px;
 }
 :root[data-embed='1'] .main-frame,
@@ -568,6 +618,155 @@ starlight-toc a[aria-current='true'] {
 }
 .ac-wiki-ref[data-wiki-ref='service'] {
   color: var(--sl-color-text-accent, inherit);
+}
+
+/*
+ * The sidebar, as shadcn's, with each level its own look so the tree reads at
+ * a glance: a top-level group is a small spaced label, a heading rather than a
+ * row; a folder is a row with a folder icon and a chevron; a page is a row with
+ * a page icon, muted until it is the one open. Starlight still opens and
+ * closes the groups. The icons are Lucide's, as everywhere else.
+ */
+.sidebar-content {
+  --ac-sidebar-page: url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22currentColor%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20class%3D%22lucide%20lucide-file-text%22%20aria-hidden%3D%22true%22%3E%3Cpath%20d%3D%22M6%2022a2%202%200%200%201-2-2V4a2%202%200%200%201%202-2h8a2.4%202.4%200%200%201%201.704.706l3.588%203.588A2.4%202.4%200%200%201%2020%208v12a2%202%200%200%201-2%202z%22%3E%3C%2Fpath%3E%3Cpath%20d%3D%22M14%202v5a1%201%200%200%200%201%201h5%22%3E%3C%2Fpath%3E%3Cpath%20d%3D%22M10%209H8%22%3E%3C%2Fpath%3E%3Cpath%20d%3D%22M16%2013H8%22%3E%3C%2Fpath%3E%3Cpath%20d%3D%22M16%2017H8%22%3E%3C%2Fpath%3E%3C%2Fsvg%3E');
+  --ac-sidebar-folder: url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22currentColor%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20class%3D%22lucide%20lucide-folder%22%20aria-hidden%3D%22true%22%3E%3Cpath%20d%3D%22M20%2020a2%202%200%200%200%202-2V8a2%202%200%200%200-2-2h-7.9a2%202%200%200%201-1.69-.9L9.6%203.9A2%202%200%200%200%207.93%203H4a2%202%200%200%200-2%202v13a2%202%200%200%200%202%202Z%22%3E%3C%2Fpath%3E%3C%2Fsvg%3E');
+  --ac-sidebar-folder-open: url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22currentColor%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20class%3D%22lucide%20lucide-folder-open%22%20aria-hidden%3D%22true%22%3E%3Cpath%20d%3D%22m6%2014%201.5-2.9A2%202%200%200%201%209.24%2010H20a2%202%200%200%201%201.94%202.5l-1.54%206a2%202%200%200%201-1.95%201.5H4a2%202%200%200%201-2-2V5a2%202%200%200%201%202-2h3.9a2%202%200%200%201%201.69.9l.81%201.2a2%202%200%200%200%201.67.9H18a2%202%200%200%201%202%202v2%22%3E%3C%2Fpath%3E%3C%2Fsvg%3E');
+  --ac-sidebar-event: url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22currentColor%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20class%3D%22lucide%20lucide-zap%22%20aria-hidden%3D%22true%22%3E%3Cpath%20d%3D%22M15.914%204a1.5%201.5%200%2000-2.474-1.561l-9%209A1.5%201.5%200%20005.5%2014h4.002a.5.5%200%2001.471.666L8.086%2020a1.5%201.5%200%20002.475%201.56l9-9A1.5%201.5%200%200018.5%2010h-3.997a.5.5%200%2001-.472-.667z%22%3E%3C%2Fpath%3E%3C%2Fsvg%3E');
+  --ac-sidebar-domain: url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22currentColor%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20class%3D%22lucide%20lucide-boxes%22%20aria-hidden%3D%22true%22%3E%3Cpath%20d%3D%22M2.97%2012.92A2%202%200%200%200%202%2014.63v3.24a2%202%200%200%200%20.97%201.71l3%201.8a2%202%200%200%200%202.06%200L12%2019v-5.5l-5-3-4.03%202.42Z%22%3E%3C%2Fpath%3E%3Cpath%20d%3D%22m7%2016.5-4.74-2.85%22%3E%3C%2Fpath%3E%3Cpath%20d%3D%22m7%2016.5%205-3%22%3E%3C%2Fpath%3E%3Cpath%20d%3D%22M7%2016.5v5.17%22%3E%3C%2Fpath%3E%3Cpath%20d%3D%22M12%2013.5V19l3.97%202.38a2%202%200%200%200%202.06%200l3-1.8a2%202%200%200%200%20.97-1.71v-3.24a2%202%200%200%200-.97-1.71L17%2010.5l-5%203Z%22%3E%3C%2Fpath%3E%3Cpath%20d%3D%22m17%2016.5-5-3%22%3E%3C%2Fpath%3E%3Cpath%20d%3D%22m17%2016.5%204.74-2.85%22%3E%3C%2Fpath%3E%3Cpath%20d%3D%22M17%2016.5v5.17%22%3E%3C%2Fpath%3E%3Cpath%20d%3D%22M7.97%204.42A2%202%200%200%200%207%206.13v4.37l5%203%205-3V6.13a2%202%200%200%200-.97-1.71l-3-1.8a2%202%200%200%200-2.06%200l-3%201.8Z%22%3E%3C%2Fpath%3E%3Cpath%20d%3D%22M12%208%207.26%205.15%22%3E%3C%2Fpath%3E%3Cpath%20d%3D%22m12%208%204.74-2.85%22%3E%3C%2Fpath%3E%3Cpath%20d%3D%22M12%2013.5V8%22%3E%3C%2Fpath%3E%3C%2Fsvg%3E');
+  --ac-sidebar-api: url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22currentColor%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20class%3D%22lucide%20lucide-globe%22%20aria-hidden%3D%22true%22%3E%3Ccircle%20cx%3D%2212%22%20cy%3D%2212%22%20r%3D%2210%22%3E%3C%2Fcircle%3E%3Cpath%20d%3D%22M12%202a14.5%2014.5%200%200%200%200%2020%2014.5%2014.5%200%200%200%200-20%22%3E%3C%2Fpath%3E%3Cpath%20d%3D%22M2%2012h20%22%3E%3C%2Fpath%3E%3C%2Fsvg%3E');
+  --ac-sidebar-service: url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22currentColor%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20class%3D%22lucide%20lucide-server%22%20aria-hidden%3D%22true%22%3E%3Crect%20width%3D%2220%22%20height%3D%228%22%20x%3D%222%22%20y%3D%222%22%20rx%3D%222%22%20ry%3D%222%22%3E%3C%2Frect%3E%3Crect%20width%3D%2220%22%20height%3D%228%22%20x%3D%222%22%20y%3D%2214%22%20rx%3D%222%22%20ry%3D%222%22%3E%3C%2Frect%3E%3Cline%20x1%3D%226%22%20x2%3D%226.01%22%20y1%3D%226%22%20y2%3D%226%22%3E%3C%2Fline%3E%3Cline%20x1%3D%226%22%20x2%3D%226.01%22%20y1%3D%2218%22%20y2%3D%2218%22%3E%3C%2Fline%3E%3C%2Fsvg%3E');
+}
+.sidebar-content .top-level > li > details > summary .large {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ac-muted);
+}
+/* Groups stand apart; the links at the top of a section sit together as rows. */
+.sidebar-content .top-level > li + li {
+  margin-top: 0.125rem;
+}
+.sidebar-content .top-level > li + li:has(> details),
+.sidebar-content .top-level > li:has(> details) + li {
+  margin-top: 1.25rem;
+}
+.sidebar-content .top-level > li > a.large {
+  font-size: var(--sl-text-sm);
+  font-weight: 400;
+}
+.sidebar-content .top-level > li > details > summary {
+  padding-block: 0.25rem;
+}
+/* A group's own rows sit flush; a folder inside it draws a rule down the side. */
+.sidebar-content .top-level > li > details > ul > li {
+  margin-inline-start: 0;
+  border-inline-start: 0;
+  padding-inline-start: 0;
+}
+.sidebar-content details details > ul {
+  margin-inline-start: 0.875rem;
+}
+.sidebar-content a,
+.sidebar-content details details > summary {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding-block: 0.375rem;
+  border-radius: calc(var(--radius) - 2px);
+  color: var(--ac-text);
+  font-size: var(--sl-text-sm);
+}
+.sidebar-content details details > summary .large {
+  font-size: var(--sl-text-sm);
+  color: var(--ac-text);
+}
+.sidebar-content details details > summary .group-label {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 500;
+}
+.sidebar-content a:not([data-icon])::before,
+.sidebar-content details details > summary .group-label::before {
+  content: '';
+  flex: none;
+  width: 1rem;
+  height: 1rem;
+  background-color: var(--ac-muted);
+  -webkit-mask: var(--ac-sidebar-page) center / contain no-repeat;
+  mask: var(--ac-sidebar-page) center / contain no-repeat;
+}
+.sidebar-content details details > summary .group-label::before {
+  -webkit-mask-image: var(--ac-sidebar-folder);
+  mask-image: var(--ac-sidebar-folder);
+}
+.sidebar-content details details[open] > summary .group-label::before {
+  -webkit-mask-image: var(--ac-sidebar-folder-open);
+  mask-image: var(--ac-sidebar-folder-open);
+}
+/* A link to a service, an event, a domain or an API reference leads with that kind's icon. */
+.sidebar-content a:not([data-icon])[href*='/services/']::before {
+  -webkit-mask-image: var(--ac-sidebar-service);
+  mask-image: var(--ac-sidebar-service);
+}
+.sidebar-content a:not([data-icon])[href*='/events/']::before {
+  -webkit-mask-image: var(--ac-sidebar-event);
+  mask-image: var(--ac-sidebar-event);
+}
+.sidebar-content a:not([data-icon])[href*='/domains/']::before {
+  -webkit-mask-image: var(--ac-sidebar-domain);
+  mask-image: var(--ac-sidebar-domain);
+}
+.sidebar-content a:not([data-icon])[href*='/apis/']::before {
+  -webkit-mask-image: var(--ac-sidebar-api);
+  mask-image: var(--ac-sidebar-api);
+}
+/* A service's group holds its pages; it is drawn as the service, not a folder. */
+.sidebar-content
+  details
+  details:has(> ul > li > a[href*='/services/'])
+  > summary
+  .group-label::before {
+  -webkit-mask-image: var(--ac-sidebar-service);
+  mask-image: var(--ac-sidebar-service);
+}
+.sidebar-content a:not([aria-current='page'], [data-icon], :hover, :focus-visible) {
+  color: var(--ac-muted);
+}
+.sidebar-content a:hover,
+.sidebar-content details details > summary:hover {
+  background-color: var(--sidebar-accent);
+  color: var(--sidebar-accent-foreground);
+}
+.sidebar-content a[aria-current='page'],
+.sidebar-content a[aria-current='page']:hover,
+.sidebar-content a[aria-current='page']:focus {
+  background-color: var(--sidebar-accent);
+  color: var(--sidebar-accent-foreground);
+  font-weight: 600;
+}
+.sidebar-content a[aria-current='page']::before,
+.sidebar-content a:hover::before,
+.sidebar-content details details > summary:hover .group-label::before {
+  background-color: currentColor;
+}
+
+/* The catalog's own pages in the sidebar each lead with their icon, painted in the link's colour. */
+.sidebar-content a[data-icon] {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.sidebar-content a[data-icon]::before {
+  content: '';
+  flex: none;
+  width: 1rem;
+  height: 1rem;
+  background-color: currentColor;
+  -webkit-mask: var(--ac-icon) center / contain no-repeat;
+  mask: var(--ac-icon) center / contain no-repeat;
 }
 
 [data-graph-fullscreen] > div {
@@ -591,4 +790,10 @@ html[data-graph-fullscreen] body > [data-graph-fullscreen] {
 .site-title img {
   height: 1.35rem;
   width: auto;
+}
+
+/* The phone's menu button, flat like the header's other controls rather than a floating disc. */
+.sl-menu-button {
+  box-shadow: none !important;
+  background-color: transparent !important;
 }

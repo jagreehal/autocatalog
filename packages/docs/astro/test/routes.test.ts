@@ -66,12 +66,14 @@ it('publishes pages for events and earlier versions, schemas, services, owners, 
       '/events/[repository]/[domain]/[id]/schema.json',
       '/events/[repository]/[domain]/[id]/v/[version]',
       '/events/[repository]/[domain]/[id]/v/[version]/schema.json',
+      '/services',
       '/services/[name]',
       '/services/[name].md',
       '/fields',
       '/schemas',
       '/apis',
       '/apis/[repository]/[name]',
+      '/apis/[repository]/[name]/reference',
       '/apis/[repository]/[name]/openapi.json',
       '/owners',
       '/owners/[owner]',
@@ -116,4 +118,14 @@ it('leaves out whole-document copies on a server site that does not know who rea
     expect.arrayContaining(copies),
   );
   expect(patterns()).toEqual(expect.arrayContaining(copies));
+});
+
+it('keeps each API’s framed reference on a site for readers outside, beside its page', () => {
+  expect(patterns({ audience: 'public' })).toEqual(
+    expect.arrayContaining([
+      '/apis/[repository]/[name]',
+      '/apis/[repository]/[name]/reference',
+      '/apis/[repository]/[name]/openapi.json',
+    ]),
+  );
 });

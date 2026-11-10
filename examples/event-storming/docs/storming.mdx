@@ -1,0 +1,40 @@
+---
+title: How the import was stormed
+owner: Catalogue
+summary: The board for the catalogue import, and a sketch of the export we have yet to build.
+---
+
+We stormed the import from its code with `ac flows draft`, then named each fact
+in the business's words. The <Sticky kind="event">Import loaded</Sticky> fact is
+where every run starts.
+
+<Storm flow="catalogue-import" show={['hotspots']} />
+
+## The export, before we build it
+
+A board can be sketched by hand before there is code to draft it from.
+
+<Storm
+  label="Catalogue export"
+  legend={false}
+  stages={[
+    {
+      stage: 'Request export',
+      actor: 'Supplier user',
+      command: 'Export catalogue',
+    },
+    {
+      stage: 'Write file',
+      system: { text: 'Object storage', summary: 'one file per export' },
+      event: 'Catalogue file written',
+      failure: { text: 'Export too large', hotspot: true },
+      hotspot: 'What is too large?',
+    },
+    {
+      stage: 'Tell the user',
+      readModel: 'Notifications',
+      event: 'Supplier told',
+      policy: 'Whenever the file is written, email a link',
+    },
+  ]}
+/>

@@ -2,6 +2,8 @@
 import { layoutGraph, NodeGraph } from '@eventcatalog/visualiser';
 import type { DslGraph } from '@eventcatalog/visualiser';
 import { type CSSProperties, type KeyboardEvent, useEffect, useRef, useState } from 'react';
+import { PlayIcon } from 'lucide-react';
+import { Button } from '#ui/components/ui/button.tsx';
 import { ToggleGroup, ToggleGroupItem } from '#ui/components/ui/toggle-group.tsx';
 import {
   asGroupCard,
@@ -54,6 +56,20 @@ interface Props {
 type Laid = Awaited<ReturnType<typeof layoutGraph>>;
 
 const MODES = ['static', 'replay', 'live'] as const;
+
+/** The title of the visualiser's button that begins a flow's walkthrough. */
+const WALKTHROUGH_START = 'Start walking through the flow';
+
+/**
+ * Begins the visualiser's own walkthrough. Its panel mounts a moment after the
+ * map, so a press waits for it, a frame at a time, for up to a second.
+ */
+function startWalkthrough(root: HTMLElement | null, frames = 60): void {
+  const start = root?.querySelector<HTMLButtonElement>(`button[title="${WALKTHROUGH_START}"]`);
+
+  if (start) start.click();
+  else if (frames > 0) requestAnimationFrame(() => startWalkthrough(root, frames - 1));
+}
 
 type Mode = (typeof MODES)[number];
 
@@ -313,33 +329,53 @@ export default function Visualiser({
       aria-label={label}
       onKeyDown={onKeyDown}
     >
-      {evidence && (
+      {(evidence || isFlow) && (
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground">
-          <ToggleGroup
-            aria-label="Runtime evidence"
-            selectionMode="single"
-            disallowEmptySelection
-            selectedKeys={[mode]}
-            onSelectionChange={(keys) => setMode(MODES.find((next) => keys.has(next)) ?? 'static')}
-            variant="outline"
-            size="sm"
-            spacing={0}
-          >
-            <ToggleGroupItem id="static">Static</ToggleGroupItem>
-            <ToggleGroupItem id="replay">Replay</ToggleGroupItem>
-            {live && <ToggleGroupItem id="live">Live</ToggleGroupItem>}
-          </ToggleGroup>
-          <ul className="flex flex-wrap gap-x-4 gap-y-1" aria-label="Edge key">
-            {KEY.map(([state, text]) => (
-              <li key={state} className="flex items-center gap-1.5">
-                <svg aria-hidden="true" width="20" height="6" className={`ac-edge-${state}`}>
-                  <line x1="0" y1="3" x2="20" y2="3" />
-                </svg>
-                {text}
-              </li>
-            ))}
-          </ul>
-          {status && <span role="status">{status}</span>}
+          {isFlow && (
+            // The visualiser's own walkthrough, started from here rather than
+            // from its card over the flow (components.css hides the card until
+            // the walk has begun).
+            <Button
+              variant="outline"
+              size="sm"
+              isDisabled={!laid}
+              onPress={() => startWalkthrough(root.current)}
+            >
+              <PlayIcon />
+              Walk through
+            </Button>
+          )}
+          {evidence && (
+            <>
+              <ToggleGroup
+                aria-label="Runtime evidence"
+                selectionMode="single"
+                disallowEmptySelection
+                selectedKeys={[mode]}
+                onSelectionChange={(keys) =>
+                  setMode(MODES.find((next) => keys.has(next)) ?? 'static')
+                }
+                variant="outline"
+                size="sm"
+                spacing={0}
+              >
+                <ToggleGroupItem id="static">Static</ToggleGroupItem>
+                <ToggleGroupItem id="replay">Replay</ToggleGroupItem>
+                {live && <ToggleGroupItem id="live">Live</ToggleGroupItem>}
+              </ToggleGroup>
+              <ul className="flex flex-wrap gap-x-4 gap-y-1" aria-label="Edge key">
+                {KEY.map(([state, text]) => (
+                  <li key={state} className="flex items-center gap-1.5">
+                    <svg aria-hidden="true" width="20" height="6" className={`ac-edge-${state}`}>
+                      <line x1="0" y1="3" x2="20" y2="3" />
+                    </svg>
+                    {text}
+                  </li>
+                ))}
+              </ul>
+              {status && <span role="status">{status}</span>}
+            </>
+          )}
         </div>
       )}
       <div
@@ -354,6 +390,8 @@ export default function Visualiser({
           edges={laid.edges}
           includeKey
           showSearch={graph.options?.search ?? false}
+          // The map sits in a page, not a full screen: its search box is sized to match.
+          compactSearch
           mode="full"
           zoomOnScroll={false}
           showFlowWalkthrough={isFlow}

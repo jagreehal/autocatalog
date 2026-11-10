@@ -33,6 +33,7 @@ const home = homePageProps(
   items,
   base,
   repositoryMetas(site.root, { repo: site.repo, repository: site.repository }),
+  { counts: site.homeCounts, outside: Boolean(site.audience) },
 );
 
 // Readers outside start from the references and the guides, not the catalog.
@@ -76,5 +77,5 @@ setPageHeader(
 <StarlightPage
   frontmatter={{ title: site.title, description: site.description, tableOfContents: false }}
 >
-  <HomePage {...page} />
+  <HomePage client:load {...page} />
 </StarlightPage>

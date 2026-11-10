@@ -1,6 +1,7 @@
 import type { StorybookConfig } from '@storybook/react-vite';
 import { fileURLToPath } from 'node:url';
 import tailwindcss from '@tailwindcss/vite';
+import { defaultChatPanel } from '../src/chat-panel';
 import { microlighterGrammars } from '../src/index';
 import { cjsShimAliases } from '../src/react-integration';
 
@@ -16,7 +17,7 @@ const config: StorybookConfig = {
     const shims = cjsShimAliases();
 
     return mergeConfig(config, {
-      plugins: [tailwindcss()],
+      plugins: [tailwindcss(), defaultChatPanel()],
       // microlighter loads each grammar with import(`./grammars/${name}.js`),
       // which pre-bundling would break.
       optimizeDeps: { exclude: ['microlighter'] },

@@ -242,9 +242,21 @@
     "apiReference": {
       "type": "string",
       "enum": [
+        "frame",
         "full",
         "embedded"
       ]
+    },
+    "apiReferenceLabel": {
+      "type": "string",
+      "minLength": 1
+    },
+    "homeCounts": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
     },
     "mcp": {
       "type": "boolean"
@@ -270,6 +282,10 @@
             "minLength": 1
           },
           "href": {
+            "type": "string",
+            "minLength": 1
+          },
+          "icon": {
             "type": "string",
             "minLength": 1
           },

@@ -35,10 +35,16 @@ export interface ApiPageProps {
    */
   outside?: boolean | undefined;
   /**
-   * `full`: Scalar takes the page below the header, with its own sidebar,
-   * search and request client. `embedded`: it sits in the site's navigation.
+   * `frame`: the site's header and sidebar stay, and Scalar has the rest of the
+   * page in a frame, with its own sidebar, search and request client. `full`:
+   * Scalar takes the page below the header. `embedded`: it sits in the content
+   * column. `standalone`: Scalar alone, as the frame shows it.
    */
-  layout?: 'full' | 'embedded' | undefined;
+  layout?: 'frame' | 'full' | 'embedded' | 'standalone' | undefined;
+  /** The reference on a page of its own, which the `frame` layout shows. */
+  referenceHref?: string | undefined;
+  /** What a screen reader calls the frame. */
+  title?: string | undefined;
   /** The site's MCP endpoint, which Scalar's Connect MCP button installs; without one the button is left out. */
   mcp?: { name: string; path: string } | undefined;
 }
@@ -101,10 +107,18 @@ interface ScalarConfiguration {
   mcp: { name?: string; url?: string; disabled?: boolean };
 }
 
+/** A mounted reference. */
+interface ScalarInstance {
+  destroy: () => void;
+}
+
 declare global {
   interface Window {
     Scalar?: {
-      createApiReference: (element: HTMLElement, configuration: ScalarConfiguration) => void;
+      createApiReference: (
+        element: HTMLElement,
+        configuration: ScalarConfiguration,
+      ) => ScalarInstance | undefined;
     };
   }
 }
@@ -118,12 +132,21 @@ const isDark = () => document.documentElement.dataset.theme === 'dark';
  * Draws the interactive reference once Scalar loads. Until then, and offline,
  * the operations table rendered on the server stands in.
  */
-function useScalar(specHref: string, outside: boolean, full: boolean, mcp: ApiPageProps['mcp']) {
+function useScalar(
+  specHref: string,
+  outside: boolean,
+  full: boolean,
+  mcp: ApiPageProps['mcp'],
+  enabled = true,
+) {
   const target = useRef<HTMLDivElement>(null);
 
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
+    // Framed, the reference loads in the frame, not on this page.
+    if (!enabled) return undefined;
+
     const configuration = {
       url: specHref,
       // Embedded, the page around it has the site's own navigation and search.
@@ -144,20 +167,28 @@ function useScalar(specHref: string, outside: boolean, full: boolean, mcp: ApiPa
 
     let observer: MutationObserver | undefined;
 
+    let instance: ScalarInstance | undefined;
+
     const mount = () => {
       if (!window.Scalar || !target.current) return;
 
-      window.Scalar.createApiReference(target.current, {
+      const mode = () => ({
         ...configuration,
-        forceDarkModeState: isDark() ? 'dark' : 'light',
+        forceDarkModeState: isDark() ? ('dark' as const) : ('light' as const),
       });
+
+      const element = target.current;
+
+      instance = window.Scalar.createApiReference(element, mode());
+
       setReady(true);
 
-      // Starlight's theme switch sets data-theme. Scalar reads its mode from
-      // these body classes, and only applies a forced mode when it mounts.
+      // Starlight's theme switch sets data-theme. Scalar fixes its mode when it
+      // mounts and puts its own classes back, so a new mode is a new mount; the
+      // reader's place is in the address, which a mount opens at.
       observer = new MutationObserver(() => {
-        document.body.classList.toggle('dark-mode', isDark());
-        document.body.classList.toggle('light-mode', !isDark());
+        instance?.destroy();
+        instance = window.Scalar?.createApiReference(element, mode());
       });
       observer.observe(document.documentElement, { attributeFilter: ['data-theme'] });
     };
@@ -174,10 +205,40 @@ function useScalar(specHref: string, outside: boolean, full: boolean, mcp: ApiPa
     return () => {
       script?.removeEventListener('load', mount);
       observer?.disconnect();
+      instance?.destroy();
     };
-  }, [specHref, outside, full, mcp?.name, mcp?.path]);
+  }, [specHref, outside, full, mcp?.name, mcp?.path, enabled]);
 
   return { target, ready };
+}
+
+/**
+ * The reference in a frame beside the site's navigation. The framed page opens
+ * where this page's address says and reports each move back (frame-sync);
+ * this follows the address back and forward.
+ */
+function ReferenceFrame({ href, title }: { href: string; title: string }) {
+  const frame = useRef<HTMLIFrameElement>(null);
+
+  useEffect(() => {
+    const target = frame.current;
+
+    if (!target) return;
+
+    const follow = () => {
+      const inner = target.contentWindow;
+
+      if (inner && inner.location.hash !== window.location.hash) {
+        inner.location.hash = window.location.hash;
+      }
+    };
+
+    window.addEventListener('hashchange', follow);
+
+    return () => window.removeEventListener('hashchange', follow);
+  }, [href]);
+
+  return <iframe ref={frame} src={href} title={title} className="block w-full border-0" />;
 }
 
 export function ApiPage({
@@ -189,18 +250,31 @@ export function ApiPage({
   operations,
   outside = false,
   layout = 'embedded',
+  referenceHref,
+  title,
   mcp,
 }: ApiPageProps) {
-  const full = layout === 'full';
+  // Scalar shows its own sidebar and search wherever it has a page to itself.
+  const full = layout === 'full' || layout === 'standalone';
 
-  const { target, ready } = useScalar(specHref, outside, full, mcp);
+  const framed = layout === 'frame' && referenceHref !== undefined;
+
+  const { target, ready } = useScalar(specHref, outside, full, mcp, !framed);
+
+  if (framed) {
+    return (
+      <div className="not-content" data-api-reference="frame">
+        <ReferenceFrame href={referenceHref} title={title ?? 'API reference'} />
+      </div>
+    );
+  }
 
   return (
     <div
       className="not-content flex flex-col gap-8"
-      {...(full ? { 'data-api-reference': 'full' } : { 'data-wide': '' })}
+      {...(full ? { 'data-api-reference': layout } : { 'data-wide': '' })}
     >
-      {!outside && (
+      {!outside && layout !== 'standalone' && (
         <p className="m-0 max-w-prose">
           {version && <>Version {version}, read </>}
           {version ? 'from' : 'Read from'} <code>{file}</code> in the {repository} repository.

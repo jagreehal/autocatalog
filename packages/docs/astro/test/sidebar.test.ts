@@ -4,7 +4,7 @@ import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { buildDocsCatalog } from '../src/catalog';
 import { docPaths } from '../src/paths';
-import { catalogSidebar, docsSidebar, navigationGroups } from '../src/sidebar';
+import { catalogSidebar, docsSidebar, navigationGroups, titleCase } from '../src/sidebar';
 import { docHref } from '../src/ui/lib/docs';
 
 let root: string;
@@ -31,6 +31,17 @@ describe('navigationGroups', () => {
     { label: 'Owners', link: '/owners' },
     { label: 'Domains', link: '/domains' },
   ];
+
+  it('draws each catalog page with its icon, as an SVG the stylesheet paints', () => {
+    const [group] = navigationGroups([{ label: 'Services', link: '/services', icon: 'service' }]);
+    const link = group!.items[0]!;
+
+    expect(link).toMatchObject({ label: 'Services', link: '/services' });
+    expect('attrs' in link && link.attrs?.['data-icon']).toBe('service');
+    expect('attrs' in link && link.attrs?.style).toMatch(
+      /^--ac-icon: url\("data:image\/svg\+xml,%3Csvg/,
+    );
+  });
 
   it('keeps the catalog group when nothing is configured', () => {
     expect(navigationGroups(pages)).toEqual([{ label: 'Catalog', items: pages }]);
@@ -319,6 +330,7 @@ describe('catalogSidebar', () => {
 
     expect(catalogSidebar(events)).toEqual([
       {
+        collapsed: true,
         label: 'Events · orders',
         items: [
           { label: 'Overview', link: '/domains/orders/' },
@@ -326,6 +338,7 @@ describe('catalogSidebar', () => {
         ],
       },
       {
+        collapsed: true,
         label: 'Events · payments',
         items: [
           { label: 'Overview', link: '/domains/payments/' },
@@ -337,6 +350,7 @@ describe('catalogSidebar', () => {
       },
       {
         label: 'Services',
+        collapsed: false,
         items: ['LedgerService', 'OrderService', 'PaymentService'].map((name) => ({
           label: name,
           link: `/services/${name}/`,
@@ -355,7 +369,11 @@ describe('catalogSidebar', () => {
     const catalog = await buildDocsCatalog(root, { includeDates: false });
 
     expect(catalog.failures.map((f) => f.repository)).toEqual(['broken-service']);
-    const links = catalogSidebar(catalog.events).flatMap((group) => group.items.map((i) => i.link));
+
+    const links = catalogSidebar(catalog.events).flatMap((group) =>
+      group.items.flatMap((i) => ('link' in i ? [i.link] : [])),
+    );
+
     expect(links).toContain('/events/payments-service/payments/payment.captured/');
     expect(links.some((link) => link.includes('broken'))).toBe(false);
   });
@@ -371,7 +389,10 @@ describe('catalogSidebar', () => {
     );
 
     const { events } = await buildDocsCatalog(root, { includeDates: false });
-    const links = catalogSidebar(events).flatMap((group) => group.items.map((i) => i.link));
+
+    const links = catalogSidebar(events).flatMap((group) =>
+      group.items.flatMap((i) => ('link' in i ? [i.link] : [])),
+    );
 
     expect(links).toEqual(
       expect.arrayContaining([
@@ -381,7 +402,85 @@ describe('catalogSidebar', () => {
     );
   });
 
-  it('adds nothing when no repository publishes events', () => {
+  it('adds nothing when no repository publishes events or an API', () => {
     expect(catalogSidebar([])).toEqual([]);
+  });
+
+  it('lists the services OpenAPI specs serve, each with its page and its Scalar reference', () => {
+    const api = (repository: string, services: string[], title = repository) => ({
+      repository,
+      name: 'openapi',
+      file: 'contracts/openapi.json',
+      document: { openapi: '3.1.0', info: { title, version: '1' }, paths: {} },
+      services,
+    });
+
+    expect(
+      catalogSidebar(
+        [],
+        [api('orders-api', ['orders-api'], 'Orders API'), api('users-api', ['users-api'])],
+      ),
+    ).toEqual([
+      {
+        label: 'Services',
+        collapsed: false,
+        items: [
+          {
+            label: 'orders-api',
+            collapsed: true,
+            items: [
+              { label: 'Overview', link: '/services/orders-api/' },
+              { label: 'Scalar', link: '/apis/orders-api/openapi/' },
+            ],
+          },
+          {
+            label: 'users-api',
+            collapsed: true,
+            items: [
+              { label: 'Overview', link: '/services/users-api/' },
+              { label: 'Scalar', link: '/apis/users-api/openapi/' },
+            ],
+          },
+        ],
+      },
+    ]);
+  });
+
+  it('names the reference link as a site says, and each one by its API when a service has two', () => {
+    const api = (name: string, title: string) => ({
+      repository: 'billing',
+      name,
+      file: `contracts/${name}.json`,
+      document: { openapi: '3.1.0', info: { title, version: '1' }, paths: {} },
+      services: ['billing'],
+    });
+
+    const [services] = catalogSidebar(
+      [],
+      [api('invoices', 'Invoices API'), api('refunds', 'Refunds API')],
+      { apiLabel: 'API reference' },
+    );
+
+    expect(services!.items[0]).toMatchObject({
+      label: 'billing',
+      items: [
+        { label: 'Overview' },
+        { label: 'API reference: Invoices API', link: '/apis/billing/invoices/' },
+        { label: 'API reference: Refunds API', link: '/apis/billing/refunds/' },
+      ],
+    });
+  });
+});
+
+describe('a folder with no label of its own', () => {
+  it('reads as words, with its acronyms in capitals', () => {
+    expect(['it', 'hr', 'on-call', 'faqs', 'api_guides', 'people'].map(titleCase)).toEqual([
+      'IT',
+      'HR',
+      'On Call',
+      'FAQs',
+      'API Guides',
+      'People',
+    ]);
   });
 });

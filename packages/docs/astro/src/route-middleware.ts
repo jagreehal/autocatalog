@@ -1,4 +1,5 @@
 import { defineRouteMiddleware } from '@astrojs/starlight/route-data';
+import sections from 'virtual:autocatalog-docs-nav';
 import { getCollection } from 'astro:content';
 import type { StarlightRouteData } from '@astrojs/starlight/route-data';
 import type { AccessDoc } from './access';
@@ -6,6 +7,7 @@ import { docsCatalog } from './catalog';
 import { servedDoc } from './served-docs';
 import { documentTwinsServed } from './document-twins';
 import { catalogId } from './ui/lib/docs';
+import { hrefsIn, liftSectionGroup, navLinks, sectionSidebar } from './nav';
 
 let built: Promise<Set<string>> | undefined;
 
@@ -58,9 +60,35 @@ export const onRequest = defineRouteMiddleware(async (context) => {
     }
   }
 
-  if (!(id in catalog.manifest) || !documentTwinsServed()) return;
-
   const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+
+  // The sidebar holds the section the page is in, under a heading with its name.
+  route.sidebar = sectionSidebar(route.sidebar, sections, context.url.pathname, base);
+
+  const section = navLinks(sections, context.url.pathname, base).find((link) => link.current);
+
+  if (section) {
+    route.sidebar = liftSectionGroup(route.sidebar, section.label);
+
+    // Previous and next stay within the section the sidebar shows.
+    const shown = new Set(route.sidebar.flatMap(hrefsIn));
+
+    for (const side of ['prev', 'next'] as const) {
+      const link = route.pagination[side];
+
+      if (link && !shown.has(link.href)) route.pagination[side] = undefined;
+    }
+
+    // The page names its section before it paints, so moving to another one
+    // slides the sidebar (section-transition.ts).
+    route.head.push({
+      tag: 'script',
+      // A label is the site's text: `<` is escaped so none can close the script.
+      content: `document.documentElement.dataset.section = ${JSON.stringify(section.label).replaceAll('<', '\\u003c')};`,
+    });
+  }
+
+  if (!(id in catalog.manifest) || !documentTwinsServed()) return;
 
   route.head.push({
     tag: 'link',

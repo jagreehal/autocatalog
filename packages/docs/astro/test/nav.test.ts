@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { navLinks, portalNav } from '../src/nav';
+import { catalogNav, liftSectionGroup, navLinks, portalNav, sectionSidebar } from '../src/nav';
 
 const links = [
   { label: 'Home', href: '/' },
@@ -61,8 +61,8 @@ describe('a developer portal', () => {
 
   it('is Documentation and API reference, the one API opened directly', () => {
     expect(portalNav(docs, ['apis/api/openapi/'])).toEqual([
-      { label: 'Documentation', href: '/', match: ['/', '/api/', '/help/'] },
-      { label: 'API reference', href: '/apis/api/openapi/', match: '/apis/' },
+      { label: 'Documentation', href: '/', icon: 'doc', match: ['/', '/api/', '/help/'] },
+      { label: 'API reference', href: '/apis/api/openapi/', icon: 'api', match: '/apis/' },
     ]);
     expect(portalNav(docs, ['apis/a/one/', 'apis/b/two/'])[1]!.href).toBe('/apis/');
   });
@@ -80,5 +80,120 @@ describe('a developer portal', () => {
   it('is nothing without both guides and an API', () => {
     expect(portalNav([], ['apis/api/openapi/'])).toEqual([]);
     expect(portalNav(docs, [])).toEqual([]);
+  });
+});
+
+// The first path segments of the pages the catalog compiles, as the build passes them.
+const SEGMENTS = ['catalog', 'services', 'owners', 'events', 'apis', 'domains', 'findings'];
+
+describe('a catalog that names no sections', () => {
+  const sections = catalogNav(
+    ['payments-service/runbook', 'payments-service/adr/001', 'ledger/guide'],
+    SEGMENTS,
+  );
+
+  const current = (page: string) => navLinks(sections, page).find((link) => link.current)?.label;
+
+  it('is Home, Catalog and Docs, Docs opening the shallowest document', () => {
+    expect(sections.map(({ label, href }) => [label, href])).toEqual([
+      ['Home', '/'],
+      ['Catalog', '/catalog/'],
+      ['Docs', '/payments-service/runbook'],
+    ]);
+    expect(catalogNav(['handbook/finance/invoices', 'handbook/incidents'], SEGMENTS)[2]!.href).toBe(
+      '/handbook/incidents',
+    );
+    expect(catalogNav([], SEGMENTS).map(({ label }) => label)).toEqual(['Home', 'Catalog']);
+    // The site's own home page is Home's, not a second Docs entry for the same page.
+    expect(catalogNav(['', 'guide'], SEGMENTS)[2]!.href).toBe('/guide');
+    expect(catalogNav([''], SEGMENTS).map(({ label }) => label)).toEqual(['Home', 'Catalog']);
+  });
+
+  it('marks Catalog on compiled pages and Docs on every repository’s documents', () => {
+    expect(current('/')).toBe('Home');
+    expect(current('/services/orders-api/')).toBe('Catalog');
+    expect(current('/owners/')).toBe('Catalog');
+    expect(current('/findings/capture-stuck/')).toBe('Catalog');
+    expect(current('/ledger/guide/')).toBe('Docs');
+    expect(current('/docs/x/')).toBeUndefined();
+  });
+
+  it('marks sections under the base a site is served from', () => {
+    expect(
+      navLinks(sections, '/autocatalog/services/a/', '/autocatalog/').find((l) => l.current)?.label,
+    ).toBe('Catalog');
+  });
+});
+
+describe('the sidebar for a section', () => {
+  const sections = catalogNav(['handbook/intro'], SEGMENTS);
+
+  const link = (href: string) => ({ type: 'link' as const, href });
+
+  const group = (label: string, ...hrefs: string[]) => ({
+    type: 'group' as const,
+    label,
+    entries: hrefs.map(link),
+  });
+
+  const sidebar = [
+    group('Catalog', '/catalog/', '/services/', '/owners/'),
+    group('Services', '/services/orders-api/', '/apis/orders-api/openapi/'),
+    group('handbook', '/handbook/intro/'),
+    group('Elsewhere', 'https://status.example.com'),
+  ];
+
+  const labels = (page: string, base?: string) =>
+    sectionSidebar(
+      base
+        ? sidebar.map((g) => ({
+            ...g,
+            entries: g.entries.map((e) => link(`${base.replace(/\/$/, '')}${e.href}`)),
+          }))
+        : sidebar,
+      sections,
+      page,
+      base,
+    ).map((entry) => entry.label);
+
+  it('holds the current section’s groups, and any group no section claims', () => {
+    expect(labels('/services/orders-api/')).toEqual(['Catalog', 'Services', 'Elsewhere']);
+    expect(labels('/handbook/intro/')).toEqual(['handbook', 'Elsewhere']);
+  });
+
+  it('keeps every group where no section, or a section with no group, holds the page', () => {
+    expect(labels('/')).toEqual(['Catalog', 'Services', 'handbook', 'Elsewhere']);
+    expect(labels('/nowhere/')).toEqual(['Catalog', 'Services', 'handbook', 'Elsewhere']);
+  });
+
+  it('reads the links under the base a site is served from', () => {
+    expect(labels('/autocatalog/services/orders-api/', '/autocatalog/')).toEqual([
+      'Catalog',
+      'Services',
+      'Elsewhere',
+    ]);
+  });
+});
+
+describe('a sidebar under its section’s heading', () => {
+  const group = (label: string, ...hrefs: string[]) => ({
+    type: 'group' as const,
+    label,
+    entries: hrefs.map((href) => ({ type: 'link' as const, href, label: href })),
+  });
+
+  it('lifts a first group named for the section, so the name is not said twice', () => {
+    const lifted = liftSectionGroup(
+      [group('Catalog', '/catalog/', '/owners/'), group('Services', '/services/')],
+      'catalog',
+    );
+
+    expect(lifted.map((entry) => entry.label)).toEqual(['/catalog/', '/owners/', 'Services']);
+  });
+
+  it('leaves a sidebar whose first group has a name of its own', () => {
+    const sidebar = [group('acme-handbook', '/acme-handbook/x/')];
+
+    expect(liftSectionGroup(sidebar, 'Docs')).toBe(sidebar);
   });
 });

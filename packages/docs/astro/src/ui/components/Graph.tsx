@@ -2,8 +2,16 @@
 import '@eventcatalog/visualiser/styles-core.css';
 import { cn } from 'cn';
 import { Maximize2Icon, Minimize2Icon } from 'lucide-react';
-import type { VisualiserGraph } from '#ui/lib/visualiser.ts';
-import { lazy, Suspense, useEffect, useRef, useState, type ReactNode } from 'react';
+import { mapHeight, type VisualiserGraph } from '#ui/lib/visualiser.ts';
+import {
+  type CSSProperties,
+  lazy,
+  Suspense,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import { createPortal } from 'react-dom';
 import { Button } from '#ui/components/ui/button.tsx';
 
@@ -15,13 +23,16 @@ export interface GraphProps {
   id: string;
   label: string;
   visualiser?: VisualiserGraph;
-  /** The live map's height; a one-hop flow needs less than the whole catalog. */
+  /** The tallest the live map may be; a small graph takes less, sized to open near full size. */
   height?: keyof typeof heights;
   /** The static picture (a flow strip): for a reader without JavaScript, and when there is no map. */
   fallback?: ReactNode;
 }
 
-const heights = { '20rem': 'h-80', '30rem': 'h-120' };
+const heights = { '20rem': 20, '30rem': 30 };
+
+// The row above the map: runtime evidence's modes and key, or a flow's walkthrough.
+const TOOLBAR_REM = 2.5;
 
 /**
  * A map of resources and the messages between them. With JavaScript it is
@@ -29,6 +40,10 @@ const heights = { '20rem': 'h-80', '30rem': 'h-120' };
  * the page moves when it arrives. The fallback is the static picture for a
  * reader without JavaScript, and for when the map cannot run.
  */
+/** Whether the map is a flow, which offers its walkthrough above the map. */
+const isFlow = (visualiser: VisualiserGraph | undefined) =>
+  visualiser?.graph.edges.some((edge) => edge.type === 'flow-step') ?? false;
+
 export function Graph({ id, label, visualiser, height = '20rem', fallback }: GraphProps) {
   const box = useRef<HTMLDivElement>(null);
 
@@ -126,10 +141,21 @@ export function Graph({ id, label, visualiser, height = '20rem', fallback }: Gra
     </div>
   );
 
+  // Sized before the map loads, from the graph's shape, so nothing below it moves.
+  const toolbar = Boolean(visualiser?.evidence) || isFlow(visualiser);
+
+  const boxHeight = visualiser
+    ? mapHeight(visualiser.graph, heights[height]) + (toolbar ? TOOLBAR_REM : 0)
+    : heights[height];
+
   return (
     <div ref={box} className="not-content" data-graph="">
       {/* In place: keeps the page height while fullscreen is portalled to body. */}
-      <div className={cn('noscript:hidden', heights[height])}>
+      <div
+        className="h-(--ac-map-height) noscript:hidden"
+        // SAFETY: a custom property is a valid inline style; React's type lists only standard ones.
+        style={{ '--ac-map-height': `${boxHeight}rem` } as CSSProperties}
+      >
         {fullscreen ? placeholder : map(false)}
       </div>
       <noscript>{fallback}</noscript>

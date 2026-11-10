@@ -12,6 +12,7 @@ import {
 } from 'autocatalog-core';
 import { z } from 'zod';
 import { aboutReference, resolveAbout } from './about';
+import { stormed, stormTracks, unhandled } from './storm';
 
 /** Where a repository keeps its process flows: one Markdown file each. */
 export const FLOWS_DIR = 'flows';
@@ -42,6 +43,52 @@ export interface FlowStep {
   stuck?: { signs: string; recovery?: string | undefined } | undefined;
   /** The code that implements it, checked by `ac flows verify`. */
   code: Array<{ file: string; contains?: string | undefined }>;
+  /** The board column it sits in. Steps that share one stack in one column. */
+  stage?: string | undefined;
+  /** The request that leads to it, which can be refused. */
+  command?: FlowCommand | undefined;
+  /** Who takes part: people, the systems involved, and what a reader sees. */
+  actors: FlowNamed[];
+  systems: FlowNamed[];
+  readModels: FlowNamed[];
+  /** What decides whether it happens: an aggregate, an entity, a record. */
+  decidedBy?: string | undefined;
+  /** What happens whenever it does: "Whenever a work fails, record it and carry on". */
+  policies: FlowRule[];
+  /** Set by the author. Unset, the board works it out from the branches. */
+  track?: FlowTrack | undefined;
+  /** Another flow that zooms into this step, as `<id>` or `<repository>/<id>`. */
+  subflow?: string | undefined;
+  /** How often it runs, for a step in a loop: "once per parsed work". */
+  repeats?: string | undefined;
+}
+
+/** The happy track carries a run that goes as intended; any failure is a fact on the failure track. */
+export type FlowTrack = 'happy' | 'failure';
+
+/** Something named on a board, with a line to say more. */
+export interface FlowNamed {
+  name: string;
+  summary?: string | undefined;
+}
+
+/** A command by name, and the catalog command it is when there is one. */
+export interface FlowCommand extends FlowNamed {
+  ref?: ResourceRef | undefined;
+}
+
+/**
+ * A case worth testing, from a fact on the board to what the reader should
+ * see. `expected` says what should happen when that differs from what does.
+ */
+export interface FlowScenario {
+  given: string;
+  when: string;
+  then: string;
+  expected?: string | undefined;
+  /** The step it ends on. */
+  step?: string | undefined;
+  test?: string | undefined;
 }
 
 /**
@@ -91,6 +138,7 @@ export interface Flow {
   /** What its steps change, unless a step says otherwise. */
   entity?: string | undefined;
   field?: string | undefined;
+  scenarios: FlowScenario[];
 }
 
 const text = z.string().trim().min(1);
@@ -104,6 +152,22 @@ const stepId = z.union([text, z.number().transform(String)]);
 const target = z.union([
   stepId.transform((id) => ({ id })),
   z.object({ id: stepId, label: text.optional() }).strict(),
+]);
+
+const named = z.union([
+  text.transform((name) => ({ name, summary: undefined })),
+  z.object({ name: text, summary: text.optional() }).strict(),
+]);
+
+const oneOrMore = <T extends z.ZodType>(item: T) =>
+  z.union([z.array(item), item.transform((value) => [value])]).default([]);
+
+const command = z.union([
+  text.transform((name) => ({ name, ref: undefined, summary: undefined })),
+  z
+    .object({ name: text.optional(), ref: text.optional(), summary: text.optional() })
+    .strict()
+    .refine((value) => value.name ?? value.ref, 'name the command, or the catalog command it is'),
 ]);
 
 const states = z.union([text.transform((state) => [state]), z.array(text).min(1)]);
@@ -152,6 +216,28 @@ const stepSchema = z
         ]),
       )
       .default([]),
+    stage: text.optional(),
+    command: command.optional(),
+    actors: oneOrMore(named),
+    systems: oneOrMore(named),
+    readModels: oneOrMore(named),
+    decidedBy: text.optional(),
+    policy: oneOrMore(rule),
+    track: z.enum(['happy', 'failure']).optional(),
+    flow: text.optional(),
+    repeats: text.optional(),
+  })
+  .strict();
+
+const scenarioSchema = z
+  .object({
+    given: text,
+    when: text,
+    // oxlint-disable-next-line unicorn/no-thenable -- Given, When, Then, not a Promise
+    then: text,
+    expected: text.optional(),
+    step: stepId.optional(),
+    test: text.optional(),
   })
   .strict();
 
@@ -172,6 +258,7 @@ const flowSchema = z
     entity: text.optional(),
     field: text.optional(),
     steps: z.array(stepSchema).min(1),
+    scenarios: z.array(scenarioSchema).default([]),
   })
   .strict();
 
@@ -271,7 +358,35 @@ export function readFlows(
 
   result.flows.sort((a, b) => a.repository.localeCompare(b.repository) || a.id.localeCompare(b.id));
 
+  result.warnings.push(...stormWarnings(result.flows));
+
   return result;
+}
+
+/**
+ * What a board would show as a gap: a failure nothing handles, and a stage
+ * that zooms into a flow no repository declares.
+ */
+export function stormWarnings(flows: Flow[]): string[] {
+  const ids = new Set(flows.map((flow) => `${flow.repository}/${flow.id}`));
+
+  return flows.flatMap((flow) => {
+    const where = `${flow.repository}/${flow.file}`;
+    const tracks = stormTracks(flow);
+    const strict = stormed(flow);
+
+    return flow.steps.flatMap((step) => [
+      ...(strict && tracks.get(step.id) === 'failure' && unhandled(step)
+        ? [
+            `${where}: step '${step.id}' is a failure with no policy, no next step and no status change, so nothing happens after it`,
+          ]
+        : []),
+      ...(step.subflow &&
+      !ids.has(step.subflow.includes('/') ? step.subflow : `${flow.repository}/${step.subflow}`)
+        ? [`${where}: step '${step.id}' zooms into '${step.subflow}', which is not a flow`]
+        : []),
+    ]);
+  });
 }
 
 function readFlow(
@@ -306,6 +421,18 @@ function readFlow(
     resolveStep(step, ids, resources, repository, options, { entity, field }),
   );
 
+  for (const scenario of parsed.data.scenarios) {
+    if (scenario.step !== undefined && !ids.has(scenario.step)) {
+      throw new Error(`a scenario ends on '${scenario.step}', which is not a step`);
+    }
+  }
+
+  for (const step of steps) {
+    if (step.subflow === id || step.subflow === `${repository}/${id}`) {
+      throw new Error(`step '${step.id}' zooms into this flow itself`);
+    }
+  }
+
   return {
     repository,
     id,
@@ -318,6 +445,7 @@ function readFlow(
     workflow: parsed.data.workflow,
     entity,
     field,
+    scenarios: parsed.data.scenarios,
   };
 }
 
@@ -432,6 +560,16 @@ function resolveStep(
     rules: step.rules,
     stuck: step.stuck,
     code: step.code,
+    stage: step.stage,
+    command: step.command && resolveCommand(step, step.command, resources, repository, options),
+    actors: step.actors,
+    systems: step.systems,
+    readModels: step.readModels,
+    decidedBy: step.decidedBy,
+    policies: step.policy,
+    track: step.track,
+    subflow: step.flow,
+    repeats: step.repeats,
   };
 
   if (step.event ?? step.service ?? step.agent) {
@@ -489,6 +627,40 @@ function resolveStep(
     title: step.title ?? step.custom?.title ?? step.id,
     summary: step.summary ?? step.custom?.summary,
     url: step.custom?.url,
+  };
+}
+
+/** A command a step names in the catalog resolves as an event does; its title names it otherwise. */
+function resolveCommand(
+  step: AuthoredStep,
+  authored: { name?: string | undefined; ref?: string | undefined; summary?: string | undefined },
+  resources: CatalogResource[],
+  repository: string,
+  options: ReadFlowsOptions,
+): FlowCommand {
+  if (!authored.ref) return { name: authored.name!, summary: authored.summary };
+
+  const reference = `command/${authored.ref}`;
+  const resolution = resolveAbout(reference, resources, repository);
+
+  if ('failure' in resolution) {
+    const missing = !resources.some((resource) => aboutReference(resource) === reference);
+
+    if (options.deferMissing && missing) {
+      return { name: authored.name ?? authored.ref, summary: authored.summary };
+    }
+
+    throw new Error(`step '${step.id}': ${resolution.failure.replace(/^about /, '')}`);
+  }
+
+  const resource = resources.find(
+    (candidate) => resourceKey(candidate.ref) === resourceKey(resolution.ref),
+  );
+
+  return {
+    name: authored.name ?? resource?.title ?? resolution.ref.id,
+    summary: authored.summary ?? resource?.summary,
+    ref: resolution.ref,
   };
 }
 

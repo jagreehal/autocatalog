@@ -100,6 +100,7 @@ it('reads a flow, resolving each step against the catalog', async () => {
       title: 'Order to dispatch',
       summary: 'From checkout to a parcel leaving the warehouse.',
       body: 'Shipping starts only once payment is taken.',
+      scenarios: [],
       steps: [
         {
           id: 'customer',
@@ -109,6 +110,10 @@ it('reads a flow, resolving each step against the catalog', async () => {
           next: [{ id: 'place' }],
           rules: [],
           code: [],
+          actors: [],
+          systems: [],
+          readModels: [],
+          policies: [],
         },
         {
           id: 'place',
@@ -119,6 +124,10 @@ it('reads a flow, resolving each step against the catalog', async () => {
           next: [{ id: 'placed' }],
           rules: [],
           code: [],
+          actors: [],
+          systems: [],
+          readModels: [],
+          policies: [],
         },
         {
           id: 'placed',
@@ -132,6 +141,10 @@ it('reads a flow, resolving each step against the catalog', async () => {
           ],
           rules: [],
           code: [],
+          actors: [],
+          systems: [],
+          readModels: [],
+          policies: [],
         },
         {
           id: 'ship',
@@ -142,6 +155,10 @@ it('reads a flow, resolving each step against the catalog', async () => {
           next: [],
           rules: [],
           code: [],
+          actors: [],
+          systems: [],
+          readModels: [],
+          policies: [],
         },
         {
           id: '2',
@@ -152,6 +169,10 @@ it('reads a flow, resolving each step against the catalog', async () => {
           next: [],
           rules: [],
           code: [],
+          actors: [],
+          systems: [],
+          readModels: [],
+          policies: [],
         },
       ],
     },

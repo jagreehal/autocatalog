@@ -209,9 +209,37 @@ export function buildProgram(): Command {
       process.exit(await runDocsInitConventions({ root: root ?? process.cwd(), ...opts }));
     });
 
-  program
+  const flows = program
     .command('flows')
-    .description('Compare declared flows with code and runtime evidence')
+    .description('Draft flows from code, and compare them with code and runtime evidence');
+
+  flows
+    .command('draft <file>')
+    .description('Draft an EventStorming flow from an Effect program, with effect-analyzer')
+    .requiredOption('--program <name>', 'the program in the file to draft, by its variable name')
+    .option('--id <id>', 'the flow id, its file name under flows/ (default: the program name)')
+    .option('--tsconfig <file>', 'the tsconfig that resolves effect', 'tsconfig.json')
+    .option('--root <dir>', 'the repository the flow belongs to', process.cwd())
+    .option('--write', 'write flows/<id>.md instead of printing it', false)
+    .option('--force', 'replace a flow that is already there', false)
+    .action(
+      async (
+        file: string,
+        opts: {
+          program: string;
+          id?: string;
+          tsconfig: string;
+          root: string;
+          write: boolean;
+          force: boolean;
+        },
+      ) => {
+        const { runFlowsDraft } = await import('./commands/flows-draft');
+        process.exit(await runFlowsDraft({ file, ...opts }));
+      },
+    );
+
+  flows
     .command('verify [root]')
     .description(
       'Write what each transition is backed by: lifecycle, schema, code, runtime and rules',

@@ -1,0 +1,19 @@
+{
+  "$schema": "./node_modules/@effect/tsgo/oxlint-schema.json",
+  "extends": ["./node_modules/@effect/tsgo/oxlint-presets/recommended.json"],
+  "categories": {
+    "correctness": "off",
+    "suspicious": "off",
+    "pedantic": "off",
+    "perf": "off",
+    "style": "off",
+    "restriction": "off",
+    "nursery": "off"
+  },
+  "ignorePatterns": ["**/dist/**", "**/node_modules/**", "**/.astro/**"],
+  "rules": {
+    "effecttsgo/schema-class-missing-brand": "off",
+    "effecttsgo/unnecessary-fail-yieldable-error": "off",
+    "effecttsgo/unnecessary-pipe-chain": "off"
+  }
+}

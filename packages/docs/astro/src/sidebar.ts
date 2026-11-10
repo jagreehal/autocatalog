@@ -1,5 +1,5 @@
 import { z } from 'astro/zod';
-import { catalogServices, type CatalogApi } from './apis';
+import { apiPath, apisForService, apiTitle, catalogServices, type CatalogApi } from './apis';
 import {
   frontmatterSchema,
   readDocs,
@@ -10,6 +10,8 @@ import {
 } from 'autocatalog-docs-core';
 import type { CatalogEvent } from './catalog';
 import { eventPath } from './event-path';
+import type { IconName } from './icons';
+import { sidebarIconAttrs, type SidebarIconAttrs } from './sidebar-icon';
 import { docPage } from './ui/lib/docs';
 
 /** The subset of Starlight's sidebar config this generates. */
@@ -18,9 +20,17 @@ export interface SidebarLink {
   link: string;
   /** The catalog page a site names it by, when the link goes somewhere more useful. */
   id?: string;
+  /** Drawn before the label, as the catalog's own pages are. */
+  icon?: IconName;
+  /** What Starlight puts on the link: the icon. */
+  attrs?: SidebarIconAttrs;
 }
 
-const starlightLink = ({ label, link }: SidebarLink): SidebarLink => ({ label, link });
+const starlightLink = ({ label, link, icon }: SidebarLink): SidebarLink => ({
+  label,
+  link,
+  ...(icon && { attrs: sidebarIconAttrs(icon) }),
+});
 
 export interface SidebarGroup {
   label: string;
@@ -28,10 +38,16 @@ export interface SidebarGroup {
   items: Array<SidebarLink | SidebarGroup>;
 }
 
-/** A group of the catalog's own pages, which never nests. */
+/** A group of the catalog's own pages; a service with an API nests its links one level. */
 export interface CatalogGroup {
   label: string;
-  items: SidebarLink[];
+  collapsed: boolean;
+  items: Array<SidebarLink | SidebarGroup>;
+}
+
+export interface CatalogSidebarOptions {
+  /** What the link to an API's reference under its service is called. */
+  apiLabel?: string;
 }
 
 /** A sidebar link with where it sits among its neighbours. */
@@ -42,8 +58,27 @@ interface Page extends SidebarLink {
   folders: string[];
 }
 
-const titleCase = (name: string) =>
-  name.replace(/[-_]+/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
+// Words a folder name is usually an acronym for; `meta.json` names any folder exactly.
+const ACRONYMS = new Set(['api', 'apis', 'cli', 'faq', 'faqs', 'sdk', 'sla', 'sre', 'sso', 'url']);
+
+/** A folder's label when `meta.json` gives none: `it` is IT, `faqs` FAQs, `on-call` On Call. */
+export const titleCase = (name: string) =>
+  name
+    .split(/[-_\s]+/)
+    .filter(Boolean)
+    .map((word, _index, words) => {
+      const lower = word.toLowerCase();
+
+      // A folder named in two letters alone is an acronym; `on` in `on-call` is a word.
+      if ((words.length === 1 && word.length <= 2) || ACRONYMS.has(lower)) {
+        return lower.endsWith('s') && lower.length > 3
+          ? `${lower.slice(0, -1).toUpperCase()}s`
+          : word.toUpperCase();
+      }
+
+      return `${word[0]!.toUpperCase()}${word.slice(1)}`;
+    })
+    .join(' ');
 
 const links = (pages: Page[]): SidebarLink[] =>
   [...pages]
@@ -180,13 +215,41 @@ const starlightSidebar = z
   .optional();
 
 /**
- * Events grouped by domain, then the services inferred from them. Built from
- * the catalog's validated events, so a repository quarantined for a broken
- * catalog has no entries here either, and every link has a page behind it.
+ * A service in the sidebar: a link to its page, or, when it serves an API, a
+ * group of its page and a link to each API's reference, named by `apiLabel`
+ * alone for one and with the API's title for several.
  */
-export function catalogSidebar(events: CatalogEvent[], apis: CatalogApi[] = []): CatalogGroup[] {
-  if (events.length === 0) return [];
+const serviceLink =
+  (apiLabel: string) =>
+  (name: string, served: CatalogApi[]): SidebarLink | SidebarGroup => {
+    const page = { label: name, link: `/services/${name}/` };
 
+    if (served.length === 0) return page;
+
+    return {
+      label: name,
+      collapsed: true,
+      items: [
+        { label: 'Overview', link: page.link },
+        ...served.map((api) => ({
+          label: served.length === 1 ? apiLabel : `${apiLabel}: ${apiTitle(api)}`,
+          link: `/${apiPath(api)}`,
+        })),
+      ],
+    };
+  };
+
+/**
+ * Events grouped by domain, then the services, whether the events or the
+ * OpenAPI specs name them. Built from the catalog's validated events and
+ * APIs, so a repository quarantined for a broken catalog has no entries here
+ * either, and every link has a page behind it.
+ */
+export function catalogSidebar(
+  events: CatalogEvent[],
+  apis: CatalogApi[] = [],
+  { apiLabel = 'Scalar' }: CatalogSidebarOptions = {},
+): CatalogGroup[] {
   const domains = new Map<string, SidebarLink[]>();
 
   for (const entry of events) {
@@ -201,19 +264,24 @@ export function catalogSidebar(events: CatalogEvent[], apis: CatalogApi[] = []):
 
   const byLabel = (a: { label: string }, b: { label: string }) => a.label.localeCompare(b.label);
 
+  const serviceItem = serviceLink(apiLabel);
+
   return [
     ...[...domains]
       .sort(([a], [b]) => a.localeCompare(b))
       // Starlight group labels are plain text, so the domain's page leads its group.
       .map(([domain, items]) => ({
         label: `Events · ${domain}`,
+        collapsed: true,
         items: [{ label: 'Overview', link: `/domains/${domain}/` }, ...items.sort(byLabel)],
       })),
     ...(services.length > 0
       ? [
           {
             label: 'Services',
-            items: services.map((name) => ({ label: name, link: `/services/${name}/` })),
+            // Open from the start: the list a reader most often comes for.
+            collapsed: false,
+            items: services.map((name) => serviceItem(name, apisForService(apis, events, name))),
           },
         ]
       : []),

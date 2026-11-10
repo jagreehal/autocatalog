@@ -16,7 +16,7 @@
     {
       "title": "Docs",
       "description": "Skills for writing documentation from source against the company's frontmatter contract.",
-      "skills": ["autocatalog-docs", "autocatalog-docs-enroll"]
+      "skills": ["autocatalog-docs", "autocatalog-docs-enroll", "autocatalog-storm"]
     },
     {
       "title": "Agents",

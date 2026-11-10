@@ -85,8 +85,12 @@ export {
 
 export {
   type Flow,
+  type FlowCommand,
   type FlowGroupBy,
+  type FlowNamed,
   type FlowRule,
+  type FlowScenario,
+  type FlowTrack,
   FLOWS_DIR,
   type FlowStep,
   type FlowTransition,
@@ -95,10 +99,28 @@ export {
   flowWorkflow,
   readFlows,
   type ReadFlowsOptions,
+  stormWarnings,
   type ReadFlowsResult,
   type StepLane,
   type WorkflowRuns,
 } from './flows';
+
+export {
+  type BigPictureLane,
+  bigPicture,
+  STORM_ROWS,
+  type StickyKind,
+  type StormBoard,
+  stormBoard,
+  type StormColumn,
+  stormed,
+  type StormEnding,
+  type StormHotspot,
+  type StormRow,
+  type StormScenario,
+  type StormSticky,
+  stormTracks,
+} from './storm';
 
 export {
   checkLifecycles,

@@ -33,6 +33,9 @@ import { SectionHeading } from '../components/SectionHeading';
 import { Icon } from '../components/Icon';
 import type { Stat } from '../components/Stats';
 import { IconTile } from '../components/IconTile';
+import { CountCards } from '../components/CountCards';
+import type { VisualiserGraph } from '../lib/visualiser';
+import { Graph } from '../components/Graph';
 
 /** One way into the catalog this build actually made. */
 export interface ExploreCard {
@@ -58,6 +61,10 @@ export interface HomePageProps {
   tags: Array<[string, DocListItem[]]>;
   /** Dark spots: review work, quarantine, orphans. */
   attention?: AttentionSnapshot | undefined;
+  /** Architecture canvas; omitted when the graph has nothing to draw. */
+  map?: VisualiserGraph | undefined;
+  /** Fullscreen / dedicated catalog map. */
+  catalogHref?: string | undefined;
 }
 
 const plural = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
@@ -67,7 +74,15 @@ const documents = (count: number) => plural(count, 'document', 'documents');
 /** Enough to show what a repository holds; the rest stay a click away. */
 const SHELF_SIZE = 5;
 
-export function HomePage({ stats, explore, repos, tags, attention }: HomePageProps) {
+export function HomePage({
+  stats,
+  explore,
+  repos,
+  tags,
+  attention,
+  map,
+  catalogHref,
+}: HomePageProps) {
   const total = repos.reduce((sum, { docs }) => sum + docs.length, 0);
 
   // Built as one string: adjacent expressions in the template lose the whitespace
@@ -76,6 +91,29 @@ export function HomePage({ stats, explore, repos, tags, attention }: HomePagePro
 
   return (
     <div className="not-content flex flex-col gap-10" data-wide>
+      <CountCards items={stats} />
+
+      {map && (
+        <section className="flex flex-col gap-4" aria-labelledby="home-architecture">
+          <SectionHeading
+            id="home-architecture"
+            count={
+              catalogHref ? (
+                <a
+                  href={catalogHref}
+                  className="text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+                >
+                  Open full screen
+                </a>
+              ) : undefined
+            }
+          >
+            Architecture
+          </SectionHeading>
+          <Graph id="home-map" label="Architecture" visualiser={map} height="30rem" />
+        </section>
+      )}
+
       <section className="flex flex-col gap-4" aria-labelledby="home-documents">
         <SectionHeading id="home-documents" count={total > 0 ? counted : undefined}>
           Documents
@@ -119,8 +157,6 @@ export function HomePage({ stats, explore, repos, tags, attention }: HomePagePro
       </section>
 
       {attention && hasAttention(attention) && <Attention attention={attention} />}
-
-      {stats.some((stat) => stat.value > 0) && <Holds stats={stats} />}
 
       <section className="flex flex-col gap-4" aria-labelledby="home-explore">
         <SectionHeading id="home-explore" count={plural(explore.length, 'place', 'places')}>
@@ -249,31 +285,6 @@ function Attention({ attention }: { attention: AttentionSnapshot }) {
         </ul>
       )}
     </section>
-  );
-}
-
-/** What the catalog holds, said as a sentence; a count with a page links to it. */
-function Holds({ stats }: { stats: Stat[] }) {
-  return (
-    <p className="m-0 max-w-prose text-sm text-muted-foreground">
-      The catalog holds{' '}
-      {stats.map((stat, index) => (
-        <Fragment key={stat.label}>
-          {index > 0 && (index === stats.length - 1 ? ' and ' : ', ')}
-          {stat.href ? (
-            <a
-              href={stat.href}
-              className="text-foreground underline underline-offset-4 hover:text-primary"
-            >
-              {`${stat.value} ${stat.label}`}
-            </a>
-          ) : (
-            <span className="text-foreground">{`${stat.value} ${stat.label}`}</span>
-          )}
-        </Fragment>
-      ))}
-      .
-    </p>
   );
 }
 

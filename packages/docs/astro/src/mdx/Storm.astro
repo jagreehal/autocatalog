@@ -1,0 +1,59 @@
+---
+import { docsCatalog } from '../catalog';
+import { flowStormView } from '../flows';
+import {
+  StormBoard,
+  StormEndings,
+  StormHotspots,
+  StormLegend,
+  StormScenarios,
+} from '../ui/components/Storm';
+import { stormColumns, type StormStage } from '../storm-stages';
+
+interface Props {
+  /** A flow's board, by its id, or `<repository>/<id>` when two repositories use the id. */
+  flow?: string;
+  /** A board written by hand: one entry per stage, each row a sticky or a list of them. */
+  stages?: StormStage[];
+  /** What a screen reader calls the board. */
+  label?: string;
+  /** Show the legend above the board. On by default. */
+  legend?: boolean;
+  /** For a flow, what the board raises below it: `hotspots`, `endings`, `scenarios`. */
+  show?: Array<'hotspots' | 'endings' | 'scenarios'>;
+}
+
+const { flow, stages, label, legend = true, show = [] } = Astro.props;
+
+if (!flow === !stages) {
+  throw new Error('<Storm> takes a flow="…" or stages={[…]}, and not both');
+}
+
+const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+
+const catalog = flow ? await docsCatalog() : undefined;
+
+const matches = catalog?.flows.filter((candidate) =>
+  flow!.includes('/') ? `${candidate.repository}/${candidate.id}` === flow : candidate.id === flow,
+);
+
+if (catalog && matches!.length !== 1) {
+  throw new Error(
+    matches!.length === 0
+      ? `<Storm flow="${flow}">: no flow has that id`
+      : `<Storm flow="${flow}">: ${matches!.length} repositories have a flow with that id; name one as <repository>/${flow}`,
+  );
+}
+
+const view = catalog && flowStormView(matches![0]!, catalog, base);
+
+const columns = view?.columns ?? stormColumns(stages!);
+---
+
+<div class="not-content flex flex-col gap-4">
+  {legend && <StormLegend />}
+  <StormBoard client:visible columns={columns} label={label ?? matches?.[0]?.title ?? 'Event storm'} />
+  {view && show.includes('hotspots') && <StormHotspots hotspots={view.hotspots} />}
+  {view && show.includes('endings') && <StormEndings endings={view.endings} />}
+  {view && show.includes('scenarios') && <StormScenarios scenarios={view.scenarios} />}
+</div>
