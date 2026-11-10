@@ -1,0 +1,43 @@
+---
+title: Eventing model
+owner: handbook
+summary: How commands, events and queries are used across Acme Inc's event-driven commerce platform.
+---
+
+The catalog separates messages by intent.
+
+- **Commands** ask another capability to do something.
+- **Events** announce that something has already happened.
+- **Queries** request information without changing state.
+
+## Commands
+
+Commands are named in the imperative and should have one clear handler. Examples:
+
+- [[event|shopping/checkout-cart]] asks [[service|Cart API]] to check out a cart.
+- [[event|ordering/reserve-inventory]] asks [[service|Inventory Service]] to hold stock.
+- [[event|ordering/authorize-payment]] asks [[service|Payment API]] to authorize payment.
+- [[event|ordering/create-order]] asks [[service|Order Service]] to create an order.
+- [[event|reviews/submit-review]] asks [[service|Review API]] to accept a product review.
+
+## Events
+
+Events are facts and should be safe for multiple consumers. Examples:
+
+- [[event|shopping-platform/shopping/cart-checked-out]] starts the checkout process.
+- [[event|ordering-platform/ordering/order-created]] signals that an order exists.
+- [[event|payments-platform/payments/payment-succeeded]] and [[event|payments-platform/payments/payment-failed]] report external processor outcomes.
+- [[event|fulfilment-platform/fulfilment/order-ready-for-shipping]] hands fulfilment to shipping.
+- [[event|reviews-platform/reviews/review-published]] updates review read models and product trust signals.
+
+## Queries
+
+Queries are explicit read contracts. Examples include [[event|catalog/get-product]], [[event|catalog/search-products]], [[event|ordering/get-order]], [[event|customer/get-customer]], [[event|fulfilment/get-stock-level]] and [[event|reviews/get-product-reviews]].
+
+## Versioning expectations
+
+Backward-compatible additions are preferred. Removing fields or changing semantics requires a versioned contract and a migration plan. For customer-critical flows, review the flow page and all participating messages before changing a schema.
+
+## Failure expectations
+
+Consumers should be idempotent. Producers should publish facts after durable state changes. Long-running processes should persist their progress, especially [[flow|ordering-platform/checkout-saga]], payment processing, search indexing and review moderation.

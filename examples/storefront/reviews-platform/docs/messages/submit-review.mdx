@@ -1,0 +1,11 @@
+---
+title: Submit Review
+owner: reviews-platform
+summary: Command issued by a customer to submit a review and rating for a product.
+sidebar:
+  hidden: true
+---
+
+## Overview
+
+`SubmitReview` is sent to the [[service|Review API]] when a customer submits a review for a product they have purchased. The API validates and stores the review, then publishes [[event|reviews-platform/reviews/review-submitted]].

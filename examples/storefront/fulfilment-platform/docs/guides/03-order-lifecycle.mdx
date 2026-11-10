@@ -1,0 +1,37 @@
+---
+title: From order to doorstep
+owner: fulfilment-platform
+summary: How the four fulfilment systems hand an order between them, and where each handoff can go wrong.
+about:
+  - domain/fulfilment
+---
+
+Fulfilment is a relay between four systems. Three are internal and owned by [[owner|fulfilment-platform]]; the fourth is an external carrier. Each system reacts to a message from the one before it and publishes a message for the one after.
+
+## 1. Inventory holds the stock
+
+This step happens during checkout, before the order exists. The Ordering domain sends [[event|ordering/reserve-inventory]] to [[service|Inventory Service]], which checks **Inventory Database** and replies with [[event|fulfilment-platform/fulfilment/inventory-reserved]] or [[event|fulfilment-platform/fulfilment/inventory-unavailable]]. Nothing physical moves yet, but from this point the stock cannot be sold to anyone else.
+
+## 2. Warehouse picks and packs
+
+When Ordering publishes [[event|ordering-platform/ordering/order-completed]], [[service|Warehouse Service]] creates a **Warehouse Pick** in **Warehouse Database**. [[service|Picking Worker]] works the pick on the warehouse floor, updating each line as it is picked. When the last item is boxed it publishes [[event|fulfilment-platform/fulfilment/order-packed]], and the warehouse service follows with [[event|fulfilment-platform/fulfilment/order-ready-for-shipping]], which carries the shipping address and parcel count the next system needs.
+
+## 3. Shipping picks a carrier
+
+[[service|Shipping API]] consumes [[event|fulfilment-platform/fulfilment/order-ready-for-shipping]], chooses a carrier and service level (`STANDARD`, `EXPRESS` or `NEXT_DAY`) based on the destination and the customer's delivery option, and hands off to [[service|Carrier Adapter]]. The adapter is an anti-corruption layer: it translates our shipment request into the carrier's format and sends [[event|fulfilment/create-shipment]] to the external [[service|Shipping API]]. Keeping the translation in one service means a change of carrier never leaks into the rest of the domain.
+
+## 4. The carrier delivers and reports back
+
+From here the [[system|carrier]] is in control. Its [[service|Tracking API]] publishes [[event|fulfilment-platform/fulfilment/shipment-created]] once the parcel is dispatched, then either [[event|fulfilment-platform/fulfilment/shipment-delivered]] or [[event|fulfilment-platform/fulfilment/shipment-failed]]. The **Shipment** record in the shipping system is updated from these events; it is our copy of the carrier's truth, not the other way round.
+
+## Where it goes wrong
+
+| Handoff              | Typical failure                                   | Where to look                                                                           |
+| -------------------- | ------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| Checkout → Inventory | Reservations never released, stock looks sold out | [[service\|Inventory Service]] `reservations` table, `HELD` rows older than `expiresAt` |
+| Ordering → Warehouse | Order completed but no pick created               | [[service\|Warehouse Service]] consumer lag on `order-completed`                        |
+| Warehouse → Shipping | Order packed but never shipped                    | **runbooks/shipments-not-dispatching**                                                  |
+| Shipping → Carrier   | `create-shipment` rejected with 400 or 422        | [[service\|Carrier Adapter]] logs; usually an address the carrier will not accept       |
+| Carrier → us         | Tracking events stop arriving                     | Carrier status page, then [[service\|Tracking API]] webhook delivery logs               |
+
+The **runbooks/on-call** checklist lists the dashboards that watch each handoff.

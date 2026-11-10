@@ -1,0 +1,15 @@
+{
+  "kind": "command",
+  "id": "get-stock-level",
+  "version": "1.0.0",
+  "name": "Get Stock Level",
+  "summary": "Query to fetch the current available stock level for a product.",
+  "domain": "fulfilment",
+  "handler": "Inventory Service",
+  "senders": [],
+  "schema": "./schema.json",
+  "outcome": {
+    "type": "result"
+  },
+  "tags": ["query"]
+}

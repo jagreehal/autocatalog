@@ -1,0 +1,11 @@
+---
+title: Create Product
+owner: product-platform
+summary: Command to add a new product to the catalog.
+sidebar:
+  hidden: true
+---
+
+## Overview
+
+`CreateProduct` is handled by the [[service|Product API]]. It validates the incoming product, writes it to the **Product Database**, and on success publishes a [[event|product-platform/catalog/product-created]] event.

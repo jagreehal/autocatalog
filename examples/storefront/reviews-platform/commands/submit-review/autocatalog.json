@@ -1,0 +1,11 @@
+{
+  "kind": "command",
+  "id": "submit-review",
+  "version": "1.0.0",
+  "name": "Submit Review",
+  "summary": "Command issued by a customer to submit a review and rating for a product.",
+  "domain": "reviews",
+  "handler": "Review API",
+  "senders": [],
+  "schema": "./schema.json"
+}

@@ -1,0 +1,11 @@
+---
+title: Authenticate Customer
+owner: customer-platform
+summary: Command to authenticate a customer with their credentials.
+sidebar:
+  hidden: true
+---
+
+## Overview
+
+`AuthenticateCustomer` is handled by the [[service|OAuth API]]. It verifies the supplied credentials against the **User Directory** and, on success, returns an access token and publishes a [[event|customer-platform/customer/customer-authenticated]] event.

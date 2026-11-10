@@ -1,0 +1,17 @@
+---
+name: Customer Platform
+summary: Owns the Customer domain — customer profiles and authentication across Acme Inc.
+email: customer-platform@acme.test
+slackDirectMessageUrl: https://acme.slack.com/channels/customer-platform
+members:
+  - sam-rivera
+---
+
+## Overview
+
+The **Customer Platform** team owns the [[domain|customer]] domain. They are responsible for how customers register, how their profiles are maintained, and how they authenticate.
+
+## Responsibilities
+
+- **Customer Management System** — registering, updating and reading customer profiles, and publishing customer change events.
+- **Identity Provider** — authenticating customers and owning credentials in the user directory.

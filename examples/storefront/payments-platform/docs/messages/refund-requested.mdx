@@ -1,0 +1,13 @@
+---
+title: Refund Requested
+owner: payments-platform
+summary: Published when the Payment Processing System requests a refund from the payment processor.
+about:
+  - event/payments/refund-requested
+sidebar:
+  hidden: true
+---
+
+## Overview
+
+`RefundRequested` is published by the [[service|Payment Worker]] to ask the external [[system|stripe]] to refund a previous charge — for example when an order is cancelled after payment. Stripe responds with [[event|payments-platform/payments/refund-processed]].

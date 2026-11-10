@@ -1,0 +1,15 @@
+{
+  "kind": "command",
+  "id": "get-customer",
+  "version": "1.0.0",
+  "name": "Get Customer",
+  "summary": "Query to fetch a single customer by their identifier.",
+  "domain": "customer",
+  "handler": "Customer API",
+  "senders": [],
+  "schema": "./schema.json",
+  "outcome": {
+    "type": "result"
+  },
+  "tags": ["query"]
+}

@@ -1,0 +1,13 @@
+---
+title: Product Created
+owner: product-platform
+summary: Published when a new product has been added to the catalog.
+about:
+  - event/catalog/product-created
+sidebar:
+  hidden: true
+---
+
+## Overview
+
+`ProductCreated` is published by the [[service|Product Search Publisher]] whenever a new product is successfully added to the catalog by the [[service|Product API]]. The [[system|search-system]] consumes this event to index the new product so it becomes discoverable.

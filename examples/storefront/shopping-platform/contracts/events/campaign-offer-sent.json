@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "description": "Published when a campaign offer has been sent to a customer.",
+  "title": "CampaignOfferSent",
+  "x-autocatalog": {
+    "id": "campaign-offer-sent",
+    "version": "1.0.0",
+    "domain": "marketing",
+    "name": "Campaign Offer Sent",
+    "summary": "Published when a campaign offer has been sent to a customer.",
+    "producers": ["Campaign Service"]
+  }
+}

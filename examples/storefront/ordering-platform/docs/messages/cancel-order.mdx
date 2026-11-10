@@ -1,0 +1,11 @@
+---
+title: Cancel Order
+owner: ordering-platform
+summary: Command to cancel an existing order.
+sidebar:
+  hidden: true
+---
+
+## Overview
+
+`CancelOrder` is handled by the [[service|Order Service]]. It cancels an order that has not yet been completed — releasing any reservations and voiding the payment authorization where needed. On success the Order Service publishes an [[event|ordering-platform/ordering/order-cancelled]] event.

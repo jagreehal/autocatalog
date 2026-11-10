@@ -1,0 +1,13 @@
+---
+title: Order Completed
+owner: ordering-platform
+summary: Published when an order has been fulfilled and completed.
+about:
+  - event/ordering/order-completed
+sidebar:
+  hidden: true
+---
+
+## Overview
+
+`OrderCompleted` is published by the [[service|Order Service]] when an order has been fully fulfilled. It marks the end of the happy path for an order. Downstream systems consume it to close out fulfilment, capture payment, and update reporting.

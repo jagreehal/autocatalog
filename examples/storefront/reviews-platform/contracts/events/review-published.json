@@ -1,0 +1,37 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ReviewPublished",
+  "type": "object",
+  "properties": {
+    "reviewId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "productId": {
+      "type": "string"
+    },
+    "customerId": {
+      "type": "string"
+    },
+    "rating": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 5
+    },
+    "publishedAt": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": ["reviewId", "productId", "rating", "publishedAt"],
+  "description": "Published when a submitted review passes moderation and becomes visible on the storefront.",
+  "x-autocatalog": {
+    "id": "review-published",
+    "version": "1.0.0",
+    "domain": "reviews",
+    "name": "Review Published",
+    "summary": "Published when a submitted review passes moderation and becomes visible on the storefront.",
+    "producers": ["Review Moderation Worker"],
+    "consumers": ["Rating Aggregator"]
+  }
+}

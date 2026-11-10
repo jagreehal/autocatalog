@@ -1,0 +1,140 @@
+{
+  "graph": {
+    "spec": "autocatalog/graph-v1",
+    "resources": [
+      {
+        "ref": {
+          "kind": "service",
+          "id": "Checkout API"
+        },
+        "title": "Checkout API",
+        "tags": [],
+        "provenance": {
+          "default": "declared",
+          "fields": {}
+        },
+        "needsReview": false,
+        "attributes": {
+          "domains": ["ordering"],
+          "system": {
+            "id": "checkout-system",
+            "name": "Checkout System"
+          }
+        },
+        "summary": "The entry point to the Checkout System. Receives the checkout command from the Shopping domain and starts the checkout flow.",
+        "owner": {
+          "team": "ordering-platform",
+          "name": "Ordering Platform",
+          "contact": "https://acme.slack.com/channels/ordering-platform"
+        }
+      },
+      {
+        "ref": {
+          "kind": "service",
+          "id": "Checkout Orchestrator"
+        },
+        "title": "Checkout Orchestrator",
+        "tags": [],
+        "provenance": {
+          "default": "declared",
+          "fields": {}
+        },
+        "needsReview": false,
+        "attributes": {
+          "domains": ["ordering"],
+          "system": {
+            "id": "checkout-system",
+            "name": "Checkout System"
+          }
+        },
+        "summary": "Runs the checkout saga. Reserves inventory, authorizes payment and creates the order, coordinating the steps that turn a checked-out cart into a confirmed order.",
+        "owner": {
+          "team": "ordering-platform",
+          "name": "Ordering Platform",
+          "contact": "https://acme.slack.com/channels/ordering-platform"
+        }
+      },
+      {
+        "ref": {
+          "kind": "service",
+          "id": "Order Service"
+        },
+        "title": "Order Service",
+        "tags": [],
+        "provenance": {
+          "default": "declared",
+          "fields": {}
+        },
+        "needsReview": false,
+        "attributes": {
+          "domains": ["ordering"],
+          "system": {
+            "id": "order-management-system",
+            "name": "Order Management System"
+          }
+        },
+        "summary": "The system of record for orders. Creates and cancels orders, serves order lookups, and publishes events as orders move through their lifecycle.",
+        "owner": {
+          "team": "ordering-platform",
+          "name": "Ordering Platform",
+          "contact": "https://acme.slack.com/channels/ordering-platform"
+        }
+      },
+      {
+        "ref": {
+          "kind": "table",
+          "namespace": "ordering-platform",
+          "id": "order-database"
+        },
+        "title": "Order Database",
+        "tags": [],
+        "provenance": {
+          "default": "declared",
+          "fields": {}
+        },
+        "needsReview": false,
+        "attributes": {
+          "technology": "postgres@16",
+          "containerType": "database"
+        },
+        "summary": "PostgreSQL database that is the system of record for orders and their items.",
+        "owner": {
+          "team": "ordering-platform",
+          "name": "Ordering Platform",
+          "contact": "https://acme.slack.com/channels/ordering-platform"
+        }
+      }
+    ],
+    "relationships": [
+      {
+        "type": "reads",
+        "from": {
+          "kind": "service",
+          "id": "Order Service"
+        },
+        "to": {
+          "kind": "table",
+          "namespace": "ordering-platform",
+          "id": "order-database"
+        },
+        "provenance": "declared",
+        "needsReview": false
+      },
+      {
+        "type": "writes",
+        "from": {
+          "kind": "service",
+          "id": "Order Service"
+        },
+        "to": {
+          "kind": "table",
+          "namespace": "ordering-platform",
+          "id": "order-database"
+        },
+        "provenance": "declared",
+        "needsReview": false
+      }
+    ]
+  },
+  "claims": []
+}

@@ -2,6 +2,7 @@ import {
   closestMatch,
   isDocumentCatalogResource,
   isEventCatalogResource,
+  isServiceCatalogResource,
   relationshipKey,
   resourceKey,
   type CatalogRelationship,
@@ -16,6 +17,8 @@ import { documentRef } from './resource-graph';
  * How `about:` names a resource: `kind/id`, the form Agent-system references
  * already take, and `event/<domain>/<id>` for an Event, because an event id is
  * unique inside a domain and an Agent's `consumes` names it as `domain/id`.
+ * A command is `command/<domain>/<id>` for the same reason: its namespace is
+ * its domain.
  * Documents have none — `related:` is how one document names another.
  */
 export function aboutReference(resource: CatalogResource): string | undefined {
@@ -23,6 +26,10 @@ export function aboutReference(resource: CatalogResource): string | undefined {
 
   if (isEventCatalogResource(resource)) {
     return `event/${resource.attributes.domain}/${resource.ref.id}`;
+  }
+
+  if (resource.ref.kind === 'command' && resource.ref.namespace) {
+    return `command/${resource.ref.namespace}/${resource.ref.id}`;
   }
 
   return `${resource.ref.kind}/${resource.ref.id}`;
@@ -49,6 +56,21 @@ export function resolveAbout(
   const pick = local.length > 0 ? local : named;
 
   if (pick.length === 1) return { ref: pick[0]!.ref };
+
+  // A domain is what its events and services name; no resource stands for it.
+  const domain = /^domain\/(.+)$/.exec(reference)?.[1];
+
+  if (
+    domain &&
+    pick.length === 0 &&
+    resources.some(
+      (resource) =>
+        (isEventCatalogResource(resource) && resource.attributes.domain === domain) ||
+        (isServiceCatalogResource(resource) && resource.attributes.domains.includes(domain)),
+    )
+  ) {
+    return { ref: { kind: 'domain', id: domain } };
+  }
 
   if (pick.length > 1) {
     return {

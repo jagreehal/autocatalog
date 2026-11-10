@@ -7,6 +7,7 @@ import { docsCatalog } from './catalog';
 import { servedDoc } from './served-docs';
 import { documentTwinsServed } from './document-twins';
 import { catalogId } from './ui/lib/docs';
+import { withoutRepeatedOverview } from './toc';
 import { hrefsIn, liftSectionGroup, navLinks, sectionSidebar } from './nav';
 
 let built: Promise<Set<string>> | undefined;
@@ -38,6 +39,9 @@ export const onRequest = defineRouteMiddleware(async (context) => {
   // Starlight's 404 is a splash page, which has no sidebar and so no shell. A
   // reader who lands on a dead link needs the way back more than anyone.
   if (route.id === '404') route.hasSidebar = true;
+
+  // "Overview" once in "On this page", when the page's first heading is its own.
+  if (route.toc) route.toc.items = withoutRepeatedOverview(route.toc.items);
 
   const catalog = await docsCatalog();
 

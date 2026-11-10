@@ -1,0 +1,13 @@
+---
+title: Order Placed On Hold
+owner: ordering-platform
+summary: Published when order progression is paused for a review or dependency check.
+about:
+  - event/ordering/order-placed-on-hold
+sidebar:
+  hidden: true
+---
+
+## Overview
+
+`OrderPlacedOnHold` tells fulfilment and customer-facing systems to pause work while a payment, fraud, address, or inventory concern is reviewed. It includes the owning team and review deadline so operational tooling can route and escalate the hold.

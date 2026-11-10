@@ -732,10 +732,15 @@ export function buildProgram(): Command {
       false,
     )
     .option('--index <url...>', "another site's /catalog.json, joined into the graph without pages")
+    .option(
+      '--print-layout <page>',
+      'print the default blocks of a page (home) for layouts in autocatalog.site.json, and build nothing',
+    )
     .action(
       async (
         root: string | undefined,
         opts: {
+          printLayout?: string;
           topic?: string;
           owner?: string;
           repo?: string[];
@@ -761,6 +766,12 @@ export function buildProgram(): Command {
           index?: string[];
         },
       ) => {
+        if (opts.printLayout !== undefined) {
+          const { printLayout } = await import('./commands/site');
+
+          process.exit(printLayout(opts.printLayout));
+        }
+
         const { runSite } = await import('./commands/site');
         process.exit(
           await runSite({

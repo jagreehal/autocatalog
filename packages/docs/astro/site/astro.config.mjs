@@ -86,7 +86,10 @@ export default defineConfig({
       // (and put that file under public/) to replace it.
       favicon: env.AUTOCATALOG_SITE_FAVICON || '/favicon.svg',
       plugins: [
-        autocatalogDocs(access ? { access: { ...access, rule: accessRule } } : {}),
+        autocatalogDocs({
+          ...(access && { access: { ...access, rule: accessRule } }),
+          blocks: ext.blocks,
+        }),
         ...ext.plugins,
       ],
     }),

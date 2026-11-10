@@ -220,6 +220,18 @@ export {
 } from './model';
 
 export {
+  OVERVIEW_DIRS,
+  type Overview,
+  type OverviewKind,
+  type OverviewTargets,
+  overviewKey,
+  overviewTargets,
+  readOverviews,
+  type ReadOverviewsOptions,
+  type ReadOverviewsResult,
+} from './overviews';
+
+export {
   REPOSITORY_META,
   type RepositoryMeta,
   readRepositoryMeta,
@@ -227,6 +239,13 @@ export {
 } from './repository-meta';
 
 export {
+  DEFAULT_HOME_LAYOUT,
+  DEFAULT_PUBLIC_HOME_LAYOUT,
+  defaultHomeLayout,
+  HOME_BLOCKS,
+  INSIDE_ONLY_BLOCKS,
+  type HomeBlockName,
+  type LayoutBlock,
   readSiteConfig,
   SITE_CONFIG,
   SITE_THEMES,

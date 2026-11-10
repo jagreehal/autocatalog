@@ -1,0 +1,11 @@
+{
+  "kind": "command",
+  "id": "authorize-payment",
+  "version": "1.0.0",
+  "name": "Authorize Payment",
+  "summary": "Command to authorize payment for the total of a checked-out cart.",
+  "domain": "ordering",
+  "handler": "Payment API",
+  "senders": ["Checkout Orchestrator"],
+  "schema": "./schema.json"
+}

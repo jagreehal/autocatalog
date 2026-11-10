@@ -1,0 +1,261 @@
+{
+  "spec": "autocatalog/graph-v1",
+  "resources": [
+    {
+      "ref": {
+        "kind": "command",
+        "namespace": "catalog",
+        "id": "search-products",
+        "version": "1.0.0"
+      },
+      "title": "Search Products",
+      "tags": ["query"],
+      "provenance": {
+        "default": "declared",
+        "fields": {}
+      },
+      "needsReview": false,
+      "attributes": {
+        "schema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "title": "SearchProducts",
+          "description": "Query to search the catalog for products, and the paginated result returned",
+          "type": "object",
+          "properties": {
+            "request": {
+              "description": "Search parameters",
+              "type": "object",
+              "properties": {
+                "query": {
+                  "description": "Free-text search term",
+                  "type": "string",
+                  "minLength": 1
+                },
+                "filters": {
+                  "description": "Optional filters applied to the search",
+                  "type": "object",
+                  "properties": {
+                    "category": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": ["DRAFT", "ACTIVE", "ARCHIVED"]
+                    },
+                    "minPrice": {
+                      "description": "Minimum price in minor units (e.g. cents)",
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "maxPrice": {
+                      "description": "Maximum price in minor units (e.g. cents)",
+                      "type": "integer",
+                      "minimum": 0
+                    }
+                  }
+                },
+                "page": {
+                  "description": "1-based page number",
+                  "type": "integer",
+                  "minimum": 1,
+                  "default": 1
+                },
+                "pageSize": {
+                  "description": "Number of results per page",
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 100,
+                  "default": 20
+                }
+              },
+              "required": ["query"]
+            },
+            "response": {
+              "description": "Paginated search results",
+              "type": "object",
+              "properties": {
+                "total": {
+                  "description": "Total number of products matching the query",
+                  "type": "integer"
+                },
+                "page": {
+                  "type": "integer"
+                },
+                "pageSize": {
+                  "type": "integer"
+                },
+                "results": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "productId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "sku": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "category": {
+                        "type": "string"
+                      },
+                      "price": {
+                        "description": "Price in minor units (e.g. cents)",
+                        "type": "integer"
+                      },
+                      "currency": {
+                        "type": "string",
+                        "pattern": "^[A-Z]{3}$"
+                      },
+                      "score": {
+                        "description": "Relevance score for this result",
+                        "type": "number"
+                      }
+                    },
+                    "required": ["productId", "sku", "name"]
+                  }
+                }
+              },
+              "required": ["total", "page", "pageSize", "results"]
+            }
+          },
+          "required": ["request", "response"]
+        },
+        "transport": [],
+        "outcome": {
+          "type": "result"
+        },
+        "outcomeSchema": null
+      },
+      "summary": "Query to search the catalog for products matching a term, with optional filters and pagination.",
+      "source": {
+        "type": "code",
+        "file": "commands/search-products/autocatalog.json"
+      }
+    },
+    {
+      "ref": {
+        "kind": "service",
+        "id": "Search API"
+      },
+      "title": "Search API",
+      "tags": [],
+      "provenance": {
+        "default": "declared",
+        "fields": {}
+      },
+      "needsReview": false,
+      "attributes": {
+        "domains": ["catalog"],
+        "system": {
+          "id": "search-system",
+          "name": "Search System"
+        }
+      },
+      "summary": "Public-facing API that serves fast, relevant product search to the rest of the business, reading from the search index.",
+      "owner": {
+        "team": "search-platform",
+        "name": "Search Platform",
+        "contact": "https://acme.slack.com/channels/search-platform"
+      }
+    },
+    {
+      "ref": {
+        "kind": "service",
+        "id": "Search Indexer"
+      },
+      "title": "Search Indexer",
+      "tags": [],
+      "provenance": {
+        "default": "declared",
+        "fields": {}
+      },
+      "needsReview": false,
+      "attributes": {
+        "domains": ["catalog"],
+        "system": {
+          "id": "search-system",
+          "name": "Search System"
+        }
+      },
+      "summary": "Consumes product change events from the Product Catalog System and keeps the search index up to date so products are discoverable.",
+      "owner": {
+        "team": "search-platform",
+        "name": "Search Platform",
+        "contact": "https://acme.slack.com/channels/search-platform"
+      }
+    },
+    {
+      "ref": {
+        "kind": "table",
+        "namespace": "search-platform",
+        "id": "search-index"
+      },
+      "title": "Search Index",
+      "tags": [],
+      "provenance": {
+        "default": "declared",
+        "fields": {}
+      },
+      "needsReview": false,
+      "attributes": {
+        "technology": "opensearch@2",
+        "containerType": "searchIndex"
+      },
+      "summary": "The denormalised, search-optimised index of products that powers product search.",
+      "owner": {
+        "team": "search-platform",
+        "name": "Search Platform",
+        "contact": "https://acme.slack.com/channels/search-platform"
+      }
+    }
+  ],
+  "relationships": [
+    {
+      "type": "handles",
+      "from": {
+        "kind": "service",
+        "id": "Search API"
+      },
+      "to": {
+        "kind": "command",
+        "namespace": "catalog",
+        "id": "search-products",
+        "version": "1.0.0"
+      },
+      "provenance": "declared",
+      "needsReview": false
+    },
+    {
+      "type": "reads",
+      "from": {
+        "kind": "service",
+        "id": "Search API"
+      },
+      "to": {
+        "kind": "table",
+        "namespace": "search-platform",
+        "id": "search-index"
+      },
+      "provenance": "declared",
+      "needsReview": false
+    },
+    {
+      "type": "writes",
+      "from": {
+        "kind": "service",
+        "id": "Search Indexer"
+      },
+      "to": {
+        "kind": "table",
+        "namespace": "search-platform",
+        "id": "search-index"
+      },
+      "provenance": "declared",
+      "needsReview": false
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "receives": [
+    {
+      "service": "Promotion Service",
+      "id": "loyalty/loyalty-points-earned"
+    },
+    {
+      "service": "Offer Service",
+      "id": "ordering/order-confirmed"
+    }
+  ]
+}

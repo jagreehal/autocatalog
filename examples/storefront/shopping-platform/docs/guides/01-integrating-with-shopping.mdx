@@ -1,0 +1,38 @@
+---
+title: Integrating with Shopping
+owner: shopping-platform
+summary: Which cart commands other teams may call, which ones are internal, and how to react to a checkout.
+about:
+  - domain/shopping
+---
+
+The Shopping domain owns the customer's path to purchase — the cart and the discounts applied to it. Storefronts, mobile apps and checkout-adjacent teams all integrate with it in one of two ways: by sending commands to [[service|Cart API]], or by subscribing to the events it publishes. This guide covers both, and is explicit about what you should **not** call.
+
+## Commands you can call
+
+[[service|Cart API]] is the front door to [[system|cart-system]]. It accepts three commands from any authenticated client. All three are synchronous HTTP calls and are safe to retry.
+
+| Command                                   | What it does                                                                 | Retry behaviour                                                                                   |
+| ----------------------------------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| [[event\|shopping/add-item-to-cart]]      | Adds a product to the cart, or increases its quantity if it is already there | Idempotent per `cartId` + `productId` + `quantity`                                                |
+| [[event\|shopping/remove-item-from-cart]] | Removes a product line from the cart                                         | Idempotent; removing a missing line returns `404`, not an error you need to handle                |
+| [[event\|shopping/checkout-cart]]         | Prices the cart, applies discounts and commits the purchase                  | **Idempotent per `cartId`** — a second checkout returns `409` and does not publish a second event |
+
+Always pass the customer's `promotionCode` on [[event|shopping/checkout-cart]] rather than trying to price the cart yourself. Pricing is done once, at checkout, by the Cart API.
+
+## Commands that are internal
+
+[[event|shopping/calculate-discount]] is sent by [[service|Cart API]] to [[service|Promotion Service]] over the `shopping.discount-commands` channel. It is **not** a public API. If you call it directly you will get a discount figure that has not been reconciled against the cart, and it will not be reflected in the final `total` at checkout.
+
+If you need to show an _estimated_ discount before checkout (a "you could save £5" banner), talk to [[owner|shopping-platform]] in `#shopping-support` — we would rather expose a supported preview endpoint than have teams depend on an internal command.
+
+## Events you can subscribe to
+
+| Event                                                     | When it fires                                                 | Typical consumer                                   |
+| --------------------------------------------------------- | ------------------------------------------------------------- | -------------------------------------------------- |
+| [[event\|shopping-platform/shopping/cart-checked-out]]    | A customer has committed to buy; the cart is priced and final | Orders, payments, fulfilment, analytics            |
+| [[event\|shopping-platform/shopping/discount-calculated]] | A discount has been evaluated for a cart                      | Promotion analytics, fraud, finance reconciliation |
+
+[[event|shopping-platform/shopping/cart-checked-out]] is the event most teams care about. It carries the full line items, `subtotal`, `discount` and `total` (all in minor units) so you never need to re-query the cart. Treat `cartId` as the idempotency key: the Cart API guarantees at-least-once delivery, so you may see the same checkout twice.
+
+Do not read from **Cart Database** or **Promotion Database** directly. Their schemas are private to the owning systems and change without notice.

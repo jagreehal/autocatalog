@@ -1,0 +1,22 @@
+{
+  "label": "Handbook",
+  "order": 0,
+  "sidebar": [
+    {
+      "directory": "platform",
+      "label": "Platform"
+    },
+    {
+      "directory": "domains",
+      "label": "Domains"
+    },
+    {
+      "directory": "flows",
+      "label": "Flows"
+    },
+    {
+      "directory": "operations",
+      "label": "Operations"
+    }
+  ]
+}

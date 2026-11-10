@@ -1,0 +1,506 @@
+{
+  "spec": "autocatalog/graph-v1",
+  "resources": [
+    {
+      "ref": {
+        "kind": "command",
+        "namespace": "shopping",
+        "id": "add-item-to-cart",
+        "version": "1.0.0"
+      },
+      "title": "Add Item To Cart",
+      "tags": [],
+      "provenance": {
+        "default": "declared",
+        "fields": {}
+      },
+      "needsReview": false,
+      "attributes": {
+        "schema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "title": "AddItemToCart",
+          "description": "Command to add an item to a shopping cart",
+          "type": "object",
+          "properties": {
+            "cartId": {
+              "description": "Unique identifier of the cart",
+              "type": "string",
+              "format": "uuid"
+            },
+            "productId": {
+              "description": "Identifier of the product to add",
+              "type": "string",
+              "format": "uuid"
+            },
+            "quantity": {
+              "description": "Number of units to add",
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
+          },
+          "required": ["cartId", "productId", "quantity"]
+        },
+        "transport": [],
+        "outcome": null,
+        "outcomeSchema": null
+      },
+      "summary": "Command to add an item to a shopping cart.",
+      "source": {
+        "type": "code",
+        "file": "commands/add-item-to-cart/autocatalog.json"
+      }
+    },
+    {
+      "ref": {
+        "kind": "command",
+        "namespace": "shopping",
+        "id": "calculate-discount",
+        "version": "1.0.0"
+      },
+      "title": "Calculate Discount",
+      "tags": [],
+      "provenance": {
+        "default": "declared",
+        "fields": {}
+      },
+      "needsReview": false,
+      "attributes": {
+        "schema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "title": "CalculateDiscount",
+          "description": "Command to calculate the discount for a cart, and the discount returned",
+          "type": "object",
+          "properties": {
+            "request": {
+              "type": "object",
+              "properties": {
+                "cartId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "customerId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "subtotal": {
+                  "description": "Cart subtotal before discounts, in minor units (e.g. cents)",
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "currency": {
+                  "type": "string",
+                  "pattern": "^[A-Z]{3}$"
+                },
+                "promotionCode": {
+                  "description": "Optional promotion code supplied by the customer",
+                  "type": "string"
+                }
+              },
+              "required": ["cartId", "subtotal", "currency"]
+            },
+            "response": {
+              "type": "object",
+              "properties": {
+                "discount": {
+                  "description": "Total discount to apply, in minor units (e.g. cents)",
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "appliedPromotions": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": ["discount"]
+            }
+          },
+          "required": ["request", "response"]
+        },
+        "transport": [
+          {
+            "address": "shopping-discount-commands",
+            "protocols": ["sqs"]
+          }
+        ],
+        "outcome": null,
+        "outcomeSchema": null
+      },
+      "summary": "Command to calculate the discount that applies to a cart.",
+      "source": {
+        "type": "code",
+        "file": "commands/calculate-discount/autocatalog.json"
+      }
+    },
+    {
+      "ref": {
+        "kind": "command",
+        "namespace": "shopping",
+        "id": "checkout-cart",
+        "version": "1.0.0"
+      },
+      "title": "Checkout Cart",
+      "tags": [],
+      "provenance": {
+        "default": "declared",
+        "fields": {}
+      },
+      "needsReview": false,
+      "attributes": {
+        "schema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "title": "CheckoutCart",
+          "description": "Command to check out a shopping cart",
+          "type": "object",
+          "properties": {
+            "cartId": {
+              "description": "Unique identifier of the cart to check out",
+              "type": "string",
+              "format": "uuid"
+            },
+            "customerId": {
+              "description": "Identifier of the customer checking out",
+              "type": "string",
+              "format": "uuid"
+            },
+            "promotionCode": {
+              "description": "Optional promotion code to apply at checkout",
+              "type": "string"
+            }
+          },
+          "required": ["cartId", "customerId"]
+        },
+        "transport": [],
+        "outcome": null,
+        "outcomeSchema": null
+      },
+      "summary": "Command to check out a shopping cart.",
+      "source": {
+        "type": "code",
+        "file": "commands/checkout-cart/autocatalog.json"
+      }
+    },
+    {
+      "ref": {
+        "kind": "command",
+        "namespace": "shopping",
+        "id": "remove-item-from-cart",
+        "version": "1.0.0"
+      },
+      "title": "Remove Item From Cart",
+      "tags": [],
+      "provenance": {
+        "default": "declared",
+        "fields": {}
+      },
+      "needsReview": false,
+      "attributes": {
+        "schema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "title": "RemoveItemFromCart",
+          "description": "Command to remove an item from a shopping cart",
+          "type": "object",
+          "properties": {
+            "cartId": {
+              "description": "Unique identifier of the cart",
+              "type": "string",
+              "format": "uuid"
+            },
+            "productId": {
+              "description": "Identifier of the product to remove",
+              "type": "string",
+              "format": "uuid"
+            },
+            "quantity": {
+              "description": "Number of units to remove. If omitted, removes the item entirely.",
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          "required": ["cartId", "productId"]
+        },
+        "transport": [],
+        "outcome": null,
+        "outcomeSchema": null
+      },
+      "summary": "Command to remove an item from a shopping cart.",
+      "source": {
+        "type": "code",
+        "file": "commands/remove-item-from-cart/autocatalog.json"
+      }
+    },
+    {
+      "ref": {
+        "kind": "service",
+        "id": "Campaign Service"
+      },
+      "title": "Campaign Service",
+      "tags": [],
+      "provenance": {
+        "default": "declared",
+        "fields": {}
+      },
+      "needsReview": false,
+      "attributes": {
+        "domains": ["marketing"],
+        "system": {
+          "id": "campaign-system",
+          "name": "Campaign System"
+        }
+      },
+      "summary": "Runs the welcome campaign and sends customers campaign offers.",
+      "owner": {
+        "team": "shopping-platform",
+        "name": "Shopping Platform",
+        "contact": "https://acme.slack.com/channels/shopping-platform"
+      }
+    },
+    {
+      "ref": {
+        "kind": "service",
+        "id": "Cart API"
+      },
+      "title": "Cart API",
+      "tags": [],
+      "provenance": {
+        "default": "declared",
+        "fields": {}
+      },
+      "needsReview": false,
+      "attributes": {
+        "domains": ["shopping"],
+        "system": {
+          "id": "cart-system",
+          "name": "Cart System"
+        }
+      },
+      "summary": "The public-facing API for shopping carts. Handles commands to add and remove items and to check out, and publishes an event when a cart is checked out.",
+      "owner": {
+        "team": "shopping-platform",
+        "name": "Shopping Platform",
+        "contact": "https://acme.slack.com/channels/shopping-platform"
+      }
+    },
+    {
+      "ref": {
+        "kind": "service",
+        "id": "Offer Service"
+      },
+      "title": "Offer Service",
+      "tags": [],
+      "provenance": {
+        "default": "declared",
+        "fields": {}
+      },
+      "needsReview": false,
+      "attributes": {
+        "domains": ["marketing"],
+        "system": {
+          "id": "campaign-system",
+          "name": "Campaign System"
+        }
+      },
+      "summary": "Builds follow-up offers for customers after they order, priced with the Shopping domain's promotions.",
+      "owner": {
+        "team": "shopping-platform",
+        "name": "Shopping Platform",
+        "contact": "https://acme.slack.com/channels/shopping-platform"
+      }
+    },
+    {
+      "ref": {
+        "kind": "service",
+        "id": "Promotion Service"
+      },
+      "title": "Promotion Service",
+      "tags": [],
+      "provenance": {
+        "default": "declared",
+        "fields": {}
+      },
+      "needsReview": false,
+      "attributes": {
+        "domains": ["shopping"],
+        "system": {
+          "id": "promotion-system",
+          "name": "Promotion System"
+        }
+      },
+      "summary": "Evaluates promotion rules and calculates the discount that applies to a cart. Receives discount requests and publishes the calculated result.",
+      "owner": {
+        "team": "shopping-platform",
+        "name": "Shopping Platform",
+        "contact": "https://acme.slack.com/channels/shopping-platform"
+      }
+    },
+    {
+      "ref": {
+        "kind": "table",
+        "namespace": "shopping-platform",
+        "id": "cart-database"
+      },
+      "title": "Cart Database",
+      "tags": [],
+      "provenance": {
+        "default": "declared",
+        "fields": {}
+      },
+      "needsReview": false,
+      "attributes": {
+        "technology": "postgres@16",
+        "containerType": "database"
+      },
+      "summary": "PostgreSQL database that is the system of record for shopping carts and their items.",
+      "owner": {
+        "team": "shopping-platform",
+        "name": "Shopping Platform",
+        "contact": "https://acme.slack.com/channels/shopping-platform"
+      }
+    },
+    {
+      "ref": {
+        "kind": "table",
+        "namespace": "shopping-platform",
+        "id": "promotion-database"
+      },
+      "title": "Promotion Database",
+      "tags": [],
+      "provenance": {
+        "default": "declared",
+        "fields": {}
+      },
+      "needsReview": false,
+      "attributes": {
+        "technology": "postgres@16",
+        "containerType": "database"
+      },
+      "summary": "PostgreSQL store of promotion and discount rules.",
+      "owner": {
+        "team": "shopping-platform",
+        "name": "Shopping Platform",
+        "contact": "https://acme.slack.com/channels/shopping-platform"
+      }
+    }
+  ],
+  "relationships": [
+    {
+      "type": "handles",
+      "from": {
+        "kind": "service",
+        "id": "Cart API"
+      },
+      "to": {
+        "kind": "command",
+        "namespace": "shopping",
+        "id": "add-item-to-cart",
+        "version": "1.0.0"
+      },
+      "provenance": "declared",
+      "needsReview": false
+    },
+    {
+      "type": "handles",
+      "from": {
+        "kind": "service",
+        "id": "Cart API"
+      },
+      "to": {
+        "kind": "command",
+        "namespace": "shopping",
+        "id": "remove-item-from-cart",
+        "version": "1.0.0"
+      },
+      "provenance": "declared",
+      "needsReview": false
+    },
+    {
+      "type": "reads",
+      "from": {
+        "kind": "service",
+        "id": "Cart API"
+      },
+      "to": {
+        "kind": "table",
+        "namespace": "shopping-platform",
+        "id": "cart-database"
+      },
+      "provenance": "declared",
+      "needsReview": false
+    },
+    {
+      "type": "sends",
+      "from": {
+        "kind": "service",
+        "id": "Cart API"
+      },
+      "to": {
+        "kind": "command",
+        "namespace": "shopping",
+        "id": "calculate-discount",
+        "version": "1.0.0"
+      },
+      "provenance": "declared",
+      "needsReview": false
+    },
+    {
+      "type": "writes",
+      "from": {
+        "kind": "service",
+        "id": "Cart API"
+      },
+      "to": {
+        "kind": "table",
+        "namespace": "shopping-platform",
+        "id": "cart-database"
+      },
+      "provenance": "declared",
+      "needsReview": false
+    },
+    {
+      "type": "sends",
+      "from": {
+        "kind": "service",
+        "id": "Offer Service"
+      },
+      "to": {
+        "kind": "command",
+        "namespace": "shopping",
+        "id": "calculate-discount",
+        "version": "1.0.0"
+      },
+      "provenance": "declared",
+      "needsReview": false
+    },
+    {
+      "type": "handles",
+      "from": {
+        "kind": "service",
+        "id": "Promotion Service"
+      },
+      "to": {
+        "kind": "command",
+        "namespace": "shopping",
+        "id": "calculate-discount",
+        "version": "1.0.0"
+      },
+      "provenance": "declared",
+      "needsReview": false
+    },
+    {
+      "type": "reads",
+      "from": {
+        "kind": "service",
+        "id": "Promotion Service"
+      },
+      "to": {
+        "kind": "table",
+        "namespace": "shopping-platform",
+        "id": "promotion-database"
+      },
+      "provenance": "declared",
+      "needsReview": false
+    }
+  ]
+}

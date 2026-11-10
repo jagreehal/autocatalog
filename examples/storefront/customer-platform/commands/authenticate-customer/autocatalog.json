@@ -1,0 +1,11 @@
+{
+  "kind": "command",
+  "id": "authenticate-customer",
+  "version": "1.0.0",
+  "name": "Authenticate Customer",
+  "summary": "Command to authenticate a customer with their credentials.",
+  "domain": "customer",
+  "handler": "OAuth API",
+  "senders": [],
+  "schema": "./schema.json"
+}

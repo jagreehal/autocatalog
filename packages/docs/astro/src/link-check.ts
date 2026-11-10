@@ -142,9 +142,13 @@ function decode(value: string): string {
   }
 }
 
+// Astro writes `&` in an attribute as `&#x26;`, so numeric references are decoded too.
 function unescape(value: string): string {
   return value
+    .replace(/&#x([0-9a-f]+);/gi, (_, hex: string) =>
+      String.fromCodePoint(Number.parseInt(hex, 16)),
+    )
+    .replace(/&#(\d+);/g, (_, dec: string) => String.fromCodePoint(Number(dec)))
     .replace(/&amp;/g, '&')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'");
+    .replace(/&quot;/g, '"');
 }

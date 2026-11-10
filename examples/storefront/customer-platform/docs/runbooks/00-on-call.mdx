@@ -1,0 +1,34 @@
+---
+title: On-call checklist
+owner: customer-platform
+summary: What the Customer on-call engineer checks at handover and how to triage a page.
+about:
+  - domain/customer
+---
+
+## At handover
+
+1. Open the customer health dashboard and confirm all four panels are green: Customer API error rate, OAuth API login success rate, customer event publish lag, database connection pool.
+2. Check `#customer-support` for anything unresolved from the previous shift — in particular any open subject access or account closure requests, which have a legal clock on them.
+3. Confirm no bulk status change is in progress. A support script suspending accounts mid-handover is the most common surprise.
+
+## Triage
+
+| Page                         | Start with                                                                                                    |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `CustomerAPI 5xx rate`       | [[service\|Customer API]] logs; usually a bad deploy — roll back first, investigate second                    |
+| `Login success rate < 95%`   | **runbooks/login-failures**                                                                                   |
+| `Customer event lag`         | **runbooks/customer-events-lag**                                                                              |
+| `Customer DB pool exhausted` | **Customer Database** connection panel; scale [[service\|Customer API]] down, not up, until the pool recovers |
+| `User directory unreachable` | Page the identity platform on-call; do not restart **User Directory** yourself                                |
+
+## Escalation
+
+- Customers unable to sign in or register is a **Sev 1** — page the incident commander immediately. Everything downstream of [[system|identity-provider]] stops working with it.
+- Stale profile data downstream (event lag) is **Sev 2** — fix within the hour, no incident channel needed unless it persists.
+- Any suspected exposure of credentials or PII from **User Directory** or **Customer Database** is a **security incident** regardless of scale. Page security on-call and stop — do not investigate the data yourself.
+- [[owner|customer-platform]] is the owning team; the team lead is the escalation point out of hours.
+
+## Before you sign off
+
+Leave a one-line summary in `#customer-support` even if nothing happened. The next person will thank you.

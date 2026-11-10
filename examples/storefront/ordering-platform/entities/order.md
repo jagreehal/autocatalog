@@ -1,0 +1,65 @@
+---
+name: Order
+summary: The durable customer order created after successful checkout.
+identifier: orderId
+aggregateRoot: true
+properties:
+  - name: orderId
+    type: UUID
+    required: true
+    description: Unique order identifier.
+  - name: customer
+    type: Customer
+    required: true
+    description: Customer who placed the order.
+    references: customer-profile
+  - name: status
+    type: string
+    required: true
+    description: Current order lifecycle state.
+  - name: totalAmount
+    type: decimal
+    required: true
+    description: Total order value at creation.
+  - name: deliveryAddress
+    type: object
+    required: true
+    description: Delivery address captured when the order was placed.
+    properties:
+      - name: line1
+        type: string
+        required: true
+        description: First line of the delivery address.
+      - name: city
+        type: string
+        required: true
+        description: Delivery city.
+      - name: postalCode
+        type: string
+        required: true
+        description: Delivery postal code.
+      - name: countryCode
+        type: string
+        required: true
+        description: ISO 3166-1 alpha-2 delivery country code.
+  - name: adjustments
+    type: array
+    description: Discounts and credits captured as part of this order.
+    items:
+      type: object
+      properties:
+        - name: description
+          type: string
+          required: true
+          description: Reason for the adjustment.
+        - name: amount
+          type: decimal
+          required: true
+          description: Signed amount applied to the order total.
+domains:
+  - ordering
+---
+
+## Overview
+
+Order is the main aggregate in [[system|order-management-system]]. It emits order lifecycle events used by Fulfilment and support workflows.

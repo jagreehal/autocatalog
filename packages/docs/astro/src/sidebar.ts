@@ -8,6 +8,7 @@ import {
   repositoryMetas,
   type SiteNavigation,
 } from 'autocatalog-docs-core';
+import type { ResourceGraph } from 'autocatalog-core';
 import type { CatalogEvent } from './catalog';
 import { eventPath } from './event-path';
 import type { IconName } from './icons';
@@ -48,6 +49,8 @@ export interface CatalogGroup {
 export interface CatalogSidebarOptions {
   /** What the link to an API's reference under its service is called. */
   apiLabel?: string;
+  /** The composed resource graph, whose declared services have pages too. */
+  graph?: ResourceGraph | undefined;
 }
 
 /** A sidebar link with where it sits among its neighbours. */
@@ -172,13 +175,17 @@ export function docsSidebar(root: string, options: ReadDocsOptions = {}): Sideba
       const meta = metas.get(repo) ?? {};
 
       return {
-        label: meta.label ?? repo,
-        // Starlight opens the group holding the current page.
-        ...(repositories.size > 1 && { collapsed: true }),
-        items: repositoryItems(pages, meta),
+        order: meta.order ?? Number.MAX_VALUE,
+        group: {
+          label: meta.label ?? repo,
+          // Starlight opens the group holding the current page.
+          ...(repositories.size > 1 && { collapsed: true }),
+          items: repositoryItems(pages, meta),
+        },
       };
     })
-    .sort((a, b) => a.label.localeCompare(b.label));
+    .sort((a, b) => a.order - b.order || a.group.label.localeCompare(b.group.label))
+    .map(({ group }) => group);
 }
 
 /** The catalog's own pages, as a site arranged them, or in one group as they came. */
@@ -219,7 +226,7 @@ const starlightSidebar = z
  * group of its page and a link to each API's reference, named by `apiLabel`
  * alone for one and with the API's title for several.
  */
-const serviceLink =
+export const serviceLink =
   (apiLabel: string) =>
   (name: string, served: CatalogApi[]): SidebarLink | SidebarGroup => {
     const page = { label: name, link: `/services/${name}/` };
@@ -248,7 +255,7 @@ const serviceLink =
 export function catalogSidebar(
   events: CatalogEvent[],
   apis: CatalogApi[] = [],
-  { apiLabel = 'Scalar' }: CatalogSidebarOptions = {},
+  { apiLabel = 'Scalar', graph }: CatalogSidebarOptions = {},
 ): CatalogGroup[] {
   const domains = new Map<string, SidebarLink[]>();
 
@@ -260,7 +267,7 @@ export function catalogSidebar(
     ]);
   }
 
-  const services = [...catalogServices({ events, apis }).keys()].sort();
+  const services = [...catalogServices({ events, apis, graph }).keys()].sort();
 
   const byLabel = (a: { label: string }, b: { label: string }) => a.label.localeCompare(b.label);
 

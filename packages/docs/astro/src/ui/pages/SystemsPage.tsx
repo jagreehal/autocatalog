@@ -34,7 +34,8 @@ export function SystemsPage({ systems }: SystemsPageProps) {
             </EmptyMedia>
             <EmptyTitle>No systems yet</EmptyTitle>
             <EmptyDescription>
-              Name a system or external system in a design, and it appears here.
+              Name a system in a design, or give a service the system it is part of, and it appears
+              here.
             </EmptyDescription>
           </EmptyHeader>
         </Empty>
@@ -68,9 +69,13 @@ export function SystemsPage({ systems }: SystemsPageProps) {
                     </TableCell>
                     <TableCell>{system.members.join(', ') || '—'}</TableCell>
                     <TableCell>
-                      <a href={system.designHref} className="underline underline-offset-4">
-                        {system.designTitle}
-                      </a>
+                      {system.design ? (
+                        <a href={system.design.href} className="underline underline-offset-4">
+                          {system.design.title}
+                        </a>
+                      ) : (
+                        '—'
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}

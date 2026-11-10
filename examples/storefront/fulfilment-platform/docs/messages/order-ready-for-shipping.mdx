@@ -1,0 +1,13 @@
+---
+title: Order Ready For Shipping
+owner: fulfilment-platform
+summary: Published when a packed order is ready to be handed to a carrier for shipping.
+about:
+  - event/fulfilment/order-ready-for-shipping
+sidebar:
+  hidden: true
+---
+
+## Overview
+
+`OrderReadyForShipping` is published by the [[service|Warehouse Service]] once an order has been packed. The [[system|shipping-system]] consumes it to create a shipment with a carrier.

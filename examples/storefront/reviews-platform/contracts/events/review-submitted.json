@@ -1,0 +1,43 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ReviewSubmitted",
+  "type": "object",
+  "properties": {
+    "reviewId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "productId": {
+      "type": "string"
+    },
+    "customerId": {
+      "type": "string"
+    },
+    "rating": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 5
+    },
+    "title": {
+      "type": "string"
+    },
+    "body": {
+      "type": "string"
+    },
+    "submittedAt": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": ["reviewId", "productId", "customerId", "rating", "submittedAt"],
+  "description": "Published when a customer submits a review. The review is stored but not yet visible — it awaits moderation.",
+  "x-autocatalog": {
+    "id": "review-submitted",
+    "version": "1.0.0",
+    "domain": "reviews",
+    "name": "Review Submitted",
+    "summary": "Published when a customer submits a review. The review is stored but not yet visible — it awaits moderation.",
+    "producers": ["Review API"],
+    "consumers": ["Review Moderation Worker"]
+  }
+}

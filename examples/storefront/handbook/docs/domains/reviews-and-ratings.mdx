@@ -1,0 +1,38 @@
+---
+title: Reviews and ratings
+owner: handbook
+summary: How the Reviews domain accepts, moderates, publishes and aggregates product feedback.
+---
+
+[[domain|reviews]] owns customer feedback on products. Unlike the other domains, it is modelled directly with services and data stores rather than nested systems.
+
+## Domain map
+
+<Map />
+
+## Services
+
+[[service|Review API]] accepts review commands and serves product reviews. It writes to **Review Database** and reads aggregate data from **Rating Cache**.
+
+[[service|Review Moderation Worker]] consumes [[event|reviews-platform/reviews/review-submitted]] and publishes either [[event|reviews-platform/reviews/review-published]] or [[event|reviews-platform/reviews/review-rejected]].
+
+[[service|Rating Aggregator]] reacts to published reviews and updates the product rating model, publishing [[event|reviews-platform/reviews/rating-updated]].
+
+## Core entity
+
+**Review** is the central aggregate. It moves from submitted to moderated to published or rejected.
+
+<Map />
+
+## Customer interactions
+
+Customers can submit, flag and vote on reviews:
+
+- [[event|reviews/submit-review]]
+- [[event|reviews/flag-review]]
+- [[event|reviews/vote-review-helpful]]
+- [[event|reviews/get-product-reviews]]
+
+## Product impact
+
+Reviews influence product discovery and conversion, but they do not own product data. Product identity remains in [[domain|catalog]], while review state remains in Reviews.

@@ -1,0 +1,14 @@
+{
+  "name": "@autocatalog-example/storefront",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "The fictional Acme storefront: eight team repositories and a handbook, joined into one site.",
+  "scripts": {
+    "check": "node ../../packages/events/cli/dist/bin.js docs check .",
+    "build": "node ../../packages/events/cli/dist/bin.js site . --out dist"
+  },
+  "dependencies": {
+    "autocatalog-cli": "workspace:*"
+  }
+}

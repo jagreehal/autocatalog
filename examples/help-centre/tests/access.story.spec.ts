@@ -2,10 +2,10 @@ import { expect, test, type Browser } from '@playwright/test';
 import { given, story, then, when } from 'executable-stories-playwright';
 
 const GUIDES = {
-  start: '/help-centre/getting-started/',
-  invoices: '/help-centre/invoices/',
-  send: '/help-centre/invoices/send-an-invoice/',
-  paid: '/help-centre/payments/get-paid/',
+  start: '/getting-started/',
+  invoices: '/invoices/',
+  send: '/invoices/send-an-invoice/',
+  paid: '/payments/get-paid/',
 };
 
 /** A page signed in as one of the example's accounts, or signed out. */
@@ -68,7 +68,7 @@ test.describe('A help centre per account', () => {
     await expect(page.getByText('Message a person')).toBeVisible();
 
     then('its Markdown twin says so in Markdown');
-    const twin = await page.request.get('/help-centre/payments/get-paid.md');
+    const twin = await page.request.get('/payments/get-paid.md');
     expect(twin.status()).toBe(403);
     expect(twin.headers()['content-type']).toContain('text/markdown');
     expect(await twin.text()).toMatch(/^# Get paid\n/);
@@ -146,7 +146,7 @@ test.describe('A help centre per account', () => {
     expect(await (await page.request.get('/llms-full.txt')).text()).not.toContain('Get paid');
 
     then('a twin reached by an encoded path stays closed');
-    const encoded = await page.request.get('/help-centre/payments%2Fget-paid.md');
+    const encoded = await page.request.get('/payments%2Fget-paid.md');
     expect(encoded.status()).not.toBe(200);
     expect(await encoded.text()).not.toContain('settle to your bank');
     await page.close();

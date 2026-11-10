@@ -26,21 +26,22 @@ each one with its history, and writes the site to `dist/`. A team enrols its
 repository by adding the topic on GitHub. Nobody edits a list in the site's
 repository, and the site's owners approve nothing.
 
-| Flag                 | Meaning                                                                           |
-| -------------------- | --------------------------------------------------------------------------------- |
-| `--topic`, `--owner` | Clone every repository the owner has with the topic                               |
-| `--repo <url...>`    | Clone these repositories as well                                                  |
-| `[root]`             | Build from checkouts already on disk, or from one repository                      |
-| `--site`, `--base`   | Where the site is served, for links, the sitemap and `llms.txt`                   |
-| `--title`            | The site's title                                                                  |
-| `--description`      | One sentence for the home page and `llms.txt`                                     |
-| `--brand`            | A folder with your logo, favicon and theme                                        |
-| `--theme`            | An accent colour by name                                                          |
-| `--audience`         | Build for readers outside, e.g. `public`: see [Public API docs](#public-api-docs) |
-| `--out`              | Output directory, `dist` by default                                               |
-| `--dev`              | Serve with live reload                                                            |
-| `--eventcatalog`     | Draw diagrams with EventCatalog, inside this site                                 |
-| `--docs-schema`      | The docs frontmatter contract to enforce                                          |
+| Flag                  | Meaning                                                                           |
+| --------------------- | --------------------------------------------------------------------------------- |
+| `--topic`, `--owner`  | Clone every repository the owner has with the topic                               |
+| `--repo <url...>`     | Clone these repositories as well                                                  |
+| `[root]`              | Build from checkouts already on disk, or from one repository                      |
+| `--site`, `--base`    | Where the site is served, for links, the sitemap and `llms.txt`                   |
+| `--title`             | The site's title                                                                  |
+| `--description`       | One sentence for the home page and `llms.txt`                                     |
+| `--brand`             | A folder with your logo, favicon and theme                                        |
+| `--theme`             | An accent colour by name                                                          |
+| `--audience`          | Build for readers outside, e.g. `public`: see [Public API docs](#public-api-docs) |
+| `--out`               | Output directory, `dist` by default                                               |
+| `--dev`               | Serve with live reload                                                            |
+| `--eventcatalog`      | Draw diagrams with EventCatalog, inside this site                                 |
+| `--docs-schema`       | The docs frontmatter contract to enforce                                          |
+| `--print-layout home` | Print the home page's default blocks for `layouts`, and build nothing             |
 
 Set the flags once in `package.json` and reuse them for the dev server:
 
@@ -121,12 +122,17 @@ keeps the last good site.
   APIs it serves. A service comes from each event's `producers` and
   `consumers`, so declaring `producers: ['InventoryManager']` on an event
   creates the InventoryManager page, or from an OpenAPI spec that serves it, so
-  a repository of APIs and no events has a page for each service. Its owner
+  a repository of APIs and no events has a page for each service. A service
+  the resource graph holds also has one: a command's handler, a table's reader
+  or writer, or one a repository declares in `.autocatalog/resources.json`
+  ([brownfield resources](/docs/brownfield-resources)). Its owner
   comes from its own record, or else from CODEOWNERS for the spec that defines
   it. Endpoints and gateways take the owner of the file each was read from, and
   a repository takes the owner of its catch-all rule, such as `*`.
-- `/domains/<domain>/` gathers the events in one domain, the services around
-  them and their owners, with a map of the domain. `/domains` lists them all.
+- `/domains/<domain>/` gathers one domain: its overview, its subdomains,
+  systems, services, events, contracts (the APIs its services serve), entities,
+  flows and the documents `about:` it, then a map of the domain and its owners.
+  `/domains` lists them all. See [Overview files](#overview-files).
 - Maps on service and domain pages use EventCatalog's MIT visualiser. A service
   map shows the services on the other side of each event, and the catalog map
   adds commands, queries and the tables and collections each service reads and
@@ -375,8 +381,9 @@ keeps the last good site.
   `teams/payments.md` describes `@acme/payments`. Keep the directory in one
   repository, such as the handbook: `ac docs check` fails a team or user
   described twice, and warns of a member with no `users/` file. Any of
-  `glossary/`, `entities/`, `data-products/`, `teams/`, `users/` or `designs/`
-  enrols a repository on its own, so a handbook can hold the directory alone.
+  `glossary/`, `entities/`, `data-products/`, `teams/`, `users/`, `designs/` or
+  `overviews/` enrols a repository on its own, so a handbook can hold the
+  directory alone.
 
 - `/data/<repository>/<model>/` is one table or collection: where its
   definition was read, who owns it, its fields (type, required, primary key,
@@ -416,7 +423,9 @@ keeps the last good site.
   link into the team's tool. See [components](/docs/components).
 - `/channels` lists each queue and topic: the ones runtime evidence saw, with
   their messaging system, and the channels designs draw. `/systems` lists the
-  systems and external systems designs name. Each has its own page.
+  systems and external systems designs name, and each system a service in the
+  resource graph says it is part of, with those services as its members. Each
+  has its own page.
 - On an event's schema tree, each field lists the other events that carry the
   same path and the consumers that read it.
 - A draft, deprecated or superseded resource shows a banner above its body,
@@ -429,6 +438,49 @@ keeps the last good site.
 - `/contracts/docs-manifest.json` lists every document and who links to it.
   Point `ac docs check --manifest` at it and each repository's CI catches a link
   to a missing document, or a rename that would orphan a link from elsewhere.
+
+## Overview files
+
+A domain, service or system page opens with what its team writes about it, in
+a Markdown file under `overviews/`:
+
+| File                           | Opens               |
+| ------------------------------ | ------------------- |
+| `overviews/domains/<id>.md`    | `/domains/<id>/`    |
+| `overviews/services/<name>.md` | `/services/<name>/` |
+| `overviews/systems/<id>.md`    | `/systems/<id>/`    |
+
+```markdown
+---
+name: Returns
+summary: Takes back what customers send, and refunds it.
+owner: fulfilment-platform
+parent: fulfilment
+---
+
+Customers send [[event|returns/request-return]], and the
+[[service|Returns API]] publishes [[event|returns/return-requested]].
+```
+
+The body is ordinary Markdown with `[[kind|id]]` links. `summary` is the
+page's description, and a domain's `name` is its title and its label in the
+sidebar. A file name matches its resource
+ignoring case and punctuation, so `payment-worker.md` is Payment Worker. Only
+`overviews/` is read, so a `services/` folder of source code stays out.
+
+`parent` makes a domain a subdomain: the parent's page lists it, and the
+Catalog sidebar nests it there. Its events keep their own domain.
+
+Any repository can write an overview, and the site resolves it against every
+repository's catalog. `ac docs check` fails two overviews of one resource in
+the checkout, a parent that is a service or system, and a domain that is its
+own ancestor. It passes an overview of something only another repository
+declares, as it does a flow's step; the site warns and leaves it out if no
+repository does. Two repositories with an overview of the same resource: the
+site keeps the first in repository-name order and warns about the other.
+
+A guide or runbook lists under its domain in the sidebar and on the domain's
+page with `about: [domain/<id>]`, for any domain an event or service names.
 
 ## Write in MDX
 
@@ -460,7 +512,9 @@ In `.md` and `.mdx` alike, `[[kind|id]]` links a catalog page:
 `[[service|PaymentService]]`, `[[event|payments/payment.captured]]`,
 `[[domain|payments]]`, `[[owner|…]]`, `[[channel|…]]`, `[[system|…]]`,
 `[[doc|…]]`, `[[flow|…]]` or `[[design|…]]`. An event written as
-`domain/id` opens the Catalog searching for it.
+`domain/id` opens the Catalog searching for it. A link reads as the last
+segment of its id, so `[[event|payments-service/payments/payment.captured]]`
+reads `payment.captured`.
 
 A focus, event or term that names nothing fails the build, with the nearest
 match. Import a component of your own as MDX always allows, and your import
@@ -548,6 +602,78 @@ Site paths take the `--base` the site is served under. Restyle the rail from
 `[data-icon-rail] a[aria-current='page']`, and `--ac-rail-width` sets its width.
 A site that overrides Starlight's `Header` itself places the links with
 `autocatalog-docs-astro/overrides/TopNav.astro`.
+
+### The sidebar
+
+On a site for readers inside, the Catalog sidebar opens with **Domains**,
+built from the catalog with nothing to maintain: each domain opens on its
+overview, then its subdomains, systems, services, events, commands, entities,
+flows, and the guides and runbooks `about:` it. Under it, **Catalog**
+links every page the catalog has (the knowledge graph, services, systems,
+APIs, channels, MCP servers, flows, each document kind and the rest), each one
+click away. A catalog without domains keeps that list alone, and
+`navigation.groups` replaces the sidebar with your own.
+
+The Docs sidebar has a group per repository, in name order. `order` in a
+repository's `docs/meta.json` moves it, lower first, so a handbook can lead:
+
+```json
+{ "label": "Handbook", "order": 0 }
+```
+
+### Compose the home page
+
+The home page is a list of blocks: the counts, the architecture map, the
+documents, what needs attention, the ways in, and documents by tag. A site for
+an `audience` starts from its documents, the ways in and tags. `layouts.home`
+replaces the list, in order. The page keeps its header; the blocks replace what
+is under it:
+
+```json
+{
+  "layouts": {
+    "home": [
+      {
+        "block": "hero",
+        "actions": [{ "label": "Get started", "href": "/getting-started/" }]
+      },
+      { "block": "apis", "title": "The API" },
+      { "block": "docs", "title": "Guides", "folder": "getting-started" },
+      { "block": "status", "href": "https://status.acme.com" }
+    ]
+  }
+}
+```
+
+| Block        | Shows                                                                    |
+| ------------ | ------------------------------------------------------------------------ |
+| `hero`       | A `title`, a line of `text` and `actions`, each a `label` and `href`     |
+| `cards`      | `items` you choose, each a `title`, `href`, `text` and `icon`            |
+| `countCards` | The catalog's counts, chosen by `kinds` or as `homeCounts` chooses them  |
+| `docs`       | The documents by repository, or one `folder`'s as a list                 |
+| `apis`       | A card for each API's reference                                          |
+| `graph`      | The architecture map                                                     |
+| `attention`  | What needs review, is quarantined, or has no producer, consumer or owner |
+| `explore`    | A card for each way into the catalog                                     |
+| `tags`       | The documents by tag                                                     |
+
+Every block but `hero`, `countCards` and `attention` takes a `title`. A site
+for an audience does not publish the company's counts, map or attention list,
+so naming `countCards`, `graph` or `attention` in its layout fails the build.
+`ac site --print-layout home` prints the blocks this site's home page is built
+from, to copy and change.
+
+A block of your own is an Astro component an [extension](#extend-the-site) names
+under `blocks`, and the layout passes it every field but `block`:
+
+```ts
+// site/extend.ts
+export default { blocks: { status: './StatusBlock.astro' } };
+```
+
+A built-in block with a field it does not take, a block nobody provides, and an
+extension's block named like a built-in one or like another extension's, fail
+the build and name it.
 
 `homeCounts` chooses the cards that open the home page, by kind and in order:
 
@@ -678,6 +804,7 @@ export default {
   middleware: './middleware.ts', // Astro middleware: sign-in, redirects, headers
   routeMiddleware: './route-data.ts', // Starlight route data: trim the sidebar per reader
   components: { Footer: './Footer.astro' }, // Starlight component overrides
+  blocks: { status: './StatusBlock.astro' }, // blocks layouts.home can name
   customCss: ['./brand.css'],
   head: [{ tag: 'meta', attrs: { name: 'robots', content: 'noindex' } }],
   remarkPlugins: [],
@@ -784,6 +911,8 @@ nothing about your own systems. Set an audience in `autocatalog.site.json`:
 ```
 
 or pass `--audience public`, and keep a second build without it for the company.
+Set `url` to where the site is deployed: without it the build has no sitemap,
+`llms.txt` links relatively, and `ac site` says so.
 Commit the spec your framework generates as `contracts/openapi.json` or
 `contracts/openapi.yaml`.
 
@@ -1084,7 +1213,12 @@ top of the sidebar:
 ```
 
 `docs/labels/start.md` is then at `/labels/start/`. Its id stays `help/labels/start`,
-so `related:` and `docHref(id)` read as before. A folder whose name the site
+so `related:` and `docHref(id)` read as before.
+
+A site for an `audience` with one repository publishes at the root without
+being asked, since its readers never see repositories. `"atRoot": false` keeps
+the repository's name in its addresses. API references stay at
+`/apis/<repository>/<name>/` either way. A folder whose name the site
 uses itself, such as `apis` or `search`, fails the build with the documents to
 move.
 

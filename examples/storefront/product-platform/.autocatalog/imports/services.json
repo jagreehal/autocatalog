@@ -1,0 +1,182 @@
+{
+  "graph": {
+    "spec": "autocatalog/graph-v1",
+    "resources": [
+      {
+        "ref": {
+          "kind": "service",
+          "id": "Product API"
+        },
+        "title": "Product API",
+        "tags": [],
+        "provenance": {
+          "default": "declared",
+          "fields": {}
+        },
+        "needsReview": false,
+        "attributes": {
+          "domains": ["catalog"],
+          "system": {
+            "id": "product-catalog-system",
+            "name": "Product Catalog System"
+          }
+        },
+        "summary": "The public-facing API for the product catalog. Handles commands to create, update and delete products, serves product reads, and is the entry point into the Product Catalog System.",
+        "owner": {
+          "team": "product-platform",
+          "name": "Product Platform",
+          "contact": "https://acme.slack.com/channels/product-platform"
+        }
+      },
+      {
+        "ref": {
+          "kind": "service",
+          "id": "Product Search Publisher"
+        },
+        "title": "Product Search Publisher",
+        "tags": [],
+        "provenance": {
+          "default": "declared",
+          "fields": {}
+        },
+        "needsReview": false,
+        "attributes": {
+          "domains": ["catalog"],
+          "system": {
+            "id": "product-catalog-system",
+            "name": "Product Catalog System"
+          }
+        },
+        "summary": "Reads product changes from the product database (outbox) and reliably publishes product-created, product-updated and product-deleted events for the Search System to consume.",
+        "owner": {
+          "team": "product-platform",
+          "name": "Product Platform",
+          "contact": "https://acme.slack.com/channels/product-platform"
+        }
+      },
+      {
+        "ref": {
+          "kind": "service",
+          "id": "Product Worker"
+        },
+        "title": "Product Worker",
+        "tags": [],
+        "provenance": {
+          "default": "declared",
+          "fields": {}
+        },
+        "needsReview": false,
+        "attributes": {
+          "domains": ["catalog"],
+          "system": {
+            "id": "product-catalog-system",
+            "name": "Product Catalog System"
+          }
+        },
+        "summary": "Background worker that handles long-running and asynchronous catalog work off the request path, such as enrichment, image processing and bulk imports.",
+        "owner": {
+          "team": "product-platform",
+          "name": "Product Platform",
+          "contact": "https://acme.slack.com/channels/product-platform"
+        }
+      },
+      {
+        "ref": {
+          "kind": "table",
+          "namespace": "product-platform",
+          "id": "product-database"
+        },
+        "title": "Product Database",
+        "tags": [],
+        "provenance": {
+          "default": "declared",
+          "fields": {}
+        },
+        "needsReview": false,
+        "attributes": {
+          "technology": "postgres@16",
+          "containerType": "database"
+        },
+        "summary": "PostgreSQL database that is the system of record for all product data.",
+        "owner": {
+          "team": "product-platform",
+          "name": "Product Platform",
+          "contact": "https://acme.slack.com/channels/product-platform"
+        }
+      }
+    ],
+    "relationships": [
+      {
+        "type": "reads",
+        "from": {
+          "kind": "service",
+          "id": "Product API"
+        },
+        "to": {
+          "kind": "table",
+          "namespace": "product-platform",
+          "id": "product-database"
+        },
+        "provenance": "declared",
+        "needsReview": false
+      },
+      {
+        "type": "writes",
+        "from": {
+          "kind": "service",
+          "id": "Product API"
+        },
+        "to": {
+          "kind": "table",
+          "namespace": "product-platform",
+          "id": "product-database"
+        },
+        "provenance": "declared",
+        "needsReview": false
+      },
+      {
+        "type": "reads",
+        "from": {
+          "kind": "service",
+          "id": "Product Search Publisher"
+        },
+        "to": {
+          "kind": "table",
+          "namespace": "product-platform",
+          "id": "product-database"
+        },
+        "provenance": "declared",
+        "needsReview": false
+      },
+      {
+        "type": "reads",
+        "from": {
+          "kind": "service",
+          "id": "Product Worker"
+        },
+        "to": {
+          "kind": "table",
+          "namespace": "product-platform",
+          "id": "product-database"
+        },
+        "provenance": "declared",
+        "needsReview": false
+      },
+      {
+        "type": "writes",
+        "from": {
+          "kind": "service",
+          "id": "Product Worker"
+        },
+        "to": {
+          "kind": "table",
+          "namespace": "product-platform",
+          "id": "product-database"
+        },
+        "provenance": "declared",
+        "needsReview": false
+      }
+    ]
+  },
+  "claims": []
+}

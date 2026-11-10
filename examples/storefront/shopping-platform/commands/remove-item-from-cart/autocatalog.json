@@ -1,0 +1,11 @@
+{
+  "kind": "command",
+  "id": "remove-item-from-cart",
+  "version": "1.0.0",
+  "name": "Remove Item From Cart",
+  "summary": "Command to remove an item from a shopping cart.",
+  "domain": "shopping",
+  "handler": "Cart API",
+  "senders": [],
+  "schema": "./schema.json"
+}

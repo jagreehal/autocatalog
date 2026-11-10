@@ -1,0 +1,11 @@
+{
+  "kind": "command",
+  "id": "create-shipment",
+  "version": "1.0.0",
+  "name": "Create Shipment",
+  "summary": "Command to create a shipment with a carrier for a packed order.",
+  "domain": "fulfilment",
+  "handler": "Shipping API",
+  "senders": ["Carrier Adapter"],
+  "schema": "./schema.json"
+}

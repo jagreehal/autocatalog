@@ -1,0 +1,114 @@
+{
+  "graph": {
+    "spec": "autocatalog/graph-v1",
+    "resources": [
+      {
+        "ref": {
+          "kind": "service",
+          "id": "Search API"
+        },
+        "title": "Search API",
+        "tags": [],
+        "provenance": {
+          "default": "declared",
+          "fields": {}
+        },
+        "needsReview": false,
+        "attributes": {
+          "domains": ["catalog"],
+          "system": {
+            "id": "search-system",
+            "name": "Search System"
+          }
+        },
+        "summary": "Public-facing API that serves fast, relevant product search to the rest of the business, reading from the search index.",
+        "owner": {
+          "team": "search-platform",
+          "name": "Search Platform",
+          "contact": "https://acme.slack.com/channels/search-platform"
+        }
+      },
+      {
+        "ref": {
+          "kind": "service",
+          "id": "Search Indexer"
+        },
+        "title": "Search Indexer",
+        "tags": [],
+        "provenance": {
+          "default": "declared",
+          "fields": {}
+        },
+        "needsReview": false,
+        "attributes": {
+          "domains": ["catalog"],
+          "system": {
+            "id": "search-system",
+            "name": "Search System"
+          }
+        },
+        "summary": "Consumes product change events from the Product Catalog System and keeps the search index up to date so products are discoverable.",
+        "owner": {
+          "team": "search-platform",
+          "name": "Search Platform",
+          "contact": "https://acme.slack.com/channels/search-platform"
+        }
+      },
+      {
+        "ref": {
+          "kind": "table",
+          "namespace": "search-platform",
+          "id": "search-index"
+        },
+        "title": "Search Index",
+        "tags": [],
+        "provenance": {
+          "default": "declared",
+          "fields": {}
+        },
+        "needsReview": false,
+        "attributes": {
+          "technology": "opensearch@2",
+          "containerType": "searchIndex"
+        },
+        "summary": "The denormalised, search-optimised index of products that powers product search.",
+        "owner": {
+          "team": "search-platform",
+          "name": "Search Platform",
+          "contact": "https://acme.slack.com/channels/search-platform"
+        }
+      }
+    ],
+    "relationships": [
+      {
+        "type": "reads",
+        "from": {
+          "kind": "service",
+          "id": "Search API"
+        },
+        "to": {
+          "kind": "table",
+          "namespace": "search-platform",
+          "id": "search-index"
+        },
+        "provenance": "declared",
+        "needsReview": false
+      },
+      {
+        "type": "writes",
+        "from": {
+          "kind": "service",
+          "id": "Search Indexer"
+        },
+        "to": {
+          "kind": "table",
+          "namespace": "search-platform",
+          "id": "search-index"
+        },
+        "provenance": "declared",
+        "needsReview": false
+      }
+    ]
+  },
+  "claims": []
+}

@@ -1,0 +1,11 @@
+{
+  "kind": "command",
+  "id": "create-order",
+  "version": "1.0.0",
+  "name": "Create Order",
+  "summary": "Command to create a new order from a checked-out cart.",
+  "domain": "ordering",
+  "handler": "Order Service",
+  "senders": ["Checkout Orchestrator"],
+  "schema": "./schema.json"
+}

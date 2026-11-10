@@ -1,5 +1,6 @@
 import { fileURLToPath } from 'node:url';
 import { closestMatch, resourceKey } from 'autocatalog-core';
+import { buildDomains } from './domains';
 import {
   domainNeighbourhood,
   lookupTerm,
@@ -142,7 +143,7 @@ export async function mdxMap(
   }
 
   if (kind === 'domain') {
-    const domains = [...new Set(catalog.events.map(({ event }) => event.frontmatter.domain))];
+    const domains = buildDomains(catalog.events, catalog.graph).map(({ name }) => name);
 
     if (!domains.includes(id)) throw new Error(missing('domain', id, domains));
 

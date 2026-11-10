@@ -1,0 +1,11 @@
+---
+title: Calculate Discount
+owner: shopping-platform
+summary: Command to calculate the discount that applies to a cart.
+sidebar:
+  hidden: true
+---
+
+## Overview
+
+`CalculateDiscount` is handled by the [[service|Promotion Service]]. It is sent by the [[service|Cart API]] when pricing a cart. The service evaluates the applicable promotion rules and returns the discount, also publishing a [[event|shopping-platform/shopping/discount-calculated]] event.

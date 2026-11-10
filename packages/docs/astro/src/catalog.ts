@@ -88,6 +88,9 @@ import {
   readDesigns,
   glossaryGraph,
   readDomainModel,
+  readOverviews,
+  overviewTargets,
+  type Overview,
   flowWorkflow,
   checkLifecycles,
   type FlowEvidence,
@@ -150,6 +153,8 @@ export interface DocsCatalog {
   repositoryRoots: Record<string, string>;
   /** Each domain's glossary, and the entities, data products, teams and users repositories describe. */
   model: DomainModel;
+  /** The text at the top of domain, service and system pages, from each repository's `overviews/`. */
+  overviews: Overview[];
   manifest: DocsManifest;
   /** The document kinds with at least one document, each with an index page. */
   kinds: DocKind[];
@@ -683,6 +688,23 @@ export async function buildDocsCatalog(
     schemaOf: (event) => schemas.get(`${event.ref.namespace}/${event.ref.id}`),
   });
 
+  // Domain, service and system overviews, matched against the composed
+  // catalog: what no repository declares is left out with a warning.
+  const overviewsRead = readOverviews(
+    enrolled,
+    overviewTargets(composed.resources, {
+      service: events.flatMap(({ event }) => [
+        ...event.frontmatter.producers,
+        ...event.frontmatter.consumers,
+      ]),
+      system: designs.designs.flatMap((design) =>
+        design.resources.flatMap((resource) =>
+          resource.type === 'system' || resource.type === 'external-system' ? [resource.id] : [],
+        ),
+      ),
+    }),
+  );
+
   // The words teams use, joined to what implements them: how an agent gets from
   // "customer onboarding" to the services and events behind it.
   composed = mergeArchitectureGraphs(
@@ -705,6 +727,8 @@ export async function buildDocsCatalog(
     ...flows.failures.map((failure) => `${failure}, so it is left out`),
     ...designs.failures.map((failure) => `${failure}, so it is left out`),
     ...modelFailures.map((failure) => `${failure}, so it is left out`),
+    ...overviewsRead.failures.map((failure) => `${failure}, so it is left out`),
+    ...overviewsRead.warnings,
     ...flows.warnings,
     ...flows.flows.flatMap((flow) => {
       const { ambiguous } = flowWorkflow(flow, workflows);
@@ -771,6 +795,7 @@ export async function buildDocsCatalog(
     designs: designs.designs,
     repositoryRoots: Object.fromEntries(enrolled.map(({ repository, dir }) => [repository, dir])),
     model,
+    overviews: overviewsRead.overviews,
     models: models.map((model) => ({
       ...model,
       resource: { ...model.resource, url: modelPath(model) },

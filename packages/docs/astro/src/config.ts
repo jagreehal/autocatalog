@@ -2,6 +2,8 @@ import path from 'node:path';
 import {
   type SiteAccessConfig,
   type SiteChat,
+  type SiteConfig,
+  siteConfigSchema,
   siteAccessSchema,
   siteChatSchema,
   type SiteNavigation,
@@ -56,6 +58,8 @@ export interface DocsSiteConfig {
   apiReferenceLabel: string;
   /** The kinds the home page counts, in order; unset, six chosen for it. */
   homeCounts: string[] | undefined;
+  /** Pages composed from blocks: `home`, in order. */
+  layouts: SiteConfig['layouts'];
   /**
    * Whether a site rendered per request serves its MCP endpoint at `/mcp`. Unset,
    * a site with `access` or an `audience` serves it, as each knows what a reader may open.
@@ -131,6 +135,9 @@ export function docsSiteConfig(): DocsSiteConfig {
     apiReferenceLabel: process.env.AUTOCATALOG_SITE_API_REFERENCE_LABEL || 'Scalar',
     homeCounts: process.env.AUTOCATALOG_SITE_HOME_COUNTS
       ? z.array(z.string()).parse(JSON.parse(process.env.AUTOCATALOG_SITE_HOME_COUNTS))
+      : undefined,
+    layouts: process.env.AUTOCATALOG_SITE_LAYOUTS
+      ? siteConfigSchema.shape.layouts.parse(JSON.parse(process.env.AUTOCATALOG_SITE_LAYOUTS))
       : undefined,
     access: process.env.AUTOCATALOG_SITE_ACCESS
       ? siteAccessSchema.parse(JSON.parse(process.env.AUTOCATALOG_SITE_ACCESS))

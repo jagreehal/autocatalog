@@ -258,6 +258,29 @@
         "minLength": 1
       }
     },
+    "layouts": {
+      "type": "object",
+      "properties": {
+        "home": {
+          "minItems": 1,
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "block": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "block"
+            ],
+            "additionalProperties": {}
+          }
+        }
+      },
+      "additionalProperties": false
+    },
     "mcp": {
       "type": "boolean"
     },

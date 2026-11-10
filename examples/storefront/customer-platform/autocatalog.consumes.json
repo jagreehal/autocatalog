@@ -1,0 +1,36 @@
+{
+  "receives": [
+    {
+      "service": "Notification Service",
+      "id": "returns/return-approved"
+    },
+    {
+      "service": "Notification Service",
+      "id": "fulfilment/shipment-delivered"
+    },
+    {
+      "service": "Loyalty Service",
+      "id": "ordering/order-cancelled"
+    },
+    {
+      "service": "Loyalty Service",
+      "id": "ordering/order-completed"
+    },
+    {
+      "service": "Notification Service",
+      "id": "ordering/order-confirmed"
+    },
+    {
+      "service": "Notification Service",
+      "id": "payments/payment-failed"
+    },
+    {
+      "service": "Notification Service",
+      "id": "payments/refund-processed"
+    },
+    {
+      "service": "Notification Service",
+      "id": "reviews/review-published"
+    }
+  ]
+}

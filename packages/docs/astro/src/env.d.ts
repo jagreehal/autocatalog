@@ -67,6 +67,11 @@ declare module 'virtual:autocatalog-access' {
 }
 
 // The site's header links, from `nav`. See index.ts.
+declare module 'virtual:autocatalog-docs-blocks' {
+  const blocks: Record<string, import('astro/runtime/server/index.js').AstroComponentFactory>;
+  export default blocks;
+}
+
 declare module 'virtual:autocatalog-docs-nav' {
   const links: import('autocatalog-docs-core').SiteNavLink[];
   export default links;

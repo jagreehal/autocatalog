@@ -8,6 +8,9 @@ import type { StarlightPlugin } from '@astrojs/starlight/types';
 import { z } from 'astro/zod';
 import {
   type Doc,
+  HOME_BLOCKS,
+  INSIDE_ONLY_BLOCKS,
+  type SiteConfig,
   resolveDocsLayout,
   siteNavLinkSchema,
   type SiteAccessConfig,
@@ -51,7 +54,11 @@ import { chatIcons, chatPages, chatText } from './chat';
 import { audienceReader } from './audience';
 import { graphOwners } from './owners';
 import { retirementsPageProps } from './retirements';
+import { buildChannels } from './channels';
+import { catalogSystemRows } from './systems';
 import { catalogSidebar, docsSidebar, navigationGroups } from './sidebar';
+import { domainSidebar } from './domain-sidebar';
+import { buildDomains } from './domains';
 import { eventCatalogEmbeds } from './eventcatalog';
 import { reactRendererIntegration, siteHasReact } from './react-integration';
 import { EMBED_SCRIPT } from './embed';
@@ -130,6 +137,10 @@ export interface AutocatalogDocsOptions {
   apiReferenceLabel?: string;
   /** The kinds the home page counts, in order: six chosen for it by default. */
   homeCounts?: string[];
+  /** Pages composed from blocks: `home`, in order. Unset, the home page is as built. */
+  layouts?: SiteConfig['layouts'];
+  /** Blocks a layout can name beyond the built-in ones: an Astro component's path by name. */
+  blocks?: Record<string, string>;
   /**
    * The MCP endpoint at `/mcp` on a site with `output: 'server'`, where agents
    * search its pages and read its APIs' operations. On by default with `access`
@@ -160,6 +171,7 @@ export interface AutocatalogDocsOptions {
   /**
    * Publish the one repository's documents at the site's root, without its
    * name: `docs/labels/start.md` at `/labels/start/`. Ids keep the name.
+   * A site for an `audience` with one repository does this unless `false`.
    */
   atRoot?: boolean;
   access?: {
@@ -226,9 +238,24 @@ export default function autocatalogDocs(opts: AutocatalogDocsOptions = {}): Star
           process.env.AUTOCATALOG_SITE_HOME_COUNTS ??= JSON.stringify(opts.homeCounts);
         }
 
+        if (opts.layouts) process.env.AUTOCATALOG_SITE_LAYOUTS ??= JSON.stringify(opts.layouts);
+
+        const blocks = opts.blocks ?? {};
+
+        checkHomeLayout(docsSiteConfig(), blocks);
+
+        addIntegration({
+          name: 'autocatalog-docs-blocks',
+          hooks: {
+            'astro:config:setup': ({ updateConfig: updateAstroConfig }) => {
+              updateAstroConfig({ vite: { plugins: [blocksModule(blocks)] } });
+            },
+          },
+        });
+
         if (opts.mcp !== undefined) process.env.AUTOCATALOG_SITE_MCP ??= String(opts.mcp);
 
-        if (opts.atRoot) process.env.AUTOCATALOG_DOCS_AT_ROOT ??= 'true';
+        if (opts.atRoot !== undefined) process.env.AUTOCATALOG_DOCS_AT_ROOT ??= String(opts.atRoot);
 
         if (opts.access) {
           const { rule: _rule, ...settings } = opts.access;
@@ -265,9 +292,17 @@ export default function autocatalogDocs(opts: AutocatalogDocsOptions = {}): Star
         // pages is worse than no sidebar.
         const effective = docsSiteConfig();
 
-        // One repository at the root: every link and route drops its name.
+        // One repository at the root: every link and route drops its name. A
+        // site for an audience does this by default, since its readers never
+        // see repositories; `atRoot: false` keeps the name.
+        const atRoot = process.env.AUTOCATALOG_DOCS_AT_ROOT;
+
         const rootRepo =
-          process.env.AUTOCATALOG_DOCS_AT_ROOT === 'true' ? onlyRepository(effective) : undefined;
+          atRoot === 'true'
+            ? onlyRepository(effective)
+            : atRoot !== 'false' && effective.audience
+              ? soleRepository(effective)
+              : undefined;
 
         if (rootRepo) process.env.AUTOCATALOG_DOCS_ROOT_REPO = rootRepo;
 
@@ -375,6 +410,7 @@ export default function autocatalogDocs(opts: AutocatalogDocsOptions = {}): Star
         // Starlight also opens whichever group holds the current page.
         const eventsSidebar = catalogSidebar(catalog.events, catalog.apis, {
           apiLabel: effective.apiReferenceLabel,
+          graph: catalog.graph,
         });
 
         // A plugin `favicon` fills Starlight when the site did not set one.
@@ -411,9 +447,11 @@ export default function autocatalogDocs(opts: AutocatalogDocsOptions = {}): Star
               ...(eventCatalogEmbeds()
                 ? [{ label: 'Architecture', link: '/architecture', icon: 'architecture' as const }]
                 : []),
+              ...(buildDomains(catalog.events, catalog.graph).length > 0
+                ? [{ label: 'Domains', link: '/domains', icon: 'domain' as const }]
+                : []),
               ...(catalog.events.length > 0
                 ? [
-                    { label: 'Domains', link: '/domains', icon: 'domain' as const },
                     { label: 'Schemas', link: '/schemas', icon: 'braces' as const },
                     { label: 'Fields', link: '/fields', icon: 'fields' as const },
                   ]
@@ -424,8 +462,17 @@ export default function autocatalogDocs(opts: AutocatalogDocsOptions = {}): Star
               ...(catalogServices(catalog).size > 0
                 ? [{ label: 'Services', link: '/services', icon: 'service' as const }]
                 : []),
+              ...(catalogSystemRows(catalog, '/').length > 0
+                ? [{ label: 'Systems', link: '/systems', icon: 'architecture' as const }]
+                : []),
               ...(catalog.apis.length > 0
                 ? [{ label: 'APIs', link: '/apis', icon: 'api' as const }]
+                : []),
+              ...(buildChannels(catalog.graph, catalog.designs, '/').length > 0
+                ? [{ label: 'Channels', link: '/channels', icon: 'channel' as const }]
+                : []),
+              ...(catalog.graph.resources.some(({ ref }) => ref.kind === 'component')
+                ? [{ label: 'Components', link: '/components', icon: 'component' as const }]
                 : []),
               ...(catalog.graph.resources.some(({ ref }) => ref.kind === 'mcp-server')
                 ? [{ label: 'MCP servers', link: '/mcp-servers', icon: 'mcp-server' as const }]
@@ -463,6 +510,14 @@ export default function autocatalogDocs(opts: AutocatalogDocsOptions = {}): Star
                 : []),
             ];
 
+        // Domains first, then a link to each catalog page. A site with its own
+        // `navigation`, a site for an audience and a catalog without domains
+        // keep the list of pages.
+        const domainGroups =
+          effective.navigation || effective.audience
+            ? []
+            : domainSidebar(catalog, catalogPages, { apiLabel: effective.apiReferenceLabel });
+
         updateConfig({
           ...(favicon && { favicon }),
           // Starlight draws asides and heading links only in the folders it is told about.
@@ -472,11 +527,13 @@ export default function autocatalogDocs(opts: AutocatalogDocsOptions = {}): Star
           },
           // A sidebar the site was configured with would have to be edited every
           // time a team writes a document. This one is what is on disk.
-          sidebar: [
-            ...navigationGroups(catalogPages, effective.navigation),
-            ...contentSidebar,
-            ...eventsSidebar,
-          ],
+          sidebar: domainGroups.length
+            ? [...domainGroups, ...contentSidebar]
+            : [
+                ...navigationGroups(catalogPages, effective.navigation),
+                ...contentSidebar,
+                ...eventsSidebar,
+              ],
           // The theme (DESIGN.md). First, so a site's own customCss still wins.
           customCss: [
             'autocatalog-docs-astro/styles/index.css',
@@ -771,15 +828,22 @@ const require = createRequire(import.meta.url);
  */
 /** The repository a site publishes at its root: there must be exactly one. */
 function onlyRepository(site: DocsSiteConfig): string {
+  const name = soleRepository(site);
+
+  if (name) return name;
+
   const { roots } = resolveDocsLayout(site.root, { repo: site.repo, repository: site.repository });
 
-  if (roots.length !== 1) {
-    throw new Error(
-      `atRoot publishes one repository at the site's root, and this site has ${roots.length}: ${roots.map((root) => root.name).join(', ') || 'none'}`,
-    );
-  }
+  throw new Error(
+    `atRoot publishes one repository at the site's root, and this site has ${roots.length}: ${roots.map((root) => root.name).join(', ') || 'none'}`,
+  );
+}
 
-  return roots[0]!.name;
+/** The site's repository when it has exactly one. */
+function soleRepository(site: DocsSiteConfig): string | undefined {
+  const { roots } = resolveDocsLayout(site.root, { repo: site.repo, repository: site.repository });
+
+  return roots.length === 1 ? roots[0]!.name : undefined;
 }
 
 /** The addresses the catalog and its pages use, which a document at the root cannot take. */
@@ -795,7 +859,7 @@ function refuseRootClashes(docs: readonly Doc[]): void {
 
   if (clashes.length > 0) {
     throw new Error(
-      `atRoot: these documents would take an address the site uses itself; move them into a folder of another name: ${clashes.join(', ')}`,
+      `atRoot: these documents would take an address the site uses itself; move them into a folder of another name, or set "atRoot": false: ${clashes.join(', ')}`,
     );
   }
 }
@@ -869,6 +933,58 @@ function buildModules(
         `export const pages = ${JSON.stringify(chat.pages)};`,
       ].join('\n');
     },
+  };
+}
+
+/**
+ * A home layout that would not draw what it says fails the build, naming the
+ * block: one nobody provides, an extension's block that takes a built-in's
+ * name, and on a site for an audience, the counts, map or attention list,
+ * which that site never publishes.
+ */
+export function checkHomeLayout(
+  site: Pick<SiteConfig, 'audience' | 'layouts'>,
+  blocks: Record<string, string>,
+): void {
+  for (const name of Object.keys(blocks)) {
+    if (name in HOME_BLOCKS) {
+      throw new Error(
+        `extend: a block named '${name}' takes the name of a built-in block (${Object.keys(HOME_BLOCKS).join(', ')}). Name yours differently.`,
+      );
+    }
+  }
+
+  for (const { block } of site.layouts?.home ?? []) {
+    if (!(block in HOME_BLOCKS) && !(block in blocks)) {
+      throw new Error(
+        `layouts.home: no block '${block}'. Built in: ${Object.keys(HOME_BLOCKS).join(', ')}${Object.keys(blocks).length ? `; from extend: ${Object.keys(blocks).join(', ')}` : ''}`,
+      );
+    }
+
+    if (site.audience && INSIDE_ONLY_BLOCKS.some((name) => name === block)) {
+      throw new Error(
+        `layouts.home: a site for "${site.audience}" does not show '${block}', which draws the company's own catalog. Remove it from the layout.`,
+      );
+    }
+  }
+}
+
+const BLOCKS_MODULE = 'virtual:autocatalog-docs-blocks';
+
+/** The blocks `extend` adds, as a module of their components by name. */
+function blocksModule(blocks: Record<string, string>): PluginOption {
+  const entries = Object.entries(blocks);
+
+  return {
+    name: 'autocatalog-docs-blocks',
+    resolveId: (id) => (id === BLOCKS_MODULE ? `\0${BLOCKS_MODULE}` : undefined),
+    load: (id) =>
+      id === `\0${BLOCKS_MODULE}`
+        ? [
+            ...entries.map(([, file], i) => `import block${i} from ${JSON.stringify(file)};`),
+            `export default { ${entries.map(([name], i) => `${JSON.stringify(name)}: block${i}`).join(', ')} };`,
+          ].join('\n')
+        : undefined,
   };
 }
 

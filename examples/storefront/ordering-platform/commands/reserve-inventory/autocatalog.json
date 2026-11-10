@@ -1,0 +1,17 @@
+{
+  "kind": "command",
+  "id": "reserve-inventory",
+  "version": "1.0.0",
+  "name": "Reserve Inventory",
+  "summary": "Command to reserve stock for the items in a checked-out cart.",
+  "domain": "ordering",
+  "handler": "Inventory Service",
+  "senders": ["Checkout Orchestrator"],
+  "schema": "./schema.json",
+  "transport": [
+    {
+      "address": "/reservations",
+      "protocols": ["http"]
+    }
+  ]
+}

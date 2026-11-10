@@ -1,0 +1,10 @@
+{
+  "kind": "command",
+  "id": "checkout-cart",
+  "version": "1.0.0",
+  "name": "Checkout Cart",
+  "summary": "Command to check out a shopping cart.",
+  "domain": "shopping",
+  "senders": [],
+  "schema": "./schema.json"
+}

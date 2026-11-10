@@ -1,0 +1,11 @@
+{
+  "kind": "command",
+  "id": "vote-review-helpful",
+  "version": "1.0.0",
+  "name": "Vote Review Helpful",
+  "summary": "Command issued by a customer to mark a published review as helpful (or remove their vote).",
+  "domain": "reviews",
+  "handler": "Review API",
+  "senders": [],
+  "schema": "./schema.json"
+}

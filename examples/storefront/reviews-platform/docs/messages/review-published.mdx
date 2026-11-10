@@ -1,0 +1,13 @@
+---
+title: Review Published
+owner: reviews-platform
+summary: Published when a submitted review passes moderation and becomes visible on the storefront.
+about:
+  - event/reviews/review-published
+sidebar:
+  hidden: true
+---
+
+## Overview
+
+`ReviewPublished` is published by the [[service|Review Moderation Worker]] when a review passes moderation. The [[service|Rating Aggregator]] consumes it to update the product's aggregate rating.

@@ -12,7 +12,7 @@ import {
 } from 'autocatalog-docs-core';
 import type { DocsCatalog } from './catalog';
 import { githubDirectoryEnrichment } from './directory';
-import { domainHref } from './domains';
+import { buildDomains, domainHref } from './domains';
 import { flowPath, renderNarrative } from './flows';
 import { ownerKey, type Owner } from './owners';
 import type {
@@ -36,9 +36,9 @@ export const dataProductPath = (product: Pick<DataProduct, 'repository' | 'id'>)
 /** A term's anchor on the glossary page, so a document can link straight to it. */
 export const termAnchor = (domain: string, term: string) => `${domain}-${term}`;
 
-/** The domains with a page of their own: those events name. */
-const domainPages = (catalog: Pick<DocsCatalog, 'events'>) =>
-  new Set(catalog.events.map(({ event }) => event.frontmatter.domain));
+/** The domains with a page of their own: those events and services name. */
+const domainPages = (catalog: Pick<DocsCatalog, 'events' | 'graph'>) =>
+  new Set(buildDomains(catalog.events, catalog.graph).map(({ name }) => name));
 
 export function glossaryPageProps(
   catalog: Pick<DocsCatalog, 'events' | 'graph' | 'model'>,

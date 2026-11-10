@@ -1,0 +1,11 @@
+---
+title: Update Customer
+owner: customer-platform
+summary: Command to update an existing customer's profile.
+sidebar:
+  hidden: true
+---
+
+## Overview
+
+`UpdateCustomer` is handled by the [[service|Customer API]]. It applies a partial update to an existing customer in the **Customer Database** and, on success, publishes a [[event|customer-platform/customer/customer-updated]] event describing what changed.

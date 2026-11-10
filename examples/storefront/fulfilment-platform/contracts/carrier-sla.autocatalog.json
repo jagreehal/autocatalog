@@ -1,0 +1,7 @@
+{
+  "specification": {
+    "name": "Carrier SLAs",
+    "summary": "Delivery promises each carrier makes, by service level.",
+    "service": "Shipping API"
+  }
+}

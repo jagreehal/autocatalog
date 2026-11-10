@@ -1,0 +1,32 @@
+---
+title: Review submission
+owner: handbook
+summary: How product reviews are submitted, moderated, published and aggregated into ratings.
+---
+
+[[flow|reviews-platform/review-submission]] captures the lifecycle of customer product feedback.
+
+## Flow map
+
+<Map />
+
+## Flow stages
+
+1. A customer submits a review through [[service|Review API]] using [[event|reviews/submit-review]].
+2. [[service|Review API]] stores the review in **Review Database** and publishes [[event|reviews-platform/reviews/review-submitted]].
+3. [[service|Review Moderation Worker]] evaluates the review.
+4. The worker publishes [[event|reviews-platform/reviews/review-published]] or [[event|reviews-platform/reviews/review-rejected]].
+5. [[service|Rating Aggregator]] consumes published reviews and updates **Rating Cache**.
+6. [[service|Review API]] serves [[event|reviews/get-product-reviews]] for storefront reads.
+
+## Moderation boundary
+
+Moderation is asynchronous so submission remains responsive and moderation rules can evolve independently.
+
+## Rating boundary
+
+Ratings are a read model. **Rating Cache** is optimised for product pages, while **Review Database** remains the durable review store.
+
+## Follow-up interactions
+
+After publication, customers can use [[event|reviews/vote-review-helpful]] or [[event|reviews/flag-review]]. These interactions publish [[event|reviews-platform/reviews/review-helpful-voted]] and [[event|reviews-platform/reviews/review-flagged]].

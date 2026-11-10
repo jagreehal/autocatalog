@@ -1,0 +1,36 @@
+---
+title: Integrating with the Catalog
+owner: product-platform
+summary: How other teams read product data and react to product changes without coupling to the catalog database.
+about:
+  - domain/catalog
+---
+
+The Catalog domain is the source of truth for product data at Acme. Everything else — checkout, search, promotions, fulfilment — reads from it or reacts to it. This guide covers the two supported ways to integrate.
+
+## Read product data on demand
+
+Use [[event|catalog/get-product]] on [[service|Product API]] when you need the current state of a product at request time (a checkout page, an admin screen).
+
+- Responses are cached for 60 seconds at the edge; if you need strong consistency, pass `Cache-Control: no-cache`.
+- Never query **Product Database** directly. Its schema is private to [[system|product-catalog-system]] and changes without notice.
+
+## React to product changes
+
+Subscribe to the domain events published by [[service|Product API]] when you need to keep a local read model in sync or trigger downstream work:
+
+| Event                                               | When it fires                                   |
+| --------------------------------------------------- | ----------------------------------------------- |
+| [[event\|product-platform/catalog/product-created]] | A product is first published                    |
+| [[event\|product-platform/catalog/product-updated]] | Any product attribute, price or variant changes |
+| [[event\|product-platform/catalog/product-deleted]] | A product is withdrawn from sale                |
+
+Events are published through a transactional outbox (see ADR-001), so you will never see an event for a change that was rolled back — but you **may** see the same event more than once. Consumers must be idempotent; use the `productId` + `version` pair on each event as the idempotency key.
+
+## Search
+
+If what you need is "find products matching…", don't build it yourself — call [[event|catalog/search-products]] on [[service|Search API]]. It is backed by **Search Index**, which [[flow|search-platform/product-search-indexing]] keeps in sync with product events. Expect up to a few seconds of lag between a product change and it appearing in search results.
+
+## Commands are internal
+
+[[event|catalog/create-product]], [[event|catalog/update-product]] and [[event|catalog/delete-product]] are only accepted from the merchandising tools owned by [[owner|product-platform]]. If your team needs to change product data, talk to us in `#catalog-support` rather than calling these directly.

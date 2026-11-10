@@ -1,0 +1,11 @@
+---
+title: Request Return
+owner: fulfilment-platform
+summary: Command sent by a customer to return one or more items from a delivered order.
+sidebar:
+  hidden: true
+---
+
+## Overview
+
+`RequestReturn` is handled by the [[service|Returns API]]. If the order is within the returns window the request is recorded and [[event|fulfilment-platform/returns/return-requested]] is published.

@@ -1,0 +1,50 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "LoyaltyPointsReversed",
+  "description": "Published when loyalty points are reversed for a cancelled order",
+  "type": "object",
+  "properties": {
+    "customerId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "orderId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "pointsReversed": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "newBalance": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "reason": {
+      "type": "string",
+      "enum": ["order_cancelled", "order_refunded"]
+    },
+    "reversedAt": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": ["customerId", "orderId", "pointsReversed", "newBalance", "reversedAt"],
+  "x-autocatalog": {
+    "id": "loyalty-points-reversed",
+    "version": "1.0.0",
+    "domain": "loyalty",
+    "name": "Loyalty Points Reversed",
+    "summary": "Published when loyalty points are removed from a customer because the order that earned them was cancelled.",
+    "producers": ["Loyalty Service"],
+    "transport": [
+      {
+        "address": "customer.loyalty-events",
+        "protocols": ["kafka"]
+      }
+    ],
+    "delivery": {
+      "guarantee": "at-least-once"
+    }
+  }
+}

@@ -1,0 +1,11 @@
+---
+title: Delete Product
+owner: product-platform
+summary: Command to remove a product from the catalog.
+sidebar:
+  hidden: true
+---
+
+## Overview
+
+`DeleteProduct` is handled by the [[service|Product API]]. It removes a product from the **Product Database** and, on success, publishes a [[event|product-platform/catalog/product-deleted]] event so downstream systems can clean up.

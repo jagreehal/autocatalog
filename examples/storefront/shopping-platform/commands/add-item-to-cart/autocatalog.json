@@ -1,0 +1,11 @@
+{
+  "kind": "command",
+  "id": "add-item-to-cart",
+  "version": "1.0.0",
+  "name": "Add Item To Cart",
+  "summary": "Command to add an item to a shopping cart.",
+  "domain": "shopping",
+  "handler": "Cart API",
+  "senders": [],
+  "schema": "./schema.json"
+}

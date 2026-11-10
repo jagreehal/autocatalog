@@ -53,4 +53,15 @@ describe('remarkWikiRefs', () => {
     expect(code).toContain('PaymentService');
     expect(code).toContain('<code>');
   });
+
+  it('reads as the last segment of a path-shaped id', async () => {
+    const processor = await createMarkdownProcessor({ remarkPlugins: [remarkWikiRefs] });
+
+    const { code } = await processor.render(
+      '[[event|payments-platform/payments/payment-failed]]\n',
+    );
+
+    expect(code).toContain('href="/events/payments-platform/payments/payment-failed/"');
+    expect(code).toContain('>payment-failed</a>');
+  });
 });

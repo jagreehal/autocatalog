@@ -1,0 +1,11 @@
+{
+  "kind": "command",
+  "id": "update-customer",
+  "version": "1.0.0",
+  "name": "Update Customer",
+  "summary": "Command to update an existing customer's profile.",
+  "domain": "customer",
+  "handler": "Customer API",
+  "senders": [],
+  "schema": "./schema.json"
+}

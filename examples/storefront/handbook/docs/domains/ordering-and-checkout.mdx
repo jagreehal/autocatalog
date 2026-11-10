@@ -1,0 +1,41 @@
+---
+title: Ordering and checkout
+owner: handbook
+summary: How the Ordering domain coordinates checkout and owns the order lifecycle.
+---
+
+[[domain|ordering]] is the core revenue domain. It turns a checked-out cart into a durable order and owns that order through completion or cancellation.
+
+## System context map
+
+<Map />
+
+## Checkout System
+
+[[system|checkout-system]] owns orchestration. [[service|Checkout API]] receives checkout intent, and [[service|Checkout Orchestrator]] runs the [[flow|ordering-platform/checkout-saga]].
+
+The saga coordinates:
+
+1. [[event|ordering/reserve-inventory]]
+2. [[event|ordering/authorize-payment]]
+3. [[event|ordering/create-order]]
+
+If a step fails, the orchestrator compensates rather than leaving partial work behind.
+
+<Map />
+
+## Order Management System
+
+[[system|order-management-system]] owns order state in **Order Database**. [[service|Order Service]] handles [[event|ordering/create-order]], [[event|ordering/cancel-order]] and [[event|ordering/get-order]].
+
+It publishes:
+
+- [[event|ordering-platform/ordering/order-created]]
+- [[event|ordering-platform/ordering/order-completed]]
+- [[event|ordering-platform/ordering/order-cancelled]]
+
+## Operating guidance
+
+Do not add payment or inventory state directly to orders unless it is a snapshot needed for audit or customer support. The owning systems remain [[system|payment-processing-system]] and [[system|inventory-system]].
+
+When checkout behavior changes, update the [[flow|ordering-platform/place-an-order]] and [[flow|ordering-platform/checkout-saga]] pages as well as the command schemas.

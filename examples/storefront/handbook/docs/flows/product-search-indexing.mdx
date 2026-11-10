@@ -1,0 +1,33 @@
+---
+title: Product search indexing
+owner: handbook
+summary: How product catalog changes are projected into the Search System for customer-facing search.
+---
+
+[[flow|search-platform/product-search-indexing]] keeps product search aligned with catalog changes. It is intentionally asynchronous: product writes should not wait for search indexing to complete.
+
+## Flow map
+
+<Map />
+
+## Producers
+
+[[system|product-catalog-system]] owns product data. Product changes are represented by:
+
+- [[event|product-platform/catalog/product-created]]
+- [[event|product-platform/catalog/product-updated]]
+- [[event|product-platform/catalog/product-deleted]]
+
+These events are published by services inside the Product Catalog System, including [[service|Product Search Publisher]].
+
+## Consumers
+
+[[system|search-system]] consumes product change events and updates **Search Index**. [[service|Search API]] then serves [[event|catalog/search-products]] against that index.
+
+## Consistency model
+
+The product database is immediately authoritative. The search index is eventually consistent. User interfaces should tolerate a short delay between product update and search result update.
+
+## Operational signals
+
+Watch for indexing lag, failed event handling and search query errors. A stale search index affects product discovery even when product writes are healthy.

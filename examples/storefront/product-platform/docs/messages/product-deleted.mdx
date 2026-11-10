@@ -1,0 +1,13 @@
+---
+title: Product Deleted
+owner: product-platform
+summary: Published when a product has been removed from the catalog.
+about:
+  - event/catalog/product-deleted
+sidebar:
+  hidden: true
+---
+
+## Overview
+
+`ProductDeleted` is published by the [[service|Product Search Publisher]] when a product is removed from the catalog via the [[service|Product API]]. The [[system|search-system]] consumes this event to remove the product from the search index.

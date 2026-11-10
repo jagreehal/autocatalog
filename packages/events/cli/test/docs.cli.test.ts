@@ -98,6 +98,54 @@ describe('ac docs check', () => {
     expect(await runDocsCheck({ root, quiet: true })).toBe(0);
   });
 
+  it('resolves about: to a service the repository declares in its resources.json, as the site does', async () => {
+    const service = {
+      ref: { kind: 'service', id: 'LedgerExporter' },
+      title: 'LedgerExporter',
+      tags: [],
+      provenance: { default: 'declared', fields: {} },
+      needsReview: false,
+      attributes: { domains: ['payments'] },
+    };
+
+    await write(
+      'payments-service/.autocatalog/resources.json',
+      JSON.stringify({ spec: 'autocatalog/graph-v1', resources: [service], relationships: [] }),
+    );
+    await write(
+      'payments-service/docs/ledger.md',
+      '---\ntitle: Ledger\nowner: Ops\nabout:\n  - service/LedgerExporter\n---\n\nBody.\n',
+    );
+
+    expect(await runDocsCheck({ root, quiet: true })).toBe(0);
+  });
+
+  it("passes an overview of another repository's service, and fails two overviews of one", async () => {
+    await write('ledger/docs/index.md', '---\ntitle: Ledger\nowner: Ledger\n---\n\nBody.\n');
+    // LedgerService is named only by events in a repository this checkout does not hold.
+    await write(
+      'ledger/overviews/services/ledger-service.md',
+      '---\nsummary: Books.\n---\n\nBooks.\n',
+    );
+
+    expect(await runDocsCheck({ root, quiet: true })).toBe(0);
+
+    await write('ledger/overviews/domains/payments.md', '---\nname: Payments\n---\n');
+    await write('billing/overviews/domains/payments.md', '---\nname: Payments\n---\n');
+    await write('billing/docs/index.md', '---\ntitle: Billing\nowner: Billing\n---\n\nBody.\n');
+
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const logs = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    expect(await runDocsCheck({ root })).toBe(1);
+
+    const said = [...errors.mock.calls, ...logs.mock.calls].flat().join('\n');
+    expect(said).toContain("domain 'payments' already has an overview in");
+
+    errors.mockRestore();
+    logs.mockRestore();
+  });
+
   it('leaves a flow naming another repository to the site, and fails one that does not hold together', async () => {
     await write(
       'payments-service/events/payments/Settled/autocatalog.json',
@@ -125,6 +173,17 @@ describe('ac docs check', () => {
     expect(await runDocsCheck({ root, quiet: true })).toBe(0);
 
     await write('payments-service/flows/settle.md', flow('LedgerService', 'nowhere'));
+    expect(await runDocsCheck({ root, quiet: true })).toBe(1);
+  });
+
+  it("passes an overview of another repository's service, and fails two for one domain", async () => {
+    await write('payments-service/docs/index.md', '---\ntitle: Payments\nowner: Payments\n---\n');
+    await write('payments-service/overviews/services/billing-service.md', 'Bills.\n');
+    expect(await runDocsCheck({ root, quiet: true })).toBe(0);
+
+    await write('payments-service/overviews/domains/payments.md', 'One.\n');
+    await write('ledger-service/docs/index.md', '---\ntitle: Ledger\nowner: Ledger\n---\n');
+    await write('ledger-service/overviews/domains/payments.md', 'Two.\n');
     expect(await runDocsCheck({ root, quiet: true })).toBe(1);
   });
 

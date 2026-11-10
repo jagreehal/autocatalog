@@ -1,0 +1,8 @@
+{
+  "receives": [
+    {
+      "service": "Warehouse Service",
+      "id": "ordering/order-completed"
+    }
+  ]
+}

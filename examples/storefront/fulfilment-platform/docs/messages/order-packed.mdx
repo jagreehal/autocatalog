@@ -1,0 +1,13 @@
+---
+title: Order Packed
+owner: fulfilment-platform
+summary: Published when an order has been picked and packed in the warehouse.
+about:
+  - event/fulfilment/order-packed
+sidebar:
+  hidden: true
+---
+
+## Overview
+
+`OrderPacked` is published by the [[service|Picking Worker]] when an order has been fully picked and packed. The [[service|Warehouse Service]] consumes it to mark the order ready and publish [[event|fulfilment-platform/fulfilment/order-ready-for-shipping]].

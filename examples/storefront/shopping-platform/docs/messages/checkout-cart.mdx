@@ -1,0 +1,11 @@
+---
+title: Checkout Cart
+owner: shopping-platform
+summary: Command to check out a shopping cart.
+sidebar:
+  hidden: true
+---
+
+## Overview
+
+`CheckoutCart` is handled by the [[service|Cart API]]. It finalises the cart — pricing it (including discounts from the [[system|promotion-system]]) — and on success publishes a [[event|shopping-platform/shopping/cart-checked-out]] event.

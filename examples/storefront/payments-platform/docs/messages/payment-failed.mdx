@@ -1,0 +1,13 @@
+---
+title: Payment Failed
+owner: payments-platform
+summary: Published by Stripe when a charge fails.
+about:
+  - event/payments/payment-failed
+sidebar:
+  hidden: true
+---
+
+## Overview
+
+`PaymentFailed` is delivered by Stripe's [[service|Webhook Endpoint]] when a requested charge fails — for example a declined card. The [[service|Payment Worker]] consumes it and records the payment as failed, which ultimately leads the order to be cancelled.

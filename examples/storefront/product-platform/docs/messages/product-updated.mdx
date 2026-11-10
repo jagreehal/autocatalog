@@ -1,0 +1,13 @@
+---
+title: Product Updated
+owner: product-platform
+summary: Published when an existing product's data has changed.
+about:
+  - event/catalog/product-updated
+sidebar:
+  hidden: true
+---
+
+## Overview
+
+`ProductUpdated` is published by the [[service|Product Search Publisher]] whenever an existing product is changed via the [[service|Product API]]. The [[system|search-system]] consumes this event to re-index the product so search results stay accurate.

@@ -1,0 +1,13 @@
+---
+title: Order Confirmed
+owner: ordering-platform
+summary: Published when payment, inventory, and order validation have succeeded and the order is ready for fulfilment.
+about:
+  - event/ordering/order-confirmed
+sidebar:
+  hidden: true
+---
+
+## Overview
+
+`OrderConfirmed` is published by the [[service|Order Service]] once an order has passed validation and its payment and inventory reservations are secured. Fulfilment, customer notification, and analytics consumers use this as the reliable signal that the order can progress.

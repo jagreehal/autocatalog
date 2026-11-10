@@ -109,6 +109,113 @@ export const siteChatSchema = z.strictObject({
 
 export type SiteChat = z.infer<typeof siteChatSchema>;
 
+const link = z.strictObject({ label: z.string().trim().min(1), href: z.string().trim().min(1) });
+
+/**
+ * The built-in blocks a page's layout is made of, each with its own props. A
+ * block a site's `extend` adds checks its own props.
+ */
+export const HOME_BLOCKS = {
+  /** A heading, a line under it and links to act on. */
+  hero: z.strictObject({
+    block: z.literal('hero'),
+    title: z.string().trim().min(1).optional(),
+    text: z.string().trim().min(1).optional(),
+    actions: z.array(link).optional(),
+  }),
+  /** Hand-picked links as cards. */
+  cards: z.strictObject({
+    block: z.literal('cards'),
+    title: z.string().trim().min(1).optional(),
+    items: z
+      .array(
+        z.strictObject({
+          title: z.string().trim().min(1),
+          href: z.string().trim().min(1),
+          text: z.string().trim().min(1).optional(),
+          icon: z.string().trim().min(1).optional(),
+        }),
+      )
+      .min(1),
+  }),
+  /** The catalog's counts, as `homeCounts` chooses them, or these kinds. */
+  countCards: z.strictObject({
+    block: z.literal('countCards'),
+    kinds: z.array(z.string().trim().min(1)).optional(),
+  }),
+  /** Documents by repository, or one folder's: `getting-started`. */
+  docs: z.strictObject({
+    block: z.literal('docs'),
+    title: z.string().trim().min(1).optional(),
+    folder: z.string().trim().min(1).optional(),
+  }),
+  /** Each API, a card to its reference. */
+  apis: z.strictObject({
+    block: z.literal('apis'),
+    title: z.string().trim().min(1).optional(),
+  }),
+  /** The architecture map. */
+  graph: z.strictObject({
+    block: z.literal('graph'),
+    title: z.string().trim().min(1).optional(),
+  }),
+  /** What needs review, is quarantined, has no producer, consumer or owner. */
+  attention: z.strictObject({ block: z.literal('attention') }),
+  /** A card for each page the catalog has: the graph, services, fields, owners. */
+  explore: z.strictObject({
+    block: z.literal('explore'),
+    title: z.string().trim().min(1).optional(),
+  }),
+  /** Documents by tag. */
+  tags: z.strictObject({
+    block: z.literal('tags'),
+    title: z.string().trim().min(1).optional(),
+  }),
+} as const;
+
+/**
+ * Blocks that show the company's own systems and upkeep, which a site for an
+ * `audience` does not publish: naming one there fails the build.
+ */
+export const INSIDE_ONLY_BLOCKS: readonly HomeBlockName[] = ['countCards', 'graph', 'attention'];
+
+export type HomeBlockName = keyof typeof HOME_BLOCKS;
+
+/** A built-in block, checked against its props; any other is a site's own, checked at build. */
+const layoutBlock = z.looseObject({ block: z.string().trim().min(1) }).superRefine((value, ctx) => {
+  if (!(value.block in HOME_BLOCKS)) return;
+
+  // SAFETY: the guard above returned for every name HOME_BLOCKS does not hold.
+  const parsed = HOME_BLOCKS[value.block as HomeBlockName].safeParse(value);
+
+  for (const issue of parsed.success ? [] : parsed.error.issues) {
+    ctx.addIssue({ code: 'custom', message: `${value.block}: ${issue.message}`, path: issue.path });
+  }
+});
+
+export type LayoutBlock = z.infer<typeof layoutBlock>;
+
+/** The home page with no `layouts.home`: the built-in page is exactly these blocks. */
+export const DEFAULT_HOME_LAYOUT: LayoutBlock[] = [
+  { block: 'countCards' },
+  { block: 'graph' },
+  { block: 'docs' },
+  { block: 'attention' },
+  { block: 'explore' },
+  { block: 'tags' },
+];
+
+/** The same for a site with an `audience`: guides and ways in, no map of the company. */
+export const DEFAULT_PUBLIC_HOME_LAYOUT: LayoutBlock[] = [
+  { block: 'docs' },
+  { block: 'explore' },
+  { block: 'tags' },
+];
+
+/** The home layout a site gets when it writes none. */
+export const defaultHomeLayout = (config: Pick<SiteConfig, 'audience'>): LayoutBlock[] =>
+  config.audience ? DEFAULT_PUBLIC_HOME_LAYOUT : DEFAULT_HOME_LAYOUT;
+
 /** Everything a company sets about its site, in `autocatalog.site.json`. */
 export const siteConfigSchema = z.strictObject({
   $schema: z.string().optional(),
@@ -180,6 +287,12 @@ export const siteConfigSchema = z.strictObject({
    * first, then what the catalog holds most of.
    */
   homeCounts: z.array(z.string().trim().min(1)).optional(),
+  /**
+   * Pages composed from blocks, in order: `home` replaces the home page's
+   * sections and keeps its header. A block is a built-in one (`HOME_BLOCKS`)
+   * or one an `extend` module adds by name.
+   */
+  layouts: z.strictObject({ home: z.array(layoutBlock).min(1).optional() }).optional(),
   /**
    * The MCP endpoint at `/mcp` on a site with `"output": "server"`, where Claude
    * and other agents search its pages and read its APIs' operations. On by

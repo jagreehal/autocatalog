@@ -1,0 +1,11 @@
+---
+title: Create Shipment
+owner: fulfilment-platform
+summary: Command to create a shipment with a carrier for a packed order.
+sidebar:
+  hidden: true
+---
+
+## Overview
+
+`CreateShipment` is sent by the [[service|Carrier Adapter]] to the external [[system|carrier]] to dispatch a packed order. The carrier responds asynchronously with [[event|fulfilment-platform/fulfilment/shipment-created]] and later [[event|fulfilment-platform/fulfilment/shipment-delivered]] or [[event|fulfilment-platform/fulfilment/shipment-failed]].

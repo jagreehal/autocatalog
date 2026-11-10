@@ -21,7 +21,7 @@ export default defineConfig({
   webServer: {
     // The server build, as it ships, with no model: the stories leave the assistant out.
     command: `pnpm build && HOST=127.0.0.1 PORT=${port} node dist/server.mjs`,
-    url: `${baseURL}/help-centre/getting-started/`,
+    url: `${baseURL}/getting-started/`,
     reuseExistingServer: !process.env.CI,
     timeout: 180_000,
   },

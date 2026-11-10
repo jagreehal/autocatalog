@@ -63,6 +63,7 @@ export function catalogForAudience(catalog: DocsCatalog): DocsCatalog {
     designs: [],
     repositoryRoots: {},
     model: { glossaries: [], entities: [], dataProducts: [], people: [] },
+    overviews: [],
     graph,
     summary: summarizeResourceGraph(graph),
     // Kept, so a quarantined repository is left out of the pages too. Only the

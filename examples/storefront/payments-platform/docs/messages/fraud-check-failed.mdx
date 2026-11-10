@@ -1,0 +1,13 @@
+---
+title: Fraud Check Failed
+owner: payments-platform
+summary: Published when a payment fails fraud screening.
+about:
+  - event/payments/fraud-check-failed
+sidebar:
+  hidden: true
+---
+
+## Overview
+
+`FraudCheckFailed` is published by the [[service|Fraud API]] when a payment is flagged as fraudulent. The [[system|payment-processing-system]] uses it to block the charge and cancel the order.

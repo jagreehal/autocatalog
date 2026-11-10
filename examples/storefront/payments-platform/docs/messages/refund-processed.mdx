@@ -1,0 +1,13 @@
+---
+title: Refund Processed
+owner: payments-platform
+summary: Published by Stripe when a refund has been processed.
+about:
+  - event/payments/refund-processed
+sidebar:
+  hidden: true
+---
+
+## Overview
+
+`RefundProcessed` is delivered by Stripe's [[service|Webhook Endpoint]] when a requested refund has been processed. The [[service|Payment Worker]] consumes it and records the refund as complete.

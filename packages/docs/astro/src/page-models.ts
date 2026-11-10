@@ -25,13 +25,13 @@ import { attentionSnapshot } from './attention';
 import { buildChannels } from './channels';
 import { fieldsByPath, withFieldLineage } from './field-lineage';
 import { statusBanners } from './resource-status';
-import { buildSystems } from './systems';
+import { buildSystems, catalogSystemRows } from './systems';
 import { z } from 'zod';
 import { type RepositoryMeta, sourceUrl } from 'autocatalog-docs-core';
 import { documentsAbout } from './about';
 import { apiPath, apisForService, apiTitle, catalogServices } from './apis';
 import { specificationPath, specificationsForService } from './specifications';
-import { flowRecords } from './flows';
+import { flowPath, flowRecords } from './flows';
 import { failureSource, type CatalogEvent, type DocsCatalog } from './catalog';
 import { docsSiteConfig } from './config';
 import { eventCatalogEmbeds } from './eventcatalog';
@@ -145,7 +145,7 @@ export function homePageProps(
     outside?: boolean;
   } = {},
 ): HomePageProps {
-  const domains = buildDomains(catalog.events).length;
+  const domains = buildDomains(catalog.events, catalog.graph).length;
 
   const all = [
     ...Object.entries(catalog.summary.resourcesByKind).map(([kind, count]) => ({
@@ -418,12 +418,17 @@ export function mcpServerPageProps(catalog: DocsCatalog, id: string, base: strin
   return server ? { server } : null;
 }
 
+/** Every system a design names or a service in the graph declares. */
+export function catalogSystems(catalog: DocsCatalog, base: string) {
+  return catalogSystemRows(catalog, base);
+}
+
 export function systemsPageProps(catalog: DocsCatalog, base: string) {
-  return { systems: buildSystems(catalog.designs, base) };
+  return { systems: catalogSystems(catalog, base) };
 }
 
 export function systemPageProps(catalog: DocsCatalog, id: string, base: string) {
-  const system = buildSystems(catalog.designs, base).find((entry) => entry.id === id);
+  const system = catalogSystems(catalog, base).find((entry) => entry.id === id);
 
   return system ? { system } : null;
 }
@@ -542,7 +547,7 @@ export function ownerPageProps(owner: Owner): OwnerPageProps {
 
 export function domainsPageProps(catalog: DocsCatalog, base: string): DomainsPageProps {
   return {
-    domains: buildDomains(catalog.events).map((domain) => ({
+    domains: buildDomains(catalog.events, catalog.graph).map((domain) => ({
       name: domain.name,
       href: domainHref(base, domain.name),
       events: domain.events.length,
@@ -552,20 +557,89 @@ export function domainsPageProps(catalog: DocsCatalog, base: string): DomainsPag
   };
 }
 
+/** A domain page's props, every section filled, and its overview's Markdown for the page to render. */
+export type DomainPageModel = DomainPageProps &
+  Required<
+    Pick<
+      DomainPageProps,
+      'title' | 'subdomains' | 'systems' | 'contracts' | 'entities' | 'flows' | 'documents'
+    >
+  > & { overview?: string | undefined };
+
 export function domainPageProps(
   catalog: DocsCatalog,
   domain: Domain,
   base: string,
-): DomainPageProps {
+): DomainPageModel {
   const owners = graphOwners(catalog.graph);
 
   const role = (name: string, side: 'producers' | 'consumers') =>
     domain.events.filter(({ event }) => event.frontmatter[side].includes(name)).length;
 
+  const overview = catalog.overviews.find(
+    ({ kind, target }) => kind === 'domain' && target === domain.name,
+  );
+
+  const inDomain = new Set(domain.services);
+
+  const apis = [
+    ...new Map(
+      domain.services.flatMap((name) =>
+        apisForService(catalog.apis, catalog.events, name).map(
+          (api) => [apiPath(api), api] as const,
+        ),
+      ),
+    ).values(),
+  ];
+
+  // A flow is the domain's when a step names one of its events or services.
+  const flows = catalog.flows.filter((flow) =>
+    flow.steps.some(
+      ({ ref }) =>
+        (ref?.kind === 'event' && ref.namespace?.split('/').at(-1) === domain.name) ||
+        (ref?.kind === 'service' && inDomain.has(ref.id)),
+    ),
+  );
+
   return {
-    summary: catalog.graph.resources.find(
-      (resource) => resource.ref.kind === 'domain' && resource.ref.id === domain.name,
-    )?.summary,
+    title: overview?.name ?? domain.name,
+    summary:
+      overview?.summary ??
+      catalog.graph.resources.find(
+        (resource) => resource.ref.kind === 'domain' && resource.ref.id === domain.name,
+      )?.summary,
+    overview: overview?.body || undefined,
+    subdomains: catalog.overviews
+      .filter(({ kind, parent }) => kind === 'domain' && parent === domain.name)
+      .map((sub) => ({
+        name: sub.name ?? sub.target,
+        href: domainHref(base, sub.target),
+        summary: sub.summary,
+      })),
+    systems: catalogSystems(catalog, base)
+      .filter((system) => system.members.some((member) => inDomain.has(member)))
+      .map(({ name, href, summary, members }) => ({
+        name,
+        href,
+        summary,
+        members: members.length,
+      })),
+    contracts: apis.map((api) => ({ name: apiTitle(api), href: `${base}${apiPath(api)}` })),
+    entities: catalog.model.entities
+      .filter((entity) => entity.domains.includes(domain.name))
+      .map((entity) => ({
+        name: entity.name,
+        href: `${base}entities/${entity.repository}/${entity.id}/`,
+        summary: entity.summary,
+      })),
+    flows: flows.map((flow) => ({
+      name: flow.title,
+      href: `${base}${flowPath(flow)}`,
+      summary: flow.summary,
+    })),
+    documents: documentsAbout(catalog.graph, { kind: 'domain', id: domain.name }).map(
+      ({ href, title, kind }) => ({ name: title, href, kind }),
+    ),
     events: domain.events.map((entry) => {
       const { name, id, summary } = entry.event.frontmatter;
 
@@ -729,10 +803,18 @@ export function serviceBasis(
     };
   }
 
+  if (events) {
+    return {
+      evidence: 'from the events that name it as a producer or consumer',
+      description:
+        "Inferred from the producers and consumers that each event declares. Nobody writes this page; change an event's contract and it changes.",
+    };
+  }
+
   return {
-    evidence: 'from the events that name it as a producer or consumer',
+    evidence: 'from the resource graph its repository commits',
     description:
-      "Inferred from the producers and consumers that each event declares. Nobody writes this page; change an event's contract and it changes.",
+      'Declared in the resource graph its repository commits: the commands it handles and the data it reads and writes.',
   };
 }
 

@@ -1,0 +1,33 @@
+---
+title: Shopping and promotions
+owner: handbook
+summary: How carts, checkout intent and discount calculation are modelled in the Shopping domain.
+---
+
+[[domain|shopping]] owns the customer's active path to purchase before an order exists. The core state is the cart, not the order.
+
+## System context map
+
+<Map />
+
+## Cart System
+
+[[system|cart-system]] owns cart state in **Cart Database**. [[service|Cart API]] handles:
+
+- [[event|shopping/add-item-to-cart]]
+- [[event|shopping/remove-item-from-cart]]
+- [[event|shopping/checkout-cart]]
+
+When a cart is checked out, it publishes [[event|shopping-platform/shopping/cart-checked-out]]. That event is the handoff from Shopping to Ordering.
+
+## Promotion System
+
+[[system|promotion-system]] owns promotion rules in **Promotion Database**. It handles [[event|shopping/calculate-discount]] and publishes [[event|shopping-platform/shopping/discount-calculated]].
+
+Discount calculation is deliberately separate from cart persistence. The Cart System owns what the customer is buying; the Promotion System owns how discounts are evaluated.
+
+## Boundary with Ordering
+
+Shopping does not create orders. Once [[event|shopping-platform/shopping/cart-checked-out]] is published, [[system|checkout-system]] takes responsibility for coordinating inventory, payment and order creation.
+
+This boundary keeps cart behavior and order lifecycle behavior independent. It also gives checkout a clear recovery point if inventory or payment fails.

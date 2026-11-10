@@ -188,7 +188,9 @@ and embeds its diagrams. `--docs-schema` names the docs frontmatter contract to
 enforce; without it the site uses the root's, else an enrolled repository's.
 `--docs-conventions` names the conventions file, found the same way.
 `--brand` takes a folder with your logo, favicon and theme; see
-[the company site](/docs/site#make-it-yours). `--fingerprint` prints a hash of
+[the company site](/docs/site#make-it-yours). `--print-layout home` prints the
+blocks the site's home page is built from, for `layouts.home`, and builds
+nothing. `--fingerprint` prints a hash of
 what is enrolled and builds nothing, so a scheduled job can skip a site with
 nothing new.
 

@@ -1,0 +1,19 @@
+---
+name: Fulfilment Platform
+summary: Owns the Fulfilment domain — reserving stock, picking and packing orders, and shipping them to customers.
+email: fulfilment-platform@acme.test
+slackDirectMessageUrl: https://acme.slack.com/channels/fulfilment-platform
+members:
+  - sam-rivera
+---
+
+## Overview
+
+The **Fulfilment Platform** team owns the [[domain|fulfilment]] domain. They are responsible for inventory, warehousing and shipping — everything that gets a confirmed order physically to the customer.
+
+## Responsibilities
+
+- **Inventory System** — tracking and reserving stock.
+- **Warehouse System** — picking and packing orders.
+- **Shipping System** — handing packed orders to carriers.
+- Integration with external **Carriers** for delivery.

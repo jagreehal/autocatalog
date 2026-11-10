@@ -130,6 +130,27 @@ describe('renderLlmsTxt', () => {
     );
   });
 
+  it('heads one repository as Docs, and names each of several', () => {
+    const doc = (repo: string) => ({
+      id: `${repo}/start`,
+      repo,
+      title: 'Start',
+      owner: '',
+      updated: null,
+      tags: [],
+    });
+
+    const input = { title: 'Acme', description: 'Docs.', base };
+
+    const one = renderLlmsTxt({ ...input, items: [doc('api')] });
+    expect(one).toContain('## Docs\n');
+    expect(one).not.toContain('## api');
+
+    const two = renderLlmsTxt({ ...input, items: [doc('api'), doc('web')] });
+    expect(two).toContain('## api\n');
+    expect(two).toContain('## web\n');
+  });
+
   it('leaves the events section out when nothing publishes events', () => {
     const text = renderLlmsTxt({ title: 'Acme', description: 'Docs.', base, items: [] });
     expect(text).not.toContain('## Events');

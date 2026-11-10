@@ -1,0 +1,416 @@
+{
+  "graph": {
+    "spec": "autocatalog/graph-v1",
+    "resources": [
+      {
+        "ref": {
+          "kind": "service",
+          "id": "Carrier Adapter"
+        },
+        "title": "Carrier Adapter",
+        "tags": [],
+        "provenance": {
+          "default": "declared",
+          "fields": {}
+        },
+        "needsReview": false,
+        "attributes": {
+          "domains": ["fulfilment"],
+          "system": {
+            "id": "shipping-system",
+            "name": "Shipping System"
+          }
+        },
+        "summary": "Translates Acme Inc shipment requests into the external carrier's format and sends them to create a shipment.",
+        "owner": {
+          "team": "fulfilment-platform",
+          "name": "Fulfilment Platform",
+          "contact": "https://acme.slack.com/channels/fulfilment-platform"
+        }
+      },
+      {
+        "ref": {
+          "kind": "service",
+          "id": "Inventory Service"
+        },
+        "title": "Inventory Service",
+        "tags": [],
+        "provenance": {
+          "default": "declared",
+          "fields": {}
+        },
+        "needsReview": false,
+        "attributes": {
+          "domains": ["fulfilment"],
+          "system": {
+            "id": "inventory-system",
+            "name": "Inventory System"
+          }
+        },
+        "summary": "The system of record for stock. Reserves and releases inventory, serves stock-level queries, and publishes events when stock is reserved or unavailable.",
+        "owner": {
+          "team": "fulfilment-platform",
+          "name": "Fulfilment Platform",
+          "contact": "https://acme.slack.com/channels/fulfilment-platform"
+        }
+      },
+      {
+        "ref": {
+          "kind": "service",
+          "id": "Picking Worker"
+        },
+        "title": "Picking Worker",
+        "tags": [],
+        "provenance": {
+          "default": "declared",
+          "fields": {}
+        },
+        "needsReview": false,
+        "attributes": {
+          "domains": ["fulfilment"],
+          "system": {
+            "id": "warehouse-system",
+            "name": "Warehouse System"
+          }
+        },
+        "summary": "Works through picking jobs on the warehouse floor and signals when an order has been picked and packed.",
+        "owner": {
+          "team": "fulfilment-platform",
+          "name": "Fulfilment Platform",
+          "contact": "https://acme.slack.com/channels/fulfilment-platform"
+        }
+      },
+      {
+        "ref": {
+          "kind": "service",
+          "id": "Returns API"
+        },
+        "title": "Returns API",
+        "tags": [],
+        "provenance": {
+          "default": "declared",
+          "fields": {}
+        },
+        "needsReview": false,
+        "attributes": {
+          "domains": ["fulfilment"],
+          "system": {
+            "id": "returns-system",
+            "name": "Returns System"
+          }
+        },
+        "summary": "Public API customers use to start a return. Validates the request against the original order and records it.",
+        "owner": {
+          "team": "fulfilment-platform",
+          "name": "Fulfilment Platform",
+          "contact": "https://acme.slack.com/channels/fulfilment-platform"
+        }
+      },
+      {
+        "ref": {
+          "kind": "service",
+          "id": "Returns Processor"
+        },
+        "title": "Returns Processor",
+        "tags": [],
+        "provenance": {
+          "default": "declared",
+          "fields": {}
+        },
+        "needsReview": false,
+        "attributes": {
+          "domains": ["fulfilment"],
+          "system": {
+            "id": "returns-system",
+            "name": "Returns System"
+          }
+        },
+        "summary": "Applies the returns policy to new requests and tracks returned parcels until they arrive back at the warehouse.",
+        "owner": {
+          "team": "fulfilment-platform",
+          "name": "Fulfilment Platform",
+          "contact": "https://acme.slack.com/channels/fulfilment-platform"
+        }
+      },
+      {
+        "ref": {
+          "kind": "service",
+          "id": "Shipping API"
+        },
+        "title": "Shipping API",
+        "tags": [],
+        "provenance": {
+          "default": "declared",
+          "fields": {}
+        },
+        "needsReview": false,
+        "attributes": {
+          "domains": ["fulfilment"],
+          "system": {
+            "id": "carrier",
+            "name": "Carrier"
+          }
+        },
+        "summary": "The carrier's API for creating shipments. Acme Inc's Shipping System calls it to dispatch packed orders.",
+        "owner": {
+          "team": "fulfilment-platform",
+          "name": "Fulfilment Platform",
+          "contact": "https://acme.slack.com/channels/fulfilment-platform"
+        }
+      },
+      {
+        "ref": {
+          "kind": "service",
+          "id": "Tracking API"
+        },
+        "title": "Tracking API",
+        "tags": [],
+        "provenance": {
+          "default": "declared",
+          "fields": {}
+        },
+        "needsReview": false,
+        "attributes": {
+          "domains": ["fulfilment"],
+          "system": {
+            "id": "carrier",
+            "name": "Carrier"
+          }
+        },
+        "summary": "The carrier's API for reporting delivery progress. It notifies Acme Inc when a shipment is created, delivered, or fails.",
+        "owner": {
+          "team": "fulfilment-platform",
+          "name": "Fulfilment Platform",
+          "contact": "https://acme.slack.com/channels/fulfilment-platform"
+        }
+      },
+      {
+        "ref": {
+          "kind": "service",
+          "id": "Warehouse Service"
+        },
+        "title": "Warehouse Service",
+        "tags": [],
+        "provenance": {
+          "default": "declared",
+          "fields": {}
+        },
+        "needsReview": false,
+        "attributes": {
+          "domains": ["fulfilment"],
+          "system": {
+            "id": "warehouse-system",
+            "name": "Warehouse System"
+          }
+        },
+        "summary": "Orchestrates picking and packing in the warehouse. It reacts to completed orders, creates picking jobs, and signals when an order is ready to ship.",
+        "owner": {
+          "team": "fulfilment-platform",
+          "name": "Fulfilment Platform",
+          "contact": "https://acme.slack.com/channels/fulfilment-platform"
+        }
+      },
+      {
+        "ref": {
+          "kind": "table",
+          "namespace": "fulfilment-platform",
+          "id": "inventory-database"
+        },
+        "title": "Inventory Database",
+        "tags": [],
+        "provenance": {
+          "default": "declared",
+          "fields": {}
+        },
+        "needsReview": false,
+        "attributes": {
+          "technology": "postgres@16",
+          "containerType": "database"
+        },
+        "summary": "PostgreSQL database that is the system of record for stock levels and reservations.",
+        "owner": {
+          "team": "fulfilment-platform",
+          "name": "Fulfilment Platform",
+          "contact": "https://acme.slack.com/channels/fulfilment-platform"
+        }
+      },
+      {
+        "ref": {
+          "kind": "table",
+          "namespace": "fulfilment-platform",
+          "id": "returns-database"
+        },
+        "title": "Returns Database",
+        "tags": [],
+        "provenance": {
+          "default": "declared",
+          "fields": {}
+        },
+        "needsReview": false,
+        "attributes": {
+          "technology": "postgres@16",
+          "containerType": "database"
+        },
+        "summary": "PostgreSQL database that is the system of record for return requests and their status.",
+        "owner": {
+          "team": "fulfilment-platform",
+          "name": "Fulfilment Platform",
+          "contact": "https://acme.slack.com/channels/fulfilment-platform"
+        }
+      },
+      {
+        "ref": {
+          "kind": "table",
+          "namespace": "fulfilment-platform",
+          "id": "warehouse-database"
+        },
+        "title": "Warehouse Database",
+        "tags": [],
+        "provenance": {
+          "default": "declared",
+          "fields": {}
+        },
+        "needsReview": false,
+        "attributes": {
+          "technology": "postgres@16",
+          "containerType": "database"
+        },
+        "summary": "PostgreSQL database that stores picking jobs and their status.",
+        "owner": {
+          "team": "fulfilment-platform",
+          "name": "Fulfilment Platform",
+          "contact": "https://acme.slack.com/channels/fulfilment-platform"
+        }
+      }
+    ],
+    "relationships": [
+      {
+        "type": "reads",
+        "from": {
+          "kind": "service",
+          "id": "Inventory Service"
+        },
+        "to": {
+          "kind": "table",
+          "namespace": "fulfilment-platform",
+          "id": "inventory-database"
+        },
+        "provenance": "declared",
+        "needsReview": false
+      },
+      {
+        "type": "writes",
+        "from": {
+          "kind": "service",
+          "id": "Inventory Service"
+        },
+        "to": {
+          "kind": "table",
+          "namespace": "fulfilment-platform",
+          "id": "inventory-database"
+        },
+        "provenance": "declared",
+        "needsReview": false
+      },
+      {
+        "type": "reads",
+        "from": {
+          "kind": "service",
+          "id": "Picking Worker"
+        },
+        "to": {
+          "kind": "table",
+          "namespace": "fulfilment-platform",
+          "id": "warehouse-database"
+        },
+        "provenance": "declared",
+        "needsReview": false
+      },
+      {
+        "type": "writes",
+        "from": {
+          "kind": "service",
+          "id": "Picking Worker"
+        },
+        "to": {
+          "kind": "table",
+          "namespace": "fulfilment-platform",
+          "id": "warehouse-database"
+        },
+        "provenance": "declared",
+        "needsReview": false
+      },
+      {
+        "type": "writes",
+        "from": {
+          "kind": "service",
+          "id": "Returns API"
+        },
+        "to": {
+          "kind": "table",
+          "namespace": "fulfilment-platform",
+          "id": "returns-database"
+        },
+        "provenance": "declared",
+        "needsReview": false
+      },
+      {
+        "type": "reads",
+        "from": {
+          "kind": "service",
+          "id": "Returns Processor"
+        },
+        "to": {
+          "kind": "table",
+          "namespace": "fulfilment-platform",
+          "id": "returns-database"
+        },
+        "provenance": "declared",
+        "needsReview": false
+      },
+      {
+        "type": "writes",
+        "from": {
+          "kind": "service",
+          "id": "Returns Processor"
+        },
+        "to": {
+          "kind": "table",
+          "namespace": "fulfilment-platform",
+          "id": "returns-database"
+        },
+        "provenance": "declared",
+        "needsReview": false
+      },
+      {
+        "type": "reads",
+        "from": {
+          "kind": "service",
+          "id": "Warehouse Service"
+        },
+        "to": {
+          "kind": "table",
+          "namespace": "fulfilment-platform",
+          "id": "warehouse-database"
+        },
+        "provenance": "declared",
+        "needsReview": false
+      },
+      {
+        "type": "writes",
+        "from": {
+          "kind": "service",
+          "id": "Warehouse Service"
+        },
+        "to": {
+          "kind": "table",
+          "namespace": "fulfilment-platform",
+          "id": "warehouse-database"
+        },
+        "provenance": "declared",
+        "needsReview": false
+      }
+    ]
+  },
+  "claims": []
+}

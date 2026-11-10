@@ -19,6 +19,7 @@ import {
 } from 'autocatalog-docs-core';
 import type { DocsCatalog } from './catalog';
 import { remarkMermaid } from './mermaid';
+import { remarkWikiRefs } from './wiki-refs';
 import type { ResourceLinksProps } from './ui/components/ResourceLinks';
 import type { StormColumnView } from './ui/components/Storm';
 import type { VisualiserGraph } from './ui/lib/visualiser';
@@ -164,13 +165,17 @@ function evidenceSummary(evidence: FlowEvidence, flow: Flow, now: number): FlowP
 // own highlighter colours them, so Shiki is not loaded for it.
 let processor: ReturnType<typeof createMarkdownProcessor> | undefined;
 
+// `[[kind|id]]` links read as they do in documents, under the site's base.
 const narrative = () =>
   (processor ??= createMarkdownProcessor({
     syntaxHighlight: false,
-    remarkPlugins: [remarkMermaid],
+    remarkPlugins: [
+      remarkMermaid,
+      [remarkWikiRefs, { base: (import.meta.env.BASE_URL ?? '/').replace(/\/$/, '') }],
+    ],
   }));
 
-/** A flow's or design's Markdown body as HTML. */
+/** A flow's, design's or overview's Markdown body as HTML. */
 export const renderNarrative = async (body: string) =>
   (await (await narrative()).render(body)).code;
 

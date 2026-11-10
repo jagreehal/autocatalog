@@ -36,10 +36,13 @@ runs:
       run: pnpm install --frozen-lockfile
 
     # Turbo's local cache, carried between runs: a package nothing changed in
-    # replays its build and tests instead of running them again.
+    # replays its build and tests instead of running them again. Each job keeps
+    # its own entry, so jobs running side by side each save what they built,
+    # and a job with none yet starts from another's.
     - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: .turbo/cache
-        key: ${{ runner.os }}-turbo-${{ github.sha }}
+        key: ${{ runner.os }}-turbo-${{ github.job }}-${{ github.sha }}
         restore-keys: |
+          ${{ runner.os }}-turbo-${{ github.job }}-
           ${{ runner.os }}-turbo-
