@@ -3,7 +3,7 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": ["dist/**"],
+      "outputs": ["dist/**", ".astro/**"],
       "passThroughEnv": ["AUTOCATALOG_DOCS_LINKS"]
     },
     "test": {

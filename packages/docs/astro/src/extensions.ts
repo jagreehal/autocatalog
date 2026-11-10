@@ -30,6 +30,8 @@ const siteExtensionSchema = z.strictObject({
   routeMiddleware: paths.optional(),
   /** Starlight component overrides, by component name. A later extension wins. */
   components: z.record(z.string(), z.string().min(1)).optional(),
+  /** Blocks a layout in autocatalog.site.json can name: an Astro component by block name. */
+  blocks: z.record(z.string(), z.string().min(1)).optional(),
   customCss: z.array(z.string().min(1)).optional(),
   head: z.array(z.custom<HeadEntry>()).optional(),
   /** For every Markdown and MDX document: `plugin` or `[plugin, options]`. */
@@ -51,6 +53,7 @@ export interface SiteExtensions {
   middleware: string[];
   routeMiddleware: string[];
   components: Record<string, string>;
+  blocks: Record<string, string>;
   customCss: string[];
   head: HeadEntry[];
   remarkPlugins: UnifiedPluginEntry[];
@@ -72,6 +75,7 @@ export function mergeSiteExtensions(
     middleware: [],
     routeMiddleware: [],
     components: {},
+    blocks: {},
     customCss: [],
     head: [],
     remarkPlugins: [],
@@ -89,6 +93,20 @@ export function mergeSiteExtensions(
 
     for (const [name, file] of Object.entries(ext.components ?? {})) {
       merged.components[name] = at(file);
+    }
+
+    // A layout names a block by name, so two extensions offering one name is
+    // a choice nobody made: say which two, and take neither.
+    for (const [name, file] of Object.entries(ext.blocks ?? {})) {
+      const taken = merged.blocks[name];
+
+      if (taken !== undefined) {
+        throw new Error(
+          `extend: two extensions add a block named '${name}': ${taken} and ${at(file)}. Rename one.`,
+        );
+      }
+
+      merged.blocks[name] = at(file);
     }
 
     merged.head.push(...(ext.head ?? []));

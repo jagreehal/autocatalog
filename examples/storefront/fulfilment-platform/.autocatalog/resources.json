@@ -1,0 +1,729 @@
+{
+  "spec": "autocatalog/graph-v1",
+  "resources": [
+    {
+      "ref": {
+        "kind": "command",
+        "namespace": "fulfilment",
+        "id": "create-shipment",
+        "version": "1.0.0"
+      },
+      "title": "Create Shipment",
+      "tags": [],
+      "provenance": {
+        "default": "declared",
+        "fields": {}
+      },
+      "needsReview": false,
+      "attributes": {
+        "schema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "title": "CreateShipment",
+          "description": "Command to create a shipment with a carrier for a packed order",
+          "type": "object",
+          "properties": {
+            "orderId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "carrier": {
+              "type": "string",
+              "description": "The carrier to ship with"
+            },
+            "service": {
+              "type": "string",
+              "enum": ["STANDARD", "EXPRESS", "NEXT_DAY"]
+            },
+            "parcelCount": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "destination": {
+              "type": "object",
+              "properties": {
+                "line1": {
+                  "type": "string"
+                },
+                "city": {
+                  "type": "string"
+                },
+                "postcode": {
+                  "type": "string"
+                },
+                "country": {
+                  "type": "string",
+                  "pattern": "^[A-Z]{2}$"
+                }
+              },
+              "required": ["line1", "city", "postcode", "country"]
+            }
+          },
+          "required": ["orderId", "destination"]
+        },
+        "transport": [],
+        "outcome": null,
+        "outcomeSchema": null
+      },
+      "summary": "Command to create a shipment with a carrier for a packed order.",
+      "source": {
+        "type": "code",
+        "file": "commands/create-shipment/autocatalog.json"
+      }
+    },
+    {
+      "ref": {
+        "kind": "command",
+        "namespace": "fulfilment",
+        "id": "get-stock-level",
+        "version": "1.0.0"
+      },
+      "title": "Get Stock Level",
+      "tags": ["query"],
+      "provenance": {
+        "default": "declared",
+        "fields": {}
+      },
+      "needsReview": false,
+      "attributes": {
+        "schema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "title": "GetStockLevel",
+          "description": "Query to fetch the current available stock level for a product, and the level returned",
+          "type": "object",
+          "properties": {
+            "request": {
+              "type": "object",
+              "properties": {
+                "productId": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "required": ["productId"]
+            },
+            "response": {
+              "type": "object",
+              "properties": {
+                "productId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "available": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "reserved": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              },
+              "required": ["productId", "available"]
+            }
+          },
+          "required": ["request", "response"]
+        },
+        "transport": [],
+        "outcome": {
+          "type": "result"
+        },
+        "outcomeSchema": null
+      },
+      "summary": "Query to fetch the current available stock level for a product.",
+      "source": {
+        "type": "code",
+        "file": "commands/get-stock-level/autocatalog.json"
+      }
+    },
+    {
+      "ref": {
+        "kind": "command",
+        "namespace": "fulfilment",
+        "id": "release-inventory",
+        "version": "1.0.0"
+      },
+      "title": "Release Inventory",
+      "tags": [],
+      "provenance": {
+        "default": "declared",
+        "fields": {}
+      },
+      "needsReview": false,
+      "attributes": {
+        "schema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "title": "ReleaseInventory",
+          "description": "Command to release a previously held inventory reservation",
+          "type": "object",
+          "properties": {
+            "reservationId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "reason": {
+              "type": "string",
+              "enum": ["CHECKOUT_FAILED", "ORDER_CANCELLED", "EXPIRED"]
+            }
+          },
+          "required": ["reservationId"]
+        },
+        "transport": [],
+        "outcome": null,
+        "outcomeSchema": null
+      },
+      "summary": "Command to release a previously held inventory reservation.",
+      "source": {
+        "type": "code",
+        "file": "commands/release-inventory/autocatalog.json"
+      }
+    },
+    {
+      "ref": {
+        "kind": "command",
+        "namespace": "returns",
+        "id": "request-return",
+        "version": "1.0.0"
+      },
+      "title": "Request Return",
+      "tags": [],
+      "provenance": {
+        "default": "declared",
+        "fields": {}
+      },
+      "needsReview": false,
+      "attributes": {
+        "schema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "title": "RequestReturn",
+          "description": "Request to return items from a delivered order",
+          "type": "object",
+          "properties": {
+            "orderId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "customerId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "items": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "properties": {
+                  "sku": {
+                    "type": "string"
+                  },
+                  "quantity": {
+                    "type": "integer",
+                    "minimum": 1
+                  }
+                },
+                "required": ["sku", "quantity"]
+              }
+            },
+            "reason": {
+              "type": "string",
+              "enum": ["damaged", "wrong_item", "not_as_described", "no_longer_needed", "other"]
+            },
+            "comment": {
+              "type": "string"
+            }
+          },
+          "required": ["orderId", "customerId", "items", "reason"]
+        },
+        "transport": [],
+        "outcome": null,
+        "outcomeSchema": null
+      },
+      "summary": "Command sent by a customer to return one or more items from a delivered order.",
+      "source": {
+        "type": "code",
+        "file": "commands/request-return/autocatalog.json"
+      }
+    },
+    {
+      "ref": {
+        "kind": "service",
+        "id": "Carrier Adapter"
+      },
+      "title": "Carrier Adapter",
+      "tags": [],
+      "provenance": {
+        "default": "declared",
+        "fields": {}
+      },
+      "needsReview": false,
+      "attributes": {
+        "domains": ["fulfilment"],
+        "system": {
+          "id": "shipping-system",
+          "name": "Shipping System"
+        }
+      },
+      "summary": "Translates Acme Inc shipment requests into the external carrier's format and sends them to create a shipment.",
+      "owner": {
+        "team": "fulfilment-platform",
+        "name": "Fulfilment Platform",
+        "contact": "https://acme.slack.com/channels/fulfilment-platform"
+      }
+    },
+    {
+      "ref": {
+        "kind": "service",
+        "id": "Inventory Service"
+      },
+      "title": "Inventory Service",
+      "tags": [],
+      "provenance": {
+        "default": "declared",
+        "fields": {}
+      },
+      "needsReview": false,
+      "attributes": {
+        "domains": ["fulfilment"],
+        "system": {
+          "id": "inventory-system",
+          "name": "Inventory System"
+        }
+      },
+      "summary": "The system of record for stock. Reserves and releases inventory, serves stock-level queries, and publishes events when stock is reserved or unavailable.",
+      "owner": {
+        "team": "fulfilment-platform",
+        "name": "Fulfilment Platform",
+        "contact": "https://acme.slack.com/channels/fulfilment-platform"
+      }
+    },
+    {
+      "ref": {
+        "kind": "service",
+        "id": "Picking Worker"
+      },
+      "title": "Picking Worker",
+      "tags": [],
+      "provenance": {
+        "default": "declared",
+        "fields": {}
+      },
+      "needsReview": false,
+      "attributes": {
+        "domains": ["fulfilment"],
+        "system": {
+          "id": "warehouse-system",
+          "name": "Warehouse System"
+        }
+      },
+      "summary": "Works through picking jobs on the warehouse floor and signals when an order has been picked and packed.",
+      "owner": {
+        "team": "fulfilment-platform",
+        "name": "Fulfilment Platform",
+        "contact": "https://acme.slack.com/channels/fulfilment-platform"
+      }
+    },
+    {
+      "ref": {
+        "kind": "service",
+        "id": "Returns API"
+      },
+      "title": "Returns API",
+      "tags": [],
+      "provenance": {
+        "default": "declared",
+        "fields": {}
+      },
+      "needsReview": false,
+      "attributes": {
+        "domains": ["fulfilment"],
+        "system": {
+          "id": "returns-system",
+          "name": "Returns System"
+        }
+      },
+      "summary": "Public API customers use to start a return. Validates the request against the original order and records it.",
+      "owner": {
+        "team": "fulfilment-platform",
+        "name": "Fulfilment Platform",
+        "contact": "https://acme.slack.com/channels/fulfilment-platform"
+      }
+    },
+    {
+      "ref": {
+        "kind": "service",
+        "id": "Returns Processor"
+      },
+      "title": "Returns Processor",
+      "tags": [],
+      "provenance": {
+        "default": "declared",
+        "fields": {}
+      },
+      "needsReview": false,
+      "attributes": {
+        "domains": ["fulfilment"],
+        "system": {
+          "id": "returns-system",
+          "name": "Returns System"
+        }
+      },
+      "summary": "Applies the returns policy to new requests and tracks returned parcels until they arrive back at the warehouse.",
+      "owner": {
+        "team": "fulfilment-platform",
+        "name": "Fulfilment Platform",
+        "contact": "https://acme.slack.com/channels/fulfilment-platform"
+      }
+    },
+    {
+      "ref": {
+        "kind": "service",
+        "id": "Shipping API"
+      },
+      "title": "Shipping API",
+      "tags": [],
+      "provenance": {
+        "default": "declared",
+        "fields": {}
+      },
+      "needsReview": false,
+      "attributes": {
+        "domains": ["fulfilment"],
+        "system": {
+          "id": "carrier",
+          "name": "Carrier"
+        }
+      },
+      "summary": "The carrier's API for creating shipments. Acme Inc's Shipping System calls it to dispatch packed orders.",
+      "owner": {
+        "team": "fulfilment-platform",
+        "name": "Fulfilment Platform",
+        "contact": "https://acme.slack.com/channels/fulfilment-platform"
+      }
+    },
+    {
+      "ref": {
+        "kind": "service",
+        "id": "Tracking API"
+      },
+      "title": "Tracking API",
+      "tags": [],
+      "provenance": {
+        "default": "declared",
+        "fields": {}
+      },
+      "needsReview": false,
+      "attributes": {
+        "domains": ["fulfilment"],
+        "system": {
+          "id": "carrier",
+          "name": "Carrier"
+        }
+      },
+      "summary": "The carrier's API for reporting delivery progress. It notifies Acme Inc when a shipment is created, delivered, or fails.",
+      "owner": {
+        "team": "fulfilment-platform",
+        "name": "Fulfilment Platform",
+        "contact": "https://acme.slack.com/channels/fulfilment-platform"
+      }
+    },
+    {
+      "ref": {
+        "kind": "service",
+        "id": "Warehouse Service"
+      },
+      "title": "Warehouse Service",
+      "tags": [],
+      "provenance": {
+        "default": "declared",
+        "fields": {}
+      },
+      "needsReview": false,
+      "attributes": {
+        "domains": ["fulfilment"],
+        "system": {
+          "id": "warehouse-system",
+          "name": "Warehouse System"
+        }
+      },
+      "summary": "Orchestrates picking and packing in the warehouse. It reacts to completed orders, creates picking jobs, and signals when an order is ready to ship.",
+      "owner": {
+        "team": "fulfilment-platform",
+        "name": "Fulfilment Platform",
+        "contact": "https://acme.slack.com/channels/fulfilment-platform"
+      }
+    },
+    {
+      "ref": {
+        "kind": "table",
+        "namespace": "fulfilment-platform",
+        "id": "inventory-database"
+      },
+      "title": "Inventory Database",
+      "tags": [],
+      "provenance": {
+        "default": "declared",
+        "fields": {}
+      },
+      "needsReview": false,
+      "attributes": {
+        "technology": "postgres@16",
+        "containerType": "database"
+      },
+      "summary": "PostgreSQL database that is the system of record for stock levels and reservations.",
+      "owner": {
+        "team": "fulfilment-platform",
+        "name": "Fulfilment Platform",
+        "contact": "https://acme.slack.com/channels/fulfilment-platform"
+      }
+    },
+    {
+      "ref": {
+        "kind": "table",
+        "namespace": "fulfilment-platform",
+        "id": "returns-database"
+      },
+      "title": "Returns Database",
+      "tags": [],
+      "provenance": {
+        "default": "declared",
+        "fields": {}
+      },
+      "needsReview": false,
+      "attributes": {
+        "technology": "postgres@16",
+        "containerType": "database"
+      },
+      "summary": "PostgreSQL database that is the system of record for return requests and their status.",
+      "owner": {
+        "team": "fulfilment-platform",
+        "name": "Fulfilment Platform",
+        "contact": "https://acme.slack.com/channels/fulfilment-platform"
+      }
+    },
+    {
+      "ref": {
+        "kind": "table",
+        "namespace": "fulfilment-platform",
+        "id": "warehouse-database"
+      },
+      "title": "Warehouse Database",
+      "tags": [],
+      "provenance": {
+        "default": "declared",
+        "fields": {}
+      },
+      "needsReview": false,
+      "attributes": {
+        "technology": "postgres@16",
+        "containerType": "database"
+      },
+      "summary": "PostgreSQL database that stores picking jobs and their status.",
+      "owner": {
+        "team": "fulfilment-platform",
+        "name": "Fulfilment Platform",
+        "contact": "https://acme.slack.com/channels/fulfilment-platform"
+      }
+    }
+  ],
+  "relationships": [
+    {
+      "type": "sends",
+      "from": {
+        "kind": "service",
+        "id": "Carrier Adapter"
+      },
+      "to": {
+        "kind": "command",
+        "namespace": "fulfilment",
+        "id": "create-shipment",
+        "version": "1.0.0"
+      },
+      "provenance": "declared",
+      "needsReview": false
+    },
+    {
+      "type": "handles",
+      "from": {
+        "kind": "service",
+        "id": "Inventory Service"
+      },
+      "to": {
+        "kind": "command",
+        "namespace": "fulfilment",
+        "id": "get-stock-level",
+        "version": "1.0.0"
+      },
+      "provenance": "declared",
+      "needsReview": false
+    },
+    {
+      "type": "handles",
+      "from": {
+        "kind": "service",
+        "id": "Inventory Service"
+      },
+      "to": {
+        "kind": "command",
+        "namespace": "fulfilment",
+        "id": "release-inventory",
+        "version": "1.0.0"
+      },
+      "provenance": "declared",
+      "needsReview": false
+    },
+    {
+      "type": "reads",
+      "from": {
+        "kind": "service",
+        "id": "Inventory Service"
+      },
+      "to": {
+        "kind": "table",
+        "namespace": "fulfilment-platform",
+        "id": "inventory-database"
+      },
+      "provenance": "declared",
+      "needsReview": false
+    },
+    {
+      "type": "writes",
+      "from": {
+        "kind": "service",
+        "id": "Inventory Service"
+      },
+      "to": {
+        "kind": "table",
+        "namespace": "fulfilment-platform",
+        "id": "inventory-database"
+      },
+      "provenance": "declared",
+      "needsReview": false
+    },
+    {
+      "type": "reads",
+      "from": {
+        "kind": "service",
+        "id": "Picking Worker"
+      },
+      "to": {
+        "kind": "table",
+        "namespace": "fulfilment-platform",
+        "id": "warehouse-database"
+      },
+      "provenance": "declared",
+      "needsReview": false
+    },
+    {
+      "type": "writes",
+      "from": {
+        "kind": "service",
+        "id": "Picking Worker"
+      },
+      "to": {
+        "kind": "table",
+        "namespace": "fulfilment-platform",
+        "id": "warehouse-database"
+      },
+      "provenance": "declared",
+      "needsReview": false
+    },
+    {
+      "type": "handles",
+      "from": {
+        "kind": "service",
+        "id": "Returns API"
+      },
+      "to": {
+        "kind": "command",
+        "namespace": "returns",
+        "id": "request-return",
+        "version": "1.0.0"
+      },
+      "provenance": "declared",
+      "needsReview": false
+    },
+    {
+      "type": "writes",
+      "from": {
+        "kind": "service",
+        "id": "Returns API"
+      },
+      "to": {
+        "kind": "table",
+        "namespace": "fulfilment-platform",
+        "id": "returns-database"
+      },
+      "provenance": "declared",
+      "needsReview": false
+    },
+    {
+      "type": "reads",
+      "from": {
+        "kind": "service",
+        "id": "Returns Processor"
+      },
+      "to": {
+        "kind": "table",
+        "namespace": "fulfilment-platform",
+        "id": "returns-database"
+      },
+      "provenance": "declared",
+      "needsReview": false
+    },
+    {
+      "type": "writes",
+      "from": {
+        "kind": "service",
+        "id": "Returns Processor"
+      },
+      "to": {
+        "kind": "table",
+        "namespace": "fulfilment-platform",
+        "id": "returns-database"
+      },
+      "provenance": "declared",
+      "needsReview": false
+    },
+    {
+      "type": "handles",
+      "from": {
+        "kind": "service",
+        "id": "Shipping API"
+      },
+      "to": {
+        "kind": "command",
+        "namespace": "fulfilment",
+        "id": "create-shipment",
+        "version": "1.0.0"
+      },
+      "provenance": "declared",
+      "needsReview": false
+    },
+    {
+      "type": "reads",
+      "from": {
+        "kind": "service",
+        "id": "Warehouse Service"
+      },
+      "to": {
+        "kind": "table",
+        "namespace": "fulfilment-platform",
+        "id": "warehouse-database"
+      },
+      "provenance": "declared",
+      "needsReview": false
+    },
+    {
+      "type": "writes",
+      "from": {
+        "kind": "service",
+        "id": "Warehouse Service"
+      },
+      "to": {
+        "kind": "table",
+        "namespace": "fulfilment-platform",
+        "id": "warehouse-database"
+      },
+      "provenance": "declared",
+      "needsReview": false
+    }
+  ]
+}

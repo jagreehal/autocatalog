@@ -27,7 +27,15 @@ const execFileAsync = promisify(execFile);
 const CONTRACTS = 'contracts';
 
 /** A domain model's folders and designs: a handbook may publish only these. */
-const MODEL_ROOTS = ['glossary', 'entities', 'data-products', 'teams', 'users', 'designs'];
+const MODEL_ROOTS = [
+  'glossary',
+  'entities',
+  'data-products',
+  'teams',
+  'users',
+  'designs',
+  'overviews',
+];
 
 // A repository that only consumes other teams' events still publishes that fact.
 const PUBLISHED_ROOTS = [

@@ -1,0 +1,13 @@
+---
+title: Inventory Reserved
+owner: fulfilment-platform
+summary: Published when stock has been successfully reserved for an order.
+about:
+  - event/fulfilment/inventory-reserved
+sidebar:
+  hidden: true
+---
+
+## Overview
+
+`InventoryReserved` is published by the [[service|Inventory Service]] when stock for an order has been successfully reserved. The Ordering domain's checkout saga relies on this to continue placing the order.

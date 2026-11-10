@@ -30,7 +30,7 @@ afterAll(async () => {
 });
 
 describe('deliveryPathView', () => {
-  it('links a service only when it has a page', () => {
+  it('links each service to its page, one only the graph declares included', () => {
     const view = deliveryPathView(
       catalog.delivery,
       'payments/payment.completed',
@@ -42,11 +42,11 @@ describe('deliveryPathView', () => {
       .flatMap((route) => route.hops)
       .flatMap((hop) => (hop.entity === 'service' ? [[hop.name, hop.href]] : []));
 
-    // LedgerService is declared only in ledger's autocatalog.consumes.json:
-    // no event names it, so it has no page to link to.
+    // LedgerService is declared only in ledger's autocatalog.consumes.json.
+    // The graph holds it, so it has a page like any other service.
     expect(Object.fromEntries(services)).toEqual({
       PaymentService: '/services/PaymentService/',
-      LedgerService: undefined,
+      LedgerService: '/services/LedgerService/',
     });
   });
 });

@@ -1,14 +1,16 @@
 ---
 import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
 import { getCollection } from 'astro:content';
-import { repositoryMetas } from 'autocatalog-docs-core';
+import { defaultHomeLayout, repositoryMetas } from 'autocatalog-docs-core';
 import { apiOperations, apiPath, apiSummary, apiTitle } from '../apis';
 import { readableCatalog } from '../access';
 import { docsCatalog } from '../catalog';
 import { docsSiteConfig } from '../config';
 import { homePageProps } from '../page-models';
 import { setPageHeader } from '../shell';
-import { HomePage } from '../ui/pages/HomePage';
+import { blockIds, HomeBlock } from '../ui/pages/HomeBlock';
+import { resolveHomeLayout } from '../home-layout';
+import blocks from 'virtual:autocatalog-docs-blocks';
 import { listItems } from '../view';
 import { catalogId } from '../ui/lib/docs';
 
@@ -62,6 +64,34 @@ const page = site.audience
     }
   : home;
 
+const metas = repositoryMetas(site.root, { repo: site.repo, repository: site.repository });
+
+// The page is its layout: `layouts.home`, or the default, which is the built-in
+// page `ac site --print-layout home` prints. A site for an audience that names
+// the counts, the map or the attention list fails the build before this.
+const layout = resolveHomeLayout(site.layouts?.home ?? defaultHomeLayout(site), {
+  base,
+  stats: (kinds) =>
+    kinds
+      ? homePageProps(catalog, items, base, metas, { counts: kinds, outside: false }).stats
+      : page.stats,
+  documents: items,
+  repos: page.repos,
+  apis: catalog.apis.map((api) => ({
+    title: apiTitle(api),
+    text: apiSummary(api) ?? `${apiOperations(api).length} operations, with examples.`,
+    href: `${base}${apiPath(api)}`,
+    icon: 'api' as const,
+  })),
+  explore: page.explore,
+  tags: page.tags,
+  attention: page.attention,
+  map: page.map,
+  catalogHref: page.catalogHref,
+});
+
+const ids = blockIds(layout.map((entry) => ({ block: entry.custom ? entry.name : entry.data.block })));
+
 setPageHeader(
   Astro.locals,
   site.audience
@@ -77,5 +107,15 @@ setPageHeader(
 <StarlightPage
   frontmatter={{ title: site.title, description: site.description, tableOfContents: false }}
 >
-  <HomePage client:load {...page} />
+  <div class="not-content flex flex-col gap-10" data-wide>
+    {
+      layout.map((entry, index) => {
+        if (!entry.custom) return <HomeBlock client:load block={entry.data} id={ids[index]!} />;
+
+        const Block = blocks[entry.name];
+
+        return Block ? <Block {...entry.props} /> : null;
+      })
+    }
+  </div>
 </StarlightPage>

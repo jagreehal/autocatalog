@@ -1,0 +1,45 @@
+---
+title: Integrating with Ordering
+owner: ordering-platform
+summary: How other teams look up orders and react to the order lifecycle without coupling to the order database or the checkout saga.
+about:
+  - domain/ordering
+---
+
+The Ordering domain owns every order at Acme from the moment a cart is checked out until the order is archived. Fulfilment, payments, customer communications and reporting all integrate with it. This guide covers the supported ways in — and the ones that are off limits.
+
+## Read an order on demand
+
+Call [[event|ordering/get-order]] on [[service|Order Service]] when you need the current state of a single order at request time (an order-status page, a support tool, a returns flow).
+
+- The response is the live state of the **Order** aggregate, read straight from **Order Database**. There is no edge cache.
+- Never connect to **Order Database** directly. Its schema is private to [[system|order-management-system]], it is classified confidential, and it changes without notice.
+- There is no "list orders" query today. If you need a bulk view, build a projection from the events below rather than polling `GetOrder`.
+
+## React to the order lifecycle
+
+Subscribe to the events published by [[service|Order Service]] on the `ordering.orders` Kafka topic. Pick the most specific event that answers your question:
+
+| I want to know when…                                       | Subscribe to                                                                                                          |
+| ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| an order exists and I can start work                       | [[event\|ordering-platform/ordering/order-created]]                                                                   |
+| payment and inventory are secured and it is safe to fulfil | [[event\|ordering-platform/ordering/order-confirmed]]                                                                 |
+| the warehouse has started picking                          | [[event\|ordering-platform/ordering/order-fulfilment-started]]                                                        |
+| the order is done, or gone                                 | [[event\|ordering-platform/ordering/order-completed]], [[event\|ordering-platform/ordering/order-cancelled]]          |
+| the delivery address changed before dispatch               | [[event\|ordering-platform/ordering/order-delivery-address-changed]]                                                  |
+| an order was paused or resumed for review                  | [[event\|ordering-platform/ordering/order-placed-on-hold]], [[event\|ordering-platform/ordering/order-hold-released]] |
+| _any_ state transition happened                            | [[event\|ordering-platform/ordering/order-status-changed]]                                                            |
+
+Prefer the business events over [[event|ordering-platform/ordering/order-status-changed]] — it exists for generic timelines, search and analytics, not as a substitute for the specific events. See **guides/order-lifecycle** for the full state machine.
+
+Events are delivered at-least-once. Consumers **must be idempotent**: key on `orderId` plus the event's `sequence` (on `OrderStatusChanged`) or its timestamp, and treat a replay as a no-op. Do not assume ordering across partitions — an [[event|ordering-platform/ordering/order-cancelled]] can occasionally arrive before the [[event|ordering-platform/ordering/order-created]] it relates to during a rebalance.
+
+## Schemas and contracts
+
+Every event has a JSON Schema published alongside it, and the whole event interface is described in the Order Service AsyncAPI document linked from the sidebar. [[event|ordering-platform/ordering/order-created]] is on version `1.0.0`; older versions (`0.3.0`, `0.6.0`) are still documented so you can see what changed, but new consumers should not target them.
+
+## Commands are internal
+
+[[event|ordering/create-order]] is only ever sent by [[service|Checkout Orchestrator]] as the final step of the [[flow|ordering-platform/checkout-saga]]. [[event|ordering/reserve-inventory]] and [[event|ordering/authorize-payment]] are likewise orchestrator-only. If your team needs to create orders through a new channel, talk to [[owner|ordering-platform]] in `#ordering-support` — we will extend the saga rather than let a second writer bypass it.
+
+[[event|ordering/cancel-order]] is the one command other teams may call, and only for orders that have not completed. Cancellation is documented end to end in [[flow|ordering-platform/order-cancellation]].

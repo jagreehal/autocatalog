@@ -1,0 +1,56 @@
+---
+name: Catalog
+summary: The Catalog domain owns everything about products — how they are created, maintained and made discoverable across Acme Inc. It is the source of truth for product data and powers product search across the business.
+owner: product-platform
+---
+
+## Overview
+
+The **Catalog** domain is responsible for the lifecycle of every product Acme Inc sells, and for making those products discoverable. It is split into two internal systems that work together:
+
+### How the systems work together
+
+The **Product Catalog System** is the authoritative source of product data. Whenever a product is created, updated or deleted it publishes a domain event. The **Search System** subscribes to those events, keeps its search index in sync, and exposes a search API so other teams never have to query the catalog database directly.
+
+## Value Chain
+
+A Wardley map of the Catalog domain. Product search is where we differentiate, so it sits closest to the shopper and furthest from commodity. The data stores and compute underneath are bought, not built.
+
+```mermaid
+wardley-beta
+title Catalog value chain
+
+anchor Shopper [0.96, 0.66]
+anchor Merchant [0.96, 0.34]
+component Product Search [0.84, 0.60]
+component Product Catalog [0.76, 0.42]
+component Search Index [0.60, 0.58]
+component Product Data Model [0.60, 0.30]
+component Event Bus [0.44, 0.74]
+component Search Engine [0.34, 0.78]
+component Catalog Database [0.24, 0.86]
+component Cloud Compute [0.10, 0.94]
+
+Shopper -> Product Search
+Merchant -> Product Catalog
+Product Search -> Search Index
+Product Catalog -> Product Data Model
+Product Catalog -> Event Bus
+Search Index -> Event Bus
+Search Index -> Search Engine
+Product Catalog -> Catalog Database
+Search Engine -> Cloud Compute
+Catalog Database -> Cloud Compute
+
+evolve Search Engine 0.90
+evolve Product Data Model 0.48
+
+note "Search relevance is our differentiator, keep it custom" [0.90, 0.40]
+note "Move self hosted search to a managed service" [0.28, 0.52]
+```
+
+## Architecture Graph
+
+Where Catalog sits in the wider architecture — its systems and messages, and the neighbouring domains it talks to.
+
+The diagram below shows the domain's systems, how they relate, and the people who interact with them.

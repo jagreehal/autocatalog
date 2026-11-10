@@ -1,0 +1,11 @@
+{
+  "kind": "command",
+  "id": "register-customer",
+  "version": "1.0.0",
+  "name": "Register Customer",
+  "summary": "Command to register a new customer.",
+  "domain": "customer",
+  "handler": "Customer API",
+  "senders": [],
+  "schema": "./schema.json"
+}

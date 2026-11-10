@@ -1,0 +1,13 @@
+---
+title: Loyalty Points Reversed
+owner: customer-platform
+summary: Published when loyalty points are removed from a customer because the order that earned them was cancelled.
+about:
+  - event/loyalty/loyalty-points-reversed
+sidebar:
+  hidden: true
+---
+
+## Overview
+
+`LoyaltyPointsReversed` is published by the [[service|Loyalty Service]] when it handles an [[event|ordering-platform/ordering/order-cancelled]] for an order that had already earned points. It keeps downstream balances and promotions consistent with the points ledger.

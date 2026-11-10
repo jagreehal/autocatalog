@@ -1,0 +1,15 @@
+{
+  "kind": "command",
+  "id": "get-product-reviews",
+  "version": "1.0.0",
+  "name": "Get Product Reviews",
+  "summary": "Query to fetch the published reviews and aggregate rating for a product.",
+  "domain": "reviews",
+  "handler": "Review API",
+  "senders": [],
+  "schema": "./schema.json",
+  "outcome": {
+    "type": "result"
+  },
+  "tags": ["query"]
+}

@@ -14,6 +14,7 @@ import {
   createEventResourceGraph,
   findCatalogRoots,
   loadRepositoryEvents,
+  readResourceGraph,
   resourceKey,
 } from 'autocatalog-core';
 import {
@@ -25,8 +26,10 @@ import {
   DOCS_MANIFEST_PATH,
   DOCS_SCHEMA_PATH,
   DocsManifestError,
+  overviewTargets,
   readDesigns,
   readDomainModel,
+  readOverviews,
   checkLifecycles,
   flowNotes,
   readDocs,
@@ -63,9 +66,10 @@ export interface DocsCommandOptions {
 
 /**
  * What the checkout defines for a document's `about:` to name: each
- * repository's events, the services they infer, and its Agent system. A
- * catalog that will not load is `ac validate`'s failure to report, so here it
- * contributes nothing rather than failing the docs check twice.
+ * repository's events, the services they infer, the resources its committed
+ * `.autocatalog/resources.json` declares, and its Agent system. A catalog that
+ * will not load is `ac validate`'s failure to report, so here it contributes
+ * nothing rather than failing the docs check twice.
  */
 export async function checkoutResources(root: string, repo?: string): Promise<CatalogResource[]> {
   const resources: CatalogResource[] = [];
@@ -78,6 +82,11 @@ export async function checkoutResources(root: string, repo?: string): Promise<Ca
       .catch(() => undefined);
 
     resources.push(...(graph?.resources ?? []));
+
+    // The site composes this file, so what it declares is what `about:` names there.
+    const declared = await readResourceGraph(dir).catch(() => undefined);
+
+    resources.push(...(declared?.resources ?? []));
 
     if (publishesAgentCatalog(dir)) {
       const graph = await loadAgentsCatalog(dir)
@@ -126,6 +135,10 @@ export async function runDocsCheck(opts: DocsCommandOptions): Promise<number> {
 
   const lifecycles = checkLifecycles(flows.flows, model.entities, { deferMissing: true });
 
+  // Domain, service and system overviews: a duplicate in this checkout fails,
+  // and one naming another repository's resource is the composed site's to resolve.
+  const overviews = readOverviews(checkouts, overviewTargets(resources), { deferMissing: true });
+
   const notes = flowNotes(readDocs(opts.root, { repo: opts.repo }), flows.flows);
 
   const failures = [
@@ -134,6 +147,7 @@ export async function runDocsCheck(opts: DocsCommandOptions): Promise<number> {
     ...designs.failures,
     ...model.failures,
     ...lifecycles.failures,
+    ...overviews.failures,
   ];
 
   // Which rules were applied is the first question a failure raises, so it is
@@ -182,6 +196,7 @@ export async function runDocsCheck(opts: DocsCommandOptions): Promise<number> {
       counted(model.glossaries.length, 'glossary', 'glossaries'),
       counted(model.entities.length, 'entity', 'entities'),
       counted(model.dataProducts.length, 'data product', 'data products'),
+      counted(overviews.overviews.length, 'overview', 'overviews'),
     ].join('');
 
     console.log(

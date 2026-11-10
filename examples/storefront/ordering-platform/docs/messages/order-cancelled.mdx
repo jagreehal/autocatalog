@@ -1,0 +1,13 @@
+---
+title: Order Cancelled
+owner: ordering-platform
+summary: Published when an order has been cancelled.
+about:
+  - event/ordering/order-cancelled
+sidebar:
+  hidden: true
+---
+
+## Overview
+
+`OrderCancelled` is published by the [[service|Order Service]] when an order is cancelled — whether at the customer's request or because a downstream step (payment, inventory) failed. Downstream systems consume it to release inventory, refund or void payment, and stop fulfilment.

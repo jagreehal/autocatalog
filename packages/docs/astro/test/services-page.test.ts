@@ -108,6 +108,12 @@ describe('a catalog whose services come only from OpenAPI specs', () => {
     );
   });
 
+  it('says a service with no events or specs comes from the resource graph', () => {
+    expect(serviceBasis(catalog, 'ledger-exporter').evidence).toBe(
+      'from the resource graph its repository commits',
+    );
+  });
+
   it('puts the services in the sidebar though there are no events', () => {
     expect(catalogSidebar(catalog.events, catalog.apis)).toEqual([
       {

@@ -3,6 +3,7 @@ import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
 import type { InferGetStaticPropsType } from 'astro';
 import { catalogServices } from '../apis';
 import { docsCatalog } from '../catalog';
+import { renderNarrative } from '../flows';
 import { serviceBasis, serviceFacts, servicePageProps } from '../page-models';
 import { setResourceContext, withMarkdownCopy } from '../shell';
 import { twinPath } from '../twins';
@@ -32,6 +33,13 @@ const page = servicePageProps(catalog, service, base);
 
 const facts = serviceFacts(catalog.graph, service.name);
 
+// The team's own words about it, from `overviews/services/<name>.md`, above what the catalog says.
+const overview = catalog.overviews.find(
+  ({ kind, target }) => kind === 'service' && target === service.name,
+);
+
+const narrativeHtml = overview?.body ? await renderNarrative(overview.body) : null;
+
 const markdownHref = `${base}${twinPath(`services/${service.name}/`)}`;
 
 setResourceContext(Astro.locals, {
@@ -59,9 +67,10 @@ const headings = [
     title: service.name,
     head: [{ tag: 'link', attrs: { rel: 'alternate', type: 'text/markdown', href: markdownHref } }],
     // Its own summary when it has one; else what the page is, since nobody wrote it.
-    description: facts.summary ?? serviceBasis(catalog, service.name).description,
+    description: overview?.summary ?? facts.summary ?? serviceBasis(catalog, service.name).description,
   }}
   headings={headings}
 >
+  {narrativeHtml && <div set:html={narrativeHtml} />}
   <ServicePage client:load {...page} />
 </StarlightPage>

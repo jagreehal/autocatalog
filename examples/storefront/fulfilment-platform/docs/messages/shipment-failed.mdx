@@ -1,0 +1,13 @@
+---
+title: Shipment Failed
+owner: fulfilment-platform
+summary: Published by the carrier when a shipment could not be delivered.
+about:
+  - event/fulfilment/shipment-failed
+sidebar:
+  hidden: true
+---
+
+## Overview
+
+`ShipmentFailed` is published by the carrier's [[service|Tracking API]] when a shipment cannot be delivered — for example a failed delivery attempt or a lost parcel. Acme Inc consumes it to trigger a redelivery, refund, or customer follow-up.

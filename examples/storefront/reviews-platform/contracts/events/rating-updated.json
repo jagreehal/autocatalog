@@ -1,0 +1,33 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "RatingUpdated",
+  "type": "object",
+  "properties": {
+    "productId": {
+      "type": "string"
+    },
+    "averageRating": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 5
+    },
+    "reviewCount": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "updatedAt": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": ["productId", "averageRating", "reviewCount", "updatedAt"],
+  "description": "Published when a product's aggregate rating changes as a result of a newly published review.",
+  "x-autocatalog": {
+    "id": "rating-updated",
+    "version": "1.0.0",
+    "domain": "reviews",
+    "name": "Rating Updated",
+    "summary": "Published when a product's aggregate rating changes as a result of a newly published review.",
+    "producers": ["Rating Aggregator"]
+  }
+}

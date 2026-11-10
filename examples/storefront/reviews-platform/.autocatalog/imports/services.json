@@ -1,0 +1,236 @@
+{
+  "graph": {
+    "spec": "autocatalog/graph-v1",
+    "resources": [
+      {
+        "ref": {
+          "kind": "service",
+          "id": "Rating Aggregator"
+        },
+        "title": "Rating Aggregator",
+        "tags": [],
+        "provenance": {
+          "default": "declared",
+          "fields": {}
+        },
+        "needsReview": false,
+        "attributes": {
+          "domains": ["reviews"]
+        },
+        "summary": "Keeps each product's aggregate star rating up to date as reviews are published, and serves it fast from a cache.",
+        "owner": {
+          "team": "reviews-platform",
+          "name": "Reviews Platform",
+          "contact": "https://acme.slack.com/channels/reviews-platform"
+        }
+      },
+      {
+        "ref": {
+          "kind": "service",
+          "id": "Review API"
+        },
+        "title": "Review API",
+        "tags": [],
+        "provenance": {
+          "default": "declared",
+          "fields": {}
+        },
+        "needsReview": false,
+        "attributes": {
+          "domains": ["reviews"]
+        },
+        "summary": "The public-facing API for product reviews. Accepts review submissions, serves published reviews, and is the entry point into the Reviews & Ratings domain.",
+        "owner": {
+          "team": "reviews-platform",
+          "name": "Reviews Platform",
+          "contact": "https://acme.slack.com/channels/reviews-platform"
+        }
+      },
+      {
+        "ref": {
+          "kind": "service",
+          "id": "Review Moderation Worker"
+        },
+        "title": "Review Moderation Worker",
+        "tags": [],
+        "provenance": {
+          "default": "declared",
+          "fields": {}
+        },
+        "needsReview": false,
+        "attributes": {
+          "domains": ["reviews"]
+        },
+        "summary": "Asynchronous worker that screens submitted reviews for spam, abuse and policy violations, then publishes or rejects them.",
+        "owner": {
+          "team": "reviews-platform",
+          "name": "Reviews Platform",
+          "contact": "https://acme.slack.com/channels/reviews-platform"
+        }
+      },
+      {
+        "ref": {
+          "kind": "table",
+          "namespace": "reviews-platform",
+          "id": "rating-cache"
+        },
+        "title": "Rating Cache",
+        "tags": [],
+        "provenance": {
+          "default": "declared",
+          "fields": {}
+        },
+        "needsReview": false,
+        "attributes": {
+          "technology": "redis@7",
+          "containerType": "cache"
+        },
+        "summary": "Redis cache that serves each product's aggregate star rating with low latency.",
+        "owner": {
+          "team": "reviews-platform",
+          "name": "Reviews Platform",
+          "contact": "https://acme.slack.com/channels/reviews-platform"
+        }
+      },
+      {
+        "ref": {
+          "kind": "table",
+          "namespace": "reviews-platform",
+          "id": "review-database"
+        },
+        "title": "Review Database",
+        "tags": [],
+        "provenance": {
+          "default": "declared",
+          "fields": {}
+        },
+        "needsReview": false,
+        "attributes": {
+          "technology": "postgres@16",
+          "containerType": "database"
+        },
+        "summary": "PostgreSQL database that is the system of record for reviews and their moderation state.",
+        "owner": {
+          "team": "reviews-platform",
+          "name": "Reviews Platform",
+          "contact": "https://acme.slack.com/channels/reviews-platform"
+        }
+      }
+    ],
+    "relationships": [
+      {
+        "type": "reads",
+        "from": {
+          "kind": "service",
+          "id": "Rating Aggregator"
+        },
+        "to": {
+          "kind": "table",
+          "namespace": "reviews-platform",
+          "id": "rating-cache"
+        },
+        "provenance": "declared",
+        "needsReview": false
+      },
+      {
+        "type": "reads",
+        "from": {
+          "kind": "service",
+          "id": "Rating Aggregator"
+        },
+        "to": {
+          "kind": "table",
+          "namespace": "reviews-platform",
+          "id": "review-database"
+        },
+        "provenance": "declared",
+        "needsReview": false
+      },
+      {
+        "type": "writes",
+        "from": {
+          "kind": "service",
+          "id": "Rating Aggregator"
+        },
+        "to": {
+          "kind": "table",
+          "namespace": "reviews-platform",
+          "id": "rating-cache"
+        },
+        "provenance": "declared",
+        "needsReview": false
+      },
+      {
+        "type": "reads",
+        "from": {
+          "kind": "service",
+          "id": "Review API"
+        },
+        "to": {
+          "kind": "table",
+          "namespace": "reviews-platform",
+          "id": "rating-cache"
+        },
+        "provenance": "declared",
+        "needsReview": false
+      },
+      {
+        "type": "reads",
+        "from": {
+          "kind": "service",
+          "id": "Review API"
+        },
+        "to": {
+          "kind": "table",
+          "namespace": "reviews-platform",
+          "id": "review-database"
+        },
+        "provenance": "declared",
+        "needsReview": false
+      },
+      {
+        "type": "writes",
+        "from": {
+          "kind": "service",
+          "id": "Review API"
+        },
+        "to": {
+          "kind": "table",
+          "namespace": "reviews-platform",
+          "id": "review-database"
+        },
+        "provenance": "declared",
+        "needsReview": false
+      },
+      {
+        "type": "reads",
+        "from": {
+          "kind": "service",
+          "id": "Review Moderation Worker"
+        },
+        "to": {
+          "kind": "table",
+          "namespace": "reviews-platform",
+          "id": "review-database"
+        },
+        "provenance": "declared",
+        "needsReview": false
+      },
+      {
+        "type": "writes",
+        "from": {
+          "kind": "service",
+          "id": "Review Moderation Worker"
+        },
+        "to": {
+          "kind": "table",
+          "namespace": "reviews-platform",
+          "id": "review-database"
+        },
+        "provenance": "declared",
+        "needsReview": false
+      }
+    ]
+  },
+  "claims": []
+}

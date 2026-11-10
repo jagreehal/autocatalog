@@ -9,7 +9,7 @@ npx autocatalog site .
 node dist/server.mjs
 ```
 
-Open `/help-centre/getting-started/`, then pick an account at the top right.
+Open `/getting-started/`, then pick an account at the top right.
 Lakeview Shop has invoicing, so it sees the invoicing guide and gets a 403 on
 the payments one; Riverside Studio sees both. The assistant needs
 `AI_GATEWAY_API_KEY`, or another model in `site/chat.ts`.

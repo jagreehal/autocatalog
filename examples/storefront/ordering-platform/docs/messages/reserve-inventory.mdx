@@ -1,0 +1,11 @@
+---
+title: Reserve Inventory
+owner: ordering-platform
+summary: Command to reserve stock for the items in a checked-out cart.
+sidebar:
+  hidden: true
+---
+
+## Overview
+
+`ReserveInventory` is sent by the [[service|Checkout Orchestrator]] to hold stock for the items in a checked-out cart. A successful reservation guarantees the inventory is available while payment is authorized. If a later checkout step fails, the reservation is released.

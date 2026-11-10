@@ -1,0 +1,15 @@
+{
+  "kind": "command",
+  "id": "get-product",
+  "version": "1.0.0",
+  "name": "Get Product",
+  "summary": "Query to fetch a single product by its identifier.",
+  "domain": "catalog",
+  "handler": "Product API",
+  "senders": [],
+  "schema": "./schema.json",
+  "outcome": {
+    "type": "result"
+  },
+  "tags": ["query"]
+}

@@ -1,0 +1,11 @@
+{
+  "kind": "command",
+  "id": "cancel-order",
+  "version": "1.0.0",
+  "name": "Cancel Order",
+  "summary": "Command to cancel an existing order.",
+  "domain": "ordering",
+  "handler": "Order Service",
+  "senders": [],
+  "schema": "./schema.json"
+}

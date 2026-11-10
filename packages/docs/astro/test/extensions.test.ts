@@ -28,6 +28,15 @@ describe('site extensions', () => {
     expect(merged.rehypePlugins).toEqual([plugin]);
   });
 
+  it('fails two extensions that add a block of the same name, naming both files', () => {
+    expect(() =>
+      mergeSiteExtensions([
+        { dir: '/a', extension: { blocks: { pricing: './Pricing.astro' } } },
+        { dir: '/b', extension: { blocks: { pricing: './Plans.astro' } } },
+      ]),
+    ).toThrow("two extensions add a block named 'pricing': /a/Pricing.astro and /b/Plans.astro");
+  });
+
   it('loads a module exporting an array, and adds middleware through an integration', async () => {
     const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'ac-ext-'));
     const file = path.join(dir, 'extend.mjs');

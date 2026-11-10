@@ -1,0 +1,633 @@
+{
+  "spec": "autocatalog/graph-v1",
+  "resources": [
+    {
+      "ref": {
+        "kind": "command",
+        "namespace": "ordering",
+        "id": "authorize-payment",
+        "version": "1.0.0"
+      },
+      "title": "Authorize Payment",
+      "tags": [],
+      "provenance": {
+        "default": "declared",
+        "fields": {}
+      },
+      "needsReview": false,
+      "attributes": {
+        "schema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "title": "AuthorizePayment",
+          "description": "Command to authorize payment for the total of a checked-out cart",
+          "type": "object",
+          "properties": {
+            "cartId": {
+              "description": "Identifier of the cart being checked out",
+              "type": "string",
+              "format": "uuid"
+            },
+            "customerId": {
+              "description": "Identifier of the customer paying",
+              "type": "string",
+              "format": "uuid"
+            },
+            "amount": {
+              "description": "Amount to authorize, in minor units (e.g. cents)",
+              "type": "integer",
+              "minimum": 0
+            },
+            "currency": {
+              "description": "ISO 4217 currency code",
+              "type": "string",
+              "pattern": "^[A-Z]{3}$"
+            }
+          },
+          "required": ["cartId", "amount", "currency"]
+        },
+        "transport": [],
+        "outcome": null,
+        "outcomeSchema": null
+      },
+      "summary": "Command to authorize payment for the total of a checked-out cart.",
+      "source": {
+        "type": "code",
+        "file": "commands/authorize-payment/autocatalog.json"
+      }
+    },
+    {
+      "ref": {
+        "kind": "command",
+        "namespace": "ordering",
+        "id": "cancel-order",
+        "version": "1.0.0"
+      },
+      "title": "Cancel Order",
+      "tags": [],
+      "provenance": {
+        "default": "declared",
+        "fields": {}
+      },
+      "needsReview": false,
+      "attributes": {
+        "schema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "title": "CancelOrder",
+          "description": "Command to cancel an existing order",
+          "type": "object",
+          "properties": {
+            "orderId": {
+              "description": "Identifier of the order to cancel",
+              "type": "string",
+              "format": "uuid"
+            },
+            "reason": {
+              "description": "Why the order is being cancelled",
+              "type": "string",
+              "enum": ["CUSTOMER_REQUESTED", "PAYMENT_FAILED", "OUT_OF_STOCK", "FRAUD"]
+            }
+          },
+          "required": ["orderId", "reason"]
+        },
+        "transport": [],
+        "outcome": null,
+        "outcomeSchema": null
+      },
+      "summary": "Command to cancel an existing order.",
+      "source": {
+        "type": "code",
+        "file": "commands/cancel-order/autocatalog.json"
+      }
+    },
+    {
+      "ref": {
+        "kind": "command",
+        "namespace": "ordering",
+        "id": "create-order",
+        "version": "1.0.0"
+      },
+      "title": "Create Order",
+      "tags": [],
+      "provenance": {
+        "default": "declared",
+        "fields": {}
+      },
+      "needsReview": false,
+      "attributes": {
+        "schema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "title": "CreateOrder",
+          "description": "Command to create a new order from a checked-out cart",
+          "type": "object",
+          "properties": {
+            "cartId": {
+              "description": "Identifier of the cart this order was created from",
+              "type": "string",
+              "format": "uuid"
+            },
+            "customerId": {
+              "description": "Identifier of the customer placing the order",
+              "type": "string",
+              "format": "uuid"
+            },
+            "items": {
+              "description": "The items in the order",
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "productId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "quantity": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "unitPrice": {
+                    "type": "integer",
+                    "description": "Price per unit in minor units (e.g. cents)"
+                  }
+                },
+                "required": ["productId", "quantity", "unitPrice"]
+              }
+            },
+            "total": {
+              "description": "Order total in minor units (e.g. cents)",
+              "type": "integer",
+              "minimum": 0
+            },
+            "currency": {
+              "description": "ISO 4217 currency code",
+              "type": "string",
+              "pattern": "^[A-Z]{3}$"
+            },
+            "paymentAuthorizationId": {
+              "description": "Identifier of the payment authorization for this order",
+              "type": "string"
+            }
+          },
+          "required": ["cartId", "customerId", "items", "total", "currency"]
+        },
+        "transport": [],
+        "outcome": null,
+        "outcomeSchema": null
+      },
+      "summary": "Command to create a new order from a checked-out cart.",
+      "source": {
+        "type": "code",
+        "file": "commands/create-order/autocatalog.json"
+      }
+    },
+    {
+      "ref": {
+        "kind": "command",
+        "namespace": "ordering",
+        "id": "get-order",
+        "version": "1.0.0"
+      },
+      "title": "Get Order",
+      "tags": ["query"],
+      "provenance": {
+        "default": "declared",
+        "fields": {}
+      },
+      "needsReview": false,
+      "attributes": {
+        "schema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "title": "GetOrder",
+          "description": "Query to fetch a single order by its identifier, and the order returned",
+          "type": "object",
+          "properties": {
+            "request": {
+              "description": "Parameters used to look up the order",
+              "type": "object",
+              "properties": {
+                "orderId": {
+                  "description": "Unique identifier of the order to fetch",
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "required": ["orderId"]
+            },
+            "response": {
+              "description": "The order returned by the query",
+              "type": "object",
+              "properties": {
+                "orderId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "customerId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": ["CREATED", "COMPLETED", "CANCELLED"]
+                },
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "productId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "quantity": {
+                        "type": "integer",
+                        "minimum": 1
+                      },
+                      "unitPrice": {
+                        "type": "integer"
+                      }
+                    },
+                    "required": ["productId", "quantity", "unitPrice"]
+                  }
+                },
+                "total": {
+                  "type": "integer",
+                  "description": "Order total in minor units (e.g. cents)"
+                },
+                "currency": {
+                  "type": "string",
+                  "pattern": "^[A-Z]{3}$"
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              },
+              "required": ["orderId", "customerId", "status", "items", "total", "currency"]
+            }
+          },
+          "required": ["request", "response"]
+        },
+        "transport": [],
+        "outcome": {
+          "type": "result"
+        },
+        "outcomeSchema": null
+      },
+      "summary": "Query to fetch a single order by its identifier.",
+      "source": {
+        "type": "code",
+        "file": "commands/get-order/autocatalog.json"
+      }
+    },
+    {
+      "ref": {
+        "kind": "command",
+        "namespace": "ordering",
+        "id": "reserve-inventory",
+        "version": "1.0.0"
+      },
+      "title": "Reserve Inventory",
+      "tags": [],
+      "provenance": {
+        "default": "declared",
+        "fields": {}
+      },
+      "needsReview": false,
+      "attributes": {
+        "schema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "title": "ReserveInventory",
+          "description": "Command to reserve stock for the items in a checked-out cart",
+          "type": "object",
+          "properties": {
+            "cartId": {
+              "description": "Identifier of the cart being checked out",
+              "type": "string",
+              "format": "uuid"
+            },
+            "customerId": {
+              "description": "Identifier of the customer checking out",
+              "type": "string",
+              "format": "uuid"
+            },
+            "items": {
+              "description": "The items to reserve",
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "productId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "quantity": {
+                    "type": "integer",
+                    "minimum": 1
+                  }
+                },
+                "required": ["productId", "quantity"]
+              }
+            }
+          },
+          "required": ["cartId", "items"]
+        },
+        "transport": [
+          {
+            "address": "/reservations",
+            "protocols": ["http"]
+          }
+        ],
+        "outcome": null,
+        "outcomeSchema": null
+      },
+      "summary": "Command to reserve stock for the items in a checked-out cart.",
+      "source": {
+        "type": "code",
+        "file": "commands/reserve-inventory/autocatalog.json"
+      }
+    },
+    {
+      "ref": {
+        "kind": "service",
+        "id": "Checkout API"
+      },
+      "title": "Checkout API",
+      "tags": [],
+      "provenance": {
+        "default": "declared",
+        "fields": {}
+      },
+      "needsReview": false,
+      "attributes": {
+        "domains": ["ordering"],
+        "system": {
+          "id": "checkout-system",
+          "name": "Checkout System"
+        }
+      },
+      "summary": "The entry point to the Checkout System. Receives the checkout command from the Shopping domain and starts the checkout flow.",
+      "owner": {
+        "team": "ordering-platform",
+        "name": "Ordering Platform",
+        "contact": "https://acme.slack.com/channels/ordering-platform"
+      }
+    },
+    {
+      "ref": {
+        "kind": "service",
+        "id": "Checkout Orchestrator"
+      },
+      "title": "Checkout Orchestrator",
+      "tags": [],
+      "provenance": {
+        "default": "declared",
+        "fields": {}
+      },
+      "needsReview": false,
+      "attributes": {
+        "domains": ["ordering"],
+        "system": {
+          "id": "checkout-system",
+          "name": "Checkout System"
+        }
+      },
+      "summary": "Runs the checkout saga. Reserves inventory, authorizes payment and creates the order, coordinating the steps that turn a checked-out cart into a confirmed order.",
+      "owner": {
+        "team": "ordering-platform",
+        "name": "Ordering Platform",
+        "contact": "https://acme.slack.com/channels/ordering-platform"
+      }
+    },
+    {
+      "ref": {
+        "kind": "service",
+        "id": "Inventory Service"
+      },
+      "title": "Inventory Service",
+      "tags": [],
+      "provenance": {
+        "default": "inferred",
+        "fields": {}
+      },
+      "needsReview": true,
+      "attributes": {
+        "domains": []
+      }
+    },
+    {
+      "ref": {
+        "kind": "service",
+        "id": "Order Service"
+      },
+      "title": "Order Service",
+      "tags": [],
+      "provenance": {
+        "default": "declared",
+        "fields": {}
+      },
+      "needsReview": false,
+      "attributes": {
+        "domains": ["ordering"],
+        "system": {
+          "id": "order-management-system",
+          "name": "Order Management System"
+        }
+      },
+      "summary": "The system of record for orders. Creates and cancels orders, serves order lookups, and publishes events as orders move through their lifecycle.",
+      "owner": {
+        "team": "ordering-platform",
+        "name": "Ordering Platform",
+        "contact": "https://acme.slack.com/channels/ordering-platform"
+      }
+    },
+    {
+      "ref": {
+        "kind": "service",
+        "id": "Payment API"
+      },
+      "title": "Payment API",
+      "tags": [],
+      "provenance": {
+        "default": "inferred",
+        "fields": {}
+      },
+      "needsReview": true,
+      "attributes": {
+        "domains": []
+      }
+    },
+    {
+      "ref": {
+        "kind": "table",
+        "namespace": "ordering-platform",
+        "id": "order-database"
+      },
+      "title": "Order Database",
+      "tags": [],
+      "provenance": {
+        "default": "declared",
+        "fields": {}
+      },
+      "needsReview": false,
+      "attributes": {
+        "technology": "postgres@16",
+        "containerType": "database"
+      },
+      "summary": "PostgreSQL database that is the system of record for orders and their items.",
+      "owner": {
+        "team": "ordering-platform",
+        "name": "Ordering Platform",
+        "contact": "https://acme.slack.com/channels/ordering-platform"
+      }
+    }
+  ],
+  "relationships": [
+    {
+      "type": "sends",
+      "from": {
+        "kind": "service",
+        "id": "Checkout Orchestrator"
+      },
+      "to": {
+        "kind": "command",
+        "namespace": "ordering",
+        "id": "authorize-payment",
+        "version": "1.0.0"
+      },
+      "provenance": "declared",
+      "needsReview": false
+    },
+    {
+      "type": "sends",
+      "from": {
+        "kind": "service",
+        "id": "Checkout Orchestrator"
+      },
+      "to": {
+        "kind": "command",
+        "namespace": "ordering",
+        "id": "create-order",
+        "version": "1.0.0"
+      },
+      "provenance": "declared",
+      "needsReview": false
+    },
+    {
+      "type": "sends",
+      "from": {
+        "kind": "service",
+        "id": "Checkout Orchestrator"
+      },
+      "to": {
+        "kind": "command",
+        "namespace": "ordering",
+        "id": "reserve-inventory",
+        "version": "1.0.0"
+      },
+      "provenance": "declared",
+      "needsReview": false
+    },
+    {
+      "type": "handles",
+      "from": {
+        "kind": "service",
+        "id": "Inventory Service"
+      },
+      "to": {
+        "kind": "command",
+        "namespace": "ordering",
+        "id": "reserve-inventory",
+        "version": "1.0.0"
+      },
+      "provenance": "declared",
+      "needsReview": false
+    },
+    {
+      "type": "handles",
+      "from": {
+        "kind": "service",
+        "id": "Order Service"
+      },
+      "to": {
+        "kind": "command",
+        "namespace": "ordering",
+        "id": "cancel-order",
+        "version": "1.0.0"
+      },
+      "provenance": "declared",
+      "needsReview": false
+    },
+    {
+      "type": "handles",
+      "from": {
+        "kind": "service",
+        "id": "Order Service"
+      },
+      "to": {
+        "kind": "command",
+        "namespace": "ordering",
+        "id": "create-order",
+        "version": "1.0.0"
+      },
+      "provenance": "declared",
+      "needsReview": false
+    },
+    {
+      "type": "handles",
+      "from": {
+        "kind": "service",
+        "id": "Order Service"
+      },
+      "to": {
+        "kind": "command",
+        "namespace": "ordering",
+        "id": "get-order",
+        "version": "1.0.0"
+      },
+      "provenance": "declared",
+      "needsReview": false
+    },
+    {
+      "type": "reads",
+      "from": {
+        "kind": "service",
+        "id": "Order Service"
+      },
+      "to": {
+        "kind": "table",
+        "namespace": "ordering-platform",
+        "id": "order-database"
+      },
+      "provenance": "declared",
+      "needsReview": false
+    },
+    {
+      "type": "writes",
+      "from": {
+        "kind": "service",
+        "id": "Order Service"
+      },
+      "to": {
+        "kind": "table",
+        "namespace": "ordering-platform",
+        "id": "order-database"
+      },
+      "provenance": "declared",
+      "needsReview": false
+    },
+    {
+      "type": "handles",
+      "from": {
+        "kind": "service",
+        "id": "Payment API"
+      },
+      "to": {
+        "kind": "command",
+        "namespace": "ordering",
+        "id": "authorize-payment",
+        "version": "1.0.0"
+      },
+      "provenance": "declared",
+      "needsReview": false
+    }
+  ]
+}

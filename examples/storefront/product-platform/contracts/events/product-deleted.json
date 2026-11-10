@@ -1,0 +1,50 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ProductDeleted",
+  "description": "Emitted when a product is removed from the catalog",
+  "type": "object",
+  "properties": {
+    "eventId": {
+      "description": "Unique identifier for this event",
+      "type": "string",
+      "format": "uuid"
+    },
+    "occurredAt": {
+      "description": "Time the product was deleted",
+      "type": "string",
+      "format": "date-time"
+    },
+    "productId": {
+      "description": "Unique identifier for the product that was deleted",
+      "type": "string",
+      "format": "uuid"
+    },
+    "reason": {
+      "description": "Optional reason the product was removed",
+      "type": "string",
+      "enum": ["DISCONTINUED", "DUPLICATE", "MERCHANT_REQUEST", "OTHER"]
+    }
+  },
+  "required": ["eventId", "occurredAt", "productId"],
+  "x-autocatalog": {
+    "id": "product-deleted",
+    "version": "1.0.0",
+    "domain": "catalog",
+    "name": "Product Deleted",
+    "summary": "Published when a product has been removed from the catalog.",
+    "producers": ["Product Search Publisher"],
+    "transport": [
+      {
+        "address": "catalog.product-events",
+        "protocols": ["kafka"]
+      },
+      {
+        "address": "catalog-search-indexer",
+        "protocols": ["sqs"]
+      }
+    ],
+    "delivery": {
+      "guarantee": "at-least-once"
+    }
+  }
+}

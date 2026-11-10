@@ -1,0 +1,13 @@
+---
+title: Payment Requested
+owner: payments-platform
+summary: Published when the Payment Processing System requests a charge from the payment processor.
+about:
+  - event/payments/payment-requested
+sidebar:
+  hidden: true
+---
+
+## Overview
+
+`PaymentRequested` is published by the [[service|Payment Worker]] to ask the external [[system|stripe]] to charge a customer for an order. Stripe responds with [[event|payments-platform/payments/payment-succeeded]] or [[event|payments-platform/payments/payment-failed]]. The [[system|fraud-detection]] system also consumes this event to screen the payment.

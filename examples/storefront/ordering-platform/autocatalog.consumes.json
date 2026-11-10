@@ -1,0 +1,8 @@
+{
+  "receives": [
+    {
+      "service": "Order Service",
+      "id": "fulfilment/order-packed"
+    }
+  ]
+}

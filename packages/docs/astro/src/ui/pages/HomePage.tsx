@@ -1,41 +1,10 @@
 /** @jsxImportSource react */
-import { Fragment, type ReactNode } from 'react';
-import {
-  Card,
-  CardAction,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '#ui/components/ui/card.tsx';
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from '#ui/components/ui/empty.tsx';
-import { Badge } from '#ui/components/ui/badge.tsx';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '#ui/components/ui/table.tsx';
 import type { IconName } from '../../icons';
 import type { AttentionSnapshot } from '../../attention';
-import { hasAttention } from '../../attention';
-import { docHref } from '../lib/docs';
-import { DocList, type DocListItem } from '../components/DocList';
-import { SectionHeading } from '../components/SectionHeading';
-import { Icon } from '../components/Icon';
+import type { DocListItem } from '../components/DocList';
 import type { Stat } from '../components/Stats';
-import { IconTile } from '../components/IconTile';
-import { CountCards } from '../components/CountCards';
 import type { VisualiserGraph } from '../lib/visualiser';
-import { Graph } from '../components/Graph';
+import { blockIds, CardGrid, HomeBlock, type HomeBlockData } from './HomeBlock';
 
 /** One way into the catalog this build actually made. */
 export interface ExploreCard {
@@ -67,14 +36,21 @@ export interface HomePageProps {
   catalogHref?: string | undefined;
 }
 
-const plural = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
+/**
+ * The built-in home page's blocks, in order: `DEFAULT_HOME_LAYOUT` in
+ * autocatalog-docs-core names the same, and a test holds the two together.
+ */
+export const HOME_PAGE_ORDER = [
+  'countCards',
+  'graph',
+  'docs',
+  'attention',
+  'explore',
+  'tags',
+] as const;
 
-const documents = (count: number) => plural(count, 'document', 'documents');
-
-/** Enough to show what a repository holds; the rest stay a click away. */
-const SHELF_SIZE = 5;
-
-export function HomePage({
+/** The built-in home page: its default blocks, filled from the catalog. */
+export function homePageBlocks({
   stats,
   explore,
   repos,
@@ -82,246 +58,32 @@ export function HomePage({
   attention,
   map,
   catalogHref,
-}: HomePageProps) {
-  const total = repos.reduce((sum, { docs }) => sum + docs.length, 0);
+}: HomePageProps): HomeBlockData[] {
+  const data: Record<(typeof HOME_PAGE_ORDER)[number], HomeBlockData> = {
+    countCards: { block: 'countCards', stats },
+    graph: { block: 'graph', map, catalogHref },
+    docs: { block: 'docs', repos },
+    attention: { block: 'attention', attention },
+    explore: { block: 'explore', cards: explore },
+    tags: { block: 'tags', tags },
+  };
 
-  // Built as one string: adjacent expressions in the template lose the whitespace
-  // between them, which is how "5documents" gets shipped.
-  const counted = `${documents(total)} from ${plural(repos.length, 'repository', 'repositories')}`;
+  return HOME_PAGE_ORDER.map((name) => data[name]);
+}
+
+export function HomePage(props: HomePageProps) {
+  const blocks = homePageBlocks(props);
+  const ids = blockIds(blocks);
 
   return (
     <div className="not-content flex flex-col gap-10" data-wide>
-      <CountCards items={stats} />
-
-      {map && (
-        <section className="flex flex-col gap-4" aria-labelledby="home-architecture">
-          <SectionHeading
-            id="home-architecture"
-            count={
-              catalogHref ? (
-                <a
-                  href={catalogHref}
-                  className="text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
-                >
-                  Open full screen
-                </a>
-              ) : undefined
-            }
-          >
-            Architecture
-          </SectionHeading>
-          <Graph id="home-map" label="Architecture" visualiser={map} height="30rem" />
-        </section>
-      )}
-
-      <section className="flex flex-col gap-4" aria-labelledby="home-documents">
-        <SectionHeading id="home-documents" count={total > 0 ? counted : undefined}>
-          Documents
-        </SectionHeading>
-        {repos.length === 0 ? (
-          <Empty>
-            <EmptyHeader>
-              <EmptyMedia variant="icon">
-                <Icon name="doc" />
-              </EmptyMedia>
-              <EmptyTitle>No documents yet</EmptyTitle>
-              <EmptyDescription>
-                Commit Markdown to a <code>docs/</code> folder in an enrolled repository and it
-                appears here on the next build.
-              </EmptyDescription>
-            </EmptyHeader>
-          </Empty>
-        ) : (
-          <div className="grid items-start gap-4 md:grid-cols-2">
-            {repos.map(({ name, label, description, href, docs }) => (
-              <Shelf
-                key={name}
-                title={label}
-                href={href}
-                description={description}
-                count={documents(docs.length)}
-              >
-                <DocList items={docs.slice(0, SHELF_SIZE)} />
-                {docs.length > SHELF_SIZE && (
-                  <details className="mt-3">
-                    <summary className="cursor-pointer text-sm text-muted-foreground">
-                      All {docs.length} documents
-                    </summary>
-                    <DocList items={docs.slice(SHELF_SIZE)} />
-                  </details>
-                )}
-              </Shelf>
-            ))}
-          </div>
-        )}
-      </section>
-
-      {attention && hasAttention(attention) && <Attention attention={attention} />}
-
-      <section className="flex flex-col gap-4" aria-labelledby="home-explore">
-        <SectionHeading id="home-explore" count={plural(explore.length, 'place', 'places')}>
-          Explore
-        </SectionHeading>
-        <ul className="m-0 grid list-none gap-3 p-0 sm:grid-cols-2 lg:grid-cols-3">
-          {explore.map((card) => (
-            <li key={card.title} className="flex" data-kind={card.kind}>
-              <a
-                href={card.href}
-                className="group flex w-full rounded-xl no-underline outline-none hover:ring-2 hover:ring-ring/40 focus-visible:ring-3 focus-visible:ring-ring/50"
-              >
-                <Card className="w-full">
-                  <CardHeader>
-                    <IconTile name={card.icon} size="md" />
-                    <CardAction>
-                      <Icon
-                        name="external"
-                        className="size-4 text-muted-foreground group-hover:text-foreground"
-                      />
-                    </CardAction>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex flex-col gap-1.5">
-                      <CardTitle>{card.title}</CardTitle>
-                      <CardDescription>{card.text}</CardDescription>
-                    </div>
-                  </CardContent>
-                </Card>
-              </a>
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      {tags.length > 0 && (
-        <section className="flex flex-col gap-4" aria-labelledby="home-by-tag">
-          <SectionHeading id="home-by-tag" count={plural(tags.length, 'tag', 'tags')}>
-            By tag
-          </SectionHeading>
-          <Card>
-            <CardContent>
-              <Table aria-label="Documents by tag">
-                <TableHeader>
-                  <TableHead isRowHeader>Tag</TableHead>
-                  <TableHead>Documents</TableHead>
-                </TableHeader>
-                <TableBody>
-                  {tags.map(([tag, docs]) => (
-                    <TableRow key={tag} id={tag}>
-                      <TableCell className="w-40 align-top">
-                        <Badge variant="secondary">{tag}</Badge>
-                      </TableCell>
-                      <TableCell className="whitespace-normal">
-                        {docs.map((doc, index) => (
-                          <Fragment key={doc.id}>
-                            {index > 0 && ', '}
-                            <a
-                              href={docHref(doc.id)}
-                              className="text-foreground underline-offset-4 hover:underline"
-                            >
-                              {doc.title}
-                            </a>
-                          </Fragment>
-                        ))}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </section>
-      )}
+      {blocks.map((block, index) => (
+        <HomeBlock key={ids[index]} block={block} id={ids[index]!} />
+      ))}
     </div>
   );
 }
 
-/** Dark spots: review work, quarantine, missing producers/consumers/owners. */
-function Attention({ attention }: { attention: AttentionSnapshot }) {
-  const items = [
-    attention.needsReview > 0 && {
-      label: `${attention.needsReview} need review`,
-      href: attention.needsReviewHref,
-    },
-    attention.failures.length > 0 && {
-      label: `${attention.failures.length} quarantined`,
-      href: attention.catalogHref,
-    },
-    attention.orphanProducers > 0 && {
-      label: `${attention.orphanProducers} with no producer`,
-      href: attention.catalogHref,
-    },
-    attention.orphanConsumers > 0 && {
-      label: `${attention.orphanConsumers} with no consumer`,
-      href: attention.catalogHref,
-    },
-    attention.unowned > 0 && {
-      label: `${attention.unowned} unowned`,
-      href: attention.ownersHref,
-    },
-  ].filter((item): item is { label: string; href: string } => Boolean(item));
-
-  return (
-    <section className="flex flex-col gap-2" aria-labelledby="home-attention" data-attention="">
-      <SectionHeading id="home-attention">Needs attention</SectionHeading>
-      <ul className="m-0 flex list-none flex-wrap gap-3 p-0 text-sm">
-        {items.map((item) => (
-          <li key={item.label}>
-            <a
-              href={item.href}
-              className="text-foreground underline decoration-border underline-offset-4 hover:decoration-foreground"
-            >
-              {item.label}
-            </a>
-          </li>
-        ))}
-      </ul>
-      {attention.failures.length > 0 && (
-        <ul className="m-0 list-none p-0 text-xs text-muted-foreground">
-          {attention.failures.slice(0, 5).map((failure) => (
-            <li key={failure.repository}>
-              {failure.repository}: {failure.message}
-            </li>
-          ))}
-        </ul>
-      )}
-    </section>
-  );
-}
-
-/** A repository and the documents under it. */
-function Shelf({
-  title,
-  href,
-  description,
-  count,
-  children,
-}: {
-  title: string;
-  href?: string | undefined;
-  description?: string | undefined;
-  count: string;
-  children: ReactNode;
-}) {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle role="heading" aria-level={3}>
-          {href ? (
-            <a href={href} className="text-foreground underline-offset-4 hover:underline">
-              {title}
-            </a>
-          ) : (
-            title
-          )}
-        </CardTitle>
-        {description && <CardDescription>{description}</CardDescription>}
-        <CardAction>
-          <span className="text-xs text-muted-foreground">{count}</span>
-        </CardAction>
-      </CardHeader>
-      <CardContent>{children}</CardContent>
-    </Card>
-  );
-}
+export { CardGrid };
 
 export default HomePage;

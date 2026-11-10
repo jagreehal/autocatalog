@@ -1,0 +1,32 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ReviewHelpfulVoted",
+  "type": "object",
+  "properties": {
+    "reviewId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "productId": {
+      "type": "string"
+    },
+    "helpfulCount": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "updatedAt": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": ["reviewId", "productId", "helpfulCount", "updatedAt"],
+  "description": "Published when a review's helpful count changes as a result of a customer vote.",
+  "x-autocatalog": {
+    "id": "review-helpful-voted",
+    "version": "1.0.0",
+    "domain": "reviews",
+    "name": "Review Helpful Voted",
+    "summary": "Published when a review's helpful count changes as a result of a customer vote.",
+    "producers": ["Review API"]
+  }
+}

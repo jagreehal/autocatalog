@@ -6,6 +6,7 @@ import { findPackageJSON } from 'node:module';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { promisify } from 'node:util';
 import {
+  defaultHomeLayout,
   readSiteConfig,
   SITE_THEMES,
   type SiteConfig,
@@ -169,6 +170,26 @@ export interface RunSiteOptions {
   unlocked?: boolean;
   /** Other sites' `/catalog.json`, joined into the graph without pages. */
   indexes?: string[];
+}
+
+/**
+ * A page's default blocks, as `layouts` in autocatalog.site.json writes them,
+ * to copy and change: data, so an upgrade still fixes what it names. The
+ * default is the built-in page, for this site: one with an `audience` has no
+ * counts, map or attention list.
+ */
+export function printLayout(page: string, dir = process.cwd()): number {
+  if (page !== 'home') {
+    console.error(kleur.red(`--print-layout: only the home page has a layout, not '${page}'`));
+
+    return 1;
+  }
+
+  const home = defaultHomeLayout(readSiteConfig(dir));
+
+  console.log(JSON.stringify({ layouts: { home } }, null, 2));
+
+  return 0;
 }
 
 /**
@@ -450,6 +471,15 @@ export async function runSite(input: RunSiteOptions): Promise<number> {
     return 1;
   }
 
+  // Without an address a public site has no sitemap and llms.txt links only relatively.
+  if (audience && !opts.site && !opts.dev) {
+    console.warn(
+      kleur.yellow(
+        `No "url" in autocatalog.site.json (or --site): a site for "${audience}" builds without a sitemap, and llms.txt links relatively. Set where it is deployed, such as "url": "https://developers.acme.com".`,
+      ),
+    );
+  }
+
   const brandDir = opts.brand ?? config.brand;
 
   if (brandDir && !(await fs.stat(brandDir).catch(() => null))?.isDirectory()) {
@@ -621,7 +651,7 @@ export async function runSite(input: RunSiteOptions): Promise<number> {
           ...(config.chat && { AUTOCATALOG_SITE_CHAT: JSON.stringify(config.chat) }),
           ...(config.access && { AUTOCATALOG_SITE_ACCESS: JSON.stringify(config.access) }),
           ...(config.repo && { AUTOCATALOG_DOCS_REPO: config.repo }),
-          ...(config.atRoot && { AUTOCATALOG_DOCS_AT_ROOT: 'true' }),
+          ...(config.atRoot !== undefined && { AUTOCATALOG_DOCS_AT_ROOT: String(config.atRoot) }),
           ...(config.pageActions === false && { AUTOCATALOG_SITE_PAGE_ACTIONS: 'false' }),
           ...(config.apiReference && { AUTOCATALOG_SITE_API_REFERENCE: config.apiReference }),
           ...(config.apiReferenceLabel && {
@@ -630,6 +660,7 @@ export async function runSite(input: RunSiteOptions): Promise<number> {
           ...(config.homeCounts && {
             AUTOCATALOG_SITE_HOME_COUNTS: JSON.stringify(config.homeCounts),
           }),
+          ...(config.layouts && { AUTOCATALOG_SITE_LAYOUTS: JSON.stringify(config.layouts) }),
           ...(config.mcp !== undefined && { AUTOCATALOG_SITE_MCP: String(config.mcp) }),
           ...(eventcatalog && { AUTOCATALOG_EVENTCATALOG: eventcatalog.embedsFile }),
           ...(opts.liveUrl && { AUTOCATALOG_DOCS_LIVE_URL: opts.liveUrl }),

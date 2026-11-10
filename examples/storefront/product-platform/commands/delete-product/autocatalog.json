@@ -1,0 +1,11 @@
+{
+  "kind": "command",
+  "id": "delete-product",
+  "version": "1.0.0",
+  "name": "Delete Product",
+  "summary": "Command to remove a product from the catalog.",
+  "domain": "catalog",
+  "handler": "Product API",
+  "senders": [],
+  "schema": "./schema.json"
+}

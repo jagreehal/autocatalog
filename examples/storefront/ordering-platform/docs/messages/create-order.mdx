@@ -1,0 +1,11 @@
+---
+title: Create Order
+owner: ordering-platform
+summary: Command to create a new order from a checked-out cart.
+sidebar:
+  hidden: true
+---
+
+## Overview
+
+`CreateOrder` is sent by the [[service|Checkout Orchestrator]] and handled by the [[service|Order Service]]. It is the final step of the checkout saga — once inventory is reserved and payment is authorized, this command creates the order. On success the Order Service publishes an [[event|ordering-platform/ordering/order-created]] event.

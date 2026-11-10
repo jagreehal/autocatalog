@@ -1,0 +1,16 @@
+{
+  "receives": [
+    {
+      "service": "Search Indexer",
+      "id": "catalog/product-created"
+    },
+    {
+      "service": "Search Indexer",
+      "id": "catalog/product-deleted"
+    },
+    {
+      "service": "Search Indexer",
+      "id": "catalog/product-updated"
+    }
+  ]
+}

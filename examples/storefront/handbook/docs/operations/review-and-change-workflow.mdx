@@ -1,0 +1,45 @@
+---
+title: Review and change workflow
+owner: handbook
+summary: The standard workflow Acme teams use to make catalog-backed architecture and integration changes.
+---
+
+Catalog updates should land with the system change they describe. The catalog is part of the delivery artifact, not an after-the-fact diagram store.
+
+## Change categories
+
+| Change                            | Required review                            |
+| --------------------------------- | ------------------------------------------ |
+| Local service implementation only | Owning team review.                        |
+| New command, event or query       | Owning team plus known consumers.          |
+| Breaking contract change          | Contract review and migration plan.        |
+| New system or external dependency | Architecture review.                       |
+| Critical flow behavior change     | Owning teams for every domain in the flow. |
+
+#### Describe the intent
+
+Update the affected domain, system or flow page with the business reason for the change.
+
+#### Update contracts
+
+Add or revise command, event and query pages before consumers integrate with them.
+
+#### Assess impact
+
+Check system maps and flow pages for upstream and downstream dependencies.
+
+#### Record decisions
+
+Add an ADR when the change affects ownership, persistence, integration style or operational recovery.
+
+#### Close the loop
+
+After release, confirm the catalog matches the deployed behavior and remove stale notes.
+
+## Flow review
+
+For checkout changes, review both the customer journey and the internal saga before implementation.
+
+<Map />
+
+<Map />

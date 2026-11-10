@@ -1,0 +1,11 @@
+{
+  "kind": "command",
+  "id": "release-inventory",
+  "version": "1.0.0",
+  "name": "Release Inventory",
+  "summary": "Command to release a previously held inventory reservation.",
+  "domain": "fulfilment",
+  "handler": "Inventory Service",
+  "senders": [],
+  "schema": "./schema.json"
+}

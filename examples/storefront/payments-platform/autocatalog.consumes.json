@@ -1,0 +1,8 @@
+{
+  "receives": [
+    {
+      "service": "Payment Worker",
+      "id": "returns/return-received"
+    }
+  ]
+}

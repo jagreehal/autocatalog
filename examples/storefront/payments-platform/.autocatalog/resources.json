@@ -1,0 +1,243 @@
+{
+  "spec": "autocatalog/graph-v1",
+  "resources": [
+    {
+      "ref": {
+        "kind": "service",
+        "id": "Fraud API"
+      },
+      "title": "Fraud API",
+      "tags": [],
+      "provenance": {
+        "default": "declared",
+        "fields": {}
+      },
+      "needsReview": false,
+      "attributes": {
+        "domains": ["payments"],
+        "system": {
+          "id": "fraud-detection",
+          "name": "Fraud Detection"
+        }
+      },
+      "summary": "External fraud screening API. It consumes payment requests and returns a pass or fail verdict for each.",
+      "owner": {
+        "team": "payments-platform",
+        "name": "Payments Platform",
+        "contact": "https://acme.slack.com/channels/payments-platform"
+      }
+    },
+    {
+      "ref": {
+        "kind": "service",
+        "id": "Ledger Exporter"
+      },
+      "title": "Ledger Exporter",
+      "tags": [],
+      "provenance": {
+        "default": "declared",
+        "fields": {}
+      },
+      "needsReview": false,
+      "attributes": {
+        "domains": ["payments"],
+        "system": {
+          "id": "finance-reporting-system",
+          "name": "Finance Reporting System"
+        }
+      },
+      "summary": "Builds the month-end ledger export used for finance reporting. It runs on a schedule and doesn't send or receive any messages.",
+      "owner": {
+        "team": "payments-platform",
+        "name": "Payments Platform",
+        "contact": "https://acme.slack.com/channels/payments-platform"
+      }
+    },
+    {
+      "ref": {
+        "kind": "service",
+        "id": "Payment API"
+      },
+      "title": "Payment API",
+      "tags": [],
+      "provenance": {
+        "default": "declared",
+        "fields": {}
+      },
+      "needsReview": false,
+      "attributes": {
+        "domains": ["payments"],
+        "system": {
+          "id": "payment-processing-system",
+          "name": "Payment Processing System"
+        }
+      },
+      "summary": "Receives payment authorization requests from the Ordering domain and records the payment intent, kicking off the charge against the payment processor.",
+      "owner": {
+        "team": "payments-platform",
+        "name": "Payments Platform",
+        "contact": "https://acme.slack.com/channels/payments-platform"
+      }
+    },
+    {
+      "ref": {
+        "kind": "service",
+        "id": "Payment Worker"
+      },
+      "title": "Payment Worker",
+      "tags": [],
+      "provenance": {
+        "default": "declared",
+        "fields": {}
+      },
+      "needsReview": false,
+      "attributes": {
+        "domains": ["payments"],
+        "system": {
+          "id": "payment-processing-system",
+          "name": "Payment Processing System"
+        }
+      },
+      "summary": "Drives charges and refunds against the external payment processor and records the outcomes. It requests payments and refunds, and consumes the success/failure events Stripe returns.",
+      "owner": {
+        "team": "payments-platform",
+        "name": "Payments Platform",
+        "contact": "https://acme.slack.com/channels/payments-platform"
+      }
+    },
+    {
+      "ref": {
+        "kind": "service",
+        "id": "Payments API"
+      },
+      "title": "Payments API",
+      "tags": [],
+      "provenance": {
+        "default": "declared",
+        "fields": {}
+      },
+      "needsReview": false,
+      "attributes": {
+        "domains": ["payments"],
+        "system": {
+          "id": "stripe",
+          "name": "Stripe"
+        }
+      },
+      "summary": "Stripe's API for charging cards and issuing refunds. Acme Inc's Payment Processing System calls it to request payments and refunds.",
+      "owner": {
+        "team": "payments-platform",
+        "name": "Payments Platform",
+        "contact": "https://acme.slack.com/channels/payments-platform"
+      }
+    },
+    {
+      "ref": {
+        "kind": "service",
+        "id": "Webhook Endpoint"
+      },
+      "title": "Webhook Endpoint",
+      "tags": [],
+      "provenance": {
+        "default": "declared",
+        "fields": {}
+      },
+      "needsReview": false,
+      "attributes": {
+        "domains": ["payments"],
+        "system": {
+          "id": "stripe",
+          "name": "Stripe"
+        }
+      },
+      "summary": "Stripe's webhook delivery for payment and refund outcomes. It notifies Acme Inc whether a charge succeeded or failed, and when a refund is processed.",
+      "owner": {
+        "team": "payments-platform",
+        "name": "Payments Platform",
+        "contact": "https://acme.slack.com/channels/payments-platform"
+      }
+    },
+    {
+      "ref": {
+        "kind": "table",
+        "namespace": "payments-platform",
+        "id": "payment-database"
+      },
+      "title": "Payment Database",
+      "tags": [],
+      "provenance": {
+        "default": "declared",
+        "fields": {}
+      },
+      "needsReview": false,
+      "attributes": {
+        "technology": "postgres@16",
+        "containerType": "database"
+      },
+      "summary": "PostgreSQL database that is the system of record for payments and refunds.",
+      "owner": {
+        "team": "payments-platform",
+        "name": "Payments Platform",
+        "contact": "https://acme.slack.com/channels/payments-platform"
+      }
+    }
+  ],
+  "relationships": [
+    {
+      "type": "reads",
+      "from": {
+        "kind": "service",
+        "id": "Payment API"
+      },
+      "to": {
+        "kind": "table",
+        "namespace": "payments-platform",
+        "id": "payment-database"
+      },
+      "provenance": "declared",
+      "needsReview": false
+    },
+    {
+      "type": "writes",
+      "from": {
+        "kind": "service",
+        "id": "Payment API"
+      },
+      "to": {
+        "kind": "table",
+        "namespace": "payments-platform",
+        "id": "payment-database"
+      },
+      "provenance": "declared",
+      "needsReview": false
+    },
+    {
+      "type": "reads",
+      "from": {
+        "kind": "service",
+        "id": "Payment Worker"
+      },
+      "to": {
+        "kind": "table",
+        "namespace": "payments-platform",
+        "id": "payment-database"
+      },
+      "provenance": "declared",
+      "needsReview": false
+    },
+    {
+      "type": "writes",
+      "from": {
+        "kind": "service",
+        "id": "Payment Worker"
+      },
+      "to": {
+        "kind": "table",
+        "namespace": "payments-platform",
+        "id": "payment-database"
+      },
+      "provenance": "declared",
+      "needsReview": false
+    }
+  ]
+}

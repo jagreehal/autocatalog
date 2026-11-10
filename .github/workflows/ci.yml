@@ -43,7 +43,9 @@ jobs:
           echo "events=$(has '^(packages/events/|fixtures/|package\.json|pnpm-lock\.yaml|turbo\.json|\.github/)')" >> "$GITHUB_OUTPUT"
           echo "python=$(has '^(python/|scripts/check-schema-sync\.sh|\.github/)')" >> "$GITHUB_OUTPUT"
 
-  build:
+  # Lint, types, tests and the release checks run side by side. Each job builds
+  # what it needs, and Turbo's cache replays what an earlier run already built.
+  lint:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -52,6 +54,13 @@ jobs:
 
       - name: Lint (Prettier, then oxlint with the anti-slop rules)
         run: pnpm lint
+
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: ./.github/actions/setup-pnpm
 
       # Packages resolve each other through dist/, so build before type-checking.
       - name: Build
@@ -63,8 +72,28 @@ jobs:
       - name: Type-check with TypeScript 7
         run: pnpm typecheck
 
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: ./.github/actions/setup-pnpm
+
+      - name: Build
+        run: pnpm build
+
       - name: Run tests
         run: pnpm test
+
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: ./.github/actions/setup-pnpm
+
+      - name: Build
+        run: pnpm build
 
       - name: Verify product journeys through the built CLI
         run: pnpm smoke:product
@@ -102,15 +131,15 @@ jobs:
             pnpm --filter "$pkg" publish --dry-run --no-git-checks
           done
 
-  # Path handling on Windows and macOS: three runners, so only when the event
-  # packages or their fixtures change.
+  # Path handling on Windows and macOS, only when the event packages or their
+  # fixtures change. The build job runs the same tests on Linux.
   catalog-hardening:
     needs: changes
     if: needs.changes.outputs.events == 'true'
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

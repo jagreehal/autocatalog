@@ -12,6 +12,8 @@ export const repositoryMetaSchema = z.strictObject({
   label: z.string().min(1).optional(),
   /** One line for the home page. */
   description: z.string().min(1).optional(),
+  /** Where its group sits among the repositories in the Docs sidebar: lower first, then by label. */
+  order: z.number().optional(),
   /** Owns every document here that names no owner of its own. */
   owner: z.string().min(1).optional(),
   /**

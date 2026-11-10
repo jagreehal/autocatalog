@@ -1,0 +1,13 @@
+---
+title: Return Received
+owner: fulfilment-platform
+summary: Published when returned items have arrived at the warehouse and been inspected.
+about:
+  - event/returns/return-received
+sidebar:
+  hidden: true
+---
+
+## Overview
+
+`ReturnReceived` is published by the [[service|Returns Processor]] when a returned parcel is scanned in at the warehouse. The [[service|Payment Worker]] refunds the customer and the [[service|Inventory Service]] restocks resellable items.

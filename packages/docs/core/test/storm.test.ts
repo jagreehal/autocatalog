@@ -317,6 +317,42 @@ describe('reading a flow for a board', () => {
     expect(failures[0]).toMatch(/step 'parse': .*command\/imports\/parse-file/);
     expect(flows).toEqual([]);
   });
+
+  it('resolves a catalog command named as <domain>/<id>', async () => {
+    const command = IMPORT.replace(
+      'command: Parse file',
+      'command: { ref: imports/parse-file, summary: one file at a time }',
+    );
+
+    await fs.mkdir(path.join(root, 'flows'), { recursive: true });
+    await fs.writeFile(path.join(root, 'flows', 'catalogue-import.md'), command);
+
+    const ref = {
+      kind: 'command' as const,
+      namespace: 'imports',
+      id: 'parse-file',
+      version: '1.0.0',
+    };
+
+    const { flows, failures } = await readFlows([{ repository: 'imports', dir: root }], {
+      resources: [
+        {
+          ref,
+          title: 'Parse file',
+          tags: [],
+          needsReview: false,
+          provenance: { default: 'declared', fields: {} },
+          attributes: {},
+        },
+      ],
+      relationships: [],
+    });
+
+    expect(failures).toEqual([]);
+
+    const parse = flows[0]!.steps.find((step) => step.id === 'parse');
+    expect(parse?.command).toMatchObject({ name: 'Parse file', ref });
+  });
 });
 
 describe('the big picture', () => {

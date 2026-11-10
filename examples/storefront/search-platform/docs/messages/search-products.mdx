@@ -1,0 +1,11 @@
+---
+title: Search Products
+owner: search-platform
+summary: Query to search the catalog for products matching a term, with optional filters and pagination.
+sidebar:
+  hidden: true
+---
+
+## Overview
+
+`SearchProducts` is handled by the [[service|Search API]]. It runs a full-text search over the **Search Index** and returns a paginated list of matching products. Use this whenever you need to find products across the catalog, rather than fetching a single product by id with [[event|catalog/get-product]].

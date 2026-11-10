@@ -3,9 +3,11 @@ import {
   buildServices,
   declaredApiService,
   isJsonObject,
+  isServiceCatalogResource,
   publishedApis,
   type JsonValue,
   type RepositoryApi,
+  type ResourceGraph,
   type ServiceSummary,
 } from 'autocatalog-core';
 import { z } from 'zod';
@@ -78,9 +80,12 @@ export function apisForService(
 export function catalogServices({
   events,
   apis,
+  graph,
 }: {
   events: CatalogEvent[];
   apis: CatalogApi[];
+  /** Services the resource graph declares: a command's handler, a datastore's reader. */
+  graph?: ResourceGraph | undefined;
 }): Map<string, ServiceSummary> {
   const services = buildServices(events.map(({ event }) => event));
 
@@ -90,6 +95,18 @@ export function catalogServices({
     for (const name of api.services ?? (declared ? [declared] : []))
       if (!services.has(name))
         services.set(name, { name, domains: [], produces: [], consumes: [] });
+  }
+
+  for (const resource of graph?.resources.filter(isServiceCatalogResource) ?? []) {
+    const name = resource.ref.id;
+
+    if (!services.has(name))
+      services.set(name, {
+        name,
+        domains: [...resource.attributes.domains].sort(),
+        produces: [],
+        consumes: [],
+      });
   }
 
   return services;

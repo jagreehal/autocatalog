@@ -1,0 +1,17 @@
+{
+  "kind": "command",
+  "id": "calculate-discount",
+  "version": "1.0.0",
+  "name": "Calculate Discount",
+  "summary": "Command to calculate the discount that applies to a cart.",
+  "domain": "shopping",
+  "handler": "Promotion Service",
+  "senders": ["Cart API", "Offer Service"],
+  "schema": "./schema.json",
+  "transport": [
+    {
+      "address": "shopping-discount-commands",
+      "protocols": ["sqs"]
+    }
+  ]
+}

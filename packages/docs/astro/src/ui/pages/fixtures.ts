@@ -214,8 +214,7 @@ export const internalSystem: SystemRow = {
   href: '/systems/payments-platform/',
   external: false,
   summary: 'Takes card payments and keeps the ledger.',
-  designHref: '/designs/payments/refunds-v2/',
-  designTitle: 'Refunds v2',
+  design: { href: '/designs/payments/refunds-v2/', title: 'Refunds v2' },
   members: ['PaymentService', 'LedgerService', 'RefundService'],
 };
 
@@ -224,8 +223,7 @@ export const externalSystem: SystemRow = {
   name: 'Card processor',
   href: '/systems/card-processor/',
   external: true,
-  designHref: '/designs/payments/refunds-v2/',
-  designTitle: 'Refunds v2',
+  design: { href: '/designs/payments/refunds-v2/', title: 'Refunds v2' },
   members: [],
 };
 

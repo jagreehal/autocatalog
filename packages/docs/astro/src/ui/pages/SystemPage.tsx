@@ -34,13 +34,15 @@ export function SystemPage({ system }: SystemPageProps) {
           )}
         </CardContent>
       </Card>
-      <p className="m-0 text-sm">
-        Declared in{' '}
-        <a href={system.designHref} className="underline underline-offset-4">
-          {system.designTitle}
-        </a>
-        .
-      </p>
+      {system.design && (
+        <p className="m-0 text-sm">
+          Declared in{' '}
+          <a href={system.design.href} className="underline underline-offset-4">
+            {system.design.title}
+          </a>
+          .
+        </p>
+      )}
     </div>
   );
 }

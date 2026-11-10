@@ -65,8 +65,11 @@ export function renderLlmsTxt({
       : []),
   ];
 
-  for (const [repo, docs] of groupByRepo(items)) {
-    lines.push(`## ${repo}`, '');
+  const repos = groupByRepo(items);
+
+  for (const [repo, docs] of repos) {
+    // One repository is the whole site, and readers outside never see its name.
+    lines.push(`## ${repos.length === 1 ? 'Docs' : repo}`, '');
 
     for (const doc of docs) {
       // A decision's state and date are what an agent asks of it first.

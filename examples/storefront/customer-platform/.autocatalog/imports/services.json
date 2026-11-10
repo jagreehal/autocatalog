@@ -1,0 +1,290 @@
+{
+  "graph": {
+    "spec": "autocatalog/graph-v1",
+    "resources": [
+      {
+        "ref": {
+          "kind": "service",
+          "id": "Customer API"
+        },
+        "title": "Customer API",
+        "tags": [],
+        "provenance": {
+          "default": "declared",
+          "fields": {}
+        },
+        "needsReview": false,
+        "attributes": {
+          "domains": ["customer"],
+          "system": {
+            "id": "customer-management-system",
+            "name": "Customer Management System"
+          }
+        },
+        "summary": "The public-facing API for customer profiles. Handles commands to register and update customers, serves customer reads, and publishes customer change events.",
+        "owner": {
+          "team": "customer-platform",
+          "name": "Customer Platform",
+          "contact": "https://acme.slack.com/channels/customer-platform"
+        }
+      },
+      {
+        "ref": {
+          "kind": "service",
+          "id": "Loyalty Service"
+        },
+        "title": "Loyalty Service",
+        "tags": [],
+        "provenance": {
+          "default": "declared",
+          "fields": {}
+        },
+        "needsReview": false,
+        "attributes": {
+          "domains": ["customer"],
+          "system": {
+            "id": "loyalty-system",
+            "name": "Loyalty System"
+          }
+        },
+        "summary": "Awards loyalty points when orders complete and reverses them when orders are cancelled. Owns the points ledger and customer balances.",
+        "owner": {
+          "team": "customer-platform",
+          "name": "Customer Platform",
+          "contact": "https://acme.slack.com/channels/customer-platform"
+        }
+      },
+      {
+        "ref": {
+          "kind": "service",
+          "id": "Notification Service"
+        },
+        "title": "Notification Service",
+        "tags": [],
+        "provenance": {
+          "default": "declared",
+          "fields": {}
+        },
+        "needsReview": false,
+        "attributes": {
+          "domains": ["customer"]
+        },
+        "summary": "Sends customers email, SMS and push notifications in response to events from across Acme Inc, honouring each customer's channel preferences.",
+        "owner": {
+          "team": "customer-platform",
+          "name": "Customer Platform",
+          "contact": "https://acme.slack.com/channels/customer-platform"
+        }
+      },
+      {
+        "ref": {
+          "kind": "service",
+          "id": "OAuth API"
+        },
+        "title": "OAuth API",
+        "tags": [],
+        "provenance": {
+          "default": "declared",
+          "fields": {}
+        },
+        "needsReview": false,
+        "attributes": {
+          "domains": ["customer"],
+          "system": {
+            "id": "identity-provider",
+            "name": "Identity Provider"
+          }
+        },
+        "summary": "OAuth-style authentication API for the Identity Provider. Verifies customer credentials and publishes an event when a customer successfully authenticates.",
+        "owner": {
+          "team": "customer-platform",
+          "name": "Customer Platform",
+          "contact": "https://acme.slack.com/channels/customer-platform"
+        }
+      },
+      {
+        "ref": {
+          "kind": "table",
+          "namespace": "customer-platform",
+          "id": "customer-database"
+        },
+        "title": "Customer Database",
+        "tags": [],
+        "provenance": {
+          "default": "declared",
+          "fields": {}
+        },
+        "needsReview": false,
+        "attributes": {
+          "technology": "postgres@16",
+          "containerType": "database"
+        },
+        "summary": "PostgreSQL database that is the system of record for all customer profile data.",
+        "owner": {
+          "team": "customer-platform",
+          "name": "Customer Platform",
+          "contact": "https://acme.slack.com/channels/customer-platform"
+        }
+      },
+      {
+        "ref": {
+          "kind": "table",
+          "namespace": "customer-platform",
+          "id": "loyalty-database"
+        },
+        "title": "Loyalty Database",
+        "tags": [],
+        "provenance": {
+          "default": "declared",
+          "fields": {}
+        },
+        "needsReview": false,
+        "attributes": {
+          "technology": "postgres@16",
+          "containerType": "database"
+        },
+        "summary": "PostgreSQL database that holds the loyalty points ledger and each customer's points balance.",
+        "owner": {
+          "team": "customer-platform",
+          "name": "Customer Platform",
+          "contact": "https://acme.slack.com/channels/customer-platform"
+        }
+      },
+      {
+        "ref": {
+          "kind": "table",
+          "namespace": "customer-platform",
+          "id": "notification-preferences"
+        },
+        "title": "Notification Preferences",
+        "tags": [],
+        "provenance": {
+          "default": "declared",
+          "fields": {}
+        },
+        "needsReview": false,
+        "attributes": {
+          "technology": "postgres@16",
+          "containerType": "database"
+        },
+        "summary": "PostgreSQL database holding each customer's notification channels, opt-ins and quiet hours.",
+        "owner": {
+          "team": "customer-platform",
+          "name": "Customer Platform",
+          "contact": "https://acme.slack.com/channels/customer-platform"
+        }
+      },
+      {
+        "ref": {
+          "kind": "table",
+          "namespace": "customer-platform",
+          "id": "user-directory"
+        },
+        "title": "User Directory",
+        "tags": [],
+        "provenance": {
+          "default": "declared",
+          "fields": {}
+        },
+        "needsReview": false,
+        "attributes": {
+          "technology": "postgres@16",
+          "containerType": "database"
+        },
+        "summary": "The directory of customer credentials and identities — the source of truth for authentication.",
+        "owner": {
+          "team": "customer-platform",
+          "name": "Customer Platform",
+          "contact": "https://acme.slack.com/channels/customer-platform"
+        }
+      }
+    ],
+    "relationships": [
+      {
+        "type": "reads",
+        "from": {
+          "kind": "service",
+          "id": "Customer API"
+        },
+        "to": {
+          "kind": "table",
+          "namespace": "customer-platform",
+          "id": "customer-database"
+        },
+        "provenance": "declared",
+        "needsReview": false
+      },
+      {
+        "type": "writes",
+        "from": {
+          "kind": "service",
+          "id": "Customer API"
+        },
+        "to": {
+          "kind": "table",
+          "namespace": "customer-platform",
+          "id": "customer-database"
+        },
+        "provenance": "declared",
+        "needsReview": false
+      },
+      {
+        "type": "reads",
+        "from": {
+          "kind": "service",
+          "id": "Loyalty Service"
+        },
+        "to": {
+          "kind": "table",
+          "namespace": "customer-platform",
+          "id": "loyalty-database"
+        },
+        "provenance": "declared",
+        "needsReview": false
+      },
+      {
+        "type": "writes",
+        "from": {
+          "kind": "service",
+          "id": "Loyalty Service"
+        },
+        "to": {
+          "kind": "table",
+          "namespace": "customer-platform",
+          "id": "loyalty-database"
+        },
+        "provenance": "declared",
+        "needsReview": false
+      },
+      {
+        "type": "reads",
+        "from": {
+          "kind": "service",
+          "id": "Notification Service"
+        },
+        "to": {
+          "kind": "table",
+          "namespace": "customer-platform",
+          "id": "notification-preferences"
+        },
+        "provenance": "declared",
+        "needsReview": false
+      },
+      {
+        "type": "reads",
+        "from": {
+          "kind": "service",
+          "id": "OAuth API"
+        },
+        "to": {
+          "kind": "table",
+          "namespace": "customer-platform",
+          "id": "user-directory"
+        },
+        "provenance": "declared",
+        "needsReview": false
+      }
+    ]
+  },
+  "claims": []
+}

@@ -1,0 +1,11 @@
+{
+  "kind": "command",
+  "id": "request-return",
+  "version": "1.0.0",
+  "name": "Request Return",
+  "summary": "Command sent by a customer to return one or more items from a delivered order.",
+  "domain": "returns",
+  "handler": "Returns API",
+  "senders": [],
+  "schema": "./schema.json"
+}

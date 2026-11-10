@@ -1,0 +1,13 @@
+---
+title: Discount Calculated
+owner: shopping-platform
+summary: Published when a discount has been calculated for a cart.
+about:
+  - event/shopping/discount-calculated
+sidebar:
+  hidden: true
+---
+
+## Overview
+
+`DiscountCalculated` is published by the [[service|Promotion Service]] after evaluating the promotion rules for a cart. The [[system|cart-system]] uses the result to price the cart, and other systems can consume it for analytics.

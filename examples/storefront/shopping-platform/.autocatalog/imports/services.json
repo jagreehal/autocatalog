@@ -1,0 +1,204 @@
+{
+  "graph": {
+    "spec": "autocatalog/graph-v1",
+    "resources": [
+      {
+        "ref": {
+          "kind": "service",
+          "id": "Campaign Service"
+        },
+        "title": "Campaign Service",
+        "tags": [],
+        "provenance": {
+          "default": "declared",
+          "fields": {}
+        },
+        "needsReview": false,
+        "attributes": {
+          "domains": ["marketing"],
+          "system": {
+            "id": "campaign-system",
+            "name": "Campaign System"
+          }
+        },
+        "summary": "Runs the welcome campaign and sends customers campaign offers.",
+        "owner": {
+          "team": "shopping-platform",
+          "name": "Shopping Platform",
+          "contact": "https://acme.slack.com/channels/shopping-platform"
+        }
+      },
+      {
+        "ref": {
+          "kind": "service",
+          "id": "Cart API"
+        },
+        "title": "Cart API",
+        "tags": [],
+        "provenance": {
+          "default": "declared",
+          "fields": {}
+        },
+        "needsReview": false,
+        "attributes": {
+          "domains": ["shopping"],
+          "system": {
+            "id": "cart-system",
+            "name": "Cart System"
+          }
+        },
+        "summary": "The public-facing API for shopping carts. Handles commands to add and remove items and to check out, and publishes an event when a cart is checked out.",
+        "owner": {
+          "team": "shopping-platform",
+          "name": "Shopping Platform",
+          "contact": "https://acme.slack.com/channels/shopping-platform"
+        }
+      },
+      {
+        "ref": {
+          "kind": "service",
+          "id": "Offer Service"
+        },
+        "title": "Offer Service",
+        "tags": [],
+        "provenance": {
+          "default": "declared",
+          "fields": {}
+        },
+        "needsReview": false,
+        "attributes": {
+          "domains": ["marketing"],
+          "system": {
+            "id": "campaign-system",
+            "name": "Campaign System"
+          }
+        },
+        "summary": "Builds follow-up offers for customers after they order, priced with the Shopping domain's promotions.",
+        "owner": {
+          "team": "shopping-platform",
+          "name": "Shopping Platform",
+          "contact": "https://acme.slack.com/channels/shopping-platform"
+        }
+      },
+      {
+        "ref": {
+          "kind": "service",
+          "id": "Promotion Service"
+        },
+        "title": "Promotion Service",
+        "tags": [],
+        "provenance": {
+          "default": "declared",
+          "fields": {}
+        },
+        "needsReview": false,
+        "attributes": {
+          "domains": ["shopping"],
+          "system": {
+            "id": "promotion-system",
+            "name": "Promotion System"
+          }
+        },
+        "summary": "Evaluates promotion rules and calculates the discount that applies to a cart. Receives discount requests and publishes the calculated result.",
+        "owner": {
+          "team": "shopping-platform",
+          "name": "Shopping Platform",
+          "contact": "https://acme.slack.com/channels/shopping-platform"
+        }
+      },
+      {
+        "ref": {
+          "kind": "table",
+          "namespace": "shopping-platform",
+          "id": "cart-database"
+        },
+        "title": "Cart Database",
+        "tags": [],
+        "provenance": {
+          "default": "declared",
+          "fields": {}
+        },
+        "needsReview": false,
+        "attributes": {
+          "technology": "postgres@16",
+          "containerType": "database"
+        },
+        "summary": "PostgreSQL database that is the system of record for shopping carts and their items.",
+        "owner": {
+          "team": "shopping-platform",
+          "name": "Shopping Platform",
+          "contact": "https://acme.slack.com/channels/shopping-platform"
+        }
+      },
+      {
+        "ref": {
+          "kind": "table",
+          "namespace": "shopping-platform",
+          "id": "promotion-database"
+        },
+        "title": "Promotion Database",
+        "tags": [],
+        "provenance": {
+          "default": "declared",
+          "fields": {}
+        },
+        "needsReview": false,
+        "attributes": {
+          "technology": "postgres@16",
+          "containerType": "database"
+        },
+        "summary": "PostgreSQL store of promotion and discount rules.",
+        "owner": {
+          "team": "shopping-platform",
+          "name": "Shopping Platform",
+          "contact": "https://acme.slack.com/channels/shopping-platform"
+        }
+      }
+    ],
+    "relationships": [
+      {
+        "type": "reads",
+        "from": {
+          "kind": "service",
+          "id": "Cart API"
+        },
+        "to": {
+          "kind": "table",
+          "namespace": "shopping-platform",
+          "id": "cart-database"
+        },
+        "provenance": "declared",
+        "needsReview": false
+      },
+      {
+        "type": "writes",
+        "from": {
+          "kind": "service",
+          "id": "Cart API"
+        },
+        "to": {
+          "kind": "table",
+          "namespace": "shopping-platform",
+          "id": "cart-database"
+        },
+        "provenance": "declared",
+        "needsReview": false
+      },
+      {
+        "type": "reads",
+        "from": {
+          "kind": "service",
+          "id": "Promotion Service"
+        },
+        "to": {
+          "kind": "table",
+          "namespace": "shopping-platform",
+          "id": "promotion-database"
+        },
+        "provenance": "declared",
+        "needsReview": false
+      }
+    ]
+  },
+  "claims": []
+}

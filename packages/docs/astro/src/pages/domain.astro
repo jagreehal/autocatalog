@@ -3,13 +3,15 @@ import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
 import type { InferGetStaticPropsType } from 'astro';
 import { docsCatalog } from '../catalog';
 import { buildDomains } from '../domains';
+import { renderNarrative } from '../flows';
 import { domainPageProps } from '../page-models';
 import { setResourceContext } from '../shell';
 import { DomainPage } from '../ui/pages/DomainPage';
 
-// A domain has no page of its own to author: it is whatever its events name.
+// A domain has no page of its own to author: it is whatever its events and services name.
 export async function getStaticPaths() {
-  const domains = buildDomains((await docsCatalog()).events);
+  const catalog = await docsCatalog();
+  const domains = buildDomains(catalog.events, catalog.graph);
 
   return domains.map((domain) => ({ params: { domain: domain.name }, props: { domain } }));
 }
@@ -20,7 +22,7 @@ const { domain } = Astro.props;
 
 const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
 
-const page = domainPageProps(await docsCatalog(), domain, base);
+const { overview, ...page } = domainPageProps(await docsCatalog(), domain, base);
 
 setResourceContext(Astro.locals, {
   kind: 'domain',
@@ -29,22 +31,35 @@ setResourceContext(Astro.locals, {
   pills: [],
 });
 
-// The page's sections, for Starlight's "On this page".
-const headings = [
-  { depth: 2, slug: 'events', text: 'Events' },
-  ...(page.services.length ? [{ depth: 2, slug: 'services', text: 'Services' }] : []),
-  ...(page.owners.length ? [{ depth: 2, slug: 'owners', text: 'Owners' }] : []),
+const narrativeHtml = overview ? await renderNarrative(overview) : null;
+
+// The page's sections, for Starlight's "On this page", in the order they render.
+const sections: Array<[string, string, number]> = [
+  ['subdomains', 'Subdomains', page.subdomains.length],
+  ['systems', 'Systems', page.systems.length],
+  ['services', 'Services', page.services.length],
+  ['events', 'Events', page.events.length],
+  ['contracts', 'Contracts', page.contracts.length],
+  ['entities', 'Entities', page.entities.length],
+  ['flows', 'Flows', page.flows.length],
+  ['documents', 'Guides and runbooks', page.documents.length],
+  ['owners', 'Owners', page.owners.length],
 ];
+
+const headings = sections.flatMap(([slug, text, count]) =>
+  count > 0 ? [{ depth: 2, slug, text }] : [],
+);
 ---
 
 <StarlightPage
   frontmatter={{
-    title: domain.name,
+    title: page.title,
     description:
       page.summary ??
-      'Built from the events that name this domain, so it changes when they do.',
+      'Built from the events and services that name this domain, so it changes when they do.',
   }}
   headings={headings}
 >
+  {narrativeHtml && <div set:html={narrativeHtml} />}
   <DomainPage client:load {...page} />
 </StarlightPage>

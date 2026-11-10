@@ -1,0 +1,13 @@
+---
+title: Order Created
+owner: ordering-platform
+summary: Published when a new order has been created.
+about:
+  - event/ordering/order-created
+sidebar:
+  hidden: true
+---
+
+## Overview
+
+`OrderCreated` is published by the [[service|Order Service]] when a new order is created from a checked-out cart. Downstream systems consume this event to begin fulfilment, send confirmation to the customer, and update reporting.

@@ -31,5 +31,35 @@
       "emptyTitle": "Ask about the Payments API",
       "placeholder": "How do I\u2026"
     }
+  },
+  "extend": "./site/extend.ts",
+  "layouts": {
+    "home": [
+      {
+        "block": "hero",
+        "actions": [
+          {
+            "label": "Get started",
+            "href": "/getting-started/"
+          },
+          {
+            "label": "API reference",
+            "href": "/apis/public-api/openapi/"
+          }
+        ]
+      },
+      {
+        "block": "apis",
+        "title": "The API"
+      },
+      {
+        "block": "docs",
+        "title": "Guides"
+      },
+      {
+        "block": "status",
+        "href": "https://status.example.com"
+      }
+    ]
   }
 }

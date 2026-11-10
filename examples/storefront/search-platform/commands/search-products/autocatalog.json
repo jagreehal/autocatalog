@@ -1,0 +1,15 @@
+{
+  "kind": "command",
+  "id": "search-products",
+  "version": "1.0.0",
+  "name": "Search Products",
+  "summary": "Query to search the catalog for products matching a term, with optional filters and pagination.",
+  "domain": "catalog",
+  "handler": "Search API",
+  "senders": [],
+  "schema": "./schema.json",
+  "outcome": {
+    "type": "result"
+  },
+  "tags": ["query"]
+}

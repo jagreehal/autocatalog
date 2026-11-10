@@ -1,0 +1,13 @@
+---
+title: Return Approved
+owner: fulfilment-platform
+summary: Published when a return request passes the returns policy and the customer can send the items back.
+about:
+  - event/returns/return-approved
+sidebar:
+  hidden: true
+---
+
+## Overview
+
+`ReturnApproved` is published by the [[service|Returns Processor]] once a [[event|fulfilment-platform/returns/return-requested]] passes policy checks. The [[service|Notification Service]] uses it to send the customer a return label and drop-off instructions.

@@ -222,7 +222,7 @@ const ID = /^[a-z0-9][a-z0-9._-]*$/i;
 const problem = (error: Error | string) => (error instanceof Error ? error.message : error);
 
 /** Every Markdown file in one folder of each repository, parsed against its schema. */
-function readFolder<T extends z.ZodType>(
+export function readFolder<T extends z.ZodType>(
   repositories: Array<{ repository: string; dir: string }>,
   folder: string,
   schema: T,

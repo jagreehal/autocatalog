@@ -65,6 +65,16 @@ it('ignores links inside HTML comments', async () => {
   expect(await brokenLinks(out)).toEqual([]);
 });
 
+it('reads a query string written with numeric character references, as Astro writes it', async () => {
+  await write(
+    'index.html',
+    '<a href="/catalog/?kind=event&#x26;q=payment-failed">Payment failed</a>',
+  );
+  await write('catalog/index.html', '<h1>Catalog</h1>');
+
+  expect(await brokenLinks(out)).toEqual([]);
+});
+
 it('accepts #top, which browsers resolve without an element', async () => {
   await write('index.html', '<a href="#top">Back to top</a>\n<a href="/#TOP">Top</a>');
 

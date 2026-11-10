@@ -82,6 +82,15 @@ export function wikiRefHref(ref: WikiRef, base = ''): string {
   }
 }
 
+/**
+ * What a ref reads as in prose: its last segment, so
+ * `[[event|payments-platform/payments/payment-failed]]` reads `payment-failed`.
+ * The full reference stays in the link's title.
+ */
+export function wikiRefLabel(ref: WikiRef): string {
+  return ref.id.split('/').filter(Boolean).pop() ?? ref.id;
+}
+
 interface TextNode {
   type: 'text';
   value: string;
@@ -123,7 +132,7 @@ export function splitText(node: TextNode, base: string): Array<TextNode | LinkNo
         type: 'link',
         url: wikiRefHref(ref, base),
         title: `${ref.kind}: ${ref.id}`,
-        children: [{ type: 'text', value: ref.id }],
+        children: [{ type: 'text', value: wikiRefLabel(ref) }],
         data: {
           hProperties: {
             className: 'ac-wiki-ref',

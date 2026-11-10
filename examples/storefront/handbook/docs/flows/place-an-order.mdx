@@ -1,0 +1,32 @@
+---
+title: Place an order
+owner: handbook
+summary: The end-to-end customer purchase journey from cart checkout to confirmed order and downstream fulfilment.
+---
+
+[[flow|ordering-platform/place-an-order]] is the highest-value customer journey in the catalog. It spans [[domain|shopping]], [[domain|ordering]], [[domain|payments]] and [[domain|fulfilment]].
+
+## Flow map
+
+<Map />
+
+## Happy path
+
+1. The customer checks out through [[service|Cart API]] using [[event|shopping/checkout-cart]].
+2. [[service|Cart API]] publishes [[event|shopping-platform/shopping/cart-checked-out]].
+3. [[service|Checkout API]] and [[service|Checkout Orchestrator]] start checkout orchestration.
+4. [[service|Checkout Orchestrator]] reserves inventory with [[event|ordering/reserve-inventory]].
+5. It authorizes payment with [[event|ordering/authorize-payment]].
+6. It creates the order with [[event|ordering/create-order]].
+7. [[service|Order Service]] publishes [[event|ordering-platform/ordering/order-created]] and eventually [[event|ordering-platform/ordering/order-completed]].
+8. Fulfilment consumes completed orders and prepares shipment.
+
+## Important boundaries
+
+The flow crosses several ownership boundaries. Shopping owns the cart, Ordering owns the order, Payments owns payment outcome, and Fulfilment owns stock and shipping. Each handoff is a contract boundary.
+
+## Failure points
+
+The two most important failure points are inventory and payment. If [[event|ordering/reserve-inventory]] or [[event|ordering/authorize-payment]] fails, checkout must compensate and avoid creating an order.
+
+Use [[flow|ordering-platform/checkout-saga]] for the detailed orchestration view.

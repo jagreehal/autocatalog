@@ -1,0 +1,31 @@
+---
+title: Customer and identity
+owner: handbook
+summary: How customer profiles and authentication are separated across Customer Management and Identity Provider systems.
+---
+
+[[domain|customer]] owns customer profile data and customer authentication. The catalog separates profile management from identity management so customer details and credentials have different operational boundaries.
+
+## System context map
+
+<Map />
+
+## Customer Management System
+
+[[system|customer-management-system]] owns **Customer Database**. [[service|Customer API]] handles:
+
+- [[event|customer/register-customer]]
+- [[event|customer/update-customer]]
+- [[event|customer/get-customer]]
+
+It publishes [[event|customer-platform/customer/customer-registered]] and [[event|customer-platform/customer/customer-updated]] so other capabilities can react to profile changes.
+
+## Identity Provider
+
+[[system|identity-provider]] owns authentication state in **User Directory**. [[service|OAuth API]] handles [[event|customer/authenticate-customer]] and emits [[event|customer-platform/customer/customer-authenticated]].
+
+## Integration guidance
+
+Services that need customer profile details should use [[event|customer/get-customer]] or consume customer events where a local read model is appropriate. Services that need authentication should integrate with the identity boundary, not the profile database.
+
+This split prevents order, review and payment systems from accidentally depending on credential storage.

@@ -63,66 +63,98 @@ jobs:
       - name: Install the packed packages and run the front door
         run: bash scripts/pack-smoke.sh
 
-      # The Playwright stories are named `test:e2e`, so `turbo run test` never
-      # reaches them. They build the site and drive the built output, which is
-      # what actually gets published.
-      #
+  # The Playwright stories are named `test:e2e`, so `turbo run test` never
+  # reaches them. They build each site and drive the built output, which is
+  # what gets published. Three jobs of two suites run side by side.
+  stories:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # The docs site, and the journeys the README's screenshots and GIFs
+          # are recorded from, run fast and unrecorded.
+          - name: docs and media
+            suites: '@autocatalog-example/docs autocatalog-media'
+            reports: examples/docs-demo
+          # A site `ac site` builds as a server, white-labelled and extended,
+          # and a help centre where one access module decides what each
+          # account opens.
+          - name: server sites
+            suites: '@autocatalog-example/site-extension @autocatalog-example/help-centre'
+            reports: examples/site-extension examples/help-centre
+          # A process drafted from Effect code, drawn as an EventStorming
+          # board, and API docs with Scalar's reference framed beside the site.
+          - name: storming and public API
+            suites: '@autocatalog-example/event-storming @autocatalog-example/public-api'
+            reports: examples/event-storming examples/public-api
+    name: stories (${{ matrix.name }})
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: ./.github/actions/setup-pnpm
+
+      # Each suite builds its own site from the packages it depends on, in dist/.
+      - name: Build what the suites depend on
+        env:
+          SUITES: ${{ matrix.suites }}
+        run: |
+          filters=()
+          for suite in $SUITES; do filters+=("--filter=$suite^..."); done
+          pnpm turbo run build "${filters[@]}"
+
+      - name: Locate Playwright
+        id: playwright
+        run: echo "version=$(pnpm exec playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
+
+      # The browser download, kept per Playwright version. The system packages
+      # it needs are installed on every run.
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ steps.playwright.outputs.version }}
+
       # Every step here is time-boxed. `playwright install` has shipped releases
-      # that hang forever after the browser download rather than failing
-      # (microsoft/playwright#40998, broken in 1.55.1–1.59.x). Without a bound,
-      # that burns the job to the six-hour default and reports nothing useful.
-      # The lockfile pins 1.60.0 and the range is `^1.60.0`, so this repo cannot
-      # resolve into that window — the timeout is for the next one.
+      # that hang after the browser download instead of failing
+      # (microsoft/playwright#40998, in 1.55.1–1.59.x). Without a bound, that
+      # burns the job to the six-hour default and reports nothing useful. The
+      # lockfile pins 1.60.0 and the range is `^1.60.0`, so this repository
+      # cannot resolve into that window; the timeout is for the next one.
       - name: Install Playwright browsers
         timeout-minutes: 10
         run: pnpm exec playwright install --with-deps chromium
 
-      - name: Run docs site stories
-        timeout-minutes: 15
-        run: pnpm --filter @autocatalog-example/docs test:e2e
+      - name: Run stories
+        timeout-minutes: 20
+        env:
+          SUITES: ${{ matrix.suites }}
+        # Both suites run, so one failing does not hide the other.
+        run: |
+          failed=0
+          for suite in $SUITES; do
+            echo "=== $suite ==="
+            pnpm --filter "$suite" test:e2e || failed=1
+          done
+          exit "$failed"
 
-      # A site `ac site` builds as a server, white-labelled and extended with
-      # a company's own code, on a desktop and a phone.
-      - name: Run white-label and extension stories
-        timeout-minutes: 15
-        run: pnpm --filter @autocatalog-example/site-extension test:e2e
-
-      # A help centre where one access module decides, per request, which
-      # guides each account opens, and every page, list and copy follows it.
-      - name: Run help centre stories
-        timeout-minutes: 15
-        run: pnpm --filter @autocatalog-example/help-centre test:e2e
-
-      # A process drafted from Effect code, drawn as an EventStorming board.
-      - name: Run event storming stories
-        timeout-minutes: 15
-        run: pnpm --filter @autocatalog-example/event-storming test:e2e
-
-      # API docs for readers outside, with Scalar's reference framed beside the site.
-      - name: Run public API stories
-        timeout-minutes: 15
-        run: pnpm --filter @autocatalog-example/public-api test:e2e
-
-      # The journeys the README's screenshots and GIFs are recorded from, run
-      # fast and unrecorded: a journey that stops passing is media gone stale.
-      - name: Run media journeys
-        timeout-minutes: 15
-        run: pnpm --filter autocatalog-media test:e2e
+      - name: Collect story reports
+        if: always()
+        env:
+          REPORTS: ${{ matrix.reports }}
+        run: |
+          mkdir -p story-reports
+          for dir in $REPORTS; do
+            for part in reports test-results; do
+              [ -d "$dir/$part" ] && mkdir -p "story-reports/$dir" && cp -R "$dir/$part" "story-reports/$dir/"
+            done
+          done
+          true
 
       - name: Upload story reports
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: e2e-stories
-          path: |
-            examples/docs-demo/reports
-            examples/docs-demo/test-results
-            examples/site-extension/reports
-            examples/site-extension/test-results
-            examples/help-centre/reports
-            examples/help-centre/test-results
-            examples/event-storming/reports
-            examples/event-storming/test-results
-            examples/public-api/reports
-            examples/public-api/test-results
+          name: e2e-stories-${{ strategy.job-index }}
+          path: story-reports
           if-no-files-found: ignore

@@ -1,0 +1,13 @@
+---
+title: Review Submitted
+owner: reviews-platform
+summary: Published when a customer submits a review. The review is stored but not yet visible — it awaits moderation.
+about:
+  - event/reviews/review-submitted
+sidebar:
+  hidden: true
+---
+
+## Overview
+
+`ReviewSubmitted` is published by the [[service|Review API]] once a review has been accepted and stored. The [[service|Review Moderation Worker]] consumes it to screen the review before it can be published.

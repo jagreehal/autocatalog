@@ -1,0 +1,13 @@
+---
+title: Review Flagged
+owner: reviews-platform
+summary: Published when a published review is flagged and needs to be screened again.
+about:
+  - event/reviews/review-flagged
+sidebar:
+  hidden: true
+---
+
+## Overview
+
+`ReviewFlagged` is published by the [[service|Review API]] when a published review is flagged. The [[service|Review Moderation Worker]] consumes it and re-screens the review, which may lead to it being rejected.

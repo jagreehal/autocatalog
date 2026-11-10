@@ -1,0 +1,39 @@
+---
+title: Operational readiness
+owner: handbook
+summary: The launch and support standards Acme applies before a system or contract is considered production-ready.
+---
+
+A system is production-ready when another team can understand ownership, dependencies and failure behavior from the catalog before an incident starts.
+
+## Required catalog coverage
+
+Before production launch, each system must document:
+
+- owning team and escalation path,
+- services and containers,
+- commands, queries and events,
+- critical flows that include the system,
+- external dependencies,
+- operational dashboards or runbooks where available,
+- known failure modes and recovery expectations.
+
+## Critical system map
+
+Checkout is the reference standard for operational coverage because it crosses Shopping, Ordering, Payments and Fulfilment.
+
+<Map />
+
+## Launch gates
+
+| Gate          | Required evidence                                                      |
+| ------------- | ---------------------------------------------------------------------- |
+| Ownership     | Team and escalation path are present in the catalog.                   |
+| Contracts     | Public commands, events and queries have schemas or payload notes.     |
+| Observability | Error, latency and throughput signals exist for customer-facing paths. |
+| Recovery      | Retry, compensation or manual recovery behavior is documented.         |
+| Dependencies  | Upstream and downstream systems are linked in the catalog.             |
+
+## Incident updates
+
+After an incident, update the catalog when the incident reveals a missing dependency, stale owner, unclear contract, undocumented failure mode or misleading flow.

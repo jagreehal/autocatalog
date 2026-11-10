@@ -1,0 +1,51 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "LoyaltyPointsEarned",
+  "description": "Published when a customer earns loyalty points for a completed order",
+  "type": "object",
+  "properties": {
+    "customerId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "orderId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "pointsEarned": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "newBalance": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "tier": {
+      "type": "string",
+      "enum": ["bronze", "silver", "gold"]
+    },
+    "earnedAt": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": ["customerId", "orderId", "pointsEarned", "newBalance", "earnedAt"],
+  "x-autocatalog": {
+    "id": "loyalty-points-earned",
+    "version": "1.0.0",
+    "domain": "loyalty",
+    "name": "Loyalty Points Earned",
+    "summary": "Published when a customer earns loyalty points for a completed order.",
+    "producers": ["Loyalty Service"],
+    "consumers": ["Notification Service"],
+    "transport": [
+      {
+        "address": "customer.loyalty-events",
+        "protocols": ["kafka"]
+      }
+    ],
+    "delivery": {
+      "guarantee": "at-least-once"
+    }
+  }
+}

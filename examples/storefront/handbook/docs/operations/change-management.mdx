@@ -1,0 +1,31 @@
+---
+title: Change management
+owner: handbook
+summary: How to safely change contracts, schemas, systems and cross-domain flows in the Acme Inc catalog.
+---
+
+Changes should start with ownership and blast radius. A small service implementation change may not affect the catalog. A schema or flow change usually does.
+
+## Contract changes
+
+Before changing a command, event or query:
+
+1. Identify the producer and all consumers.
+2. Check whether the change is backward compatible.
+3. Update the schema and resource summary.
+4. Update affected flow pages.
+5. Coordinate rollout with consumer owners.
+
+High-risk contracts include [[event|shopping-platform/shopping/cart-checked-out]], [[event|ordering/reserve-inventory]], [[event|ordering/authorize-payment]], [[event|ordering/create-order]], [[event|ordering-platform/ordering/order-created]] and [[event|reviews-platform/reviews/review-published]].
+
+## System changes
+
+When a system adds a service or data store, update the system page and any domain page that lists that system. If the change alters ownership of data, update the data ownership page too.
+
+## Flow changes
+
+For flows such as [[flow|ordering-platform/place-an-order]], [[flow|ordering-platform/checkout-saga]], [[flow|search-platform/product-search-indexing]] and [[flow|reviews-platform/review-submission]], update the diagram and the narrative together. A diagram without the operating rules is not enough for on-call or onboarding.
+
+## Decision records
+
+Use ADRs when a decision changes a long-lived pattern. The Product Catalog System already documents key decisions such as [[doc|product-platform/adr/adr-001-use-transactional-outbox]], [[doc|product-platform/adr/adr-002-postgres-as-system-of-record]] and [[doc|product-platform/adr/adr-003-offload-async-work-to-worker]].

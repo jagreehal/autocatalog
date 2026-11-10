@@ -1,0 +1,37 @@
+---
+title: Contract standards
+owner: handbook
+summary: The rules Acme teams follow when defining, versioning and changing commands, events and queries.
+---
+
+Commands, events and queries are the public language between Acme systems. A contract is not ready until it is understandable by a team that does not own the implementation.
+
+## Contract types
+
+| Type    | Meaning                                  | Example                                                                                                                                                                    |
+| ------- | ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Command | A request for an owner to do work.       | [[event\|ordering/reserve-inventory]], [[event\|ordering/authorize-payment]], [[event\|ordering/create-order]]                                                             |
+| Event   | A fact that already happened.            | [[event\|ordering-platform/ordering/order-created]], [[event\|payments-platform/payments/payment-succeeded]], [[event\|fulfilment-platform/fulfilment/inventory-reserved]] |
+| Query   | A read contract owned by one capability. | [[event\|ordering/get-order]], [[event\|catalog/search-products]], [[event\|reviews/get-product-reviews]]                                                                  |
+
+## Required fields
+
+Every contract page should document:
+
+- business purpose,
+- producer or handler,
+- consumers where known,
+- schema or payload reference,
+- version and compatibility policy,
+- failure semantics for commands and queries,
+- replay and ordering assumptions for events.
+
+## Versioning rules
+
+Additive fields are allowed when consumers can ignore them. Removing fields, changing meaning, tightening validation or changing delivery semantics is breaking and requires a new version or a migration plan.
+
+Use deprecation before removal. Keep the old contract documented until all consumers have moved.
+
+## Review checklist
+
+Before changing a contract, teams must identify all known consumers, confirm whether the change is additive or breaking, update flow pages that depend on the contract, and add an ADR when the change introduces a new integration pattern.

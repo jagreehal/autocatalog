@@ -1,0 +1,15 @@
+{
+  "kind": "command",
+  "id": "get-order",
+  "version": "1.0.0",
+  "name": "Get Order",
+  "summary": "Query to fetch a single order by its identifier.",
+  "domain": "ordering",
+  "handler": "Order Service",
+  "senders": [],
+  "schema": "./schema.json",
+  "outcome": {
+    "type": "result"
+  },
+  "tags": ["query"]
+}

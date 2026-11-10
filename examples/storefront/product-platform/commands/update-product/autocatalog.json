@@ -1,0 +1,11 @@
+{
+  "kind": "command",
+  "id": "update-product",
+  "version": "1.0.0",
+  "name": "Update Product",
+  "summary": "Command to update an existing product in the catalog.",
+  "domain": "catalog",
+  "handler": "Product API",
+  "senders": [],
+  "schema": "./schema.json"
+}

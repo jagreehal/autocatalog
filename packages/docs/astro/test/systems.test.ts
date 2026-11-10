@@ -35,7 +35,7 @@ describe('buildSystems', () => {
         name: 'Payments platform',
         external: false,
         members: ['PaymentService'],
-        designHref: '/designs/platform/payments-context/',
+        design: { href: '/designs/platform/payments-context/', title: 'Payments context' },
       }),
       expect.objectContaining({
         id: 'stripe',
@@ -44,5 +44,34 @@ describe('buildSystems', () => {
         summary: 'Card acquirer',
       }),
     ]);
+  });
+
+  it('adds the systems services declare, with those services as members', () => {
+    const rows = buildSystems(
+      [
+        {
+          repository: 'platform',
+          id: 'payments-context',
+          title: 'Payments context',
+          resources: [{ id: 'payments-platform', type: 'system', name: 'Payments platform' }],
+        },
+      ],
+      '/',
+      [
+        { name: 'PaymentWorker', system: { id: 'payments-platform' } },
+        { name: 'CartAPI', system: { id: 'cart-system', name: 'Cart System' } },
+        { name: 'Notifier' },
+      ],
+    );
+
+    expect(rows).toEqual([
+      expect.objectContaining({ id: 'cart-system', name: 'Cart System', members: ['CartAPI'] }),
+      expect.objectContaining({
+        id: 'payments-platform',
+        members: ['PaymentWorker'],
+        design: { href: '/designs/platform/payments-context/', title: 'Payments context' },
+      }),
+    ]);
+    expect(rows[0]!.design).toBeUndefined();
   });
 });

@@ -1,0 +1,11 @@
+{
+  "kind": "command",
+  "id": "create-product",
+  "version": "1.0.0",
+  "name": "Create Product",
+  "summary": "Command to add a new product to the catalog.",
+  "domain": "catalog",
+  "handler": "Product API",
+  "senders": [],
+  "schema": "./schema.json"
+}

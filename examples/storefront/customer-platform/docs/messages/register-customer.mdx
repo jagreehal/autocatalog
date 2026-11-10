@@ -1,0 +1,11 @@
+---
+title: Register Customer
+owner: customer-platform
+summary: Command to register a new customer.
+sidebar:
+  hidden: true
+---
+
+## Overview
+
+`RegisterCustomer` is handled by the [[service|Customer API]]. It validates the new customer, writes it to the **Customer Database**, and on success publishes a [[event|customer-platform/customer/customer-registered]] event.

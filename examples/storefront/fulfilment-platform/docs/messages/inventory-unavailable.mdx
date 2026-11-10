@@ -1,0 +1,13 @@
+---
+title: Inventory Unavailable
+owner: fulfilment-platform
+summary: Published when stock could not be reserved for an order.
+about:
+  - event/fulfilment/inventory-unavailable
+sidebar:
+  hidden: true
+---
+
+## Overview
+
+`InventoryUnavailable` is published by the [[service|Inventory Service]] when stock for an order cannot be reserved. The Ordering domain's checkout saga uses it to fail checkout and cancel the order.

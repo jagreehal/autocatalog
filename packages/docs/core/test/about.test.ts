@@ -38,6 +38,16 @@ describe('resolveAbout', () => {
     expect(resolveAbout('agent/support-triage', [event('a'), agent])).toEqual({ ref: agent.ref });
   });
 
+  it('names a domain its events name as domain/<id>, though no resource stands for it', () => {
+    expect(resolveAbout('domain/payments', [event('a')])).toEqual({
+      ref: { kind: 'domain', id: 'payments' },
+    });
+    expect(resolveAbout('domain/billing', [event('a')])).toHaveProperty(
+      'failure',
+      expect.stringContaining("about 'domain/billing' does not resolve"),
+    );
+  });
+
   it('suggests the near miss for a reference that does not resolve', () => {
     expect(resolveAbout('agent/suport-triage', [agent])).toEqual({
       failure:

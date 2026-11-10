@@ -1,0 +1,11 @@
+{
+  "kind": "command",
+  "id": "flag-review",
+  "version": "1.0.0",
+  "name": "Flag Review",
+  "summary": "Command issued by a customer or moderator to flag a published review for re-moderation.",
+  "domain": "reviews",
+  "handler": "Review API",
+  "senders": [],
+  "schema": "./schema.json"
+}

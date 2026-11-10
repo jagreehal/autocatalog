@@ -1,0 +1,35 @@
+---
+title: Data ownership
+owner: handbook
+summary: The source-of-truth data stores in the default catalog and the rules for reading and writing business state.
+---
+
+Every durable business concept has an owning system and a source-of-truth store. Other systems should depend on published contracts instead of reaching into another system's data store.
+
+## Source-of-truth stores
+
+| Data store             | Owner                                  | Business data                                           |
+| ---------------------- | -------------------------------------- | ------------------------------------------------------- |
+| **Product Database**   | [[system\|product-catalog-system]]     | Products, product attributes and catalog change outbox. |
+| **Search Index**       | [[system\|search-system]]              | Search-optimised product documents.                     |
+| **Cart Database**      | [[system\|cart-system]]                | Active shopping carts and checkout state.               |
+| **Promotion Database** | [[system\|promotion-system]]           | Promotion rules and discount configuration.             |
+| **Order Database**     | [[system\|order-management-system]]    | Orders and order lifecycle state.                       |
+| **Payment Database**   | [[system\|payment-processing-system]]  | Payment intents, charge outcomes and refunds.           |
+| **Inventory Database** | [[system\|inventory-system]]           | Stock levels and reservations.                          |
+| **Warehouse Database** | [[system\|warehouse-system]]           | Picking and packing work.                               |
+| **Customer Database**  | [[system\|customer-management-system]] | Customer profiles.                                      |
+| **Review Database**    | [[domain\|reviews]]                    | Reviews and moderation state.                           |
+| **Rating Cache**       | [[domain\|reviews]]                    | Product rating read model.                              |
+
+## Read model pattern
+
+[[system|search-system]] and **Rating Cache** are read models. They do not own the original facts. They rebuild their state from events such as [[event|product-platform/catalog/product-created]], [[event|product-platform/catalog/product-updated]], [[event|reviews-platform/reviews/review-published]] and [[event|reviews-platform/reviews/rating-updated]].
+
+## Write rule
+
+Only the owning system writes its source-of-truth store. Cross-system updates should be commands or events. For example, checkout asks fulfilment to reserve stock with [[event|ordering/reserve-inventory]] rather than writing **Inventory Database** directly.
+
+## Consistency rule
+
+User-facing flows should make the consistency model explicit. Checkout needs coordinated confirmation across inventory, payment and order creation, so it uses the [[flow|ordering-platform/checkout-saga]]. Search indexing can lag product writes, so it uses asynchronous product events.
