@@ -1,5 +1,12 @@
 # autocatalog-plugin-storybook
 
+## 0.1.4
+
+### Patch Changes
+
+- Updated dependencies [9451b43]
+  - autocatalog-core@0.11.0
+
 ## 0.1.3
 
 ### Patch Changes
