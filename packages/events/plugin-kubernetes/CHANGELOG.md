@@ -1,5 +1,12 @@
 # autocatalog-plugin-kubernetes
 
+## 0.1.3
+
+### Patch Changes
+
+- Updated dependencies [9451b43]
+  - autocatalog-core@0.11.0
+
 ## 0.1.2
 
 ### Patch Changes
