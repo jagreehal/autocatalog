@@ -25,6 +25,21 @@ test.describe('The company documentation index', () => {
     ).toBeVisible();
   });
 
+  test("the home page's browser title is the site's own", async ({ page }, testInfo) => {
+    story.init(testInfo, { tags: ['docs'] });
+
+    given('a site titled "Acme docs (demo)"');
+    await page.goto('/');
+
+    then('the home page names the site once, and a document names itself and the site');
+    await expect(page).toHaveTitle('Acme docs (demo)');
+    await page
+      .getByRole('link', { name: /Replaying failed captures/ })
+      .first()
+      .click();
+    await expect(page).toHaveTitle(/^Replaying failed captures \| Acme docs \(demo\)$/);
+  });
+
   test('a field the company added to its own contract reaches the page', async ({
     page,
   }, testInfo) => {

@@ -105,7 +105,13 @@ setPageHeader(
 ---
 
 <StarlightPage
-  frontmatter={{ title: site.title, description: site.description, tableOfContents: false }}
+  frontmatter={{
+    title: site.title,
+    description: site.description,
+    tableOfContents: false,
+    // Starlight titles pages "<page> | <site>"; the home page is the site, so name it once.
+    head: [{ tag: 'title', content: site.title }],
+  }}
 >
   <div class="not-content flex flex-col gap-10" data-wide>
     {
