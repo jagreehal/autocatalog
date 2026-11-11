@@ -1,5 +1,11 @@
 # autocatalog-docs-astro
 
+## 0.15.1
+
+### Patch Changes
+
+- 394c34d: The home page's browser title is the site's title, and every other page reads "<page> | <site>".
+
 ## 0.15.0
 
 ### Minor Changes

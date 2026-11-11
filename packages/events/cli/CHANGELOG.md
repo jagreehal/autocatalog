@@ -1,5 +1,12 @@
 # autocatalog-cli
 
+## 0.13.1
+
+### Patch Changes
+
+- Updated dependencies [394c34d]
+  - autocatalog-docs-astro@0.15.1
+
 ## 0.13.0
 
 ### Minor Changes
