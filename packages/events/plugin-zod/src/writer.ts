@@ -1,1 +1,1 @@
-export { writeEventFolder, type WriteEventFolderOptions } from 'autocatalog-core';
+export { writeEventFolder, type WriteEventFolderOptions } from 'autocatalog-core/plugin';

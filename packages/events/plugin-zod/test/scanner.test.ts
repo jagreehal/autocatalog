@@ -4,7 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { z } from 'zod';
-import type { eventFrontmatter } from 'autocatalog-core';
+import type { eventFrontmatter } from 'autocatalog-core/plugin';
 import { domainForFile, idFromSymbol, scanRepo } from '../src/scanner';
 
 const here = path.dirname(fileURLToPath(import.meta.url));

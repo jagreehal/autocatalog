@@ -62,9 +62,14 @@ jobs:
 
       - uses: ./.github/actions/setup-pnpm
 
-      # Packages resolve each other through dist/, so build before type-checking.
-      - name: Build
-        run: pnpm build
+      # Packages resolve each other through dist/, so build them before
+      # type-checking. The example sites are not type-checked, so they are left
+      # to the build job; the docs app needs only Astro's generated types.
+      - name: Build the packages
+        run: pnpm turbo run build --filter='./packages/*/*'
+
+      - name: Generate the docs app's Astro types
+        run: pnpm --filter autocatalog-site exec astro sync
 
       - name: Published JSON Schemas match the code
         run: pnpm contracts --check
@@ -79,11 +84,10 @@ jobs:
 
       - uses: ./.github/actions/setup-pnpm
 
-      - name: Build
-        run: pnpm build
-
-      - name: Run tests
-        run: pnpm test
+      # One turbo run, so a package's tests start once its dependencies are
+      # built instead of waiting for every example site.
+      - name: Build and test
+        run: pnpm turbo run build test
 
   verify:
     runs-on: ubuntu-latest
@@ -92,8 +96,9 @@ jobs:
 
       - uses: ./.github/actions/setup-pnpm
 
-      - name: Build
-        run: pnpm build
+      # Every check below runs the packages; the sites are built by the build job.
+      - name: Build the packages
+        run: pnpm turbo run build --filter='./packages/*/*'
 
       - name: Verify product journeys through the built CLI
         run: pnpm smoke:product
@@ -104,8 +109,8 @@ jobs:
       - name: Validate agent starter
         run: pnpm validate:agents
 
-      # The site itself is built by `pnpm build`, which covers every workspace
-      # package. This is the check a publishing repository runs in its own CI.
+      # The site itself is built by the build job. This is the check a
+      # publishing repository runs in its own CI.
       - name: Check the docs demo against the convention
         run: pnpm validate:docs
 

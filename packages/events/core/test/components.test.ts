@@ -185,3 +185,12 @@ describe('the file', () => {
     await expect(readComponentsFile(await repository(content))).rejects.toThrow(COMPONENTS_FILE);
   });
 });
+
+describe('components in core', () => {
+  // Each tool's name lives in its plugin; core reads only the committed file.
+  it('never names the tool a component came from', async () => {
+    const source = await fs.readFile(new URL('../src/components.ts', import.meta.url), 'utf8');
+
+    expect(source).not.toMatch(/storybook/i);
+  });
+});

@@ -8,7 +8,7 @@ import {
   type JsonObject,
   type JsonPrimitive,
   type JsonValue,
-} from 'autocatalog-core';
+} from 'autocatalog-core/plugin';
 import ts from 'typescript';
 import { z } from 'zod';
 

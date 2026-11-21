@@ -1,4 +1,4 @@
-import type { EventFrontmatter, JsonObject, JsonValue } from 'autocatalog-core';
+import type { EventFrontmatter, JsonObject, JsonValue } from 'autocatalog-core/plugin';
 import type { z } from 'zod';
 
 export interface EventDeprecation {

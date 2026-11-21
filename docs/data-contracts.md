@@ -14,7 +14,7 @@ A data contract describes a dataset as an API description describes an API:
 its schema, quality rules, service levels, terms of use and owner, in the
 [Open Data Contract Standard](https://bitol-io.github.io/open-data-contract-standard/)
 (ODCS). autocatalog reads ODCS contracts where a data product names them, and
-[`autocatalog-plugin-odcs`](https://github.com/jagreehal/autocatalog/tree/main/packages/events/plugin-odcs)
+[`autocatalog-plugin-odcs`](https://github.com/jagreehal/autocatalog-plugins/tree/main/packages/plugin-odcs)
 checks them with [`autotel-datacontract`](https://github.com/jagreehal/autotel/tree/main/packages/autotel-datacontract).
 
 ## On the data product page

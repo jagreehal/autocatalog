@@ -7,7 +7,7 @@ import {
   type AdapterEvent,
   type ProvenanceValue,
   type SourceLocation,
-} from 'autocatalog-core';
+} from 'autocatalog-core/plugin';
 import { z } from 'zod';
 import { getEventMetadata, mergeMetadata, type SchemaInput } from './define-event';
 

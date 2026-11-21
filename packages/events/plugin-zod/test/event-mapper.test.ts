@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
-import { pascalCase } from 'autocatalog-core';
+import { pascalCase } from 'autocatalog-core/plugin';
 import { parseCompactName, compactItemToAutocatalogEvent } from '../src/event-mapper';
 import { defineEvent } from '../src/define-event';
 
