@@ -1,5 +1,7 @@
 /** @jsxImportSource react */
+import type { OdcsContract, TrackRecord } from 'autocatalog-docs-core';
 import { Card, CardContent, CardHeader, CardTitle } from '#ui/components/ui/card.tsx';
+import { contractAnchor, DataContract } from '../components/DataContract';
 import { Graph } from '../components/Graph';
 import type { VisualiserGraph } from '../lib/visualiser';
 
@@ -9,6 +11,9 @@ export interface DataProductPort {
   /** As the frontmatter writes it. */
   reference: string;
   contract?: string | undefined;
+  /** The contract read, when it is ODCS. */
+  odcs?: OdcsContract | undefined;
+  trackRecord?: TrackRecord | undefined;
 }
 
 export interface DataProductPageProps {
@@ -21,7 +26,17 @@ export interface DataProductPageProps {
   narrativeHtml?: string | null | undefined;
 }
 
-function Ports({ title, id, ports }: { title: string; id: string; ports: DataProductPort[] }) {
+function Ports({
+  title,
+  id,
+  ports,
+  expects = false,
+}: {
+  title: string;
+  id: string;
+  ports: DataProductPort[];
+  expects?: boolean;
+}) {
   return (
     <Card id={id}>
       <CardHeader>
@@ -32,7 +47,7 @@ function Ports({ title, id, ports }: { title: string; id: string; ports: DataPro
       <CardContent>
         <ul className="m-0 flex flex-col gap-2 pl-4">
           {ports.map((port) => (
-            <li key={port.reference}>
+            <li key={`${port.reference}-${port.contract ?? ''}`}>
               {port.href ? (
                 <a
                   href={port.href}
@@ -47,7 +62,17 @@ function Ports({ title, id, ports }: { title: string; id: string; ports: DataPro
               {port.contract && (
                 <>
                   {' '}
-                  under the contract <code>{port.contract}</code>
+                  {expects ? 'expecting' : 'under the contract'}{' '}
+                  {port.odcs ? (
+                    <a
+                      href={`#${contractAnchor(port.odcs, expects)}`}
+                      className="underline underline-offset-4"
+                    >
+                      <code>{port.contract}</code>
+                    </a>
+                  ) : (
+                    <code>{port.contract}</code>
+                  )}
                 </>
               )}
             </li>
@@ -70,7 +95,7 @@ export function DataProductPage({
 }: DataProductPageProps) {
   const list = (
     <div className="not-content grid gap-4 md:grid-cols-2">
-      {inputs.length > 0 && <Ports title="Inputs" id="inputs" ports={inputs} />}
+      {inputs.length > 0 && <Ports title="Inputs" id="inputs" ports={inputs} expects />}
       {outputs.length > 0 && <Ports title="Outputs" id="outputs" ports={outputs} />}
     </div>
   );
@@ -104,6 +129,33 @@ export function DataProductPage({
       />
 
       {list}
+
+      {outputs.map(
+        (port) =>
+          port.odcs &&
+          port.contract && (
+            <DataContract
+              key={`out-${port.reference}-${port.contract}`}
+              contract={port.odcs}
+              file={port.contract}
+              trackRecord={port.trackRecord}
+              about={port.name}
+            />
+          ),
+      )}
+      {inputs.map(
+        (port) =>
+          port.odcs &&
+          port.contract && (
+            <DataContract
+              key={`in-${port.reference}-${port.contract}`}
+              contract={port.odcs}
+              file={port.contract}
+              about={port.name}
+              expectation
+            />
+          ),
+      )}
 
       {narrativeHtml && <div dangerouslySetInnerHTML={{ __html: narrativeHtml }} />}
     </div>

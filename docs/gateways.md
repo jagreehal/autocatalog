@@ -67,7 +67,8 @@ The build says where the gateway and the contracts disagree:
 - a route that authenticates nothing, in front of an operation whose spec secures
   it
 
-`ac federation status` lists the same, under its own heading. The MCP server's
+`ac federation status` lists the same, under its own heading, and
+`--fail-on gateway` fails the run on them. The MCP server's
 `assess_impact` names the gateway beside the service that exposes an operation.
 
 ## Another gateway

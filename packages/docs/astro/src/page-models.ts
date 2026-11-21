@@ -221,6 +221,18 @@ export function homePageProps(
           },
         ]
       : []),
+    ...(catalog.graph.resources.some(
+      ({ ref }) => ref.kind === 'skill' || ref.kind === 'agent-plugin',
+    )
+      ? [
+          {
+            title: 'Skills and plugins',
+            text: 'The skills and coding-agent plugins teams share, and what each may do unasked.',
+            href: `${base}skills/`,
+            icon: 'skill' as const,
+          },
+        ]
+      : []),
     ...(domains > 0
       ? [
           {

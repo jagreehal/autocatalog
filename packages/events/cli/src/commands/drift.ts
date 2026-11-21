@@ -25,6 +25,7 @@ import {
   readOptionalResourceJson,
   type ArchitectureSnapshot,
   type DriftFinding,
+  type DriftReport,
   type ResourceGraph,
   consumersFromGraph,
   shownName,
@@ -83,6 +84,15 @@ export interface RunDriftOptions {
   consumersTokenEnv?: string;
   /** This repository's name on the company site, when two repositories publish one event. */
   repository?: string;
+  /**
+   * Fail when the consumers cannot be read, or are older than `maxConsumersAge`,
+   * instead of checking without them.
+   */
+  requireConsumers?: boolean;
+  /** Hours the company site's catalog may be old before it counts as stale. */
+  maxConsumersAge?: number;
+  /** Called with the report, for a caller that posts it somewhere. */
+  onReport?: (report: DriftReport) => void;
 }
 
 async function gitOutput(cwd: string, args: string[]): Promise<string> {
@@ -280,12 +290,19 @@ async function artifactResources(events: string): Promise<ResourceGraph | undefi
 
 /**
  * Consumers other repositories declare, from the company index. An index that
- * cannot be read is said and skipped: a site outage must not block every
- * pull request in the company.
+ * cannot be read is said and skipped, so a site outage does not block every
+ * pull request in the company, unless `require` says a gate without them is
+ * no gate: then an unreadable or stale index throws.
  */
 async function companyConsumers(
   source: string,
-  options: { tokenEnv?: string; repository?: string; quiet?: boolean },
+  options: {
+    tokenEnv?: string;
+    repository?: string;
+    quiet?: boolean;
+    require?: boolean;
+    maxAgeHours?: number;
+  },
 ): Promise<
   | {
       consumers: Map<string, EventConsumers>;
@@ -298,6 +315,12 @@ async function companyConsumers(
     const { graph, publishedAt } = await readCompanyIndex(source, { tokenEnv: options.tokenEnv });
 
     if (!options.quiet) console.warn(`  ${publishedLine('consumers', source, publishedAt)}`);
+
+    const stale = staleness(publishedAt, options.maxAgeHours);
+
+    if (stale && options.require) throw new ConsumersRequired(`consumers from ${source} ${stale}`);
+
+    if (stale && !options.quiet) console.warn(`! consumers from ${source} ${stale}`);
 
     const { consumers, endpoints, ambiguous, rejected } = consumersFromGraph(graph, {
       repository: options.repository,
@@ -315,13 +338,40 @@ async function companyConsumers(
 
     return { consumers, endpoints, graph };
   } catch (error) {
-    if (!options.quiet)
-      console.warn(
-        `! could not read consumers from ${source} (${shownName(error instanceof Error ? error.message : String(error))}); checking without them`,
+    if (error instanceof ConsumersRequired) throw error;
+
+    const reason = shownName(error instanceof Error ? error.message : String(error));
+
+    if (options.require) {
+      throw new ConsumersRequired(
+        `could not read consumers from ${source} (${reason}), and --require-consumers needs them`,
       );
+    }
+
+    if (!options.quiet)
+      console.warn(`! could not read consumers from ${source} (${reason}); checking without them`);
 
     return undefined;
   }
+}
+
+/** A gate told it needs the company's consumers, without them. */
+class ConsumersRequired extends Error {
+  override name = 'ConsumersRequired';
+}
+
+/** Why an index is too old to trust, or nothing when it is fresh enough or no limit is set. */
+export function staleness(publishedAt: Date | undefined, maxAgeHours?: number): string | undefined {
+  if (maxAgeHours === undefined) return undefined;
+
+  if (!publishedAt)
+    return `say no publish time, so their age against --max-consumers-age is unknown`;
+
+  const hours = (Date.now() - publishedAt.getTime()) / 3_600_000;
+
+  return hours > maxAgeHours
+    ? `are ${Math.floor(hours)} hours old, older than --max-consumers-age ${maxAgeHours}`
+    : undefined;
 }
 
 /**
@@ -360,6 +410,10 @@ export async function runDrift(opts: RunDriftOptions): Promise<number> {
     throw new Error('Specify exactly one of --base or --base-ref');
   }
 
+  if ((opts.requireConsumers || opts.maxConsumersAge !== undefined) && !opts.consumers) {
+    throw new Error('--require-consumers and --max-consumers-age need --consumers <url|file>');
+  }
+
   // Read before any scan: a snapshot that is not one fails fast, not after a worktree.
   const snapshot = opts.snapshot ? await readSnapshot(opts.snapshot) : undefined;
 
@@ -388,6 +442,8 @@ export async function runDrift(opts: RunDriftOptions): Promise<number> {
           tokenEnv: opts.consumersTokenEnv,
           repository: opts.repository ?? (await repositoryName(agentsRoot)),
           quiet: opts.quiet,
+          require: opts.requireConsumers,
+          maxAgeHours: opts.maxConsumersAge,
         })
       : undefined;
 
@@ -541,6 +597,8 @@ export async function runDrift(opts: RunDriftOptions): Promise<number> {
     const incompatible = opts.compatibility
       ? compatibilityBreaks(report, opts.compatibility)
       : undefined;
+
+    opts.onReport?.(report);
 
     if (!opts.quiet) {
       if (opts.format === 'json') {

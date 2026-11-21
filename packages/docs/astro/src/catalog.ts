@@ -76,6 +76,7 @@ import {
   createDocsResourceGraph,
   DocsManifestError,
   headCommit,
+  lastChanged,
   readDocs,
   resolveDocKinds,
   type BuildDocsManifestOptions,
@@ -1144,6 +1145,58 @@ export function fullCatalog(): Promise<DocsCatalog> {
   }
 
   return cached;
+}
+
+/**
+ * When a file or folder a page is built from last changed, by git. Null when
+ * git cannot say, or the path sits outside the site's root, as a discovered
+ * catalog does.
+ */
+export function changedAt(absolute: string): string | null {
+  if (changes.has(absolute)) return changes.get(absolute) ?? null;
+
+  const { root } = docsSiteConfig();
+  const file = path.relative(root, absolute).split(path.sep).join('/');
+  const iso = !file || file.startsWith('..') ? null : lastChanged(root, file);
+
+  changes.set(absolute, iso);
+
+  return iso;
+}
+
+// A resource's page and the home page's recent list ask about the same files.
+const changes = new Map<string, string | null>();
+
+/** A file named from its repository's root, as specs, entities and data products are. */
+export function repositoryFileChangedAt(
+  catalog: Pick<DocsCatalog, 'repositoryRoots'>,
+  repository: string,
+  file: string,
+  changed = changedAt,
+): string | null {
+  const dir = catalog.repositoryRoots[repository];
+
+  return dir ? changed(path.join(dir, file)) : null;
+}
+
+/** An event's date: its committed folder's, else the file it was discovered from. */
+export function eventChangedAt(
+  catalog: Pick<DocsCatalog, 'graph' | 'repositoryRoots'>,
+  { repository, event }: CatalogEvent,
+  changed = changedAt,
+): string | null {
+  const committed = changed(event.folder.path);
+
+  if (committed) return committed;
+
+  const { domain, id } = event.frontmatter;
+
+  const file = catalog.graph.resources.find(
+    ({ ref }) =>
+      ref.kind === 'event' && ref.namespace === `${repository}/${domain}` && ref.id === id,
+  )?.source?.file;
+
+  return file ? repositoryFileChangedAt(catalog, repository, file, changed) : null;
 }
 
 // Every document page asks this question, so the answer is grouped once per

@@ -6,7 +6,7 @@
   "scripts": {
     "build": "turbo run build",
     "test": "turbo run test",
-    "lint": "prettier --check . && oxlint --disable-nested-config && pnpm lint:effect",
+    "lint": "prettier --check . && oxlint --disable-nested-config && pnpm lint:effect && node scripts/pin-actions.mjs --check",
     "lint:slop": "oxlint --disable-nested-config",
     "lint:effect": "node scripts/lint-effect.mjs",
     "typecheck": "node scripts/typecheck.mjs",
@@ -45,7 +45,7 @@
     "experiments": "pnpm -s build && node experiments/run.mjs",
     "compat:eventcatalog": "bash scripts/eventcatalog-compat.sh",
     "changeset": "changeset",
-    "version-packages": "changeset version",
+    "version-packages": "changeset version && node scripts/pin-actions.mjs && prettier --write actions",
     "release": "pnpm build && changeset publish"
   },
   "devDependencies": {

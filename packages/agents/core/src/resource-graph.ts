@@ -51,8 +51,15 @@ export interface GraphEvent {
   repository?: string;
 }
 
-function entityRef(entity: Entity): ResourceRef<EntityKind> {
+function entityRef(entity: Entity, repository?: string): ResourceRef<EntityKind> {
   const ref: ResourceRef<EntityKind> = { kind: entity.kind, id: entity.id };
+
+  // Teams name skills alike: one outside a plugin belongs to its repository, so
+  // two repositories' "release" skills stay two resources once composed.
+  const namespace =
+    entity.kind === 'skill' && !entity.plugin ? (entity.repository?.id ?? repository) : undefined;
+
+  if (namespace) ref.namespace = namespace;
 
   if (entity.version) ref.version = entity.version;
 
@@ -128,6 +135,8 @@ function attributesOf(entity: Entity, eventEdges: boolean): AgentSystemResourceA
     agent: ['model', 'tools', 'servers', 'policies', 'domain', ...events],
     tool: ['domain', 'server', ...events],
     'mcp-server': ['snapshot'],
+    // Servers stay listed too: a plugin can ship one no catalog entry describes yet.
+    'agent-plugin': ['skills'],
     workflow: ['agents', 'domain'],
     eval: ['target'],
   };
@@ -217,12 +226,12 @@ export function createAgentsResourceGraph(
 
   for (const kind of ENTITY_KINDS) {
     for (const entity of catalog.entities.get(kind)?.values() ?? []) {
-      refs.set(refKey(kind, entity.id), entityRef(entity));
+      refs.set(refKey(kind, entity.id), entityRef(entity, options.repository));
     }
   }
 
   const addRepositoryEdge = (
-    type: 'defines' | 'usesServer',
+    type: 'defines' | 'usesPlugin' | 'usesServer',
     repository: string,
     to: CatalogResource,
     entity: Entity,
@@ -255,7 +264,7 @@ export function createAgentsResourceGraph(
 
     const relationship: CatalogRelationship = {
       type,
-      from: entityRef(from),
+      from: entityRef(from, options.repository),
       to,
       ...evidence,
       source: sourceOf(catalog, from),
@@ -277,7 +286,7 @@ export function createAgentsResourceGraph(
         Object.assign(attributes, mcpServerFacts(catalog, entity.id));
 
       const resource: AgentSystemCatalogResource = {
-        ref: entityRef(entity),
+        ref: entityRef(entity, options.repository),
         title: entity.name,
         summary: entity.description,
         url:
@@ -342,6 +351,30 @@ export function createAgentsResourceGraph(
         const users = entity.used_by ?? (options.repository ? [options.repository] : []);
 
         for (const user of users) addRepositoryEdge('usesServer', user, resource, entity);
+      } else if (entity.kind === 'skill') {
+        // A plugin's skill is the plugin's; the plugin draws that edge.
+        const owner = entity.repository?.id ?? options.repository;
+
+        if (!entity.plugin && owner) addRepositoryEdge('defines', owner, resource, entity);
+      } else if (entity.kind === 'agent-plugin') {
+        for (const skill of [...new Set(entity.skills)].sort()) {
+          addRelationship('defines', entity, 'skill', skill, 'skills');
+        }
+
+        for (const server of [...new Set(entity.servers)].sort()) {
+          addRelationship('usesServer', entity, 'mcp-server', server, 'servers');
+        }
+
+        const builtIn = entity.repository?.id ?? (entity.path ? options.repository : undefined);
+
+        if (builtIn) addRepositoryEdge('defines', builtIn, resource, entity);
+
+        // With `used_by`, this catalog gathers many repositories, as a sweep writes it.
+        const users =
+          entity.used_by ??
+          (entity.enabled_in.length > 0 && options.repository ? [options.repository] : []);
+
+        for (const user of users) addRepositoryEdge('usesPlugin', user, resource, entity);
       } else if (entity.kind === 'workflow') {
         const workflow = entity;
 
@@ -367,7 +400,9 @@ export function createAgentsResourceGraph(
     // Same direction the event catalog draws for services: a producer points at
     // the event, and the event points at whoever consumes it.
     const [start, end] =
-      link.direction === 'produces' ? [entityRef(from), to] : [to, entityRef(from)];
+      link.direction === 'produces'
+        ? [entityRef(from, options.repository), to]
+        : [to, entityRef(from, options.repository)];
 
     const relationship: CatalogRelationship = {
       type: link.direction,

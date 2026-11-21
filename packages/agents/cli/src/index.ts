@@ -28,8 +28,8 @@ Usage:
                                            Diff observed agent behaviour (OTLP JSON) against the declared catalog
   ac agents search <query> [--root <path>] [--json]
                                            Substring search across every entity's id, name, description, owner
-  ac agents discover --from pydantic-ai|ai-sdk|mcp|mcp-snapshot [<source-dir>] [--root <catalog>] [--dry-run]
-                                           Infer draft entries from source, MCP servers, or snapshots
+  ac agents discover --from pydantic-ai|ai-sdk|mcp|mcp-snapshot|skills [<source-dir>] [--root <catalog>] [--dry-run]
+                                           Infer draft entries from source, MCP servers, snapshots, or skills and plugins
                                            mcp also takes --home, --prune, --per-repository, --internal <hosts,@scopes>
   ac agents snapshot [<server>...] [--root <path>] [--check] [--fail-on review|breaking]
                      [--format text|github|json] [--executor <url>] [--allow-stdio]

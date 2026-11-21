@@ -10,6 +10,7 @@ import {
   type ScanFindingBase,
 } from './merge-discoveries';
 import { publishCatalog, type PublishCatalogResult } from './publish-catalog';
+import { builtInDiscoveryAdapters } from './built-in-adapters';
 import type { ArtifactRepository } from './catalog-artifact';
 import { applySnapshot, type ArchitectureSnapshot, type SnapshotMergeResult } from './snapshot';
 
@@ -41,9 +42,10 @@ export interface ScanCatalogOptions {
   /** A shared conventions file, read in place of the repository's own. */
   conventions?: string;
   /**
-   * Keep to what a repository publishes on purpose: `contracts/`, `events/`, and
-   * the Adapters that read just the files named to them. Anything else is test
-   * data or a stranger's JSON, so it neither fails the scan nor joins the catalog.
+   * Keep to what a repository publishes on purpose: `contracts/`, `events/`, the
+   * Adapters that read just the files named to them, and every plugin the
+   * repository installs. Anything else a built-in Adapter finds is test data or a
+   * stranger's JSON, so it neither fails the scan nor joins the catalog.
    */
   onlyPublished?: boolean;
 }
@@ -59,6 +61,8 @@ export interface ScanCatalogResult {
   /** Present when a runtime snapshot was supplied. */
   runtime?: SnapshotMergeResult;
 }
+
+const BUILT_IN = new Set<DiscoveryAdapter>(builtInDiscoveryAdapters);
 
 /** Adapters whose files were named to them, so a file that does not read is always news. */
 const NAMED_FILE_ADAPTERS = new Set(['convention', 'message-contract']);
@@ -104,7 +108,12 @@ export async function scanCatalog(opts: ScanCatalogOptions): Promise<ScanCatalog
           // Each error starts with the file it is about, named the same way.
           const errors = valid.errors.map((error) => (within ? `${within}/${error}` : error));
 
-          if (!opts.onlyPublished || NAMED_FILE_ADAPTERS.has(adapter.name)) {
+          // An installed plugin is there because a team chose it to read their code.
+          if (
+            !opts.onlyPublished ||
+            NAMED_FILE_ADAPTERS.has(adapter.name) ||
+            !BUILT_IN.has(adapter)
+          ) {
             return { ...valid, errors };
           }
 

@@ -40,6 +40,10 @@ export interface DocsSiteConfig {
   exclude: string[];
   /** The release each catalog is locked at, as `platform v1.0.0`, by its directory. */
   releases: Record<string, string | undefined>;
+  /** Sources `ac site` could not read before the build, such as a repository it could not clone. */
+  leftOut: Array<{ name: string; reason: string }>;
+  /** The SHA-256 of the lock the site was built from, when it was built from one. */
+  lockDigest: string | undefined;
   /** Each service's owning repository, from the lock, when the site is built from one. */
   serviceOwners: Map<string, string> | undefined;
   title: string;
@@ -113,6 +117,10 @@ export function docsSiteConfig(): DocsSiteConfig {
     indexes: (process.env.AUTOCATALOG_DOCS_INDEXES ?? '').split(path.delimiter).filter(Boolean),
     exclude: (process.env.AUTOCATALOG_DOCS_EXCLUDE ?? '').split(path.delimiter).filter(Boolean),
     releases: JSON.parse(process.env.AUTOCATALOG_DOCS_RELEASES ?? '{}'),
+    leftOut: z
+      .array(z.object({ name: z.string(), reason: z.string() }))
+      .parse(JSON.parse(process.env.AUTOCATALOG_DOCS_LEFT_OUT ?? '[]')),
+    lockDigest: process.env.AUTOCATALOG_DOCS_LOCK_DIGEST || undefined,
     serviceOwners: process.env.AUTOCATALOG_DOCS_SERVICE_OWNERS
       ? new Map(
           Object.entries(

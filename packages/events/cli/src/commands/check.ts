@@ -6,10 +6,14 @@ import {
   builtInDiscoveryAdapters,
   CONSUMES_FILE,
   findCatalogRoots,
+  renderDriftMarkdown,
   scanCatalog,
+  type DriftReport,
 } from 'autocatalog-core';
 import kleur from 'kleur';
+import { discoverAdapters, discoverDiscoveryAdapters } from '../adapters';
 import { githubAnnotation } from './annotation';
+import { pullRequestFromEnv, upsertComment } from './pr-comment';
 import { runDocsCheck } from './docs';
 import { runDrift } from './drift';
 import { runValidate } from './validate';
@@ -21,19 +25,53 @@ export interface RunCheckOptions {
   /** Compare the repository's contracts against this ref, as a pull request does. */
   baseRef?: string | undefined;
   format: 'text' | 'github';
-  /** Run the rules a repository commits, for a repository you trust. */
+  /** Run the rules and plugins a repository commits, for a repository you trust. */
   allowCodeExecution?: boolean | undefined;
+  /** The company site's `/catalog.json`, so drift names consumers in other repositories. */
+  consumers?: string | undefined;
+  consumersTokenEnv?: string | undefined;
+  /** This repository's name on the company site. */
+  repository?: string | undefined;
+  /** Fail when the consumers cannot be read, rather than checking without them. */
+  requireConsumers?: boolean | undefined;
+  /** Hours the consumers may be old before they count as unreadable. */
+  maxConsumersAge?: number | undefined;
+  /** Keep one comment on the pull request with the result. */
+  comment?: boolean | undefined;
 }
 
-/** Scan a package's source contracts the way drift does, into a folder nobody keeps. */
-async function runContracts(dir: string, root: string, format: RunCheckOptions['format']) {
+/**
+ * Scan a package's source contracts the way drift does, into a folder nobody
+ * keeps: with the plugins it installs when it is trusted to run them, since
+ * drift reads its contracts through them too.
+ */
+async function runContracts(dir: string, root: string, opts: RunCheckOptions) {
+  const { format } = opts;
   const outRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'autocatalog-check-'));
 
   try {
+    const installed = opts.allowCodeExecution
+      ? await discoverDiscoveryAdapters(dir, { allowCodeExecution: true })
+      : [];
+
+    if (!opts.allowCodeExecution) {
+      const skipped = (await discoverAdapters(dir)).filter(
+        ({ discoveryEntryAbs }) => discoveryEntryAbs,
+      );
+
+      if (skipped.length > 0) {
+        console.warn(
+          kleur.yellow(
+            `! ${skipped.map(({ packageName }) => packageName).join(', ')} not run: contracts they read are not checked without --allow-code-execution`,
+          ),
+        );
+      }
+    }
+
     const { errors } = await scanCatalog({
       root: dir,
       outRoot,
-      adapters: [...builtInDiscoveryAdapters],
+      adapters: [...builtInDiscoveryAdapters, ...installed],
       onlyPublished: true,
     });
 
@@ -58,32 +96,57 @@ function report(failure: string, format: RunCheckOptions['format'], root: string
 /** Compare against the base branch, which may hold contracts this change removed. */
 const driftCheck = (
   dir: string,
-  opts: RunCheckOptions & { baseRef: string },
+  opts: RunCheckOptions & { baseRef: string; onReport?: (report: DriftReport) => void },
   where = '',
   format: RunCheckOptions['format'] = opts.format,
 ) =>
   [
     `Drift from ${opts.baseRef}${where}`,
-    () =>
-      runDrift({
+    async () => {
+      // Without consent, drift compares what the built-in adapters read and names the rest.
+      const skipped = opts.allowCodeExecution
+        ? []
+        : (await discoverAdapters(dir)).filter(({ discoveryEntryAbs }) => discoveryEntryAbs);
+
+      if (skipped.length > 0) {
+        console.warn(
+          kleur.yellow(
+            `! ${skipped.map(({ packageName }) => packageName).join(', ')} not run: drift does not compare the events they read without --allow-code-execution`,
+          ),
+        );
+      }
+
+      return runDrift({
         baseRef: opts.baseRef,
         root: dir,
         current: path.join(dir, 'events'),
         format,
         failOn: 'breaking',
         allowCodeExecution: opts.allowCodeExecution ?? false,
+        ...(!opts.allowCodeExecution && { adapters: builtInDiscoveryAdapters }),
         onlyPublished: true,
-      }),
+        consumers: opts.consumers,
+        consumersTokenEnv: opts.consumersTokenEnv,
+        repository: opts.repository,
+        requireConsumers: opts.requireConsumers,
+        maxConsumersAge: opts.maxConsumersAge,
+        onReport: opts.onReport,
+      });
+    },
   ] as const;
 
 /** What one package publishes beyond its documents. */
-function packageChecks(dir: string, root: string, opts: RunCheckOptions): Check[] {
+function packageChecks(
+  dir: string,
+  root: string,
+  opts: RunCheckOptions & { onReport?: (report: DriftReport) => void },
+): Check[] {
   const exists = (name: string) => fsSync.existsSync(path.join(dir, name));
   const where = dir === root ? '' : ` in ${path.relative(root, dir).split(path.sep).join('/')}`;
 
   return [
     ...(exists('contracts')
-      ? [[`Contracts${where}`, () => runContracts(dir, root, opts.format)] as const]
+      ? [[`Contracts${where}`, () => runContracts(dir, root, opts)] as const]
       : []),
     ...(exists('events') || exists(CONSUMES_FILE)
       ? [[`Events${where}`, () => runValidate({ cwd: dir })] as const]
@@ -103,8 +166,10 @@ function packageChecks(dir: string, root: string, opts: RunCheckOptions): Check[
  * command fits every repository. Drift always runs against a base branch: a
  * change may have removed the only thing that would otherwise ask for it.
  */
-export async function runCheck(opts: RunCheckOptions): Promise<number> {
-  const root = path.resolve(opts.root);
+export async function runCheck(input: RunCheckOptions): Promise<number> {
+  const root = path.resolve(input.root);
+  const reports: DriftReport[] = [];
+  const opts = { ...input, onReport: (report: DriftReport) => reports.push(report) };
 
   // A monorepo publishes from its packages, so each one answers for itself.
   const roots = findCatalogRoots(root);
@@ -136,19 +201,61 @@ export async function runCheck(opts: RunCheckOptions): Promise<number> {
 
   for (const clash of clashes) report(clash, opts.format, root);
 
-  let failed = clashes.length > 0;
+  const failures = clashes.length > 0 ? ['Packages that publish under one name'] : [];
 
   for (const [name, run] of checks) {
     console.log(kleur.bold(name));
 
     // One check that cannot run is a failure, and the others still report.
     try {
-      if ((await run()) !== 0) failed = true;
+      if ((await run()) !== 0) failures.push(name);
     } catch (error) {
       report(error instanceof Error ? error.message : String(error), opts.format, root);
-      failed = true;
+      failures.push(name);
     }
   }
 
-  return failed ? 1 : 0;
+  if (opts.comment) await comment(failures, reports);
+
+  return failures.length > 0 ? 1 : 0;
+}
+
+/** The result as a pull request comment: what failed, then each drift report. */
+export function commentBody(failures: string[], reports: DriftReport[]): string {
+  const findings = reports.filter((report) => report.findings.length > 0);
+
+  return [
+    failures.length > 0
+      ? `### autocatalog check failed\n\n${failures.map((name) => `- ${name}`).join('\n')}`
+      : '### autocatalog check passed',
+    ...findings.map((report) => renderDriftMarkdown(report).replace(/^# /, '#### ')),
+  ].join('\n\n');
+}
+
+/**
+ * One comment, kept up to date. A comment that cannot be written, as on a pull
+ * request from a fork whose token may only read, is said and does not fail.
+ */
+async function comment(failures: string[], reports: DriftReport[]): Promise<void> {
+  const pr = await pullRequestFromEnv();
+
+  if (!pr) {
+    console.warn(kleur.dim('--comment: not a pull request with a GITHUB_TOKEN, so no comment'));
+
+    return;
+  }
+
+  const worthSaying = failures.length > 0 || reports.some(({ findings }) => findings.length > 0);
+
+  try {
+    const done = await upsertComment(pr, commentBody(failures, reports), { worthSaying });
+
+    console.log(kleur.dim(`--comment: ${done} on #${pr.number}`));
+  } catch (error) {
+    console.warn(
+      kleur.yellow(
+        `--comment: could not write to #${pr.number} (${error instanceof Error ? error.message : String(error)}). A pull request from a fork has a token that can only read.`,
+      ),
+    );
+  }
 }

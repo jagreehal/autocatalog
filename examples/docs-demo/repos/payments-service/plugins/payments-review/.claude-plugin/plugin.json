@@ -1,0 +1,5 @@
+{
+  "name": "payments-review",
+  "version": "1.0.0",
+  "description": "Review a payments change for money handling and idempotency."
+}

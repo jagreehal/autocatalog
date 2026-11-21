@@ -25,6 +25,8 @@ import {
   type McpServer,
   type Model,
   type Policy,
+  type Skill,
+  type AgentPlugin,
   type Tool,
   type Workflow,
 } from './schemas.js';
@@ -71,6 +73,8 @@ export type EntityByKind = {
   domain: Domain;
   eval: Eval;
   policy: Policy;
+  skill: Skill;
+  'agent-plugin': AgentPlugin;
 };
 
 const isOfKind =
@@ -99,7 +103,12 @@ export const entityOf = <K extends EntityKind>(
  * repository holding one has not enrolled by having it.
  */
 export const publishesAgentCatalog = (dir: string): boolean =>
-  [DIR_BY_KIND.agent, DIR_BY_KIND['mcp-server']].some((name) => existsSync(join(dir, name)));
+  [
+    DIR_BY_KIND.agent,
+    DIR_BY_KIND['mcp-server'],
+    DIR_BY_KIND.skill,
+    DIR_BY_KIND['agent-plugin'],
+  ].some((name) => existsSync(join(dir, name)));
 
 export const refKey = (kind: EntityKind, id: string): string => `${kind}/${id}`;
 

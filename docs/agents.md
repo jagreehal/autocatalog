@@ -17,9 +17,10 @@ They run through the same `ac` binary — `ac agents <command>` — over their o
 catalog directory. The commands live in `autocatalog-agents-cli`, an optional
 install that `ac agents` names if it is missing.
 
-## Eight entity kinds
+## Entity kinds
 
-`agent`, `tool`, `mcp-server`, `model`, `workflow`, `domain`, `eval`, `policy`. Each is a
+`agent`, `tool`, `mcp-server`, `model`, `workflow`, `domain`, `eval`, `policy`,
+`skill` and `agent-plugin`. Each is a
 document in the catalog, and each declares its references to the others, so
 "what breaks if this tool changes" is a question the catalog can answer.
 
@@ -291,6 +292,96 @@ A span names its server with `server.address`, `mcp.server.name` or
 not say which agent called, so these calls count against the gateway rather than
 an agent, unless the span carries `agent.id` or `gen_ai.agent.id`.
 
+## Skills and plugins
+
+A team shares how it works with coding agents as files: skills, slash commands,
+Cursor rules, Claude Code plugins, and the settings that turn plugins on. The catalog lists them with an
+owner, and flags the change that matters in review: a skill or plugin that gains
+the power to act without asking.
+
+```bash
+ac agents discover --from skills
+```
+
+```text
+discover: skills /work/payments
+  files 6
+  skills 2
+  plugins 2
+  review skill/release: new, with allowed_tools
+  info   skill/review-checklist: new
+  info   agent-plugin/deploy: new
+  review agent-plugin/review: new, with hooks, servers
+
+2 to review · 2 info
+```
+
+It reads what a repository commits:
+
+- every `SKILL.md`, the format Claude Code, Codex and other agents share, with
+  its `allowed-tools`
+- slash commands in `.claude/commands/`, with their `allowed-tools`
+- Cursor rules in `.cursor/rules/`
+- each `.claude-plugin/plugin.json`, with the skills, subagents, commands, hook
+  events and MCP servers the plugin ships
+- each `.claude-plugin/marketplace.json`, and where it fetches each plugin from
+- `enabledPlugins` in `.claude/settings.json`
+
+A skill, a command and a rule are each a `skill` entry, with `format` saying
+which. A rule's id starts with `cursor-`, since Cursor keeps rules apart from
+skills. A plugin manifest's `skills`, `agents`, `commands` and `hooks` paths are
+followed while they stay inside the repository; one that leaves it is named in a
+warning and not read.
+
+`.claude/settings.local.json` and your home folder are never read: they are one
+person's. A hook's command and a server's arguments stay in the plugin's files.
+The entry keeps the hook's event, such as `PreToolUse`, and the server's id, the
+same one `ac agents discover --from mcp` gives it.
+
+Entries go in `agent-skills/` and `agent-plugins/`, beside the rest of the agent
+catalog. Not `skills/`: that is where a repository keeps its `SKILL.md` folders.
+Set `owner` and commit them. A new
+scan keeps what you set and replaces what it read. An entry with no `discovery`
+block was written by hand and stays as it is. `--prune` removes entries nothing
+names any more.
+
+On the site, the repository defines its own skills and plugins, a plugin defines
+its skills, and a repository whose settings turn a plugin on uses it. `/skills`
+lists every plugin with what it ships, its hooks, its MCP servers and the
+repositories that turn it on, then every skill, command and rule with the tools
+it may use unasked. Owner pages and the catalog explorer link to each row.
+
+A skill outside a plugin belongs to its repository, so two repositories can each
+keep a `release` skill and the site shows both.
+
+### Across a whole organisation
+
+`ac mcp-sweep` reads skills and plugins from the same clones as MCP servers, into
+`agent-skills/` and `agent-plugins/` in the one catalog. A skill's id starts with
+its repository's name, a plugin records the repository that builds it in
+`repository` and the ones that turn it on in `used_by`. Run discovery yourself
+over a folder of checkouts with `--per-repository`.
+
+### Check them in CI
+
+`--check` writes nothing and exits 1 when the files no longer match the committed
+entries. A change is `review` when it grants something no one approved: a tool a
+skill may use without asking, a hook that runs a command, or an MCP server.
+
+```yaml
+on: pull_request
+jobs:
+  skills:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: npx autocatalog agents discover --from skills --root catalog --check
+```
+
+A pull request that adds `allowed-tools: Bash(*)` to a skill fails until someone
+runs the scan and commits the entry, so the grant shows up in the diff a reviewer
+reads.
+
 ## Commands
 
 ```text
@@ -304,6 +395,7 @@ ac agents drift <otlp-file>               Compare observed behaviour against the
 ac agents discover --from <framework>     Infer draft entries from source code
 ac agents discover --from mcp             List the MCP servers a repository builds or uses
 ac agents discover --from mcp-snapshot    Draft Tool entries from saved snapshots
+ac agents discover --from skills          List the skills and coding-agent plugins a repository commits
 ac agents snapshot [<server>...]          Save each MCP server's tools, report what changed
 ac agents llmstxt                         Emit llms.txt for the catalog
 ac agents mcp                             Start the stdio MCP server

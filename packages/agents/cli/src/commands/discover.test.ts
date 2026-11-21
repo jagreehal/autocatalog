@@ -186,3 +186,75 @@ describe('ac agents discover --from mcp', () => {
     expect(await fs.readFile(file, 'utf8')).toBe('{ broken');
   });
 });
+
+describe('ac agents discover --from skills', () => {
+  const run = async (...extra: string[]) => {
+    let out = '';
+
+    vi.spyOn(process.stdout, 'write').mockImplementation((chunk: string | Uint8Array) => {
+      out += String(chunk);
+
+      return true;
+    });
+
+    const exit = await runDiscover(['--from', 'skills', root, '--root', root, ...extra]);
+    vi.restoreAllMocks();
+
+    return { exit, out };
+  };
+
+  const skillFile = path.join('.claude', 'skills', 'release', 'SKILL.md');
+  const entry = path.join('agent-skills', 'release', 'autocatalog.json');
+
+  const writeSkill = async (tools: string) => {
+    await fs.mkdir(path.dirname(path.join(root, skillFile)), { recursive: true });
+    await fs.writeFile(
+      path.join(root, skillFile),
+      `---\nname: release\ndescription: Cut a release.\nallowed-tools: ${tools}\n---\n`,
+    );
+  };
+
+  it('writes entries, keeps the owner, and --check flags a new grant without writing', async () => {
+    await writeSkill('Read');
+
+    const first = await run();
+
+    expect(first.exit).toBe(0);
+    expect(first.out).toContain('review skill/release: new, with allowed_tools');
+
+    const file = path.join(root, entry);
+    const stored = JSON.parse(await fs.readFile(file, 'utf8'));
+
+    await fs.writeFile(file, JSON.stringify({ ...stored, owner: 'platform' }, null, 2));
+
+    expect((await run('--check')).exit).toBe(0);
+
+    await writeSkill('Read, Bash(*)');
+
+    const checked = await run('--check');
+
+    expect(checked.exit).toBe(1);
+    expect(checked.out).toContain('review skill/release: allowed_tools gained Bash(*)');
+    expect(JSON.parse(await fs.readFile(file, 'utf8')).allowed_tools).toEqual(['Read']);
+
+    await run();
+
+    const after = JSON.parse(await fs.readFile(file, 'utf8'));
+
+    expect(after.owner).toBe('platform');
+    expect(after.allowed_tools).toEqual(['Bash(*)', 'Read']);
+  });
+
+  it('names a skill no longer found, and removes it only with --prune', async () => {
+    await writeSkill('Read');
+    await run();
+    await fs.rm(path.join(root, '.claude'), { recursive: true });
+
+    expect((await run()).out).toContain('skill/release: no longer found');
+    expect(await fs.stat(path.join(root, entry)).catch(() => null)).not.toBeNull();
+
+    await run('--prune');
+
+    expect(await fs.stat(path.join(root, entry)).catch(() => null)).toBeNull();
+  });
+});

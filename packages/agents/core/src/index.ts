@@ -25,3 +25,5 @@ export * from './mcp-config.js';
 export * from './mcp-snapshot.js';
 
 export * from './resource-graph.js';
+
+export * from './skills.js';

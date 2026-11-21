@@ -2,9 +2,9 @@
 import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
 import type { InferGetStaticPropsType } from 'astro';
 import { apiDescription, apiPageProps, apiPath, apiTitle, servicesForApi } from '../apis';
-import { docsCatalog } from '../catalog';
+import { docsCatalog, repositoryFileChangedAt } from '../catalog';
 import { docsSiteConfig } from '../config';
-import { setPageHeader } from '../shell';
+import { setLastChanged, setPageHeader } from '../shell';
 import { ApiPage } from '../ui/pages/ApiPage';
 
 export async function getStaticPaths() {
@@ -35,6 +35,8 @@ const full = site.apiReference === 'full';
 const page = outside
   ? apiPageProps(api, [], base, true)
   : apiPageProps(api, servicesForApi(api, catalog.events), base);
+
+setLastChanged(Astro.locals, repositoryFileChangedAt(catalog, api.repository, api.file));
 
 setPageHeader(Astro.locals, {
   actions: [{ label: 'View openapi.json', href: page.specHref, icon: 'braces' }],

@@ -477,6 +477,11 @@ export default function autocatalogDocs(opts: AutocatalogDocsOptions = {}): Star
               ...(catalog.graph.resources.some(({ ref }) => ref.kind === 'mcp-server')
                 ? [{ label: 'MCP servers', link: '/mcp-servers', icon: 'mcp-server' as const }]
                 : []),
+              ...(catalog.graph.resources.some(
+                ({ ref }) => ref.kind === 'skill' || ref.kind === 'agent-plugin',
+              )
+                ? [{ label: 'Skills', link: '/skills', icon: 'skill' as const }]
+                : []),
               ...(catalog.flows.length > 0
                 ? [{ label: 'Flows', link: '/flows', icon: 'flow' as const }]
                 : []),

@@ -624,7 +624,7 @@ repository's `docs/meta.json` moves it, lower first, so a handbook can lead:
 ### Compose the home page
 
 The home page is a list of blocks: the counts, the architecture map, the
-documents, what needs attention, the ways in, and documents by tag. A site for
+documents, what changed recently, what needs attention, the ways in, and documents by tag. A site for
 an `audience` starts from its documents, the ways in and tags. `layouts.home`
 replaces the list, in order. The page keeps its header; the blocks replace what
 is under it:
@@ -653,13 +653,15 @@ is under it:
 | `docs`       | The documents by repository, or one `folder`'s as a list                 |
 | `apis`       | A card for each API's reference                                          |
 | `graph`      | The architecture map                                                     |
+| `recent`     | What changed most recently, documents and resources, dated by git        |
 | `attention`  | What needs review, is quarantined, or has no producer, consumer or owner |
 | `explore`    | A card for each way into the catalog                                     |
 | `tags`       | The documents by tag                                                     |
 
 Every block but `hero`, `countCards` and `attention` takes a `title`. A site
 for an audience does not publish the company's counts, map or attention list,
-so naming `countCards`, `graph` or `attention` in its layout fails the build.
+so naming `countCards`, `graph`, `recent` or `attention` in its layout fails
+the build.
 `ac site --print-layout home` prints the blocks this site's home page is built
 from, to copy and change.
 
@@ -916,8 +918,10 @@ Set `url` to where the site is deployed: without it the build has no sitemap,
 Commit the spec your framework generates as `contracts/openapi.json` or
 `contracts/openapi.yaml`.
 
-A document publishes only when its frontmatter names the audience. A document
-that names none stays on the company's site:
+Events, services, flows, entities, owners and the graph never publish to an
+audience, and its `/catalog.json` holds none of them: only documents and API
+references do. A document publishes only when its frontmatter names the
+audience. A document that names none stays on the company's site:
 
 ```yaml
 ---
@@ -1143,6 +1147,11 @@ The one rule decides:
 - `llms.txt` and `llms-full.txt`;
 - what the assistant searches and reads.
 
+It covers documents only. Event, service, flow, entity and other catalog pages,
+and `/catalog.json`, are built once and open to anyone who can reach the site,
+signed in or not. To keep them in, put the whole site behind your host's sign-in
+or your own middleware, and use `access` for which documents each reader opens.
+
 Name some sample readers, and the build tries the rule as each:
 
 ```ts
@@ -1357,6 +1366,33 @@ nothing and a new repository still joins without anyone touching the site.
 Keep the deploy in the job that builds, as here, and the next run retries a
 failed deploy. Any host works: follow the action with `cloudflare/wrangler-action`
 or your own step, gated on `built`.
+
+### A partial catalog does not ship
+
+The action builds with `--strict`: when a repository cannot be cloned, a pinned
+one is missing, or one that cloned does not compile, it publishes nothing and
+fails, so the last good site stays up and the job goes red. A site missing a
+team reads as complete to everyone who opens it, which is worse than an old one.
+Set `strict: false` to publish what composed and say what did not.
+
+Every build writes `/catalog.meta.json` beside `/catalog.json`:
+
+```json
+{
+  "spec": "autocatalog/catalog-meta-v1",
+  "builtAt": "2026-11-16T09:00:00.000Z",
+  "lockDigest": "9f2c…",
+  "resources": 412,
+  "relationships": 980,
+  "failures": 1,
+  "problems": [{ "repository": "orders", "source": "events", "message": "schema.json: not JSON" }]
+}
+```
+
+`lockDigest` is the SHA-256 of the lock the build followed. Watch the file to
+alert on `failures` above 0 or a `builtAt` older than your schedule. A site for
+an `audience`, or one behind `access`, counts its problems without naming them.
+Run `ac site --strict` yourself on another CI.
 
 To read private repositories, pass a `token` that can, such as one from a GitHub
 App. The token clones and stops there: `ac site` keeps it out of the build,

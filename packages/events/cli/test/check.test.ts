@@ -2,6 +2,7 @@ import { execFileSync } from 'node:child_process';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+import { createConsumerResourceGraph, type EventCatalogResource } from 'autocatalog-core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { githubAnnotation } from '../src/commands/annotation';
 import { runCheck } from '../src/commands/check';
@@ -285,6 +286,232 @@ describe('githubAnnotation', () => {
   it('leaves out the file when a failure names none', () => {
     expect(githubAnnotation('a flow does not hold together')).toBe(
       '::error::a flow does not hold together',
+    );
+  });
+});
+
+describe('ac check, as the company gate', () => {
+  const git = (...args: string[]) =>
+    execFileSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@t', ...args], {
+      cwd: root,
+      stdio: 'ignore',
+    });
+
+  const order = (total: string) =>
+    JSON.stringify({
+      title: 'order.placed',
+      version: '1.0.0',
+      type: 'object',
+      properties: { id: { type: 'string' }, [total]: { type: 'number' } },
+      required: ['id', total],
+    });
+
+  // Another repository's team reads `total`; the company site says so.
+  const published = {
+    // A contract with no domain of its own is read as event `order` in domain `order`.
+    ref: { kind: 'event' as const, namespace: 'orders/order', id: 'order', version: '0.1.0' },
+    domain: 'order',
+    id: 'order',
+    repository: 'orders',
+  };
+
+  const companyCatalog = () => {
+    const billing = createConsumerResourceGraph(
+      [{ service: 'InvoiceService', event: 'order/order', fields: ['total'] }],
+      { repository: 'billing', events: [published] },
+    );
+
+    const event: EventCatalogResource = {
+      ref: published.ref,
+      title: 'Order placed',
+      tags: [],
+      provenance: { default: 'declared', fields: {} },
+      needsReview: false,
+      attributes: { domain: 'order', status: 'active', schema: 'schema.json', examples: 0 },
+    };
+
+    return JSON.stringify({ ...billing, resources: [event, ...billing.resources] });
+  };
+
+  beforeEach(async () => {
+    await write('contracts/order.json', order('total'));
+    git('init', '-q', '-b', 'main');
+    git('add', '-A');
+    git('commit', '-qm', 'base');
+    // The pull request renames total.
+    await write('contracts/order.json', order('totalMinor'));
+  });
+
+  it('fails a rename and names the consumer another repository declares', async () => {
+    vi.spyOn(console, 'log').mockImplementation(() => undefined);
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const out = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const log = vi.spyOn(console, 'log');
+    const catalog = path.join(root, '..', `${path.basename(root)}-catalog.json`);
+
+    await fs.writeFile(catalog, companyCatalog());
+
+    try {
+      expect(
+        await runCheck({
+          root,
+          format: 'github',
+          baseRef: 'main',
+          consumers: catalog,
+          repository: 'orders',
+        }),
+      ).toBe(1);
+      expect([...log.mock.calls, ...out.mock.calls].join('\n')).toMatch(/breaks .*InvoiceService/);
+    } finally {
+      await fs.rm(catalog, { force: true });
+    }
+  });
+
+  it('fails closed when it needs the consumers and cannot read them', async () => {
+    vi.spyOn(console, 'log').mockImplementation(() => undefined);
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    // The same rename, so the only difference is whether a missing catalog is allowed.
+    expect(
+      await runCheck({
+        root,
+        format: 'text',
+        baseRef: 'main',
+        consumers: path.join(root, 'missing.json'),
+        requireConsumers: true,
+      }),
+    ).toBe(1);
+    expect(error.mock.calls.join(' ')).toMatch(/--require-consumers needs them/);
+  });
+});
+
+describe('ac check plugins', () => {
+  // A plugin that reads contracts the built-ins cannot, and finds one broken.
+  const plugin = async () => {
+    const dir = path.join(root, 'node_modules', 'autocatalog-plugin-strict');
+
+    await fs.mkdir(dir, { recursive: true });
+    await fs.writeFile(
+      path.join(dir, 'package.json'),
+      JSON.stringify({
+        name: 'autocatalog-plugin-strict',
+        autocatalog: { plugin: { discovery: { entry: 'index.mjs', export: 'adapter' } } },
+      }),
+    );
+    await fs.writeFile(
+      path.join(dir, 'index.mjs'),
+      `export const adapter = { async discover() { return { candidates: [], errors: ['src/order.ts: the plugin could not read it'] }; } };`,
+    );
+  };
+
+  it('runs installed plugins in the contracts step when trusted, and says when it skips them', async () => {
+    vi.spyOn(console, 'log').mockImplementation(() => undefined);
+    const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+    await write(
+      'contracts/order.json',
+      JSON.stringify({ title: 'order.placed', version: '1.0.0', type: 'object' }),
+    );
+    await plugin();
+
+    expect(await runCheck({ root, format: 'text' })).toBe(0);
+    expect(warn.mock.calls.join(' ')).toMatch(/autocatalog-plugin-strict not run/);
+
+    expect(await runCheck({ root, format: 'text', allowCodeExecution: true })).toBe(1);
+    expect(error.mock.calls.join(' ')).toMatch(/the plugin could not read it/);
+  });
+});
+
+describe('ac check drift through a plugin', () => {
+  // Reads an event from source code, as the Zod plugin does, outside contracts/.
+  const install = async () => {
+    const dir = path.join(root, 'node_modules', 'autocatalog-plugin-source');
+
+    await fs.mkdir(dir, { recursive: true });
+    await fs.writeFile(
+      path.join(dir, 'package.json'),
+      JSON.stringify({
+        name: 'autocatalog-plugin-source',
+        autocatalog: { plugin: { discovery: { entry: 'index.mjs', export: 'adapter' } } },
+      }),
+    );
+    await fs.writeFile(
+      path.join(dir, 'index.mjs'),
+      `import fs from 'node:fs';
+import path from 'node:path';
+export const adapter = {
+  async discover({ root }) {
+    const schema = JSON.parse(fs.readFileSync(path.join(root, 'src/order.schema.json'), 'utf8'));
+    const event = { id: 'order.paid', version: '1.0.0', name: 'Order paid', summary: 'Paid.',
+      domain: 'orders', folderName: 'OrderPaid', schema, examples: [],
+      source: { file: 'src/order.schema.json', line: 1 } };
+    return { candidates: [{ event, finding: { file: 'src/order.schema.json', symbol: 'OrderPaid',
+      kind: 'test', id: event.id, needsReview: false, source: 'test' } }], errors: [] };
+  }
+};
+`,
+    );
+  };
+
+  const schema = (field: string) =>
+    JSON.stringify({
+      type: 'object',
+      properties: { [field]: { type: 'string' } },
+      required: [field],
+    });
+
+  it('compares the events a trusted plugin reads from source', async () => {
+    const log = vi.spyOn(console, 'log').mockImplementation(() => undefined);
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    const git = (...args: string[]) =>
+      execFileSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@t', ...args], {
+        cwd: root,
+        stdio: 'ignore',
+      });
+
+    await install();
+    await write('src/order.schema.json', schema('orderId'));
+    await write('.gitignore', 'node_modules\n');
+    await write('package-lock.json', '{}');
+    git('init', '-q', '-b', 'main');
+    git('add', '-A');
+    git('commit', '-qm', 'base');
+    await write('src/order.schema.json', schema('id'));
+
+    expect(
+      await runCheck({ root, format: 'github', baseRef: 'main', allowCodeExecution: true }),
+    ).toBe(1);
+    expect(error.mock.calls.join('\n')).not.toMatch(/consent/);
+    expect(log.mock.calls.join('\n')).toMatch(/orders\/order\.paid.*orderId/);
+  });
+
+  it('without consent, compares what built-in adapters read and names the plugin it skipped', async () => {
+    vi.spyOn(console, 'log').mockImplementation(() => undefined);
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    const git = (...args: string[]) =>
+      execFileSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@t', ...args], {
+        cwd: root,
+        stdio: 'ignore',
+      });
+
+    await install();
+    await write('src/order.schema.json', schema('orderId'));
+    await write('.gitignore', 'node_modules\n');
+    await write('package-lock.json', '{}');
+    git('init', '-q', '-b', 'main');
+    git('add', '-A');
+    git('commit', '-qm', 'base');
+
+    expect(await runCheck({ root, format: 'github', baseRef: 'main' })).toBe(0);
+    expect(error.mock.calls.join('\n')).not.toMatch(/consent/);
+    expect(warn.mock.calls.join('\n')).toMatch(
+      /autocatalog-plugin-source not run: drift does not compare/,
     );
   });
 });

@@ -26,9 +26,17 @@ import {
   TableRow,
 } from '#ui/components/ui/table.tsx';
 import type { AttentionSnapshot } from '../../attention';
+import type { IconName } from '../../icons';
 import { hasAttention } from '../../attention';
-import { docHref } from '../lib/docs';
+import { day, docHref } from '../lib/docs';
 import { CountCards } from '../components/CountCards';
+import {
+  Item,
+  ItemContent,
+  ItemDescription,
+  ItemMedia,
+  ItemTitle,
+} from '#ui/components/ui/item.tsx';
 import { DocList, type DocListItem } from '../components/DocList';
 import { Graph } from '../components/Graph';
 import { Icon } from '../components/Icon';
@@ -37,6 +45,18 @@ import { SectionHeading } from '../components/SectionHeading';
 import type { Stat } from '../components/Stats';
 import type { VisualiserGraph } from '../lib/visualiser';
 import type { ExploreCard, HomePageProps } from './HomePage';
+
+/** One thing that changed lately, with the day git last saw it change. */
+export interface RecentChange {
+  /** What it is, as a reader says it: `Event`, `Document`. */
+  kind: string;
+  icon: IconName;
+  title: string;
+  href: string;
+  repository: string;
+  /** ISO date of the newest commit to its file or folder. */
+  updated: string;
+}
 
 /** A built-in block of a home layout, with the catalog's data it shows already chosen. */
 export type HomeBlockData =
@@ -62,6 +82,7 @@ export type HomeBlockData =
       map?: VisualiserGraph | undefined;
       catalogHref?: string | undefined;
     }
+  | { block: 'recent'; title?: string | undefined; items: RecentChange[] }
   | { block: 'attention'; attention?: AttentionSnapshot | undefined }
   | { block: 'tags'; title?: string | undefined; tags: HomePageProps['tags'] };
 
@@ -75,6 +96,7 @@ const SECTION_ID = new Map<string, string>(
     countCards: 'home-counts',
     docs: 'home-documents',
     graph: 'home-architecture',
+    recent: 'home-recent',
     attention: 'home-attention',
     tags: 'home-by-tag',
   } satisfies Record<HomeBlockData['block'], string>),
@@ -196,6 +218,32 @@ export function HomeBlock({ block, id }: { block: HomeBlockData; id: string }) {
             visualiser={block.map}
             height="30rem"
           />
+        </Section>
+      ) : null;
+    case 'recent':
+      return block.items.length > 0 ? (
+        <Section id={id} title={block.title ?? 'Recently changed'}>
+          <Card>
+            <CardContent>
+              <ul className="not-content -mx-3 m-0 flex list-none flex-col gap-1 p-0">
+                {block.items.map((item) => (
+                  <li key={item.href}>
+                    <Item size="sm" href={item.href}>
+                      <ItemMedia>
+                        <IconTile name={item.icon} />
+                      </ItemMedia>
+                      <ItemContent>
+                        <ItemTitle>{item.title}</ItemTitle>
+                        <ItemDescription>
+                          {`${item.kind} in ${item.repository}, updated ${day(item.updated) ?? ''}`}
+                        </ItemDescription>
+                      </ItemContent>
+                    </Item>
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
         </Section>
       ) : null;
     case 'attention':

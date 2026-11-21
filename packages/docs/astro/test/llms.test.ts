@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { readOdcs } from 'autocatalog-docs-core';
 import { renderLlmsFullTxt, renderLlmsTxt } from '../src/llms';
 
 describe('renderLlmsTxt', () => {
@@ -103,6 +104,75 @@ describe('renderLlmsTxt', () => {
       `## Entities\n\n- [Payment](${base}/entities/payments-service/payment/)`,
     );
     expect(text).not.toContain('## Data products');
+  });
+
+  it("tells an agent what a data product's ODCS contract promises and asks of it", () => {
+    const odcs = readOdcs(`
+apiVersion: v3.2.0
+kind: DataContract
+id: customers
+version: 1.0.0
+status: active
+description: { limitations: Contains only customers with an active policy }
+slaProperties:
+  - { property: freshness, value: 24, unit: hours, element: customers.last_updated_at }
+context:
+  instructions: Annual premiums are stored in cents.
+  constraints: [{ constraint: Do not price a policy with it. }]
+  verifiedStatements: [{ question: How many active customers?, answer: SELECT 1 }]
+`);
+
+    const text = renderLlmsTxt({
+      title: 'Acme',
+      description: 'Docs.',
+      base,
+      items: [],
+      model: {
+        glossaries: [],
+        entities: [],
+        dataProducts: [
+          {
+            repository: 'crm',
+            body: '',
+            id: 'customers',
+            file: 'data-products/customers.md',
+            name: 'Customers',
+            inputs: [],
+            outputs: [
+              {
+                reference: 'data-product/cross-sell',
+                contract: 'datacontracts/customers_v1.odcs.yaml',
+                odcs,
+                trackRecord: {
+                  runs: 30,
+                  passed: 29,
+                  slas: [
+                    {
+                      property: 'freshness',
+                      element: 'customers.last_updated_at',
+                      kept: 29,
+                      measured: 30,
+                    },
+                  ],
+                },
+              },
+            ],
+          },
+        ],
+        people: [],
+      },
+    });
+
+    expect(text).toContain(
+      [
+        `- [Customers](${base}/data-products/crm/customers/)`,
+        '  - Contract customers 1.0.0 (active), `datacontracts/customers_v1.odcs.yaml`: freshness 24 hours on customers.last_updated_at (kept 29 of the last 30)',
+        '  - Limitations: Contains only customers with an active policy',
+        '  - Instructions: Annual premiums are stored in cents.',
+        '  - Must not: Do not price a policy with it.',
+        '  - Verified answer to "How many active customers?"',
+      ].join('\n'),
+    );
   });
 
   it("says a decision's kind, state and date beside its owner", () => {

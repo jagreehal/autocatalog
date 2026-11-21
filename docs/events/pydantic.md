@@ -104,3 +104,18 @@ structure the TypeScript path writes.
 Because extraction imports your module, run it where importing that module is
 safe — the same rule the [production](/docs/production) page sets out for runtime
 plugins.
+
+## In CI
+
+`ac check` and the [check action](/docs/drift-ci) run Node and do not import
+Python. They compare the `events/` folder your repository commits, so commit what
+the extractor writes and fail CI when it no longer matches the models:
+
+```yaml
+- run: autocatalog-py extract --module myapp.events --out ./events
+- run: git diff --exit-code events/
+- uses: jagreehal/autocatalog/actions/check@v1
+```
+
+The action then compares `events/` with the base branch, as it does for any
+committed contract.

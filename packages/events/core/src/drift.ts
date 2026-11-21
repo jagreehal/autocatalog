@@ -1578,8 +1578,26 @@ export function compareSemverish(a: string, b: string): number {
 
   if (preA.length === 0 || preB.length === 0) return preB.length - preA.length;
 
-  // Numeric locale order follows semver's identifier rules.
-  return preA.join('-').localeCompare(preB.join('-'), 'en', { numeric: true });
+  // Semver: digits-only identifiers compare as numbers and sort before the
+  // rest, which compare in ASCII order, so rc10 sorts before rc2.
+  const ia = preA.join('-').split('.');
+  const ib = preB.join('-').split('.');
+
+  for (let i = 0; i < Math.min(ia.length, ib.length); i++) {
+    const x = ia[i] ?? '';
+    const y = ib[i] ?? '';
+    const nx = /^\d+$/.test(x);
+    const ny = /^\d+$/.test(y);
+
+    // Compare digits by length, then text: Number() loses precision past 2^53.
+    if (nx && ny && x !== y) return x.length - y.length || (x < y ? -1 : 1);
+
+    if (nx !== ny) return nx ? -1 : 1;
+
+    if (!nx && x !== y) return x < y ? -1 : 1;
+  }
+
+  return ia.length - ib.length;
 }
 
 /**

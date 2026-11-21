@@ -90,7 +90,10 @@ afterEach(async () => {
   await fs.rm(work, { recursive: true, force: true });
 });
 
-async function drift(consumers: string, extra: { consumersTokenEnv?: string } = {}) {
+async function drift(
+  consumers: string,
+  extra: { consumersTokenEnv?: string; requireConsumers?: boolean; maxConsumersAge?: number } = {},
+) {
   const log = vi.spyOn(console, 'log').mockImplementation(() => {});
   const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
   const exit = await runDrift({ base: baseline, current, format: 'json', consumers, ...extra });
@@ -159,6 +162,54 @@ describe('ac drift --consumers', () => {
     expect(exit).toBe(1);
     expect(renamed.consumers).not.toContain('FraudService');
     expect(warned).toContain('missing.json');
+  });
+
+  it('fails closed when told the consumers are required and the index cannot be read', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    await expect(
+      runDrift({
+        base: baseline,
+        current,
+        format: 'json',
+        consumers: path.join(work, 'missing.json'),
+        requireConsumers: true,
+      }),
+    ).rejects.toThrow(/--require-consumers needs them/);
+  });
+
+  it('warns about an index older than --max-consumers-age, and fails on it when required', async () => {
+    const old = new Date(Date.now() - 30 * 3_600_000);
+    await fs.utimes(index, old, old);
+
+    const { exit, renamed, warned } = await drift(index, { maxConsumersAge: 24 });
+
+    expect(exit).toBe(1);
+    expect(renamed.consumers).toContain('FraudService');
+    expect(warned).toMatch(/are 30 hours old, older than --max-consumers-age 24/);
+
+    await expect(
+      runDrift({
+        base: baseline,
+        current,
+        format: 'json',
+        consumers: index,
+        maxConsumersAge: 24,
+        requireConsumers: true,
+      }),
+    ).rejects.toThrow(/older than --max-consumers-age 24/);
+  });
+
+  it('reads a fresh index under the same policy', async () => {
+    const { renamed } = await drift(index, { maxConsumersAge: 24, requireConsumers: true });
+
+    expect(renamed.consumers).toContain('FraudService');
+  });
+
+  it('asks for --consumers when told they are required', async () => {
+    await expect(
+      runDrift({ base: baseline, current, format: 'json', requireConsumers: true }),
+    ).rejects.toThrow(/need --consumers/);
   });
 
   it('refuses an index that is not a resource graph, and says so', async () => {

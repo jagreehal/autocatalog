@@ -1,0 +1,19 @@
+{
+  "name": "money",
+  "owner": "Payments",
+  "format": "cursor-rule",
+  "description": "Amounts are integers in minor units, never floats.",
+  "allowed_tools": [],
+  "discovery": {
+    "confidence": "inferred",
+    "adapter": "skills",
+    "sources": [
+      {
+        "file": ".cursor/rules/money.mdc",
+        "line": 1,
+        "symbol": "money"
+      }
+    ],
+    "needs_review": []
+  }
+}

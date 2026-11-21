@@ -5,7 +5,7 @@ import {
   type CatalogResource,
   type ResourceGraph,
 } from 'autocatalog-core';
-import { catalogHref } from './view';
+import { catalogHref, skillHref } from './view';
 
 /** Everything one owner owns, across every kind that carries ownership. */
 export interface Owner {
@@ -73,6 +73,8 @@ const KIND_HEADINGS = new Map([
   ['agent', 'Agents'],
   ['tool', 'Tools'],
   ['mcp-server', 'MCP servers'],
+  ['skill', 'Skills'],
+  ['agent-plugin', 'Agent plugins'],
   ['component', 'Components'],
   ['model', 'Models'],
   ['workflow', 'Workflows'],
@@ -216,6 +218,8 @@ export function resourceHref(resource: CatalogResource): string {
   if (kind === 'event' && namespace) return `${base}/events/${namespace}/${id}/`;
 
   if (kind === 'mcp-server') return `${base}/mcp-servers/${id}/`;
+
+  if (kind === 'skill' || kind === 'agent-plugin') return skillHref(`${base}/`, resource);
 
   return catalogHref(resource.ref);
 }

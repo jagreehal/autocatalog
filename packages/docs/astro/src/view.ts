@@ -71,6 +71,10 @@ export function catalogAnchor(ref: ResourceRef): string {
   return `resource-${encodeURIComponent(resourceKey(ref))}`;
 }
 
+/** Where a skill or plugin is read: its row on the skills page. */
+export const skillHref = (base: string, resource: { ref: ResourceRef }) =>
+  `${base}skills/#${catalogAnchor(resource.ref)}`;
+
 /** Link from any shell surface into the composed Catalog inventory. */
 export function catalogHref(ref: ResourceRef): string {
   return `${import.meta.env.BASE_URL.replace(/\/$/, '')}/catalog#${catalogAnchor(ref)}`;

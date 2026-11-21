@@ -43,7 +43,7 @@ export const modelExports = z.array(
     id: z.string().min(1),
     datastore: z.string().min(1),
     database: z.string().min(1),
-    adapter: z.enum(['mongoose', 'prisma', 'drizzle']),
+    adapter: z.enum(['mongoose', 'prisma', 'drizzle', 'odcs']),
     schema: jsonObjectSchema,
     symbol: z.string().optional(),
   }),

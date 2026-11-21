@@ -42,6 +42,8 @@ packages/events/core/test/fixtures/bad-*-tmp/
 
 # Local agent settings.
 .claude/
+# The example repositories commit theirs, as a team would.
+!examples/docs-demo/repos/*/.claude/
 
 # playwright-cli session output
 .playwright-cli/

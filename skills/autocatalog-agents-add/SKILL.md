@@ -5,7 +5,7 @@ description: Add a new entity (Agent, Tool, MCP server, Model, Workflow, Domain,
 
 # /autocatalog-agents-add
 
-Adds a new entity to the local autocatalog-agents catalog. The catalog root is typically `starters/agent-default` in development, or the directory containing top-level `agents/`, `tools/`, `mcp-servers/`, `models/`, `workflows/`, `domains/`, `evals/`, `policies/` in a user project.
+Adds a new entity to the local autocatalog-agents catalog. The catalog root is typically `starters/agent-default` in development, or the directory containing top-level `agents/`, `tools/`, `mcp-servers/`, `models/`, `workflows/`, `domains/`, `evals/`, `policies/`, `agent-skills/`, `agent-plugins/` in a user project.
 
 ## Process
 
@@ -32,6 +32,8 @@ Use `AskUserQuestion` to offer the 8 kinds: Agent, Tool, MCP server, Model, Work
 
 For an MCP server, offer discovery first: `ac agents discover --from mcp` drafts every server the repository configures or builds. An Agent names the servers it uses in `servers`, and a Tool names its server in `server` and the server's own tool name in `mcp_name`.
 
+For agent skills and Claude Code plugins, run `ac agents discover --from skills` instead of writing entries by hand. It reads every `SKILL.md`, slash command in `.claude/commands/`, Cursor rule in `.cursor/rules/`, `.claude-plugin/plugin.json`, marketplace and `enabledPlugins` in `.claude/settings.json`, and writes `agent-skills/<id>/` and `agent-plugins/<id>/`. Set `owner` on each.
+
 Validate referenced IDs against the existing catalog _before_ writing — read the relevant subdirectory and confirm every referenced ID exists. If not, offer to either fix the reference or stub the missing entity.
 
 For an Agent or Tool, also ask which events it **produces** or **consumes**, and write them using the event catalog's `domain/id`: `produces: ['payments/refund.issued']`, and `consumes: [{ event: 'payments/refund.issued', fields: ['amount'] }]` — `fields` (the payload paths it reads) only when the user knows them. Take the ids from the `events/` catalog next to the agent catalog, or from the event MCP server (`list_events`) — never invent one. This is how the event side learns the agent exists: without it, a breaking change to that event will not name the agent.
@@ -54,7 +56,7 @@ Run `ac-agents validate <root>` from the repo root. If it exits non-zero, surfac
 
 ## Anti-patterns to refuse
 
-- Don't invent entity kinds. The eight are fixed (see CONTEXT.md if present).
+- Don't invent entity kinds. The ten are fixed (see CONTEXT.md if present).
 - Don't add `Skill` or `KnowledgeBase` as first-class; fold them into existing tags/attributes.
 - Don't write a credential into an MCP server's `snapshot`. Name it as `${NAME}`.
 - Don't write a file at the catalog root or into an unexpected directory.

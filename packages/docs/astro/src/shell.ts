@@ -89,6 +89,17 @@ export function pageHeader(locals: App.Locals): PageHeader | undefined {
   return contexts.get(locals) ?? headers.get(locals);
 }
 
+const changes = new WeakMap<App.Locals, string>();
+
+/** When the file a resource page is built from last changed, for its footer. */
+export function setLastChanged(locals: App.Locals, iso: string | null): void {
+  if (iso) changes.set(locals, iso);
+}
+
+export function lastChangedOf(locals: App.Locals): string | undefined {
+  return changes.get(locals);
+}
+
 /** `v1.2.0` for a numeric version; any other scheme is shown as written. */
 export function versionLabel(version: string): string {
   return /^\d/.test(version) ? `v${version}` : version;

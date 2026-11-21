@@ -8,6 +8,7 @@ import { docsSiteConfig } from '../config';
 import { SiteChat } from '../ui/overrides/SiteChat';
 import ViewAs from './ViewAs.astro';
 import { graphOwners, ownerFor, ownerHref } from '../owners';
+import { lastChangedOf } from '../shell';
 import { DocFooterChrome } from '../ui/overrides/DocFooterChrome';
 import { catalogHref, day, toLinks } from '../view';
 import { catalogId } from '../ui/lib/docs';
@@ -40,8 +41,11 @@ const owner = record?.owner ?? data.owner;
 const ownerPage = owner ? ownerFor(graphOwners(catalog.graph), owner) : undefined;
 
 // Freshness is git's answer, not Starlight's: each enrolled repository may be
-// its own checkout, which the site's own git history knows nothing about.
-const changed = day(record?.updated);
+// its own checkout, which the site's own git history knows nothing about. A
+// resource page has no manifest record, so it names its own file's date.
+const resourceChanged = lastChangedOf(Astro.locals);
+
+const changed = day(record?.updated ?? resourceChanged);
 
 const repository = id.split('/')[0] ?? '';
 
@@ -76,7 +80,7 @@ const outside = docsSiteConfig().audience !== undefined;
   siteTitle={siteTitle}
   owner={owner}
   ownerHref={ownerPage && ownerHref(ownerPage)}
-  known={record !== undefined}
+  known={record !== undefined || resourceChanged !== undefined}
   changed={changed}
   source={record?.source}
   edit={record?.edit}

@@ -215,6 +215,21 @@ repositories both define, and references that don't resolve. It exits 1 when a
 source is left out or an id has two owners. `--format json` gives the same
 report for scripts.
 
+The other findings are reports until you enforce them. `--fail-on` exits 1 on
+the kinds you name as well:
+
+```bash
+npx autocatalog federation status --fail-on gateway,network
+```
+
+| Kind         | Fails on                                                               |
+| ------------ | ---------------------------------------------------------------------- |
+| `gateway`    | a [gateway](/docs/gateways) route and the contracts behind it disagree |
+| `network`    | a call the [network policy](/docs/network) does not let through        |
+| `unresolved` | a reference that does not resolve                                      |
+| `unpinned`   | a field that waits for the lock to pin its owner                       |
+| `behind`     | a service that reads an earlier release than the newest                |
+
 ## See who is behind
 
 A consumer says which release it reads with `version` in

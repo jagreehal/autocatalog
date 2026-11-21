@@ -20,7 +20,9 @@ it lives, so you skip the setup a catalog usually asks for:
   as it was.
 - **Upkeep:** you write no service definitions or catalog entries. Each build
   reads your contracts again, so the site follows them.
-- **Hosting:** the site is a static folder that any host can serve.
+- **Hosting:** the site is a static folder that any host can serve. Deciding
+  who reads which document, the assistant and the `/mcp` endpoint answer per
+  request, so they need `"output": "server"` and a Node process.
 - **Joining:** a team adds a GitHub topic, and one action checks its pull
   requests.
 
@@ -73,7 +75,8 @@ running on this repository. See [the docs convention](/docs/docs-convention).
 ## Where it fits
 
 Autocatalog derives a static site from your repositories. It has no plugin
-pipeline, no resource-type system to extend, and no server. To author a catalog
+pipeline and no resource-type system to extend, and it runs as a server only
+when you want per-reader access, the assistant or `/mcp`. To author a catalog
 with custom pages and a wider set of resource types, or to run both tools
 together, read [autocatalog and EventCatalog](/docs/comparison).
 
