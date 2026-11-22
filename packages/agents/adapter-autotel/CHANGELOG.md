@@ -1,5 +1,12 @@
 # autocatalog-agents-adapter-autotel
 
+## 0.3.6
+
+### Patch Changes
+
+- Updated dependencies [75a8ff7]
+  - autocatalog-agents-core@0.4.0
+
 ## 0.3.5
 
 ### Patch Changes
