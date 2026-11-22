@@ -8,9 +8,8 @@ import {
   isJsonObject,
   jsonValueSchema,
   summariseDrift,
-  type JsonObject,
-  type JsonValue,
 } from '../src/index';
+import type { JsonObject, JsonValue } from '../src/index';
 
 /**
  * Differential test: Ajv decides, the gate is checked against it.
@@ -25,7 +24,7 @@ const ajv = new Ajv({ strict: false, allErrors: false });
 
 const accepts = (schema: JsonObject, payload: JsonValue): boolean => {
   try {
-    return ajv.validate(schema, payload) === true;
+    return ajv.validate(schema, payload);
   } catch {
     // A schema Ajv will not compile cannot be an oracle; those cases are
     // skipped rather than silently counted as agreement.
@@ -37,10 +36,14 @@ const localRef = z.string().startsWith('#/');
 
 /** Follow a local `$ref` so candidates see the constraints a validator sees. */
 function deref(root: JsonObject, node: JsonValue | undefined): JsonValue | undefined {
-  if (!isJsonObject(node)) return node;
+  if (!isJsonObject(node)) {
+    return node;
+  }
   const ref = localRef.safeParse(node.$ref);
 
-  if (!ref.success) return node;
+  if (!ref.success) {
+    return node;
+  }
 
   const target = ref.data
     .slice(2)
@@ -81,18 +84,22 @@ const candidateNode = z
  * numeric bound, and a sample of each type. A generator that only emits the
  * first enum value never notices the second one being removed.
  */
-function interestingValues(root: JsonObject, raw: JsonValue | undefined): JsonValue[] {
+function interestingValues(root: JsonObject, raw: JsonValue | undefined): Array<JsonValue> {
   const resolved = deref(root, raw);
   const node = candidateNode.parse(resolved);
-  const values: JsonValue[] = ['x', 1, 0, true, null, [], [1], ['x'], [['x']], [[1]], {}];
+  const values: Array<JsonValue> = ['x', 1, 0, true, null, [], [1], ['x'], [['x']], [[1]], {}];
 
   values.push(...(node.enum ?? []));
 
   for (const bound of [node.minimum, node.maximum, node.exclusiveMinimum, node.exclusiveMaximum]) {
-    if (bound !== undefined) values.push(bound - 1, bound, bound + 1);
+    if (bound !== undefined) {
+      values.push(bound - 1, bound, bound + 1);
+    }
   }
 
-  if (node.maxLength !== undefined) values.push('y'.repeat(node.maxLength + 1));
+  if (node.maxLength !== undefined) {
+    values.push('y'.repeat(node.maxLength + 1));
+  }
 
   // Every nested schema is a source of discriminating values — including the
   // forbidden ones under `not`, which are exactly what a widened negation
@@ -112,7 +119,9 @@ function interestingValues(root: JsonObject, raw: JsonValue | undefined): JsonVa
   }
 
   if (node.items !== undefined) {
-    for (const value of interestingValues(root, node.items)) values.push([value]);
+    for (const value of interestingValues(root, node.items)) {
+      values.push([value]);
+    }
   }
 
   return values;
@@ -122,8 +131,8 @@ const entriesOf = (value: JsonValue | undefined): Array<[string, JsonValue]> =>
   isJsonObject(value) ? Object.entries(value) : [];
 
 /** Payload candidates drawn from both schemas, plus the obvious edges. */
-function candidates(before: JsonObject, after: JsonObject): JsonValue[] {
-  const samples: JsonValue[] = [
+function candidates(before: JsonObject, after: JsonObject): Array<JsonValue> {
+  const samples: Array<JsonValue> = [
     generateExampleFromSchema(before),
     generateExampleFromSchema(after),
     {},
@@ -138,7 +147,7 @@ function candidates(before: JsonObject, after: JsonObject): JsonValue[] {
   // `^x` is never exercised and every check below quietly early-returns.
   const patternKeys = (schema: JsonObject) =>
     entriesOf(schema.patternProperties).map(
-      ([pattern]) => `${pattern.replace(/[^a-zA-Z0-9]/g, '')}1`,
+      ([pattern]) => `${pattern.replaceAll(/[^a-zA-Z0-9]/g, '')}1`,
     );
 
   // One payload per (property, interesting value) across both schemas, so a
@@ -155,7 +164,9 @@ function candidates(before: JsonObject, after: JsonObject): JsonValue[] {
     const schemaFor = (schema: JsonObject): JsonValue | undefined => {
       const named = isJsonObject(schema.properties) ? schema.properties[key] : undefined;
 
-      if (named !== undefined) return named;
+      if (named !== undefined) {
+        return named;
+      }
 
       const pattern = entriesOf(schema.patternProperties).find(([p]) => new RegExp(p).test(key));
 
@@ -167,11 +178,15 @@ function candidates(before: JsonObject, after: JsonObject): JsonValue[] {
       ...interestingValues(after, schemaFor(after)),
     ];
 
-    for (const value of fromEither) samples.push({ [key]: value });
+    for (const value of fromEither) {
+      samples.push({ [key]: value });
+    }
   }
 
   for (const base of samples.slice(0, 2)) {
-    if (!isJsonObject(base)) continue;
+    if (!isJsonObject(base)) {
+      continue;
+    }
     samples.push({ ...base, unexpected: 'x' });
 
     for (const key of Object.keys(base)) {
@@ -221,7 +236,7 @@ const conditional = (
   else: whenFalse,
 });
 
-const cases: Case[] = [
+const cases: Array<Case> = [
   { name: 'field removed', before: obj({ a: { type: 'string' } }), after: obj({}) },
   {
     name: 'field required',
@@ -553,22 +568,30 @@ describe.each(cases)(
     );
 
     it('has payloads that actually discriminate', () => {
-      if (!oracleFindsBackward) return;
+      if (!oracleFindsBackward) {
+        return;
+      }
       expect(backwardBroken).toBe(true);
     });
 
     it('reports a BACKWARD break whenever a real payload stops validating', () => {
-      if (!backwardBroken) return;
+      if (!backwardBroken) {
+        return;
+      }
       expect(compatibilityBreaks(report, 'backward').length).toBeGreaterThan(0);
     });
 
     it('reports a FORWARD break whenever new data fails the old schema', () => {
-      if (!forwardBroken) return;
+      if (!forwardBroken) {
+        return;
+      }
       expect(compatibilityBreaks(report, 'forward').length).toBeGreaterThan(0);
     });
 
     it('fails the default gate whenever anything stopped validating', () => {
-      if (!backwardBroken) return;
+      if (!backwardBroken) {
+        return;
+      }
       expect(report.hasBreaking).toBe(!severityAdditiveByDesign);
     });
   },

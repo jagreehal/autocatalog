@@ -18,7 +18,7 @@ import {
   taskContextFor,
 } from '../src/tools.js';
 
-const here = path.dirname(fileURLToPath(import.meta.url));
+const here = import.meta.dirname;
 
 const starterEvents = path.resolve(here, '../../../../fixtures/event-starter/events');
 
@@ -77,16 +77,16 @@ describe('tools', () => {
     const catalog = await loadCatalog(starterEvents);
     const result = getExamples(catalog, 'payment.completed');
     expect(result.examples.length).toBeGreaterThan(0);
-    expect(result.examples[0]!.data).toBeDefined();
+    expect(result.examples[0].data).toBeDefined();
   });
 
   it('getExamples filters by name', async () => {
     const catalog = await loadCatalog(starterEvents);
     const all = getExamples(catalog, 'payment.completed');
-    const first = all.examples[0]!;
+    const first = all.examples[0];
     const filtered = getExamples(catalog, 'payment.completed', first.name);
     expect(filtered.examples).toHaveLength(1);
-    expect(filtered.examples[0]!.name).toBe(first.name);
+    expect(filtered.examples[0].name).toBe(first.name);
   });
 
   it('searchEvents finds by id', async () => {

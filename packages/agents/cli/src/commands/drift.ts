@@ -1,7 +1,8 @@
 import { resolve } from 'node:path';
 import kleur from 'kleur';
 import { loadCatalog } from 'autocatalog-agents-core';
-import { computeDrift, loadObservations, type DriftKind } from 'autocatalog-agents-adapter-autotel';
+import { computeDrift, loadObservations } from 'autocatalog-agents-adapter-autotel';
+import type { DriftKind } from 'autocatalog-agents-adapter-autotel';
 
 const KIND_COLOR: Record<DriftKind, (s: string) => string> = {
   'unknown-agent': kleur.red,
@@ -14,7 +15,7 @@ const KIND_COLOR: Record<DriftKind, (s: string) => string> = {
   'tool-not-in-snapshot': kleur.yellow,
 };
 
-export const runDrift = async (args: string[]): Promise<number> => {
+export const runDrift = async (args: Array<string>): Promise<number> => {
   let root = '.';
   let file: string | null = null;
   let json = false;
@@ -22,9 +23,13 @@ export const runDrift = async (args: string[]): Promise<number> => {
   for (let i = 0; i < args.length; i++) {
     const a = args[i]!;
 
-    if (a === '--root') root = args[++i] ?? '.';
-    else if (a === '--json') json = true;
-    else if (!file) file = a;
+    if (a === '--root') {
+      root = args[++i] ?? '.';
+    } else if (a === '--json') {
+      json = true;
+    } else if (!file) {
+      file = a;
+    }
   }
 
   if (!file) {
@@ -62,7 +67,9 @@ export const runDrift = async (args: string[]): Promise<number> => {
     const color = KIND_COLOR[d.kind];
     process.stdout.write(`  ${color('•')} ${kleur.bold(d.kind)} — agent/${d.agentId}`);
 
-    if (d.toolId) process.stdout.write(`  → tool/${d.toolId}`);
+    if (d.toolId) {
+      process.stdout.write(`  → tool/${d.toolId}`);
+    }
     process.stdout.write(`\n      ${d.message}\n`);
   }
 

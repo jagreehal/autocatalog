@@ -134,7 +134,7 @@ describe('ac drift --base-ref --snapshot', () => {
   let repo: string;
   let snapshotPath: string;
 
-  const snapshot = (...names: string[]) =>
+  const snapshot = (...names: Array<string>) =>
     `${JSON.stringify({
       spec: 'autotel-architecture/v1',
       generatedAt: '2026-01-01T00:00:00Z',

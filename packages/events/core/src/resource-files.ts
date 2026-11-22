@@ -1,13 +1,14 @@
 import { constants as fsConstants } from 'node:fs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { type JsonValue, jsonValueSchema } from './json';
+import { jsonValueSchema } from './json';
+import type { JsonValue } from './json';
 import { DEFAULT_SCAN_EXCLUDE, isRealFileInside } from './utils';
 
 export interface ResourceScanOptions {
   root: string;
   /** Folder names skipped anywhere, or absolute paths skipped exactly. */
-  exclude?: string[];
+  exclude?: Array<string>;
   outDir?: string;
   maxFiles?: number;
   maxFileBytes?: number;
@@ -21,21 +22,23 @@ export interface ResourceFileFilter {
    * Where an unreadable directory or the file limit is reported. With it, a scan
    * degrades to what it could list; without it, either one throws.
    */
-  skipped?: string[];
+  skipped?: Array<string>;
 }
 
 export async function resourceFiles(
   options: ResourceScanOptions,
   filter: ResourceFileFilter = {},
-): Promise<string[]> {
-  const files: string[] = [];
+): Promise<Array<string>> {
+  const files: Array<string> = [];
   const ignored = new Set([...DEFAULT_SCAN_EXCLUDE, ...(options.exclude ?? [])]);
   const root = path.resolve(options.root);
-  const limit = options.maxFiles ?? 10000;
+  const limit = options.maxFiles ?? 10_000;
   let full = false;
 
   const report = (message: string) => {
-    if (!filter.skipped) throw new Error(message);
+    if (!filter.skipped) {
+      throw new Error(message);
+    }
     filter.skipped.push(message);
   };
 
@@ -50,16 +53,23 @@ export async function resourceFiles(
     }
 
     for (const entry of entries) {
-      if (full) return;
+      if (full) {
+        return;
+      }
 
       const file = path.join(directory, entry.name);
 
-      if (ignored.has(entry.name) || ignored.has(file)) continue;
+      if (ignored.has(entry.name) || ignored.has(file)) {
+        continue;
+      }
 
-      if (options.outDir && path.resolve(options.outDir) === file) continue;
+      if (options.outDir && path.resolve(options.outDir) === file) {
+        continue;
+      }
 
-      if (entry.isDirectory()) await walk(file);
-      else if (entry.isFile() && (filter.include?.(file) ?? true)) {
+      if (entry.isDirectory()) {
+        await walk(file);
+      } else if (entry.isFile() && (filter.include?.(file) ?? true)) {
         if (files.length >= limit) {
           full = true;
           report(
@@ -104,7 +114,9 @@ export async function readResourceSource(
   const relative = path.relative(options.root, file).split(path.sep).join('/');
   const stat = await fs.lstat(file).catch(() => undefined);
 
-  if (!stat) throw new ResourceReadError('missing', `${relative}: not found`);
+  if (!stat) {
+    throw new ResourceReadError('missing', `${relative}: not found`);
+  }
 
   if (!isRealFileInside(options.root, file)) {
     throw new ResourceReadError(
@@ -149,7 +161,9 @@ export async function readOptionalResourceJson(
   try {
     return await readResourceJson(file, options);
   } catch (error) {
-    if (error instanceof ResourceReadError && error.reason === 'missing') return undefined;
+    if (error instanceof ResourceReadError && error.reason === 'missing') {
+      return undefined;
+    }
     throw error;
   }
 }
@@ -162,7 +176,9 @@ export async function readOptionalResourceJson(
 export async function writeResourceFile(file: string, text: string): Promise<void> {
   const existing = await fs.lstat(file).catch(() => undefined);
 
-  if (existing?.isSymbolicLink()) throw new Error(`${path.basename(file)} is a link`);
+  if (existing?.isSymbolicLink()) {
+    throw new Error(`${path.basename(file)} is a link`);
+  }
 
   const { O_WRONLY, O_CREAT, O_TRUNC, O_NOFOLLOW = 0 } = fsConstants;
   const handle = await fs.open(file, O_WRONLY | O_CREAT | O_TRUNC | O_NOFOLLOW, 0o644);

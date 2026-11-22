@@ -39,7 +39,7 @@ export interface SchemaRow {
 }
 
 export interface SchemasPageProps {
-  schemas: SchemaRow[];
+  schemas: Array<SchemaRow>;
 }
 
 const link =

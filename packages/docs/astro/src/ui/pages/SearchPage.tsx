@@ -20,7 +20,7 @@ import {
 export interface SearchPageProps {
   query: string;
   /** The query's words, marked wherever a result shows them. */
-  words: string[];
+  words: Array<string>;
   results: Array<{ title: string; href: string; excerpt: string }>;
   /** How many pages matched, of which `results` are the best. */
   total: number;
@@ -28,11 +28,13 @@ export interface SearchPageProps {
   empty?: ReactNode;
 }
 
-const escape = (word: string) => word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const escape = (word: string) => word.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
 
 /** The text with each of the words in it marked. */
-function Marked({ text, words }: { text: string; words: string[] }) {
-  if (words.length === 0) return text;
+function Marked({ text, words }: { text: string; words: Array<string> }) {
+  if (words.length === 0) {
+    return text;
+  }
 
   // Longest first, so `payee` marks all of “Payee” when `pay` is asked too.
   const longest = [...words].sort((a, b) => b.length - a.length);

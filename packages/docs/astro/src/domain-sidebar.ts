@@ -1,24 +1,26 @@
 import type { CatalogResource, ResourceGraph } from 'autocatalog-core';
 import type { Design, Entity, Flow, Overview } from 'autocatalog-docs-core';
-import { apisForService, catalogServices, type CatalogApi } from './apis';
+import { apisForService, catalogServices } from './apis';
+import type { CatalogApi } from './apis';
 import type { CatalogEvent } from './catalog';
 import { buildDomains } from './domains';
 import { eventPath } from './event-path';
 import { flowPath } from './flows';
-import { serviceLink, titleCase, type SidebarGroup, type SidebarLink } from './sidebar';
+import { domainTitle, serviceLink } from './sidebar';
+import type { SidebarGroup, SidebarLink } from './sidebar';
 import { sidebarIconAttrs } from './sidebar-icon';
 import { catalogSystemRows } from './systems';
 import { docPage } from './ui/lib/docs';
 
 /** What the domain-first sidebar is built from: the parts of the catalog it reads. */
 export interface DomainSidebarCatalog {
-  events: CatalogEvent[];
-  apis: CatalogApi[];
+  events: Array<CatalogEvent>;
+  apis: Array<CatalogApi>;
   graph: ResourceGraph;
-  overviews: Overview[];
-  flows: Flow[];
-  designs: Design[];
-  model: { entities: Entity[] };
+  overviews: Array<Overview>;
+  flows: Array<Flow>;
+  designs: Array<Design>;
+  model: { entities: Array<Entity> };
 }
 
 type Item = SidebarLink | SidebarGroup;
@@ -31,7 +33,7 @@ const link = (label: string, href: string, icon?: SidebarLink['icon']): SidebarL
 });
 
 /** A group that leaves itself out when it has nothing in it. */
-const group = (label: string, items: Item[], collapsed = true): SidebarGroup[] =>
+const group = (label: string, items: Array<Item>, collapsed = true): Array<SidebarGroup> =>
   items.length > 0 ? [{ label, collapsed, items }] : [];
 
 /**
@@ -44,12 +46,14 @@ const group = (label: string, items: Item[], collapsed = true): SidebarGroup[] =
  */
 export function domainSidebar(
   catalog: DomainSidebarCatalog,
-  indexPages: SidebarLink[],
+  indexPages: Array<SidebarLink>,
   { apiLabel = 'Scalar' }: { apiLabel?: string | undefined } = {},
-): SidebarGroup[] {
+): Array<SidebarGroup> {
   const domains = buildDomains(catalog.events, catalog.graph);
 
-  if (domains.length === 0) return [];
+  if (domains.length === 0) {
+    return [];
+  }
 
   // As Starlight takes them: the icon drawn, not named.
   const pages = indexPages.map((page) => link(page.label, page.link, page.icon));
@@ -57,7 +61,7 @@ export function domainSidebar(
   const overviewOf = (id: string) =>
     catalog.overviews.find(({ kind, target }) => kind === 'domain' && target === id);
 
-  const titleOf = (id: string) => overviewOf(id)?.name ?? titleCase(id);
+  const titleOf = (id: string) => domainTitle(catalog.overviews, id);
 
   const services = catalogServices(catalog);
 

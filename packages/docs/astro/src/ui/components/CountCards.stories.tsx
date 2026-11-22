@@ -43,7 +43,7 @@ export const WorstCase: Story = {
       { label: 'relationships', value: 1_284_507, kind: 'relationship' },
       { label: 'data products', value: 1, href: '/data-products/', kind: 'dataProduct' },
       { label: 'MCP servers', value: 12_840, href: '/mcp-servers/', kind: 'agent' },
-      { label: 'services', value: 4_096, href: '/services/', kind: 'service' },
+      { label: 'services', value: 4096, href: '/services/', kind: 'service' },
       { label: 'retirements', value: 1, kind: 'decision' },
       { label: 'endpoints', value: 98_765, href: '/catalog/?kind=endpoint', kind: 'endpoint' },
     ],

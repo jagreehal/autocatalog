@@ -1,4 +1,5 @@
-import { entitiesOf, type Catalog } from './loader.js';
+import { entitiesOf } from './loader.js';
+import type { Catalog } from './loader.js';
 import type { EntityKind } from './schemas.js';
 
 export type EdgeIssue = {
@@ -10,8 +11,8 @@ export type EdgeIssue = {
 const lookup = (cat: Catalog, kind: EntityKind, id: string): boolean =>
   cat.entities.get(kind)?.has(id) ?? false;
 
-export const validateEdges = (cat: Catalog): EdgeIssue[] => {
-  const issues: EdgeIssue[] = [];
+export const validateEdges = (cat: Catalog): Array<EdgeIssue> => {
+  const issues: Array<EdgeIssue> = [];
 
   for (const a of entitiesOf(cat, 'agent')) {
     if (!lookup(cat, 'model', a.model)) {

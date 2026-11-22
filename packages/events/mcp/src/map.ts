@@ -3,8 +3,6 @@ import { resourceKey } from 'autocatalog-core';
 import {
   catalogDiagram,
   dataProductDiagram,
-  type Design,
-  type DesignInput,
   designChanges,
   designDiagram,
   domainNeighbourhood,
@@ -15,8 +13,8 @@ import {
   resolveAbout,
   runtimeByEvent,
   serviceNeighbourhood,
-  type Diagram,
 } from 'autocatalog-docs-core';
+import type { Design, DesignInput, Diagram } from 'autocatalog-docs-core';
 import { checkouts, pickOne } from './knowledge.js';
 import { domainModel } from './model.js';
 import type { CatalogSnapshot } from './tools.js';
@@ -29,7 +27,7 @@ export interface CatalogMap extends Diagram {
   /** A design's simpler levels: 2 without its messages, 1 its domains and systems. */
   levels?: ReturnType<typeof designDiagram>['levels'];
   /** A design's parts the catalog does not have yet. */
-  proposed?: string[];
+  proposed?: Array<string>;
   /** What a design adds to the catalog, in a line. */
   changes?: string;
 }
@@ -168,7 +166,9 @@ export function catalogMap(
   } else if (focus) {
     const resolution = resolveAbout(focus, graph.resources);
 
-    if ('failure' in resolution) throw new Error(resolution.failure);
+    if ('failure' in resolution) {
+      throw new Error(resolution.failure);
+    }
 
     const key = resourceKey(resolution.ref);
 
@@ -182,7 +182,9 @@ export function catalogMap(
 
   const diagram = catalogDiagram(graph, { ...(only && { only }), runtime });
 
-  if (!diagram) throw new Error(`Nothing to draw${focus ? ` around ${focus}` : ''}: no edges.`);
+  if (!diagram) {
+    throw new Error(`Nothing to draw${focus ? ` around ${focus}` : ''}: no edges.`);
+  }
 
   return { title, ...(focus && { focus }), ...diagram };
 }
@@ -192,9 +194,13 @@ function around(relationships: CatalogSnapshot['relationships'], key: string): S
   const near = new Set([key]);
 
   for (const { from, to } of relationships) {
-    if (resourceKey(from) === key) near.add(resourceKey(to));
+    if (resourceKey(from) === key) {
+      near.add(resourceKey(to));
+    }
 
-    if (resourceKey(to) === key) near.add(resourceKey(from));
+    if (resourceKey(to) === key) {
+      near.add(resourceKey(from));
+    }
   }
 
   return near;

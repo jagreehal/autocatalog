@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { type DocsLayout, resolveDocsLayout } from 'autocatalog-docs-core';
+import { resolveDocsLayout } from 'autocatalog-docs-core';
+import type { DocsLayout } from 'autocatalog-docs-core';
 import { docsSiteConfig } from './config';
 import { docPage } from './ui/lib/docs';
 
@@ -10,7 +11,7 @@ interface Node {
   tagName?: string;
   /** hast keeps both as plain strings; the walk touches no other property. */
   properties?: { href?: string; src?: string };
-  children?: Node[];
+  children?: Array<Node>;
 }
 
 /**
@@ -42,7 +43,9 @@ export function rehypeDocsBase(base: string) {
     rewrite(tree, (url) => {
       const document = file.path ? documentUrl(url, file.path, layout) : undefined;
 
-      if (document !== undefined) return prefix + document;
+      if (document !== undefined) {
+        return prefix + document;
+      }
 
       return prefix && based(url, prefix) ? prefix + url : url;
     });
@@ -53,13 +56,19 @@ function rewrite(node: Node, to: (url: string) => string): void {
   const attr = node.tagName === 'a' ? 'href' : node.tagName === 'img' ? 'src' : null;
   const value = attr ? node.properties?.[attr] : undefined;
 
-  if (attr && value !== undefined) node.properties![attr] = to(value);
+  if (attr && value !== undefined) {
+    node.properties![attr] = to(value);
+  }
 
-  for (const child of node.children ?? []) rewrite(child, to);
+  for (const child of node.children ?? []) {
+    rewrite(child, to);
+  }
 }
 
 function based(url: string, prefix: string): boolean {
-  if (!url.startsWith('/') || url.startsWith('//')) return false;
+  if (!url.startsWith('/') || url.startsWith('//')) {
+    return false;
+  }
 
   return url !== prefix && !url.startsWith(`${prefix}/`);
 }
@@ -68,7 +77,9 @@ function based(url: string, prefix: string): boolean {
 function documentUrl(url: string, from: string, layout: DocsLayout): string | undefined {
   const match = /^([^/#?:][^#?:]*\.mdx?)(#.*)?$/.exec(url);
 
-  if (!match) return undefined;
+  if (!match) {
+    return undefined;
+  }
   const target = path.resolve(path.dirname(from), decodeURIComponent(match[1]!));
   const source = path.relative(layout.root, from).split(path.sep).join('/');
   const file = path.relative(layout.root, target).split(path.sep).join('/');

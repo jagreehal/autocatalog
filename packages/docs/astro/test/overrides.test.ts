@@ -1,4 +1,5 @@
-import { createElement, type ComponentType } from 'react';
+import { createElement } from 'react';
+import type { ComponentType } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { DocFooterChrome } from '../src/ui/overrides/DocFooterChrome';

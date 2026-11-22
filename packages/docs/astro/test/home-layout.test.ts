@@ -4,7 +4,8 @@ import {
   siteConfigSchema,
 } from 'autocatalog-docs-core';
 import { expect, it } from 'vitest';
-import { resolveHomeLayout, type HomeLayoutContext } from '../src/home-layout';
+import { resolveHomeLayout } from '../src/home-layout';
+import type { HomeLayoutContext } from '../src/home-layout';
 import { checkHomeLayout } from '../src/index';
 import { HOME_PAGE_ORDER, homePageBlocks } from '../src/ui/pages/HomePage';
 
@@ -96,7 +97,7 @@ it('fills each built-in block from the catalog, and passes a site block its prop
 });
 
 it("checks a built-in block's props in autocatalog.site.json, and leaves a site's own to it", () => {
-  const parse = (home: unknown[]) => siteConfigSchema.safeParse({ layouts: { home } });
+  const parse = (home: Array<unknown>) => siteConfigSchema.safeParse({ layouts: { home } });
 
   expect(
     parse([

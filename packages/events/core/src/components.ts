@@ -3,15 +3,11 @@ import path from 'node:path';
 import { z } from 'zod';
 import { ownerForPath } from './codeowners';
 import { loadCodeowners } from './enrich-event';
-import { jsonObjectSchema, type JsonObject } from './json';
+import { jsonObjectSchema } from './json';
+import type { JsonObject } from './json';
 import { readOptionalResourceJson } from './resource-files';
-import {
-  AUTOCATALOG_GRAPH_SPEC,
-  createRepositoryResource,
-  type CatalogRelationship,
-  type ResourceGraph,
-  type TypedCatalogResource,
-} from './resource-graph';
+import { AUTOCATALOG_GRAPH_SPEC, createRepositoryResource } from './resource-graph';
+import type { CatalogRelationship, ResourceGraph, TypedCatalogResource } from './resource-graph';
 
 /**
  * The UI components a repository publishes, committed beside its code so they
@@ -94,11 +90,15 @@ export async function readComponentsFile(root: string): Promise<ComponentsFile |
   const file = path.join(root, COMPONENTS_FILE);
   const value = await readOptionalResourceJson(file, { root });
 
-  if (value === undefined) return undefined;
+  if (value === undefined) {
+    return undefined;
+  }
 
   const parsed = componentsFileSchema.safeParse(value);
 
-  if (!parsed.success) throw new Error(`${COMPONENTS_FILE}: ${z.prettifyError(parsed.error)}`);
+  if (!parsed.success) {
+    throw new Error(`${COMPONENTS_FILE}: ${z.prettifyError(parsed.error)}`);
+  }
 
   return parsed.data;
 }
@@ -115,11 +115,13 @@ export async function createComponentResourceGraph(
 ): Promise<ResourceGraph | undefined> {
   const file = await readComponentsFile(root);
 
-  if (!file) return undefined;
+  if (!file) {
+    return undefined;
+  }
 
   const rules = await loadCodeowners(root, options.ownersWithin);
 
-  const resources: ComponentCatalogResource[] = file.components.map((entry) => {
+  const resources: Array<ComponentCatalogResource> = file.components.map((entry) => {
     const { id, name, description, ...facts } = entry;
     const team = file.owner ?? (entry.source && ownerForPath(rules, entry.source));
 
@@ -140,7 +142,7 @@ export async function createComponentResourceGraph(
     };
   });
 
-  const relationships: CatalogRelationship[] = resources.map(({ ref }) => ({
+  const relationships: Array<CatalogRelationship> = resources.map(({ ref }) => ({
     type: 'defines',
     from: { kind: 'repository', id: repository },
     to: ref,
@@ -164,7 +166,7 @@ export async function createComponentResourceGraph(
 export async function writeComponents(
   root: string,
   input: {
-    components: CatalogComponent[];
+    components: Array<CatalogComponent>;
     viewer?: ComponentViewer | undefined;
     owner?: string | undefined;
   },
@@ -189,8 +191,9 @@ export async function writeComponents(
   const text = `${JSON.stringify(file, null, 2)}\n`;
   const out = path.join(root, COMPONENTS_FILE);
 
-  if (options.check)
+  if (options.check) {
     return (await fs.readFile(out, 'utf8').catch(() => undefined)) === text ? 'current' : 'stale';
+  }
 
   await fs.writeFile(out, text);
 

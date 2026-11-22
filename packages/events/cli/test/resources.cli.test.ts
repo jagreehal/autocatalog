@@ -4,7 +4,8 @@ import type { AddressInfo } from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { CommanderError, type Command } from 'commander';
+import { CommanderError } from 'commander';
+import type { Command } from 'commander';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   runResourceScan,
@@ -20,13 +21,13 @@ import {
   readResourceGraph,
   relationshipKey,
   resourceKey,
-  type JsonValue,
 } from 'autocatalog-core';
+import type { JsonValue } from 'autocatalog-core';
 import { runScan } from '../src/commands/scan';
 import { runDrift } from '../src/commands/drift';
 import { buildProgram } from '../src/index';
 
-const here = path.dirname(fileURLToPath(import.meta.url));
+const here = import.meta.dirname;
 
 const brownfield = path.resolve(here, '../../../../fixtures/brownfield-repo');
 
@@ -34,13 +35,14 @@ const jsonSchemaRepo = path.resolve(here, '../../../../fixtures/json-schema-repo
 
 const flags = { service: 'billing', datastore: 'main', database: 'finance' };
 
-const temporary: string[] = [];
+const temporary: Array<string> = [];
 
 afterEach(async () => {
   process.exitCode = undefined;
 
-  for (const directory of temporary.splice(0))
+  for (const directory of temporary.splice(0)) {
     await fs.rm(directory, { recursive: true, force: true });
+  }
 });
 
 async function workspace(): Promise<string> {
@@ -67,8 +69,8 @@ async function writeJson(file: string, value: JsonValue): Promise<string> {
 
 /** Everything a command printed, by stream, with the exit code it returned. */
 async function capture(run: () => Promise<number | void>) {
-  const stdout: string[] = [];
-  const stderr: string[] = [];
+  const stdout: Array<string> = [];
+  const stderr: Array<string> = [];
   const log = vi.spyOn(console, 'log').mockImplementation((line) => void stdout.push(String(line)));
 
   const warn = vi
@@ -91,20 +93,23 @@ async function capture(run: () => Promise<number | void>) {
 }
 
 /** Parse argv through the real program, with commander's exits turned into results. */
-async function cli(argv: string[]) {
+async function cli(argv: Array<string>) {
   const program = buildProgram();
-  const errors: string[] = [];
-  const all = (command: Command): Command[] => [command, ...command.commands.flatMap(all)];
+  const errors: Array<string> = [];
+  const all = (command: Command): Array<Command> => [command, ...command.commands.flatMap(all)];
 
-  for (const command of all(program))
+  for (const command of all(program)) {
     command.exitOverride().configureOutput({ writeErr: (text) => void errors.push(text) });
+  }
 
   try {
     await program.parseAsync(['node', 'ac', ...argv]);
 
     return { code: process.exitCode ?? 0, stderr: errors.join('') };
   } catch (error) {
-    if (!(error instanceof CommanderError)) throw error;
+    if (!(error instanceof CommanderError)) {
+      throw error;
+    }
 
     return { code: error.exitCode, stderr: errors.join('') };
   }

@@ -2,7 +2,8 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import type { Doc } from 'autocatalog-docs-core';
 import { z } from 'zod';
-import { accessRule, SIGNED_OUT, type SiteAccess } from './access';
+import { accessRule, SIGNED_OUT } from './access';
+import type { SiteAccess } from './access';
 import { docPage } from './ui/lib/docs';
 
 const moduleSchema = z.object({
@@ -24,19 +25,21 @@ export async function loadSiteAccess(file: string): Promise<SiteAccess<unknown>>
     await import(/* @vite-ignore */ pathToFileURL(file).href),
   );
 
-  if (!parsed.success) throw new Error(`access.module ${file}: ${z.prettifyError(parsed.error)}`);
+  if (!parsed.success) {
+    throw new Error(`access.module ${file}: ${z.prettifyError(parsed.error)}`);
+  }
 
   return parsed.data.default;
 }
 
 /** Which documents each sample reader may open: `opens[i]` is `readers[i]`. */
 export interface AccessTable {
-  readers: string[];
-  rows: Array<{ id: string; opens: boolean[] }>;
+  readers: Array<string>;
+  rows: Array<{ id: string; opens: Array<boolean> }>;
 }
 
 /** Which documents each sample reader may open, signed out first. */
-export function accessTable(docs: readonly Doc[], access: SiteAccess<unknown>): AccessTable {
+export function accessTable(docs: ReadonlyArray<Doc>, access: SiteAccess<unknown>): AccessTable {
   const readers: Array<[string, unknown]> = [
     [SIGNED_OUT, undefined],
     ...Object.entries(access.readers ?? {}),
@@ -80,12 +83,14 @@ export function formatAccessTable({ readers, rows }: AccessTable): string {
 const RELATED = z.array(z.string()).catch([]);
 
 /** The documents one links to, by `related` or by a Markdown link in its body. */
-export function linkedDocs(doc: Doc, ids: ReadonlySet<string>): string[] {
+export function linkedDocs(doc: Doc, ids: ReadonlySet<string>): Array<string> {
   const byPage = new Map([...ids].map((id) => [docPage(id), id]));
   const folder = path.posix.dirname(doc.id);
 
   const targets = [...doc.body.matchAll(/\]\(([^)\s]+)/g)].flatMap(([, href]) => {
-    if (!href || /^[a-z]+:|^#/.test(href)) return [];
+    if (!href || /^[a-z]+:|^#/.test(href)) {
+      return [];
+    }
 
     const page = href
       .split('#')[0]!
@@ -103,7 +108,7 @@ export function linkedDocs(doc: Doc, ids: ReadonlySet<string>): string[] {
 }
 
 /** Each link a sample reader may follow to a document they may not open. */
-export function closedLinks(docs: readonly Doc[], table: AccessTable): string[] {
+export function closedLinks(docs: ReadonlyArray<Doc>, table: AccessTable): Array<string> {
   const opens = new Map(table.rows.map((row) => [row.id, row.opens]));
   const ids = new Set(docs.map((doc) => doc.id));
 

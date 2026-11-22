@@ -1,20 +1,24 @@
-import { resourceKey, type ResourceRef } from 'autocatalog-core';
+import { resourceKey } from 'autocatalog-core';
+import type { ResourceRef } from 'autocatalog-core';
 import {
   dataProductDiagram,
   entityDiagram,
   entityReferences,
   portName,
-  type DataProduct,
-  type DataProductPort,
-  type DomainModel,
-  type Entity,
-  type Person,
+} from 'autocatalog-docs-core';
+import type {
+  DataProduct,
+  DataProductPort,
+  DomainModel,
+  Entity,
+  Person,
 } from 'autocatalog-docs-core';
 import type { DocsCatalog } from './catalog';
 import { githubDirectoryEnrichment } from './directory';
 import { buildDomains, domainHref } from './domains';
 import { flowPath, renderNarrative } from './flows';
-import { ownerKey, type Owner } from './owners';
+import { ownerKey } from './owners';
+import type { Owner } from './owners';
 import type {
   DataProductPageProps,
   DataProductsPageProps,
@@ -23,7 +27,8 @@ import type {
   GlossaryPageProps,
   OwnerProfile,
 } from './ui/pages';
-import { pageOf, type CatalogGraphOptions } from './visualiser';
+import { pageOf } from './visualiser';
+import type { CatalogGraphOptions } from './visualiser';
 
 type Pages = Pick<CatalogGraphOptions, 'servicePages' | 'eventPages'>;
 
@@ -207,7 +212,9 @@ export async function dataProductPageProps(
     const found = catalog.graph.resources.find((resource) => resourceKey(resource.ref) === node.id);
     const href = found ? pageOf(found, base, pages) : products.get(node.id)?.href;
 
-    if (href && node.id !== `data-product/${product.id}`) hrefs[node.id] = href;
+    if (href && node.id !== `data-product/${product.id}`) {
+      hrefs[node.id] = href;
+    }
   }
 
   return {
@@ -233,7 +240,7 @@ export async function dataProductPageProps(
  * the owner as CODEOWNERS or frontmatter writes it, `@acme/payments` matching
  * `teams/payments.md`.
  */
-export function ownerProfile(owner: Owner, people: Person[]): OwnerProfile | undefined {
+export function ownerProfile(owner: Owner, people: Array<Person>): OwnerProfile | undefined {
   const person = people.find((candidate) =>
     [ownerKey(candidate.id), ownerKey(candidate.name)].some(
       (key) => owner.key === key || owner.key.endsWith(`/${key}`),
@@ -252,7 +259,9 @@ export function ownerProfile(owner: Owner, people: Person[]): OwnerProfile | und
   if (!person) {
     // A bare login without a directory file is not a profile; only org/team
     // handles are rich enough to invent one from GitHub's public URLs.
-    if (!handle.includes('/') || !enrichment) return undefined;
+    if (!handle.includes('/') || !enrichment) {
+      return undefined;
+    }
 
     return {
       kind: 'team',

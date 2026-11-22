@@ -1,6 +1,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { EntityKindSchema, type Catalog } from 'autocatalog-agents-core';
+import { EntityKindSchema } from 'autocatalog-agents-core';
+import type { Catalog } from 'autocatalog-agents-core';
 import {
   audit,
   cost,
@@ -42,8 +43,8 @@ export const createServer = (catalog: Catalog): McpServer => {
     async ({ kind }) => {
       try {
         return asText(listEntities(catalog, kind));
-      } catch (e) {
-        return asError(e);
+      } catch (error) {
+        return asError(error);
       }
     },
   );
@@ -59,8 +60,8 @@ export const createServer = (catalog: Catalog): McpServer => {
     async ({ ref }) => {
       try {
         return asText(describeEntity(catalog, ref));
-      } catch (e) {
-        return asError(e);
+      } catch (error) {
+        return asError(error);
       }
     },
   );
@@ -76,8 +77,8 @@ export const createServer = (catalog: Catalog): McpServer => {
     async ({ ref }) => {
       try {
         return asText(impactEntity(catalog, ref));
-      } catch (e) {
-        return asError(e);
+      } catch (error) {
+        return asError(error);
       }
     },
   );
@@ -93,8 +94,8 @@ export const createServer = (catalog: Catalog): McpServer => {
     async ({ query }) => {
       try {
         return asText(searchEntities(catalog, query));
-      } catch (e) {
-        return asError(e);
+      } catch (error) {
+        return asError(error);
       }
     },
   );
@@ -110,8 +111,8 @@ export const createServer = (catalog: Catalog): McpServer => {
     async ({ attribute, value }) => {
       try {
         return asText(findBy(catalog, attribute, value));
-      } catch (e) {
-        return asError(e);
+      } catch (error) {
+        return asError(error);
       }
     },
   );
@@ -130,8 +131,8 @@ export const createServer = (catalog: Catalog): McpServer => {
     async ({ agent, by }) => {
       try {
         return asText(cost(catalog, { agent, by }));
-      } catch (e) {
-        return asError(e);
+      } catch (error) {
+        return asError(error);
       }
     },
   );
@@ -149,8 +150,8 @@ export const createServer = (catalog: Catalog): McpServer => {
     async ({ minSeverity }) => {
       try {
         return asText(audit(catalog, { minSeverity }));
-      } catch (e) {
-        return asError(e);
+      } catch (error) {
+        return asError(error);
       }
     },
   );
@@ -168,8 +169,8 @@ export const createServer = (catalog: Catalog): McpServer => {
     async ({ file }) => {
       try {
         return asText(await drift(catalog, { file }));
-      } catch (e) {
-        return asError(e);
+      } catch (error) {
+        return asError(error);
       }
     },
   );

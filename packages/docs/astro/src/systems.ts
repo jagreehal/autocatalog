@@ -1,4 +1,5 @@
-import { isServiceCatalogResource, type ResourceGraph } from 'autocatalog-core';
+import { isServiceCatalogResource } from 'autocatalog-core';
+import type { ResourceGraph } from 'autocatalog-core';
 
 /** A system or external system, named in a design or by the services in it. */
 export interface SystemRow {
@@ -9,7 +10,7 @@ export interface SystemRow {
   summary?: string | undefined;
   /** The design that declares it, when one does. */
   design?: { href: string; title: string } | undefined;
-  members: string[];
+  members: Array<string>;
 }
 
 /** A service and the system it says it is part of, from the resource graph. */
@@ -37,17 +38,19 @@ interface DesignSystemSource {
  * to name the box.
  */
 export function buildSystems(
-  designs: DesignSystemSource[],
+  designs: Array<DesignSystemSource>,
   base: string,
-  services: ServiceSystemSource[] = [],
-): SystemRow[] {
+  services: Array<ServiceSystemSource> = [],
+): Array<SystemRow> {
   const byId = new Map<string, SystemRow>();
 
   for (const design of designs) {
     const designHref = `${base}designs/${design.repository}/${design.id}/`;
 
     for (const resource of design.resources) {
-      if (resource.type !== 'system' && resource.type !== 'external-system') continue;
+      if (resource.type !== 'system' && resource.type !== 'external-system') {
+        continue;
+      }
 
       const members = design.resources
         .filter((other) => other.parent === resource.id)
@@ -74,7 +77,9 @@ export function buildSystems(
   }
 
   for (const service of services) {
-    if (!service.system) continue;
+    if (!service.system) {
+      continue;
+    }
 
     const existing = byId.get(service.system.id);
 
@@ -97,9 +102,9 @@ export function buildSystems(
 
 /** Every system the catalog has: those designs name, and those its services say they are part of. */
 export function catalogSystemRows(
-  catalog: { designs: DesignSystemSource[]; graph: ResourceGraph },
+  catalog: { designs: Array<DesignSystemSource>; graph: ResourceGraph },
   base: string,
-): SystemRow[] {
+): Array<SystemRow> {
   return buildSystems(
     catalog.designs,
     base,
@@ -109,6 +114,6 @@ export function catalogSystemRows(
   );
 }
 
-export function systemById(systems: SystemRow[], id: string): SystemRow | undefined {
+export function systemById(systems: Array<SystemRow>, id: string): SystemRow | undefined {
   return systems.find((system) => system.id === id);
 }

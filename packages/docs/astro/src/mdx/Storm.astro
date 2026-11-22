@@ -8,13 +8,14 @@ import {
   StormLegend,
   StormScenarios,
 } from '../ui/components/Storm';
-import { stormColumns, type StormStage } from '../storm-stages';
+import { stormColumns } from '../storm-stages';
+import type { StormStage } from '../storm-stages';
 
 interface Props {
   /** A flow's board, by its id, or `<repository>/<id>` when two repositories use the id. */
   flow?: string;
   /** A board written by hand: one entry per stage, each row a sticky or a list of them. */
-  stages?: StormStage[];
+  stages?: Array<StormStage>;
   /** What a screen reader calls the board. */
   label?: string;
   /** Show the legend above the board. On by default. */

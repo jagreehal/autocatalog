@@ -2,13 +2,8 @@ import { z } from 'zod';
 import type { SourceLocation } from './adapter-event';
 import type { ComponentCatalogResource } from './components';
 import { deliveryEventOf } from './delivery-model';
-import {
-  isJsonObject,
-  jsonObjectSchema,
-  jsonValueSchema,
-  type JsonObject,
-  type JsonValue,
-} from './json';
+import { isJsonObject, jsonObjectSchema, jsonValueSchema } from './json';
+import type { JsonObject, JsonValue } from './json';
 import type { LoadedEvent } from './load';
 import type { EventFrontmatter, ProvenanceValue } from './schema';
 
@@ -39,7 +34,7 @@ export interface TypedCatalogResource<Kind extends string, Attributes> {
   summary?: string;
   url?: string;
   owner?: { team: string; name?: string; contact?: string };
-  tags: string[];
+  tags: Array<string>;
   provenance: ResourceEvidence;
   confidence?: number;
   needsReview: boolean;
@@ -52,12 +47,12 @@ export interface RuntimeResourceEvidence {
   count: number;
   firstSeen?: string;
   lastSeen?: string;
-  sampleTraceIds: string[];
+  sampleTraceIds: Array<string>;
   environment?: string;
-  operations?: string[];
+  operations?: Array<string>;
   coverage: 'unknown';
   /** Span counts per trace export digest, so re-importing an export cannot double count. */
-  exports?: { id: string; count: number }[];
+  exports?: Array<{ id: string; count: number }>;
 }
 
 export type ArchitectureResourceKind =
@@ -92,7 +87,7 @@ export interface EventResourceAttributes {
 }
 
 export interface ServiceResourceAttributes {
-  domains: string[];
+  domains: Array<string>;
   /** Where its code lives: a web address, as a reader would follow it. */
   repository?: string;
   /** The system it is part of, as EventCatalog groups services. */
@@ -115,7 +110,7 @@ export type RepositoryResourceAttributes = Record<string, never>;
 /** A glossary term: a domain's word for something, and the other words teams use for it. */
 export interface TermResourceAttributes {
   domain: string;
-  aliases: string[];
+  aliases: Array<string>;
 }
 
 export type AgentSystemResourceKind =
@@ -243,8 +238,8 @@ export interface CatalogRelationship<Type extends string = CatalogRelationshipTy
 
 export interface ResourceGraph {
   spec: typeof AUTOCATALOG_GRAPH_SPEC;
-  resources: CatalogResource[];
-  relationships: CatalogRelationship[];
+  resources: Array<CatalogResource>;
+  relationships: Array<CatalogRelationship>;
 }
 
 export interface ResourceGraphSummary {
@@ -284,10 +279,12 @@ export class ResourceGraphConflictError extends Error {
  * Compose Adapter fragments into one deterministic graph without allowing a
  * later Adapter to silently replace an earlier fact.
  */
-export function composeResourceGraphs(...fragments: ResourceGraph[]): ResourceGraph {
+export function composeResourceGraphs(...fragments: Array<ResourceGraph>): ResourceGraph {
   const composer = createResourceGraphComposer();
 
-  for (const fragment of fragments) composer.add(fragment);
+  for (const fragment of fragments) {
+    composer.add(fragment);
+  }
 
   return composer.graph();
 }
@@ -318,7 +315,9 @@ export function createResourceGraphComposer(): ResourceGraphComposer {
         if (existing) {
           const merged = mergeCompatibleResource(existing, resource);
 
-          if (!merged) throw new ResourceGraphConflictError('resource', key);
+          if (!merged) {
+            throw new ResourceGraphConflictError('resource', key);
+          }
           stagedResources.set(key, merged);
         } else {
           stagedResources.set(key, resource);
@@ -336,9 +335,13 @@ export function createResourceGraphComposer(): ResourceGraphComposer {
         stagedRelationships.set(key, relationship);
       }
 
-      for (const [key, resource] of stagedResources) resources.set(key, resource);
+      for (const [key, resource] of stagedResources) {
+        resources.set(key, resource);
+      }
 
-      for (const [key, relationship] of stagedRelationships) relationships.set(key, relationship);
+      for (const [key, relationship] of stagedRelationships) {
+        relationships.set(key, relationship);
+      }
     },
     graph() {
       return {
@@ -358,13 +361,17 @@ function mergeCompatibleResource(
   existing: CatalogResource,
   incoming: CatalogResource,
 ): CatalogResource | null {
-  if (stableValue(existing) === stableValue(incoming)) return existing;
+  if (stableValue(existing) === stableValue(incoming)) {
+    return existing;
+  }
 
   if (isMcpServerResource(existing) && isMcpServerResource(incoming)) {
     return mergeMcpServers(existing, incoming);
   }
 
-  if (!isServiceCatalogResource(existing) || !isServiceCatalogResource(incoming)) return null;
+  if (!isServiceCatalogResource(existing) || !isServiceCatalogResource(incoming)) {
+    return null;
+  }
 
   const structural = (resource: ServiceCatalogResource) => ({
     ref: resource.ref,
@@ -376,7 +383,9 @@ function mergeCompatibleResource(
     provenance: resource.provenance,
   });
 
-  if (stableValue(structural(existing)) !== stableValue(structural(incoming))) return null;
+  if (stableValue(structural(existing)) !== stableValue(structural(incoming))) {
+    return null;
+  }
 
   const sources = [existing.source, incoming.source].filter(
     (source): source is SourceLocation => source !== undefined,
@@ -433,12 +442,16 @@ function mergeMcpServers(
     McpServerAttributes.safeParse(resource.attributes),
   );
 
-  if (!a?.success || !b?.success) return null;
+  if (!a?.success || !b?.success) {
+    return null;
+  }
 
   const endpoint = ({ data }: typeof a) =>
     JSON.stringify([data.transport, data.url, data.package?.registry, data.package?.name]);
 
-  if (endpoint(a) !== endpoint(b)) return null;
+  if (endpoint(a) !== endpoint(b)) {
+    return null;
+  }
 
   const [first] = [existing, incoming].sort((x, y) => x.title.localeCompare(y.title));
 
@@ -475,11 +488,15 @@ function mergeMcpServers(
       : (origins.find((origin) => origin !== 'unknown') ?? 'unknown'),
   };
 
-  if (owners.length > 0) attributes.owners = owners;
+  if (owners.length > 0) {
+    attributes.owners = owners;
+  }
 
   const connections = [...new Set([...a.data.connections, ...b.data.connections])].sort();
 
-  if (connections.length > 0) attributes.connections = connections;
+  if (connections.length > 0) {
+    attributes.connections = connections;
+  }
 
   const tools = new Map([...a.data.tools, ...b.data.tools].map((tool) => [tool.name, tool]));
 
@@ -495,7 +512,9 @@ function mergeMcpServers(
     attributes.changes = jsonValueSchema.parse(changes.sort((x, y) => y.at.localeCompare(x.at)));
   }
 
-  if (versions.length > 1) attributes.versions = versions;
+  if (versions.length > 1) {
+    attributes.versions = versions;
+  }
 
   if (a.data.package) {
     const { registry, name } = a.data.package;
@@ -534,7 +553,7 @@ function stableValue(
  * range picks a release behind the current one. The event graph itself holds
  * current versions only.
  */
-export function earlierVersions(events: LoadedEvent[], repository: string): ResourceGraph {
+export function earlierVersions(events: Array<LoadedEvent>, repository: string): ResourceGraph {
   return createEventResourceGraph(
     events.flatMap((event) =>
       event.folder.isVersioned
@@ -593,7 +612,7 @@ export interface CreateEventResourceGraphOptions {
 }
 
 export function createEventResourceGraph(
-  events: LoadedEvent[],
+  events: Array<LoadedEvent>,
   options: CreateEventResourceGraphOptions = {},
 ): ResourceGraph {
   const resources = new Map<string, CatalogResource>();
@@ -786,14 +805,18 @@ export function summarizeResourceGraph(graph: ResourceGraph): ResourceGraphSumma
     resourcesByKind[resource.ref.kind] = (resourcesByKind[resource.ref.kind] ?? 0) + 1;
     provenance[resource.provenance.default]++;
 
-    if (resource.needsReview) needsReview++;
+    if (resource.needsReview) {
+      needsReview++;
+    }
   }
 
   for (const relationship of graph.relationships) {
     relationshipsByType[relationship.type] = (relationshipsByType[relationship.type] ?? 0) + 1;
     provenance[relationship.provenance]++;
 
-    if (relationship.needsReview) needsReview++;
+    if (relationship.needsReview) {
+      needsReview++;
+    }
   }
 
   return {

@@ -1,10 +1,7 @@
-import {
-  componentAttributesSchema,
-  isComponentId,
-  type ComponentResourceAttributes,
-  type ResourceGraph,
-} from 'autocatalog-core';
-import { ownerFor, ownerHref, type Owner } from './owners';
+import { componentAttributesSchema, isComponentId } from 'autocatalog-core';
+import type { ComponentResourceAttributes, ResourceGraph } from 'autocatalog-core';
+import { ownerFor, ownerHref } from './owners';
+import type { Owner } from './owners';
 
 export interface ComponentStoryRow {
   id: string;
@@ -29,9 +26,9 @@ export interface ComponentRow {
   /** The tool that shows the stories, by name. */
   viewer: string | undefined;
   props: ComponentResourceAttributes['props'];
-  stories: ComponentStoryRow[];
+  stories: Array<ComponentStoryRow>;
   /** Other repositories with a component of this name. */
-  alsoIn: string[];
+  alsoIn: Array<string>;
 }
 
 /** A repository's name as one segment of a page's path. */
@@ -42,13 +39,17 @@ const isRepositorySegment = (name: string | undefined) =>
 export function buildComponents(
   graph: ResourceGraph,
   base: string,
-  owners: Owner[] = [],
-): ComponentRow[] {
+  owners: Array<Owner> = [],
+): Array<ComponentRow> {
   const components = graph.resources.flatMap((resource) => {
-    if (resource.ref.kind !== 'component') return [];
+    if (resource.ref.kind !== 'component') {
+      return [];
+    }
 
     // Another site's graph can join through --index: what has no page is left out.
-    if (!isRepositorySegment(resource.ref.namespace) || !isComponentId(resource.ref.id)) return [];
+    if (!isRepositorySegment(resource.ref.namespace) || !isComponentId(resource.ref.id)) {
+      return [];
+    }
 
     const facts = componentAttributesSchema.safeParse(resource.attributes);
 
@@ -61,7 +62,9 @@ export function buildComponents(
     );
 
   const ownerOf = (team: string | undefined) => {
-    if (!team) return undefined;
+    if (!team) {
+      return undefined;
+    }
 
     const owner = ownerFor(owners, team);
 

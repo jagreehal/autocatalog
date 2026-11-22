@@ -21,8 +21,8 @@ export interface DataProductPageProps {
   file: string;
   domain?: { name: string; href?: string | undefined } | undefined;
   visualiser: VisualiserGraph;
-  inputs: DataProductPort[];
-  outputs: DataProductPort[];
+  inputs: Array<DataProductPort>;
+  outputs: Array<DataProductPort>;
   narrativeHtml?: string | null | undefined;
 }
 
@@ -34,7 +34,7 @@ function Ports({
 }: {
   title: string;
   id: string;
-  ports: DataProductPort[];
+  ports: Array<DataProductPort>;
   expects?: boolean;
 }) {
   return (

@@ -1,9 +1,5 @@
-import {
-  assessRetirement,
-  consumersFromGraph,
-  deprecatedFields,
-  type DeclaredConsumers,
-} from 'autocatalog-core';
+import { assessRetirement, consumersFromGraph, deprecatedFields } from 'autocatalog-core';
+import type { DeclaredConsumers } from 'autocatalog-core';
 import type { DocsCatalog } from './catalog';
 import { serviceLinks } from './data-models';
 import { eventPath } from './event-path';
@@ -21,7 +17,9 @@ export function retirementsPageProps(catalog: DocsCatalog, base: string): Retire
   const consumersOf = (repository: string) => {
     const known = byRepository.get(repository);
 
-    if (known) return known;
+    if (known) {
+      return known;
+    }
 
     const found = consumersFromGraph(catalog.graph, { repository }).consumers;
 
@@ -39,12 +37,14 @@ export function retirementsPageProps(catalog: DocsCatalog, base: string): Retire
       const fields = deprecatedFields(entry.event.schema);
       const deprecated = fm.status === 'deprecated' || fm.deprecation !== undefined;
 
-      if (!deprecated && fields.length === 0) return [];
+      if (!deprecated && fields.length === 0) {
+        return [];
+      }
 
       const elsewhere = consumersOf(entry.repository).get(key);
 
       // Each consumer's own word counts beside the producer's.
-      const declared: DeclaredConsumers[] = [
+      const declared: Array<DeclaredConsumers> = [
         { source: entry.repository, consumers: fm.consumers, fields: fm.consumerFields ?? {} },
         ...(elsewhere
           ? [

@@ -11,14 +11,16 @@ export interface Stat {
 }
 
 export interface StatsProps {
-  items: Stat[];
+  items: Array<Stat>;
   /** Names the counts for assistive technology; they are said, not titled. */
   label?: string;
 }
 
 /** ", " between counts and " and " before the last, as a sentence lists things. */
 const joiner = (index: number, length: number) => {
-  if (index === 0) return '';
+  if (index === 0) {
+    return '';
+  }
 
   return index === length - 1 ? ' and ' : ', ';
 };
@@ -28,7 +30,9 @@ const joiner = (index: number, length: number) => {
  * as tiles: DESIGN.md. A count with somewhere to go is a link in the sentence.
  */
 export function Stats({ items, label }: StatsProps) {
-  if (items.length === 0) return null;
+  if (items.length === 0) {
+    return null;
+  }
 
   return (
     <div role="group" aria-label={label} className="not-content my-6 text-sm text-muted-foreground">

@@ -150,7 +150,9 @@ it('leaves a repository without models out of the graph', async () => {
 async function diagrams(files: Record<string, string>) {
   await write('app/package.json', JSON.stringify({ name: 'app' }));
 
-  for (const [file, body] of Object.entries(files)) await write(`app/${file}`, body);
+  for (const [file, body] of Object.entries(files)) {
+    await write(`app/${file}`, body);
+  }
 
   const catalog = await buildDocsCatalog(root, { includeDates: false });
 

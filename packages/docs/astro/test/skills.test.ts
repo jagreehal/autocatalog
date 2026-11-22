@@ -1,4 +1,5 @@
-import { AUTOCATALOG_GRAPH_SPEC, type AgentSystemCatalogResource } from 'autocatalog-core';
+import { AUTOCATALOG_GRAPH_SPEC } from 'autocatalog-core';
+import type { AgentSystemCatalogResource } from 'autocatalog-core';
 import { expect, it } from 'vitest';
 import { buildSkills } from '../src/skills';
 

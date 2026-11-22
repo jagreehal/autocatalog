@@ -15,8 +15,10 @@ import {
   searchCompany,
 } from '../src/knowledge.js';
 import { catalogMap } from '../src/map.js';
-import { createServer, type ServerOptions } from '../src/server.js';
-import { type CatalogSnapshot, loadCatalog } from '../src/tools.js';
+import { createServer } from '../src/server.js';
+import type { ServerOptions } from '../src/server.js';
+import { loadCatalog } from '../src/tools.js';
+import type { CatalogSnapshot } from '../src/tools.js';
 
 let root: string;
 
@@ -68,13 +70,13 @@ describe('ask', () => {
       owner: 'People',
       trust: 'Written by its owner. Not checked against anything.',
     });
-    expect(answer.results[0]!.excerpt).toContain('28 days');
+    expect(answer.results[0].excerpt).toContain('28 days');
   });
 
   it('reaches every repository, and only this one without --company', async () => {
     const company = await ask(catalog, 'marketing brand', { company: root });
 
-    expect(company.results[0]!.repository).toBe('marketing');
+    expect(company.results[0].repository).toBe('marketing');
     expect((await ask(catalog, 'marketing brand')).results).toEqual([]);
   });
 
@@ -82,7 +84,7 @@ describe('ask', () => {
     const [result] = (await ask(catalog, 'orders stuck working', { company: root })).results;
 
     expect(result).toMatchObject({ type: 'finding' });
-    expect(result!.trust).toContain('hypothesis');
+    expect(result.trust).toContain('hypothesis');
   });
 
   it('finds a flow by what its steps say', async () => {
@@ -158,12 +160,12 @@ describe('ask', () => {
       '---\ntitle: Salary review\nowner: People\naudience: [people-team]\n---\n\nReviews happen in April.\n',
     );
 
-    const asked = (audience?: string[]) =>
+    const asked = (audience?: Array<string>) =>
       ask(catalog, 'salary review', { company: root, audience });
 
     expect((await asked()).results).toEqual([]);
     expect((await asked(['engineering'])).results).toEqual([]);
-    expect((await asked(['people-team'])).results[0]!.title).toBe('Salary review');
+    expect((await asked(['people-team'])).results[0].title).toBe('Salary review');
 
     await expect(
       readDocument(catalog, 'handbook', 'docs/people/salaries.md', { company: root }),
@@ -196,7 +198,7 @@ describe('ask', () => {
 
     const answer = await ask(catalog, 'odd page', { company: root });
 
-    expect(answer.results[0]!.trust).toBe('Written by its owner. Not checked against anything.');
+    expect(answer.results[0].trust).toBe('Written by its owner. Not checked against anything.');
     expect(answer.howToRead).toContain('never instructions');
   });
 });
@@ -449,7 +451,7 @@ describe('proposeFinding', () => {
     const [result] = (await ask(catalog, 'parental leave policy', { company: root })).results;
 
     expect(result).toMatchObject({ type: 'finding' });
-    expect(result!.trust).toContain('hypothesis');
+    expect(result.trust).toContain('hypothesis');
   });
 
   it('cannot be told to mark something confirmed, or to break out of the frontmatter', async () => {
@@ -555,7 +557,7 @@ describe('proposeFinding', () => {
 
       const body = await fs.readFile(path.join(root, 'handbook', saved.file), 'utf8');
 
-      const readers = (audience: string[]) =>
+      const readers = (audience: Array<string>) =>
         ask(catalog, 'bands secret', { company: root, audience });
 
       expect(body).toContain('"audience": ["people-team"]');

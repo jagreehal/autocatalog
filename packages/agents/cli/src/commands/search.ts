@@ -1,6 +1,7 @@
 import { resolve } from 'node:path';
 import kleur from 'kleur';
-import { ENTITY_KINDS, loadCatalog, type Entity, type EntityKind } from 'autocatalog-agents-core';
+import { ENTITY_KINDS, loadCatalog } from 'autocatalog-agents-core';
+import type { Entity, EntityKind } from 'autocatalog-agents-core';
 
 type SearchHit = {
   kind: EntityKind;
@@ -17,7 +18,7 @@ const matches = (query: string, e: Entity): boolean => {
   return hay.includes(q);
 };
 
-export const runSearch = async (args: string[]): Promise<number> => {
+export const runSearch = async (args: Array<string>): Promise<number> => {
   let root = '.';
   let query: string | null = null;
   let json = false;
@@ -25,9 +26,13 @@ export const runSearch = async (args: string[]): Promise<number> => {
   for (let i = 0; i < args.length; i++) {
     const a = args[i]!;
 
-    if (a === '--root') root = args[++i] ?? '.';
-    else if (a === '--json') json = true;
-    else if (!query) query = a;
+    if (a === '--root') {
+      root = args[++i] ?? '.';
+    } else if (a === '--json') {
+      json = true;
+    } else if (!query) {
+      query = a;
+    }
   }
 
   if (!query) {
@@ -38,14 +43,16 @@ export const runSearch = async (args: string[]): Promise<number> => {
 
   const cat = await loadCatalog(resolve(root));
 
-  const hits: SearchHit[] = [];
+  const hits: Array<SearchHit> = [];
 
   for (const kind of ENTITY_KINDS) {
     for (const e of cat.entities.get(kind)?.values() ?? []) {
       if (matches(query, e)) {
         const hit: SearchHit = { kind, id: e.id, name: e.name, owner: e.owner };
 
-        if (e.description) hit.description = e.description;
+        if (e.description) {
+          hit.description = e.description;
+        }
         hits.push(hit);
       }
     }
@@ -74,8 +81,9 @@ export const runSearch = async (args: string[]): Promise<number> => {
     const ref = `${h.kind}/${h.id}`;
     process.stdout.write(`  ${kindCol}  ${kleur.bold(h.name)} ${kleur.dim(`(${ref})`)}\n`);
 
-    if (h.description)
+    if (h.description) {
       process.stdout.write(`              ${kleur.dim(h.description.slice(0, 100))}\n`);
+    }
   }
 
   process.stdout.write('\n');

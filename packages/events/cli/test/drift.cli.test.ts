@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { runDrift } from '../src/commands/drift';
 
-const here = path.dirname(fileURLToPath(import.meta.url));
+const here = import.meta.dirname;
 
 const demoRepo = path.resolve(here, '../../../../fixtures/demo-repo');
 
@@ -39,7 +39,7 @@ describe('ac drift (executable story: the guardrail)', () => {
     });
 
     await scanRepo({ root: repoCopy, out: current });
-  }, 60000);
+  }, 60_000);
 
   afterAll(async () => {
     await fs.rm(work, { recursive: true, force: true });
@@ -69,7 +69,9 @@ describe('ac drift (executable story: the guardrail)', () => {
     await fs.rm(path.join(major, 'autocatalog.artifact.json'));
 
     for (const file of await fs.readdir(major, { recursive: true })) {
-      if (path.basename(file) !== 'autocatalog.json') continue;
+      if (path.basename(file) !== 'autocatalog.json') {
+        continue;
+      }
       const manifest = JSON.parse(await fs.readFile(path.join(major, file), 'utf8'));
       manifest.version = `${Number(String(manifest.version).split('.')[0]) + 1}.0.0`;
       await fs.writeFile(path.join(major, file), JSON.stringify(manifest));

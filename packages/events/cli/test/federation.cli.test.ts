@@ -16,7 +16,7 @@ import {
 } from '../src/federation';
 import { tokenHeader } from '../src/enrol';
 
-const here = path.dirname(fileURLToPath(import.meta.url));
+const here = import.meta.dirname;
 
 const fixture = path.resolve(here, '../../../../fixtures/delivery-rabbitmq');
 
@@ -28,7 +28,7 @@ const quiet = () => {
   vi.spyOn(console, 'error').mockImplementation(() => {});
 };
 
-const git = (dir: string, ...args: string[]) =>
+const git = (dir: string, ...args: Array<string>) =>
   execFileSync('git', ['-C', dir, '-c', 'user.email=a@b', '-c', 'user.name=a', ...args], {
     encoding: 'utf8',
   }).trim();
@@ -77,7 +77,7 @@ describe('ac federation lock', () => {
       return `file://${dir}`;
     };
 
-    const lockWith = async (repos: string[], service?: string[]) => {
+    const lockWith = async (repos: Array<string>, service?: Array<string>) => {
       quiet();
 
       return runFederationLock({
@@ -168,7 +168,7 @@ describe('ac federation lock', () => {
     };
 
     /** A repository with a commit after the one `tag` names, so HEAD is not the release. */
-    const released = async (...tags: string[]) => {
+    const released = async (...tags: Array<string>) => {
       const remote = await repository('payments');
 
       for (const tag of tags) {

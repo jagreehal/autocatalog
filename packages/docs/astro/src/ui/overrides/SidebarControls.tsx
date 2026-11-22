@@ -1,6 +1,7 @@
 /** @jsxImportSource react */
 import { PanelLeftCloseIcon, PanelLeftOpenIcon } from 'lucide-react';
-import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import type { PointerEvent as ReactPointerEvent } from 'react';
 import { Button } from '#ui/components/ui/button.tsx';
 import {
   SIDEBAR_COLLAPSED_KEY as COLLAPSED_KEY,
@@ -38,10 +39,14 @@ export function SidebarControls() {
   }, []);
 
   useEffect(() => {
-    if (!ready) return;
+    if (!ready) {
+      return;
+    }
 
     const onMove = (event: PointerEvent) => {
-      if (!drag.current) return;
+      if (!drag.current) {
+        return;
+      }
 
       const next = Math.min(
         MAX_WIDTH,
@@ -52,7 +57,9 @@ export function SidebarControls() {
     };
 
     const onUp = () => {
-      if (!drag.current) return;
+      if (!drag.current) {
+        return;
+      }
 
       drag.current = null;
       document.body.classList.remove('ac-sidebar-resizing');
@@ -63,7 +70,9 @@ export function SidebarControls() {
 
       const remValue = Number.parseFloat(width);
 
-      if (Number.isFinite(remValue)) localStorage.setItem(WIDTH_KEY, String(remValue));
+      if (Number.isFinite(remValue)) {
+        localStorage.setItem(WIDTH_KEY, String(remValue));
+      }
     };
 
     window.addEventListener('pointermove', onMove);
@@ -84,7 +93,9 @@ export function SidebarControls() {
   };
 
   const startResize = (event: ReactPointerEvent<HTMLDivElement>) => {
-    if (collapsed) return;
+    if (collapsed) {
+      return;
+    }
 
     const width = Number.parseFloat(
       getComputedStyle(document.documentElement).getPropertyValue('--sl-sidebar-width'),

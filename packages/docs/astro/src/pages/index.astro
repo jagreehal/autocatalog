@@ -1,6 +1,7 @@
 ---
 import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
 import { getCollection } from 'astro:content';
+import starlightConfig from 'virtual:starlight/user-config';
 import { defaultHomeLayout, repositoryMetas } from 'autocatalog-docs-core';
 import { apiOperations, apiPath, apiSummary, apiTitle } from '../apis';
 import { readableCatalog } from '../access';
@@ -87,6 +88,9 @@ const layout = resolveHomeLayout(site.layouts?.home ?? defaultHomeLayout(site), 
   explore: page.explore,
   tags: page.tags,
   attention: page.attention,
+  provenance: page.provenance,
+  // A site that renders per request has no search dialog; it searches on its /search page.
+  searchAction: starlightConfig.prerender === false ? `${base}search` : undefined,
   recent: site.audience ? [] : recentChanges(catalog, items, base),
   map: page.map,
   catalogHref: page.catalogHref,

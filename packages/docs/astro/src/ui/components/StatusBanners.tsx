@@ -10,8 +10,10 @@ const ICONS = {
 } as const;
 
 /** Resource state a reader must not miss: draft, deprecated, review, newer version. */
-export function StatusBanners({ banners }: { banners: StatusBanner[] }) {
-  if (banners.length === 0) return null;
+export function StatusBanners({ banners }: { banners: Array<StatusBanner> }) {
+  if (banners.length === 0) {
+    return null;
+  }
 
   return (
     <div className="not-content flex flex-col gap-3" data-status-banners="">

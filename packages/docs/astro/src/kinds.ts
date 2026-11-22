@@ -1,16 +1,7 @@
-import {
-  isJsonObject,
-  resourceKey,
-  type JsonObject,
-  type JsonValue,
-  type ResourceRef,
-} from 'autocatalog-core';
-import {
-  type DocKind,
-  type DocsManifest,
-  SUPERSEDE_FIELDS,
-  supersession,
-} from 'autocatalog-docs-core';
+import { isJsonObject, resourceKey } from 'autocatalog-core';
+import type { JsonObject, JsonValue, ResourceRef } from 'autocatalog-core';
+import { SUPERSEDE_FIELDS, supersession } from 'autocatalog-docs-core';
+import type { DocKind, DocsManifest } from 'autocatalog-docs-core';
 import { z } from 'astro/zod';
 import type { ResourceLink } from './about';
 import type { DocsCatalog } from './catalog';
@@ -65,10 +56,10 @@ export const RESERVED_SEGMENTS = new Set([
  * publishes is refused with the file to change, before any page is built.
  */
 export function publishedKinds(
-  kinds: DocKind[],
+  kinds: Array<DocKind>,
   manifest: DocsManifest,
   repositories: Set<string>,
-): DocKind[] {
+): Array<DocKind> {
   const used = new Set(Object.values(manifest).map((entry) => entry.kind));
   const published = kinds.filter((kind) => used.has(kind.id));
 
@@ -108,7 +99,9 @@ export function kindCounts(catalog: Pick<DocsCatalog, 'kinds' | 'manifest'>): Ma
   const counts = new Map(catalog.kinds.map((kind) => [kind.id, 0]));
 
   for (const entry of Object.values(catalog.manifest)) {
-    if (entry.kind && counts.has(entry.kind)) counts.set(entry.kind, counts.get(entry.kind)! + 1);
+    if (entry.kind && counts.has(entry.kind)) {
+      counts.set(entry.kind, counts.get(entry.kind)! + 1);
+    }
   }
 
   return new Map(catalog.kinds.map((kind) => [kind, counts.get(kind.id) ?? 0]));
@@ -154,11 +147,15 @@ const scalar = z.union([z.string(), z.number(), z.boolean()]);
 function valueText(kind: DocKind, field: string, value: JsonValue | undefined): string | null {
   const list = z.array(scalar).safeParse(value);
 
-  if (list.success) return list.data.map(String).join(', ') || null;
+  if (list.success) {
+    return list.data.map(String).join(', ') || null;
+  }
 
   const single = scalar.safeParse(value);
 
-  if (!single.success || single.data === '') return null;
+  if (!single.success || single.data === '') {
+    return null;
+  }
 
   const written = String(single.data);
 
@@ -172,9 +169,13 @@ export function kindIndexProps(catalog: DocsCatalog, kind: DocKind): KindIndexPa
   const cell = (field: string, data: JsonObject): KindCell | null => {
     const text = valueText(kind, field, data[field]);
 
-    if (text === null) return null;
+    if (text === null) {
+      return null;
+    }
 
-    if (field === kind.statusField) return { text, status: true };
+    if (field === kind.statusField) {
+      return { text, status: true };
+    }
 
     if (field === 'owner') {
       const owner = ownerFor(owners, text);
@@ -188,7 +189,9 @@ export function kindIndexProps(catalog: DocsCatalog, kind: DocKind): KindIndexPa
   const rows: Array<KindRow & { sortDate: string }> = catalog.docs.flatMap((doc) => {
     const entry = catalog.manifest[doc.id];
 
-    if (entry?.kind !== kind.id) return [];
+    if (entry?.kind !== kind.id) {
+      return [];
+    }
 
     const summary = text.optional().catch(undefined).parse(doc.data.summary);
 
@@ -234,26 +237,36 @@ export function kindIndexProps(catalog: DocsCatalog, kind: DocKind): KindIndexPa
  * decision that was replaced, then each one that replaced it. Either side may
  * declare the edge, so a chain holds when only the newer document says so.
  */
-export function supersedeChains(catalog: DocsCatalog, kind: DocKind): KindChainLink[][] {
-  const next = new Map<string, string[]>();
+export function supersedeChains(catalog: DocsCatalog, kind: DocKind): Array<KindChainLink>[] {
+  const next = new Map<string, Array<string>>();
   const replaced = new Set<string>();
 
   const link = (older: string, newer: string) => {
-    if (!Object.hasOwn(catalog.manifest, older) || !Object.hasOwn(catalog.manifest, newer)) return;
+    if (!Object.hasOwn(catalog.manifest, older) || !Object.hasOwn(catalog.manifest, newer)) {
+      return;
+    }
 
     const after = next.get(older) ?? [];
 
-    if (!after.includes(newer)) after.push(newer);
+    if (!after.includes(newer)) {
+      after.push(newer);
+    }
     next.set(older, after.sort());
     replaced.add(newer);
   };
 
   for (const doc of catalog.docs) {
-    if (catalog.manifest[doc.id]?.kind !== kind.id) continue;
+    if (catalog.manifest[doc.id]?.kind !== kind.id) {
+      continue;
+    }
 
-    for (const older of supersession(doc.data).supersedes) link(older, doc.id);
+    for (const older of supersession(doc.data).supersedes) {
+      link(older, doc.id);
+    }
 
-    for (const newer of supersession(doc.data).supersededBy) link(doc.id, newer);
+    for (const newer of supersession(doc.data).supersededBy) {
+      link(doc.id, newer);
+    }
   }
 
   const toLink = (id: string): KindChainLink => {
@@ -265,7 +278,9 @@ export function supersedeChains(catalog: DocsCatalog, kind: DocKind): KindChainL
   // A decision replaced by two follows the first by id, which keeps each chain
   // a single line.
   return [...next.keys()].sort().flatMap((start) => {
-    if (replaced.has(start)) return [];
+    if (replaced.has(start)) {
+      return [];
+    }
 
     const chain = [start];
 
@@ -281,7 +296,7 @@ export function supersedeChains(catalog: DocsCatalog, kind: DocKind): KindChainL
 export interface KindHeader {
   kind: DocKind;
   status?: string;
-  facts: TitleFact[];
+  facts: Array<TitleFact>;
 }
 
 /**
@@ -294,9 +309,11 @@ export function kindHeader(catalog: DocsCatalog, id: string, base: string): Kind
   const kind = catalog.kinds.find((candidate) => candidate.id === entry?.kind);
   const doc = catalog.docs.find((candidate) => candidate.id === id);
 
-  if (!entry || !kind || !doc) return undefined;
+  if (!entry || !kind || !doc) {
+    return undefined;
+  }
 
-  const facts: TitleFact[] = [
+  const facts: Array<TitleFact> = [
     { term: 'Kind', links: [{ label: kind.label, href: kindHref(base, kind) }] },
   ];
 
@@ -315,12 +332,16 @@ export function kindHeader(catalog: DocsCatalog, id: string, base: string): Kind
   for (const field of new Set(fields)) {
     const text = skip.has(field) ? null : valueText(kind, field, doc.data[field]);
 
-    if (text !== null) facts.push({ term: heading(kind, field), text });
+    if (text !== null) {
+      facts.push({ term: heading(kind, field), text });
+    }
   }
 
   const applies = appliesTo(catalog, id, base);
 
-  if (applies.length > 0) facts.push({ term: 'Applies to', links: applies });
+  if (applies.length > 0) {
+    facts.push({ term: 'Applies to', links: applies });
+  }
 
   for (const field of SUPERSEDE_FIELDS) {
     // Only ids the manifest knows become links, so a link always lands on a
@@ -331,7 +352,9 @@ export function kindHeader(catalog: DocsCatalog, id: string, base: string): Kind
       return entry ? [{ label: entry.title, href: docHref(target) }] : [];
     });
 
-    if (links.length > 0) facts.push({ term: heading(kind, field), links });
+    if (links.length > 0) {
+      facts.push({ term: heading(kind, field), links });
+    }
   }
 
   return { kind, ...(entry.status && { status: entry.status }), facts };
@@ -356,11 +379,15 @@ function appliesTo(
   const services = catalogServices(catalog);
 
   return catalog.graph.relationships.flatMap(({ type, from: source, to }) => {
-    if (type !== 'describes' || resourceKey(source) !== resourceKey(from)) return [];
+    if (type !== 'describes' || resourceKey(source) !== resourceKey(from)) {
+      return [];
+    }
 
     const resource = byKey.get(resourceKey(to));
 
-    if (!resource) return [];
+    if (!resource) {
+      return [];
+    }
 
     const href =
       to.kind === 'service' && services.has(to.id)
@@ -375,8 +402,8 @@ function appliesTo(
 
 /** Plain documents, and one card of links per kind. */
 export interface DocumentsByKind {
-  documents: ResourceLink[];
-  records: ResourceLinksProps[];
+  documents: Array<ResourceLink>;
+  records: Array<ResourceLinksProps>;
 }
 
 /**
@@ -384,7 +411,10 @@ export interface DocumentsByKind {
  * documents together, and one card per kind ("Decisions", "Runbooks"), each
  * only when it has any.
  */
-export function documentsByKind(kinds: DocKind[], links: ResourceLink[]): DocumentsByKind {
+export function documentsByKind(
+  kinds: Array<DocKind>,
+  links: Array<ResourceLink>,
+): DocumentsByKind {
   const known = new Set(kinds.map((kind) => kind.id));
 
   const records = kinds.flatMap((kind) => {

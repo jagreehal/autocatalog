@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { runScan } from '../src/commands/scan';
 
-const here = path.dirname(fileURLToPath(import.meta.url));
+const here = import.meta.dirname;
 
 const jsonSchemaRepo = path.resolve(here, '../../../../fixtures/json-schema-repo');
 
@@ -75,7 +75,7 @@ describe('runtime evidence', () => {
   });
 
   it('reports the two findings a static catalog cannot produce', async () => {
-    const output: string[] = [];
+    const output: Array<string> = [];
 
     const log = vi.spyOn(console, 'log').mockImplementation((line) => {
       output.push(String(line));
@@ -109,13 +109,13 @@ describe('runtime evidence', () => {
 
 describe('what a scan leaves in the repository', () => {
   let repo: string;
-  let said: string[];
+  let said: Array<string>;
 
   beforeEach(async () => {
     repo = await fs.mkdtemp(path.join(os.tmpdir(), 'ac-cli-agents-'));
     await fs.cp(jsonSchemaRepo, repo, { recursive: true });
     said = [];
-    vi.spyOn(console, 'log').mockImplementation((...args: unknown[]) => {
+    vi.spyOn(console, 'log').mockImplementation((...args: Array<unknown>) => {
       said.push(args.map(String).join(' '));
     });
   });
@@ -201,7 +201,7 @@ describe('runScan multi-source', () => {
   });
 
   it('reports the compiled resource graph after a successful scan', async () => {
-    const output: string[] = [];
+    const output: Array<string> = [];
 
     const log = vi.spyOn(console, 'log').mockImplementation((...args) => {
       output.push(args.map(String).join(' '));

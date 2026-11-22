@@ -12,7 +12,9 @@ const globs = fs
   .flatMap((line) => /^\s+-\s+'([^']+)'/.exec(line)?.[1] ?? []);
 
 const folders = globs.flatMap((glob) => {
-  if (!glob.endsWith('/*')) return [glob];
+  if (!glob.endsWith('/*')) {
+    return [glob];
+  }
 
   const parent = path.join(root, glob.slice(0, -2));
 
@@ -26,7 +28,9 @@ const folders = globs.flatMap((glob) => {
 const usesEffect = (folder) => {
   const manifest = path.join(root, folder, 'package.json');
 
-  if (!fs.existsSync(manifest)) return false;
+  if (!fs.existsSync(manifest)) {
+    return false;
+  }
 
   const { dependencies = {}, devDependencies = {} } = JSON.parse(fs.readFileSync(manifest, 'utf8'));
 
@@ -42,20 +46,26 @@ if (packages.length === 0) {
 
 console.log(`Effect rules over ${packages.join(', ')}`);
 
-const result = spawnSync(
-  'pnpm',
-  [
-    'exec',
-    'effect-tsgo',
-    'oxlint',
-    '--type-aware',
-    '--disable-nested-config',
-    '-c',
-    '.oxlintrc.effect.json',
-    '--deny-warnings',
-    ...packages,
-  ],
-  { cwd: root, stdio: 'inherit' },
-);
+// From inside each package: oxlint reads `oxlint-suppressions.json` from where
+// it runs, and the root one records the main config's findings, not these.
+const failed = packages.filter((folder) => {
+  const result = spawnSync(
+    'pnpm',
+    [
+      'exec',
+      'effect-tsgo',
+      'oxlint',
+      '--type-aware',
+      '--disable-nested-config',
+      '-c',
+      path.join(root, '.oxlintrc.effect.json'),
+      '--deny-warnings',
+      '.',
+    ],
+    { cwd: path.join(root, folder), stdio: 'inherit' },
+  );
 
-process.exit(result.status ?? 1);
+  return result.status !== 0;
+});
+
+process.exit(failed.length > 0 ? 1 : 0);

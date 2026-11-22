@@ -1,5 +1,6 @@
 import type { APIContext } from 'astro';
-import { type ResourceGraph, type ResourceRef, summarizeResourceGraph } from 'autocatalog-core';
+import { summarizeResourceGraph } from 'autocatalog-core';
+import type { ResourceGraph, ResourceRef } from 'autocatalog-core';
 import type { Doc } from 'autocatalog-docs-core';
 import { z } from 'zod';
 import type { DocsCatalog } from './catalog';
@@ -45,14 +46,16 @@ const needs = z.union([z.string().transform((one) => [one]), z.array(z.string())
 
 /** What the rule without a `canRead` reads of a reader. */
 export interface AccessReader {
-  access?: readonly string[] | undefined;
+  access?: ReadonlyArray<string> | undefined;
 }
 
 /** The rule without a `canRead`. Frontmatter it cannot read keeps the document closed. */
 export function defaultCanRead(doc: AccessDoc, reader: AccessReader | undefined): boolean {
   const required = needs.safeParse(doc.data.access);
 
-  if (!required.success) return false;
+  if (!required.success) {
+    return false;
+  }
 
   const has = reader?.access ?? [];
 
@@ -66,7 +69,9 @@ export function accessRule<Reader>(
 ): (doc: AccessDoc) => boolean {
   return (doc) => {
     try {
-      if (access.canRead) return access.canRead(doc, reader);
+      if (access.canRead) {
+        return access.canRead(doc, reader);
+      }
 
       // Without a `canRead`, only what the default rule reads of the reader.
       return defaultCanRead(doc, held.safeParse(reader).data);
@@ -83,7 +88,9 @@ export function readableCatalog(
   catalog: DocsCatalog,
   canRead: ((doc: AccessDoc) => boolean) | undefined,
 ): DocsCatalog {
-  if (!canRead) return catalog;
+  if (!canRead) {
+    return catalog;
+  }
 
   const docs = catalog.docs.filter(canRead);
   const ids = new Set(docs.map((doc) => doc.id));

@@ -217,7 +217,9 @@ describe('ac retire', () => {
       // Chunked, with no length to refuse it by up front.
       response.write('{"padding":"');
 
-      for (let i = 0; i < 5; i += 1) response.write('x'.repeat(1024 * 1024));
+      for (let i = 0; i < 5; i += 1) {
+        response.write('x'.repeat(1024 * 1024));
+      }
 
       response.end('"}');
     });

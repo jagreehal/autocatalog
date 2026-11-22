@@ -1,12 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import {
-  assessEventChange,
-  renderDriftMarkdown,
-  summariseDrift,
-  type SchemaNode,
-} from '../src/index';
+import { assessEventChange, renderDriftMarkdown, summariseDrift } from '../src/index';
+import type { SchemaNode } from '../src/index';
 
-const payment = (properties: Record<string, SchemaNode>, required: string[]): SchemaNode => ({
+const payment = (properties: Record<string, SchemaNode>, required: Array<string>): SchemaNode => ({
   type: 'object',
   properties,
   required,

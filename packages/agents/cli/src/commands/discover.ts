@@ -27,15 +27,17 @@ import {
   skillDraft,
   SKILLS_ADAPTER,
   parseSkillEntry,
-  type SkillChange,
-  type SkillEntry,
-  type SkillKind,
-  type DiscoveredAgent,
-  type DiscoveredMcpServer,
-  type DiscoveredModel,
-  type DiscoveredTool,
-  type DiscoveryAdapter,
-  type DiscoveryResult,
+} from 'autocatalog-agents-core';
+import type {
+  SkillChange,
+  SkillEntry,
+  SkillKind,
+  DiscoveredAgent,
+  DiscoveredMcpServer,
+  DiscoveredModel,
+  DiscoveredTool,
+  DiscoveryAdapter,
+  DiscoveryResult,
 } from 'autocatalog-agents-core';
 
 type DiscoverSource =
@@ -49,7 +51,7 @@ type DiscoverArgs = {
   home: boolean;
   prune: boolean;
   perRepository: boolean;
-  internal: string[];
+  internal: Array<string>;
   check: boolean;
 };
 
@@ -58,7 +60,7 @@ const usage = (): string =>
   '       with mcp: [--home] [--prune] [--per-repository] [--internal <host-or-@scope>,...]\n' +
   '       with skills: [--prune] [--check] [--per-repository]\n';
 
-const parseArgs = (args: string[]): DiscoverArgs | null => {
+const parseArgs = (args: Array<string>): DiscoverArgs | null => {
   let adapter: DiscoverSource | null = null;
   let source: string | null = null;
   let root = '.';
@@ -66,7 +68,7 @@ const parseArgs = (args: string[]): DiscoverArgs | null => {
   let home = false;
   let prune = false;
   let perRepository = false;
-  let internal: string[] = [];
+  let internal: Array<string> = [];
   let check = false;
 
   for (let i = 0; i < args.length; i++) {
@@ -83,7 +85,9 @@ const parseArgs = (args: string[]): DiscoverArgs | null => {
         value === SKILLS_ADAPTER
       ) {
         adapter = value;
-      } else return null;
+      } else {
+        return null;
+      }
     } else if (arg === '--root') {
       root = args[++i] ?? '.';
     } else if (arg === '--dry-run') {
@@ -105,7 +109,9 @@ const parseArgs = (args: string[]): DiscoverArgs | null => {
     }
   }
 
-  if (!adapter) return null;
+  if (!adapter) {
+    return null;
+  }
 
   return {
     adapter,
@@ -123,7 +129,7 @@ const parseArgs = (args: string[]): DiscoverArgs | null => {
 const discovery = (
   adapter: DiscoveryAdapter,
   source: { file: string; line: number; symbol?: string },
-  needsReview: string[],
+  needsReview: Array<string>,
 ) => ({
   confidence: 'inferred',
   adapter,
@@ -174,8 +180,11 @@ const modelData = (adapter: DiscoveryAdapter, model: DiscoveredModel) => ({
   ]),
 });
 
-const writeDrafts = async (catalogRoot: string, result: DiscoveryResult): Promise<string[]> => {
-  const written: string[] = [];
+const writeDrafts = async (
+  catalogRoot: string,
+  result: DiscoveryResult,
+): Promise<Array<string>> => {
+  const written: Array<string> = [];
 
   for (const model of result.models) {
     const dir = join(catalogRoot, 'models', model.id);
@@ -200,7 +209,9 @@ const writeDrafts = async (catalogRoot: string, result: DiscoveryResult): Promis
   }
 
   for (const agent of result.agents) {
-    if (!agent.model) continue;
+    if (!agent.model) {
+      continue;
+    }
     const dir = join(catalogRoot, 'agents', agent.id);
     const manifestPath = join(dir, AUTOCATALOG_ENTITY_FILE);
     const bodyPath = join(dir, 'index.mdx');
@@ -221,7 +232,7 @@ type ServerWrite = 'new' | 'updated' | 'unchanged' | 'kept' | 'moved';
 
 const serversDir = (catalogRoot: string): string => join(catalogRoot, DIR_BY_KIND['mcp-server']);
 
-type StaleServer = { id: string; sightings: string[] };
+type StaleServer = { id: string; sightings: Array<string> };
 
 /**
  * Manifests a scan could have seen and did not. A scan of a repository says
@@ -231,26 +242,30 @@ const staleServers = async (
   catalogRoot: string,
   seen: Set<string>,
   home: boolean,
-): Promise<StaleServer[]> => {
+): Promise<Array<StaleServer>> => {
   const entries = await readdir(serversDir(catalogRoot), { withFileTypes: true }).catch(() => []);
-  const stale: StaleServer[] = [];
+  const stale: Array<StaleServer> = [];
 
   for (const entry of entries) {
-    if (!entry.isDirectory() || seen.has(entry.name)) continue;
+    if (!entry.isDirectory() || seen.has(entry.name)) {
+      continue;
+    }
 
     const path = join(serversDir(catalogRoot), entry.name, AUTOCATALOG_ENTITY_FILE);
     const text = await readFile(path, 'utf8').catch(() => null);
     const sightings = text ? mcpServerSightings(parseStoredMcpServer(text)) : [];
     const inScope = home || sightings.every((sighting) => !sighting.startsWith(HOME_PREFIX));
 
-    if (sightings.length > 0 && inScope) stale.push({ id: entry.name, sightings });
+    if (sightings.length > 0 && inScope) {
+      stale.push({ id: entry.name, sightings });
+    }
   }
 
   return stale;
 };
 
 /** A stale entry whose config now names a new address is that server, moved. */
-const movedTo = (stale: StaleServer, servers: DiscoveredMcpServer[]): string | undefined =>
+const movedTo = (stale: StaleServer, servers: Array<DiscoveredMcpServer>): string | undefined =>
   servers.find(({ sources }) =>
     sources.some(({ file, symbol }) => stale.sightings.includes(`${file}#${symbol ?? ''}`)),
   )?.id;
@@ -281,9 +296,13 @@ const writeServer = async (
 
   const after = jsonFile(refreshMcpServer(existing, server));
 
-  if (!existing.discovery) return 'kept';
+  if (!existing.discovery) {
+    return 'kept';
+  }
 
-  if (after === before) return 'unchanged';
+  if (after === before) {
+    return 'unchanged';
+  }
 
   await writeFile(path, after, 'utf8');
 
@@ -345,7 +364,9 @@ const runMcpDiscover = async (parsed: DiscoverArgs): Promise<number> => {
   for (const entry of stale) {
     const target = movedTo(entry, result.servers);
 
-    if (target && !onDisk.has(target) && !moves.has(target)) moves.set(target, entry.id);
+    if (target && !onDisk.has(target) && !moves.has(target)) {
+      moves.set(target, entry.id);
+    }
   }
 
   for (const server of result.servers) {
@@ -366,15 +387,17 @@ const runMcpDiscover = async (parsed: DiscoverArgs): Promise<number> => {
 
       const outcome = from ? 'moved' : await writeServer(catalogRoot, server);
 
-      if (from) await writeServer(catalogRoot, server);
+      if (from) {
+        await writeServer(catalogRoot, server);
+      }
 
       counts[outcome]++;
       process.stdout.write(
         `  ${kleur.green(outcome)} ${line}${from ? kleur.dim(` from ${from}`) : ''}\n`,
       );
-    } catch (cause) {
+    } catch (error) {
       process.stdout.write(
-        `  ${kleur.yellow('skip')} ${server.id} ${kleur.dim(cause instanceof Error ? cause.message : String(cause))}\n`,
+        `  ${kleur.yellow('skip')} ${server.id} ${kleur.dim(error instanceof Error ? error.message : String(error))}\n`,
       );
     }
   }
@@ -427,13 +450,17 @@ const runSnapshotDiscover = async (parsed: DiscoverArgs): Promise<number> => {
       for (const tool of snapshot.tools) {
         const id = mcpToolId(server.id, tool.name);
 
-        if (known.has(id)) continue;
+        if (known.has(id)) {
+          continue;
+        }
 
         known.add(id);
         written += 1;
         process.stdout.write(`  ${kleur.green('new')} tool/${id}\n`);
 
-        if (parsed.dryRun) continue;
+        if (parsed.dryRun) {
+          continue;
+        }
 
         const dir = join(catalogRoot, DIR_BY_KIND.tool, id);
         const draft = mcpToolDraft(server, tool, { file, line: 1, symbol: tool.name });
@@ -487,7 +514,7 @@ const runSkillsDiscover = async (parsed: DiscoverArgs): Promise<number> => {
     })),
   ];
 
-  const changes: SkillChange[] = [];
+  const changes: Array<SkillChange> = [];
   const seen = new Set(drafts.map(({ kind, id }) => `${kind}/${id}`));
 
   for (const { kind, id, draft } of drafts) {
@@ -496,13 +523,17 @@ const runSkillsDiscover = async (parsed: DiscoverArgs): Promise<number> => {
     const existing = await readEntry(path);
 
     // An entry with no discovery block was written by hand and stays as it is.
-    if (existing && !existing.discovery) continue;
+    if (existing && !existing.discovery) {
+      continue;
+    }
 
     const next = existing ? refreshSkillEntry(kind, existing, draft) : draft;
 
     changes.push(...skillChanges(kind, id, existing ?? undefined, next));
 
-    if (parsed.dryRun || parsed.check) continue;
+    if (parsed.dryRun || parsed.check) {
+      continue;
+    }
 
     await mkdir(dir, { recursive: true });
     await writeFile(path, jsonFile(next), 'utf8');
@@ -512,11 +543,15 @@ const runSkillsDiscover = async (parsed: DiscoverArgs): Promise<number> => {
     const dir = join(catalogRoot, DIR_BY_KIND[kind]);
 
     for (const entry of await readdir(dir, { withFileTypes: true }).catch(() => [])) {
-      if (!entry.isDirectory() || seen.has(`${kind}/${entry.name}`)) continue;
+      if (!entry.isDirectory() || seen.has(`${kind}/${entry.name}`)) {
+        continue;
+      }
 
       const stored = await readEntry(join(dir, entry.name, AUTOCATALOG_ENTITY_FILE));
 
-      if (!stored?.discovery) continue;
+      if (!stored?.discovery) {
+        continue;
+      }
 
       changes.push(...skillChanges(kind, entry.name, stored, undefined));
 
@@ -536,7 +571,9 @@ const runSkillsDiscover = async (parsed: DiscoverArgs): Promise<number> => {
 
   process.stdout.write(`\n${reviews} to review · ${changes.length - reviews} info\n`);
 
-  if (parsed.check) return changes.length > 0 ? 1 : 0;
+  if (parsed.check) {
+    return changes.length > 0 ? 1 : 0;
+  }
 
   if (!parsed.dryRun && changes.some(({ message }) => message.startsWith('new'))) {
     process.stdout.write(
@@ -547,7 +584,7 @@ const runSkillsDiscover = async (parsed: DiscoverArgs): Promise<number> => {
   return 0;
 };
 
-export const runDiscover = async (args: string[]): Promise<number> => {
+export const runDiscover = async (args: Array<string>): Promise<number> => {
   const parsed = parseArgs(args);
 
   if (!parsed) {
@@ -556,11 +593,17 @@ export const runDiscover = async (args: string[]): Promise<number> => {
     return 2;
   }
 
-  if (parsed.adapter === MCP_ADAPTER) return runMcpDiscover(parsed);
+  if (parsed.adapter === MCP_ADAPTER) {
+    return runMcpDiscover(parsed);
+  }
 
-  if (parsed.adapter === MCP_SNAPSHOT_ADAPTER) return runSnapshotDiscover(parsed);
+  if (parsed.adapter === MCP_SNAPSHOT_ADAPTER) {
+    return runSnapshotDiscover(parsed);
+  }
 
-  if (parsed.adapter === SKILLS_ADAPTER) return runSkillsDiscover(parsed);
+  if (parsed.adapter === SKILLS_ADAPTER) {
+    return runSkillsDiscover(parsed);
+  }
 
   const sourceRoot = resolve(parsed.source);
   const catalogRoot = resolve(parsed.root);
@@ -586,12 +629,15 @@ export const runDiscover = async (args: string[]): Promise<number> => {
       );
     }
 
-    for (const tool of result.tools) process.stdout.write(`  ${kleur.cyan('tool')}  ${tool.id}\n`);
+    for (const tool of result.tools) {
+      process.stdout.write(`  ${kleur.cyan('tool')}  ${tool.id}\n`);
+    }
 
-    for (const model of result.models)
+    for (const model of result.models) {
       process.stdout.write(
         `  ${kleur.cyan('model')} ${model.id} (${model.provider}:${model.model_id})\n`,
       );
+    }
 
     return 0;
   }
@@ -604,7 +650,9 @@ export const runDiscover = async (args: string[]): Promise<number> => {
     );
   }
 
-  for (const path of written) process.stdout.write(`  ${kleur.green('write')} ${path}\n`);
+  for (const path of written) {
+    process.stdout.write(`  ${kleur.green('write')} ${path}\n`);
+  }
 
   return 0;
 };

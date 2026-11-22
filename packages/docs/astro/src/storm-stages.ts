@@ -63,15 +63,15 @@ const ROW_OF: Array<[Exclude<keyof Parsed, 'stage' | 'repeats'>, StickyKind, Sto
 ];
 
 /** Hand-written stages as the board's columns, or what is wrong with them. */
-export function stormColumns(stages: StormStage[]): StormColumnView[] {
+export function stormColumns(stages: Array<StormStage>): Array<StormColumnView> {
   const parsed = z.array(stageSchema).min(1).safeParse(stages);
 
   if (!parsed.success) {
-    throw new Error(`<Storm stages>: ${z.prettifyError(parsed.error).replace(/\n+/g, '; ')}`);
+    throw new Error(`<Storm stages>: ${z.prettifyError(parsed.error).replaceAll(/\n+/g, '; ')}`);
   }
 
   return parsed.data.map((stage) => {
-    const rows: Record<StormRowName, StormStickyView[]> = {
+    const rows: Record<StormRowName, Array<StormStickyView>> = {
       who: [],
       command: [],
       decidedBy: [],

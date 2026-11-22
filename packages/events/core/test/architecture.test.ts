@@ -28,7 +28,9 @@ describe('competing facts from two sources', () => {
     resource.provenance = { default: 'extracted', fields: {} };
     resource.needsReview = false;
 
-    if (team) resource.owner = { team };
+    if (team) {
+      resource.owner = { team };
+    }
     graph.resources.push(resource);
 
     return graph;

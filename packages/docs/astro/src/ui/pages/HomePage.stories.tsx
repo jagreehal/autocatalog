@@ -2,6 +2,8 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { docs } from './fixtures';
 import { HomePage } from './HomePage';
+import type { HomePageProps } from './HomePage';
+import storefront from './home-storefront.fixture.json';
 
 const meta = {
   title: 'Pages/HomePage',
@@ -64,6 +66,38 @@ const meta = {
       ['oncall', [docs[0]!]],
       ['runbook', docs],
     ],
+    provenance: {
+      resources: { extracted: 12, declared: 30, inferred: 3 },
+      relationships: { extracted: 20, declared: 9, inferred: 2 },
+    },
+    attention: {
+      needsReview: 2,
+      needsReviewHref: '/catalog/?review=1',
+      failures: [],
+      orphanProducers: 0,
+      orphanConsumers: 3,
+      unowned: 4,
+      ownersHref: '/owners/',
+      catalogHref: '/catalog/',
+    },
+    recent: [
+      {
+        kind: 'Event',
+        icon: 'event',
+        title: 'Order placed',
+        href: '/events/orders/order-placed/',
+        repository: 'orders',
+        updated: '2026-11-20T10:00:00Z',
+      },
+      {
+        kind: 'Document',
+        icon: 'doc',
+        title: 'Refund runbook',
+        href: '/billing/refund-runbook/',
+        repository: 'billing',
+        updated: '2026-11-18T09:00:00Z',
+      },
+    ],
   },
 } satisfies Meta<typeof HomePage>;
 
@@ -81,6 +115,19 @@ export const Empty: Story = {
   args: {
     stats: [{ label: 'relationships', value: 0 }],
     explore: [meta.args.explore[0]!, meta.args.explore[5]!],
+    repos: [],
+    tags: [],
+  },
+};
+
+// The storefront example's own home page data, as its build gives it.
+const built: unknown = storefront;
+
+export const Storefront: Story = {
+  args: {
+    // SAFETY: the fixture is the props the storefront build passed this page,
+    // copied from its HTML; JSON widens their literal unions, which is all that differs.
+    ...(built as Partial<HomePageProps>),
     repos: [],
     tags: [],
   },

@@ -7,7 +7,8 @@ import { eventPath } from '../event-path';
 import { docsSiteConfig } from '../config';
 import { renderLlmsTxt } from '../llms';
 import { componentRows } from '../page-models';
-import { type DocEntry, listItems } from '../view';
+import { listItems } from '../view';
+import type { DocEntry } from '../view';
 import { catalogId } from '../ui/lib/docs';
 import { documentsPerRequest } from 'virtual:autocatalog-docs-build';
 

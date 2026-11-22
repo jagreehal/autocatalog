@@ -25,7 +25,9 @@ export const POST: APIRoute = async ({ request: incoming, url }) => {
 
   const started = startDesign(await docsCatalog(), body.data.repository, body.data.title);
 
-  if (!started.ok) return Response.json(started, { status: 422 });
+  if (!started.ok) {
+    return Response.json(started, { status: 422 });
+  }
 
   const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
 

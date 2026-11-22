@@ -130,7 +130,7 @@ describe('the sidebar for a section', () => {
 
   const link = (href: string) => ({ type: 'link' as const, href });
 
-  const group = (label: string, ...hrefs: string[]) => ({
+  const group = (label: string, ...hrefs: Array<string>) => ({
     type: 'group' as const,
     label,
     entries: hrefs.map(link),
@@ -176,7 +176,7 @@ describe('the sidebar for a section', () => {
 });
 
 describe('a sidebar under its section’s heading', () => {
-  const group = (label: string, ...hrefs: string[]) => ({
+  const group = (label: string, ...hrefs: Array<string>) => ({
     type: 'group' as const,
     label,
     entries: hrefs.map((href) => ({ type: 'link' as const, href, label: href })),

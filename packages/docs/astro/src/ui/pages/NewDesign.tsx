@@ -8,7 +8,7 @@ import { Input } from '#ui/components/ui/input.tsx';
 
 export interface NewDesignProps {
   /** The repositories a design can start in, by name. */
-  repositories: string[];
+  repositories: Array<string>;
   /** Where a design is started. */
   startUrl: string;
 }

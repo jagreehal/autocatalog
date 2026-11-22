@@ -8,13 +8,14 @@ import {
   ItemMedia,
   ItemTitle,
 } from '#ui/components/ui/item.tsx';
-import { day, docHref, type DocListItem } from '../lib/docs';
+import { day, docHref } from '../lib/docs';
+import type { DocListItem } from '../lib/docs';
 import { IconTile } from './IconTile';
 
 export type { DocListItem };
 
 export interface DocListProps {
-  items: DocListItem[];
+  items: Array<DocListItem>;
   /** Show which repository each document comes from, for mixed lists. */
   showRepo?: boolean;
 }
@@ -24,7 +25,9 @@ function byline(item: DocListItem, showRepo: boolean): string {
   const updated = day(item.updated);
 
   // A site for readers outside names no owner.
-  if (!item.owner) return updated ? `Updated ${updated}` : '';
+  if (!item.owner) {
+    return updated ? `Updated ${updated}` : '';
+  }
 
   const owned = `${showRepo ? `In ${item.repo}, owned` : 'Owned'} by ${item.owner}`;
 

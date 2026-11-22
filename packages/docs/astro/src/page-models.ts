@@ -14,44 +14,46 @@ import {
   hasFieldConflict,
   indexFields,
   provenanceSummary,
-  type DeliveryReport,
-  type EventFrontmatter,
-  type LoadedExample,
-  type ResourceGraph,
-  type ResourceRef,
-  type BehindReference,
+} from 'autocatalog-core';
+import type {
+  DeliveryReport,
+  EventFrontmatter,
+  LoadedExample,
+  ProvenanceValue,
+  ResourceGraph,
+  ResourceRef,
+  BehindReference,
 } from 'autocatalog-core';
 import { attentionSnapshot } from './attention';
+import type { CatalogProvenance } from './ui/pages/HomeBlock';
+import { domainTitle } from './sidebar';
 import { buildChannels } from './channels';
 import { fieldsByPath, withFieldLineage } from './field-lineage';
 import { statusBanners } from './resource-status';
 import { buildSystems, catalogSystemRows } from './systems';
 import { z } from 'zod';
-import { type RepositoryMeta, sourceUrl } from 'autocatalog-docs-core';
+import { sourceUrl } from 'autocatalog-docs-core';
+import type { RepositoryMeta } from 'autocatalog-docs-core';
 import { documentsAbout } from './about';
 import { apiPath, apisForService, apiTitle, catalogServices } from './apis';
 import { specificationPath, specificationsForService } from './specifications';
 import { flowPath, flowRecords } from './flows';
-import { failureSource, type CatalogEvent, type DocsCatalog } from './catalog';
+import { failureSource } from './catalog';
+import type { CatalogEvent, DocsCatalog } from './catalog';
 import { docsSiteConfig } from './config';
 import { eventCatalogEmbeds } from './eventcatalog';
 import { architectureHref } from './eventcatalog-path';
 import { eventPath, eventsForService, fieldCarriers } from './event-path';
 import { eventVersions, versionLinks, versionPath } from './event-versions';
-import {
-  byKind,
-  graphOwners,
-  ownerContact,
-  ownerFor,
-  ownerHref,
-  resourceHref,
-  type Owner,
-} from './owners';
-import { type ShellLink, versionLabel } from './shell';
+import { byKind, graphOwners, ownerContact, ownerFor, ownerHref, resourceHref } from './owners';
+import type { Owner } from './owners';
+import { versionLabel } from './shell';
+import type { ShellLink } from './shell';
 import { remarkMermaid } from './mermaid';
 import { docKindIcon, documentsByKind, kindCounts, kindHref, kindNoun } from './kinds';
 import { explorerModel } from './ui/components/catalog-explorer-model';
-import { buildComponents, type ComponentRow } from './components';
+import { buildComponents } from './components';
+import type { ComponentRow } from './components';
 import { buildMcpServers } from './mcp-servers';
 import type { EventCatalogDiagramProps } from './ui/components/EventCatalogDiagram';
 import type { DeliveryView } from './ui/components/DeliveryFacts';
@@ -72,8 +74,10 @@ import type {
   ServicePageProps,
   ServicesPageProps,
 } from './ui/pages';
-import { catalogAnchor, docHref, groupByRepo, groupByTag, type DocListItem } from './view';
-import { buildDomains, domainHref, type Domain } from './domains';
+import { catalogAnchor, docHref, groupByRepo, groupByTag } from './view';
+import type { DocListItem } from './view';
+import { buildDomains, domainHref } from './domains';
+import type { Domain } from './domains';
 import {
   catalogGraph,
   domainNeighbourhood,
@@ -106,9 +110,9 @@ const HOME_COUNTS = 6;
  * the catalog.
  */
 export function homeCounts<Stat extends { label: string; value: number; kind?: string }>(
-  all: Stat[],
-  chosen?: readonly string[],
-): Stat[] {
+  all: Array<Stat>,
+  chosen?: ReadonlyArray<string>,
+): Array<Stat> {
   const present = all.filter(({ value }) => value > 0);
 
   const key = (stat: Stat) => stat.kind ?? stat.label;
@@ -122,7 +126,9 @@ export function homeCounts<Stat extends { label: string; value: number; kind?: s
   const rank = (stat: Stat) => {
     const leading = LEADING_COUNTS.indexOf(key(stat));
 
-    if (leading >= 0) return leading;
+    if (leading >= 0) {
+      return leading;
+    }
 
     return key(stat) === 'relationship' ? Number.MAX_SAFE_INTEGER : LEADING_COUNTS.length;
   };
@@ -132,7 +138,7 @@ export function homeCounts<Stat extends { label: string; value: number; kind?: s
 
 export function homePageProps(
   catalog: DocsCatalog,
-  items: DocListItem[],
+  items: Array<DocListItem>,
   base: string,
   metas: ReadonlyMap<string, RepositoryMeta> = new Map(),
   {
@@ -140,7 +146,7 @@ export function homePageProps(
     outside = false,
   }: {
     /** The kinds the home page counts, in order: `homeCounts`. */
-    counts?: readonly string[] | undefined;
+    counts?: ReadonlyArray<string> | undefined;
     /** A site for readers outside the company, which draws no map of its systems. */
     outside?: boolean;
   } = {},
@@ -371,12 +377,15 @@ export function homePageProps(
 
   const attention = attentionSnapshot(catalog, base);
 
+  const provenance = outside ? undefined : catalogProvenance(catalog.graph);
+
   const map = outside
     ? undefined
     : catalogGraph(catalog.graph, base, {
         servicePages: servicePages(catalog),
         eventPages: eventPages(catalog),
         ...mapEvidence(catalog),
+        levels: byDomain(catalog, base),
       });
 
   return {
@@ -399,6 +408,7 @@ export function homePageProps(
       .sort((a, b) => a.label.localeCompare(b.label)),
     tags: groupByTag(items),
     attention,
+    ...(provenance && { provenance }),
     ...(map && { map, catalogHref: `${base}catalog/` }),
   };
 }
@@ -416,7 +426,7 @@ export function channelPageProps(catalog: DocsCatalog, id: string, base: string)
 }
 
 /** Every component in the catalog, with its owner's page when it has one. */
-export function componentRows(catalog: DocsCatalog, base: string): ComponentRow[] {
+export function componentRows(catalog: DocsCatalog, base: string): Array<ComponentRow> {
   return buildComponents(catalog.graph, base, graphOwners(catalog.graph));
 }
 
@@ -467,6 +477,7 @@ export function catalogPageProps(catalog: DocsCatalog, base: string): CatalogPag
       servicePages: servicePages(catalog),
       eventPages: eventPages(catalog),
       ...mapEvidence(catalog),
+      levels: byDomain(catalog, base),
     }),
     explorer: explorerModel(catalog.graph),
   };
@@ -705,7 +716,9 @@ export function diagramProps(
   target: string | undefined,
   title: string,
 ): EventCatalogDiagramProps | undefined {
-  if (target === undefined) return undefined;
+  if (target === undefined) {
+    return undefined;
+  }
 
   return {
     embed: eventCatalogEmbeds()?.embed ?? false,
@@ -743,12 +756,12 @@ export function servicesPageProps(catalog: DocsCatalog, base: string): ServicesP
     ...new Set(serviceCalls.flatMap(({ caller, called }) => (called === name ? [caller] : []))),
   ];
 
-  const serviceLinks = (names: string[]) =>
+  const serviceLinks = (names: Array<string>) =>
     names.flatMap((name) =>
       services.has(name) ? [{ label: name, href: `${base}services/${name}/` }] : [],
     );
 
-  const eventLinks = (list: CatalogEvent[]) =>
+  const eventLinks = (list: Array<CatalogEvent>) =>
     list.map((entry) => ({
       label: entry.event.frontmatter.name,
       href: `${base}${eventPath(entry)}`,
@@ -853,7 +866,7 @@ export function servicePageProps(
 
   const { owner, system } = serviceFacts(catalog.graph, service.name);
 
-  const nodes = (list: CatalogEvent[]): ShellLink[] =>
+  const nodes = (list: Array<CatalogEvent>): Array<ShellLink> =>
     list.map((entry) => ({
       label: entry.event.frontmatter.name,
       href: `${base}${eventPath(entry)}`,
@@ -872,7 +885,9 @@ export function servicePageProps(
     { heading: 'Produces', slug: 'produces', events: produces },
     { heading: 'Consumes', slug: 'consumes', events: consumes },
   ].flatMap((section) => {
-    if (section.events.length === 0) return [];
+    if (section.events.length === 0) {
+      return [];
+    }
 
     return [
       {
@@ -960,7 +975,9 @@ export interface ServiceFacts {
 export function serviceFacts(graph: ResourceGraph, name: string): ServiceFacts {
   const resource = graph.resources.find((r) => r.ref.kind === 'service' && r.ref.id === name);
 
-  if (!resource) return {};
+  if (!resource) {
+    return {};
+  }
 
   const owner = resource.owner && ownerFor(graphOwners(graph), resource.owner.team);
   const { repository, system } = serviceRecord.parse(resource.attributes);
@@ -981,7 +998,7 @@ export function serviceFacts(graph: ResourceGraph, name: string): ServiceFacts {
 /** Each example's JSON, pretty-printed. */
 const UNITS = [
   ['day', 86_400],
-  ['hour', 3_600],
+  ['hour', 3600],
   ['minute', 60],
   ['second', 1],
 ] as const;
@@ -1008,7 +1025,9 @@ export function deliveryView(
   /** The field a journey is traced by, declared or found in the schema. */
   correlation?: string,
 ): DeliveryView | undefined {
-  if (!delivery && !correlation) return undefined;
+  if (!delivery && !correlation) {
+    return undefined;
+  }
 
   const { maxLateness, correlationKey, ...rest } = delivery ?? {};
   const tracedBy = correlationKey ?? correlation;
@@ -1024,7 +1043,7 @@ export function deliveryView(
 const exampleOrder = (example: LoadedExample) =>
   example.case ? EXAMPLE_CASES.indexOf(example.case) + 1 : 0;
 
-export function exampleViews(examples: LoadedExample[]): ExampleView[] {
+export function exampleViews(examples: Array<LoadedExample>): Array<ExampleView> {
   return [...examples]
     .sort((a, b) => exampleOrder(a) - exampleOrder(b))
     .map((example) => {
@@ -1042,7 +1061,7 @@ export function exampleViews(examples: LoadedExample[]): ExampleView[] {
 }
 
 /** The dead-letter queues consumers declare for one event, in `autocatalog.consumes.json`. */
-function deadLetters(graph: ResourceGraph, event: ResourceRef): DeadLetterView[] {
+function deadLetters(graph: ResourceGraph, event: ResourceRef): Array<DeadLetterView> {
   return graph.relationships.flatMap((edge) => {
     const queue = deadLetterOf(edge);
 
@@ -1059,7 +1078,7 @@ function deadLetters(graph: ResourceGraph, event: ResourceRef): DeadLetterView[]
 export async function eventPageProps(
   catalog: DocsCatalog,
   entry: CatalogEvent,
-  agents: { producers: ShellLink[]; consumers: ShellLink[] },
+  agents: { producers: Array<ShellLink>; consumers: Array<ShellLink> },
   base: string,
 ): Promise<EventPageProps> {
   const { repository, event } = entry;
@@ -1111,7 +1130,7 @@ export async function eventPageProps(
 
   const owner = fm.owner && ownerFor(graphOwners(catalog.graph), fm.owner.team);
 
-  const services = (names: string[]): ShellLink[] =>
+  const services = (names: Array<string>): Array<ShellLink> =>
     names.map((name) => ({ label: name, href: `${base}services/${name}/`, kind: 'service' }));
 
   const seen = runtimeByEvent(catalog.events, catalog.snapshots).get(
@@ -1141,7 +1160,13 @@ export async function eventPageProps(
     ['Repository', repository],
   ];
 
-  if (fm.tags.length) facts.push(['Tags', fm.tags.join(', ')]);
+  if (fm.owner) {
+    facts.push(owner ? ['Owner', owner.name, ownerHref(owner)] : ['Owner', fm.owner.team]);
+  }
+
+  if (fm.tags.length) {
+    facts.push(['Tags', fm.tags.join(', ')]);
+  }
 
   const deprecation =
     fm.status === 'deprecated'
@@ -1221,7 +1246,9 @@ export function deliveryPathView(
   const routes = report?.routes.filter((route) => route.event === event) ?? [];
   const findings = report?.findings.filter((finding) => finding.event === event) ?? [];
 
-  if (!report || (routes.length === 0 && findings.length === 0)) return undefined;
+  if (!report || (routes.length === 0 && findings.length === 0)) {
+    return undefined;
+  }
 
   const service = (name: string) => ({
     name,
@@ -1278,9 +1305,9 @@ export function deliveryPathView(
 
 export async function eventVersionPageProps(
   entry: CatalogEvent,
-  versions: CatalogEvent[],
+  versions: Array<CatalogEvent>,
   base: string,
-  behind: BehindReference[],
+  behind: Array<BehindReference>,
 ): Promise<EventVersionPageProps> {
   const { event } = entry;
 
@@ -1309,3 +1336,34 @@ export async function eventVersionPageProps(
     versions: links,
   };
 }
+
+/**
+ * How many resources and relationships each source gave: read from code,
+ * written by owners, or worked out. A fact known another way (overridden,
+ * observed) is left out of the figures rather than counted as one of the three.
+ */
+export function catalogProvenance(graph: DocsCatalog['graph']) {
+  const tally = (sources: Array<ProvenanceValue>) => {
+    const counts: CatalogProvenance['resources'] = {};
+
+    for (const source of sources) {
+      if (source === 'extracted' || source === 'declared' || source === 'inferred') {
+        counts[source] = (counts[source] ?? 0) + 1;
+      }
+    }
+
+    return counts;
+  };
+
+  return {
+    resources: tally(graph.resources.map(({ provenance }) => provenance.default)),
+    relationships: tally(graph.relationships.map(({ provenance }) => provenance)),
+  } satisfies CatalogProvenance;
+}
+
+/** The whole architecture is read by its domains first; a click on a level goes deeper. */
+const byDomain = (catalog: DocsCatalog, base: string) => ({
+  open: 1 as const,
+  domainHref: (name: string) => domainHref(base, name),
+  domainTitle: (name: string) => domainTitle(catalog.overviews, name),
+});

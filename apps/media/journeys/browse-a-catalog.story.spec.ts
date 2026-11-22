@@ -16,7 +16,7 @@ test('Browse a catalog', async ({ page, frame }, testInfo) => {
 
   given('the catalog opens on what it holds and how it connects');
   await page.goto(`${SITES.docs}/`);
-  await expect(page.getByRole('list', { name: 'What the catalog holds' })).toBeVisible();
+  await expect(page.getByRole('list', { name: 'Browse by type' })).toBeVisible();
   await page.getByRole('heading', { name: 'Architecture' }).scrollIntoViewIfNeeded();
   await expect(page.locator('.react-flow__node').first()).toBeVisible();
   await page.evaluate(() => window.scrollTo(0, 0));

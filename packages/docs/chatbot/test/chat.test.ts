@@ -1,17 +1,10 @@
 import type { LanguageModelV4StreamPart } from '@ai-sdk/provider';
 import { convertArrayToReadableStream, MockLanguageModelV4 } from 'ai/test';
 import { expect, it } from 'vitest';
-import {
-  type ChatPage,
-  type ChatTurn,
-  createChat,
-  pagesSource,
-  plainText,
-  rankPages,
-  searchPages,
-} from '../src/index';
+import { createChat, pagesSource, plainText, rankPages, searchPages } from '../src/index';
+import type { ChatPage, ChatTurn } from '../src/index';
 
-const pages: ChatPage[] = [
+const pages: Array<ChatPage> = [
   {
     title: 'Authentication',
     href: '/api/authentication/',
@@ -36,7 +29,7 @@ const call = (toolCallId: string, toolName: string, input: Record<string, string
   input: JSON.stringify(input),
 });
 
-const step = (...parts: LanguageModelV4StreamPart[]) => ({
+const step = (...parts: Array<LanguageModelV4StreamPart>) => ({
   stream: convertArrayToReadableStream<LanguageModelV4StreamPart>([
     ...parts,
     {
@@ -68,7 +61,7 @@ const ask = (question: string) =>
   });
 
 it('answers from the pages it searched and read, and only those the reader can open', async () => {
-  const turns: ChatTurn[] = [];
+  const turns: Array<ChatTurn> = [];
 
   const model = new MockLanguageModelV4({
     doStream: [
@@ -113,7 +106,7 @@ it('answers from the pages it searched and read, and only those the reader can o
 });
 
 it('says what is missing when the pages do not answer', async () => {
-  const turns: ChatTurn[] = [];
+  const turns: Array<ChatTurn> = [];
 
   const model = new MockLanguageModelV4({
     doStream: [
@@ -168,7 +161,7 @@ it('answers on its last step, which can only report a gap', async () => {
 });
 
 it('replies after a gap reported on its last step, with no tools at all', async () => {
-  const turns: ChatTurn[] = [];
+  const turns: Array<ChatTurn> = [];
 
   const model = new MockLanguageModelV4({
     doStream: [

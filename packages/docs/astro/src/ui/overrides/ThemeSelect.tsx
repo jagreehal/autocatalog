@@ -62,7 +62,9 @@ export function ThemeSelect() {
     const query = matchMedia('(prefers-color-scheme: light)');
 
     const follow = () => {
-      if (!stored()) document.documentElement.dataset.theme = system();
+      if (!stored()) {
+        document.documentElement.dataset.theme = system();
+      }
     };
 
     query.addEventListener('change', follow);

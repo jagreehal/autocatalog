@@ -6,7 +6,7 @@ export interface DocListItem {
   owner: string;
   /** ISO date of the last commit touching the file, or null if git cannot say. */
   updated: string | null;
-  tags: string[];
+  tags: Array<string>;
   /** Its kind, state and date, when it is a decision, runbook or incident. */
   kind?: string | undefined;
   status?: string | undefined;
@@ -20,11 +20,15 @@ export interface DocListItem {
  * worse than no date, because it reads as a promise.
  */
 export function day(iso: string | null | undefined): string | null {
-  if (!iso) return null;
+  if (!iso) {
+    return null;
+  }
 
   const parsed = new Date(iso);
 
-  if (Number.isNaN(parsed.getTime())) return null;
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
 
   // In UTC, so a date-only value (`2026-10-18`) is that day wherever the site is built.
   return parsed.toLocaleDateString('en-GB', {

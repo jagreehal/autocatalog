@@ -11,20 +11,22 @@ import {
   deliveryEvents,
   edgeBindings,
   nodeOf,
-  type BrokerNode,
   jsonValueSchema,
   loadRepositoryEvents,
   rabbitMqGraph,
   readConsumerDeclarations,
   resourceKey,
   scanArchitecture,
-  type CatalogRelationship,
-  type ConsumerDelivery,
-  type DeliveryFinding,
-  type DeliveryHop,
-  type DeliveryReport,
-  type JsonValue,
-  type ResourceGraph,
+} from 'autocatalog-core';
+import type {
+  BrokerNode,
+  CatalogRelationship,
+  ConsumerDelivery,
+  DeliveryFinding,
+  DeliveryHop,
+  DeliveryReport,
+  JsonValue,
+  ResourceGraph,
 } from 'autocatalog-core';
 
 const execFileAsync = promisify(execFile);
@@ -39,7 +41,9 @@ export async function deliveryReport(
   if (!resources) {
     const scanned = await scanArchitecture({ root, publish: false });
 
-    if (scanned.errors.length) throw new Error(scanned.errors.join('; '));
+    if (scanned.errors.length) {
+      throw new Error(scanned.errors.join('; '));
+    }
     resources = scanned.graph;
   }
 
@@ -96,15 +100,18 @@ export function renderRoute(route: ConsumerDelivery, environment?: string): stri
 
     lines.push(`${'  '.repeat(depth)}→ ${route.consumer}`);
 
-    if (route.deadLetter)
+    if (route.deadLetter) {
       lines.push(
         `${'  '.repeat(depth)}→ rejected: ${route.deadLetter.exchange} → ${route.deadLetter.queues.join(', ') || kleur.red('nowhere')}`,
       );
+    }
   } else {
     lines.push(`      ${kleur.red(`✗ no committed example reaches ${route.queue}`)}`);
   }
 
-  if (route.facts.length) lines.push(`  ${kleur.dim(route.facts.join(' · '))}`);
+  if (route.facts.length) {
+    lines.push(`  ${kleur.dim(route.facts.join(' · '))}`);
+  }
 
   for (const example of route.examples) {
     const headers = Object.entries(example.headers)
@@ -140,16 +147,22 @@ export async function runDelivery(opts: {
 }): Promise<number> {
   const { report } = await deliveryReport(path.resolve(opts.root));
 
-  if (opts.format === 'json') console.log(JSON.stringify(report, null, 2));
-  else {
-    if (report.routes.length === 0 && report.findings.length === 0)
+  if (opts.format === 'json') {
+    console.log(JSON.stringify(report, null, 2));
+  } else {
+    if (report.routes.length === 0 && report.findings.length === 0) {
       console.log(
         'No delivery routes: no broker definitions, AMQP event transport or consumer queue was found.',
       );
+    }
 
-    for (const route of report.routes) console.log(`${renderRoute(route, report.environment)}\n`);
+    for (const route of report.routes) {
+      console.log(`${renderRoute(route, report.environment)}\n`);
+    }
 
-    for (const finding of report.findings) console.log(renderFinding(finding));
+    for (const finding of report.findings) {
+      console.log(renderFinding(finding));
+    }
 
     console.log(
       report.complete
@@ -188,7 +201,7 @@ export interface Verification {
   environment?: string;
   revision?: string;
   adapter: { provider: 'rabbitmq'; version?: string; broker: string };
-  results: VerificationResult[];
+  results: Array<VerificationResult>;
 }
 
 interface ManagementApi {
@@ -220,8 +233,9 @@ export function managementApi(url: string): ManagementApi & { broker: string } {
     // is not: repeating a publish or a /get could duplicate or lose a message.
     const response = method === 'GET' ? await request().catch(request) : await request();
 
-    if (!response.ok)
+    if (!response.ok) {
       throw new Error(`${method} ${pathname}: ${response.status} ${response.statusText}`);
+    }
 
     const text = await response.text();
 
@@ -279,8 +293,8 @@ const PROMISES: Array<[label: string, read: (node: BrokerNode) => string | numbe
 export function compareDeployment(
   declared: ResourceGraph,
   deployed: ResourceGraph,
-): VerificationResult[] {
-  const results: VerificationResult[] = [];
+): Array<VerificationResult> {
+  const results: Array<VerificationResult> = [];
 
   const brokerOnly = (graph: ResourceGraph) =>
     graph.resources.filter((r) => isRabbitMq(r.ref.namespace));
@@ -310,18 +324,21 @@ export function compareDeployment(
 
     const deployedNode = nodeOf(deployedResource);
 
-    if (!node || !deployedNode) continue;
+    if (!node || !deployedNode) {
+      continue;
+    }
 
     for (const [label, read] of PROMISES) {
       const want = read(node);
       const have = read(deployedNode);
 
-      if (want !== have)
+      if (want !== have) {
         results.push({
           status: 'FAIL',
           check: `${entity} ${resource.ref.id} has ${label} ${have ?? 'unset'} deployed, ${want ?? 'unset'} declared`,
           source,
         });
+      }
     }
   }
 
@@ -333,19 +350,21 @@ export function compareDeployment(
     const source = located(edge.source);
     const name = `${edge.from.id} → ${edge.to.id}`;
 
-    if (!deployedEdge)
+    if (!deployedEdge) {
       results.push({
         status: 'FAIL',
         check: `declared route ${name} is missing from the deployment`,
         source,
       });
-    else if (comparable(edge) !== comparable(deployedEdge))
+    } else if (comparable(edge) !== comparable(deployedEdge)) {
       results.push({
         status: 'FAIL',
         check: `declared route ${name} has different bindings in the deployment`,
         source,
       });
-    else results.push({ status: 'PASS', check: `declared route ${name} exists`, source });
+    } else {
+      results.push({ status: 'PASS', check: `declared route ${name} exists`, source });
+    }
   }
 
   return results;
@@ -362,7 +381,7 @@ type Ackmode = 'ack_requeue_false' | 'reject_requeue_false' | 'reject_requeue_tr
 
 /** Messages taken off queues during the run, by queue. */
 export class Mailbox {
-  readonly seen = new Map<string, Received[]>();
+  readonly seen = new Map<string, Array<Received>>();
 
   constructor(
     private readonly api: ManagementApi,
@@ -383,16 +402,19 @@ export class Mailbox {
         ),
       );
 
-      if (batch.length === 0) return;
+      if (batch.length === 0) {
+        return;
+      }
 
       for (const message of batch) {
         const id = message.properties.correlation_id;
 
-        if (id)
+        if (id) {
           this.seen.set(queue, [
             ...(this.seen.get(queue) ?? []),
             { correlationId: id, at: Date.now() - this.started, redelivered: message.redelivered },
           ]);
+        }
       }
     }
   }
@@ -402,7 +424,7 @@ export class Mailbox {
   }
 
   /** Every time a message was taken off a queue, oldest first. */
-  all(queue: string, correlationId: string): Received[] {
+  all(queue: string, correlationId: string): Array<Received> {
     return this.seen.get(queue)?.filter((m) => m.correlationId === correlationId) ?? [];
   }
 
@@ -418,11 +440,12 @@ export class Mailbox {
     for (const message of batch) {
       const id = message.properties.correlation_id;
 
-      if (id)
+      if (id) {
         this.seen.set(queue, [
           ...(this.seen.get(queue) ?? []),
           { correlationId: id, at: Date.now() - this.started, redelivered: message.redelivered },
         ]);
+      }
     }
   }
 }
@@ -438,7 +461,9 @@ async function until(
   for (;;) {
     await poll(deadline);
 
-    if (done() || Date.now() >= deadline) return;
+    if (done() || Date.now() >= deadline) {
+      return;
+    }
     await sleep(100);
   }
 }
@@ -522,12 +547,13 @@ export async function verifyDelivery(opts: {
       () => Boolean(mailbox.has(route.queue, correlationId)),
     );
 
-    if (!mailbox.has(route.queue, correlationId))
+    if (!mailbox.has(route.queue, correlationId)) {
       return {
         ...base,
         status: 'NOT TESTED',
         check: `recovery: no message reached ${route.queue} to fail`,
       };
+    }
 
     await until(
       Date.now() + deadlineMs,
@@ -555,12 +581,13 @@ export async function verifyDelivery(opts: {
   ): Promise<VerificationResult> => {
     const base = { event: route.event, consumer: route.consumer, example: example.name };
 
-    if (limit > 10)
+    if (limit > 10) {
       return {
         ...base,
         status: 'NOT TESTED',
         check: `the attempt limit of ${limit} on ${route.queue}: too many deliveries for a short test`,
       };
+    }
 
     const vhost = vhostFor(route);
     const dlq = route.deadLetter!.queues[0]!;
@@ -598,13 +625,14 @@ export async function verifyDelivery(opts: {
     };
   };
 
-  for (const route of report.routes.filter((r) => r.system !== 'rabbitmq'))
+  for (const route of report.routes.filter((r) => r.system !== 'rabbitmq')) {
     results.push({
       event: route.event,
       consumer: route.consumer,
       status: 'NOT TESTED',
       check: `delivery to ${route.queue} on ${route.system}: live verification runs against RabbitMQ`,
     });
+  }
 
   for (const route of report.routes.filter((r) => r.system === 'rabbitmq')) {
     const vhost = vhostFor(route);
@@ -665,13 +693,14 @@ export async function verifyDelivery(opts: {
         });
       }
     } else if (rejected.length) {
-      for (const example of rejected)
+      for (const example of rejected) {
         results.push({
           ...base,
           status: 'NOT TESTED',
           check: `rejected example ${example.name} is excluded: no matching example arrived to compare against`,
           example: example.name,
         });
+      }
     }
 
     const [first] = matching;
@@ -725,10 +754,13 @@ export async function verifyDelivery(opts: {
       });
     }
 
-    if (first) results.push(await recovery(route, first));
+    if (first) {
+      results.push(await recovery(route, first));
+    }
 
-    if (first && route.deadLetter?.queues.length && route.maxAttempts !== undefined)
+    if (first && route.deadLetter?.queues.length && route.maxAttempts !== undefined) {
       results.push(await attemptLimit(route, first, route.maxAttempts));
+    }
 
     results.push({
       ...base,
@@ -737,13 +769,14 @@ export async function verifyDelivery(opts: {
     });
   }
 
-  for (const finding of report.findings.filter((f) => f.confidence === 'unknown'))
+  for (const finding of report.findings.filter((f) => f.confidence === 'unknown')) {
     results.push({
       status: 'UNKNOWN',
       check: finding.message,
       event: finding.event,
       ...(finding.consumer && { consumer: finding.consumer }),
     });
+  }
 
   results.push(
     { status: 'NOT TESTED', check: 'retention expiry over time' },
@@ -751,7 +784,7 @@ export async function verifyDelivery(opts: {
     { status: 'NOT TESTED', check: 'throughput and outage recovery' },
   );
 
-  const git = (args: string[]) =>
+  const git = (args: Array<string>) =>
     execFileAsync('git', args, { cwd: root })
       .then((r) => r.stdout.trim())
       .catch(() => undefined);
@@ -775,7 +808,7 @@ export async function verifyDelivery(opts: {
   };
 }
 
-const ORDER: VerificationStatus[] = ['FAIL', 'PASS', 'NOT TESTED', 'UNKNOWN'];
+const ORDER: Array<VerificationStatus> = ['FAIL', 'PASS', 'NOT TESTED', 'UNKNOWN'];
 
 export function renderVerificationMarkdown(verification: Verification): string {
   const lines = [
@@ -807,7 +840,9 @@ export function renderVerificationMarkdown(verification: Verification): string {
       .filter(Boolean)
       .join(', ');
 
-    lines.push(`| ${result.status} | ${result.check.replaceAll('|', '\\|')} | ${evidence} |`);
+    lines.push(
+      `| ${result.status} | ${result.check.replaceAll('|', String.raw`\|`)} | ${evidence} |`,
+    );
   }
 
   return `${lines.join('\n')}\n`;
@@ -843,8 +878,9 @@ export async function runDeliveryVerify(opts: {
     UNKNOWN: kleur.magenta,
   };
 
-  for (const result of verification.results)
+  for (const result of verification.results) {
     console.log(`${colors[result.status](result.status.padEnd(11))} ${result.check}`);
+  }
 
   if (opts.out) {
     await fs.mkdir(opts.out, { recursive: true });

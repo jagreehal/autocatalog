@@ -3,7 +3,8 @@ import path from 'node:path';
 import { z } from 'zod';
 import { shownName } from './consumes';
 import { readOptionalResourceJson, writeResourceFile } from './resource-files';
-import { resourceKey, type ResourceGraph } from './resource-graph';
+import { resourceKey } from './resource-graph';
+import type { ResourceGraph } from './resource-graph';
 
 /**
  * Who may reach whom on the network, written by a plugin such as
@@ -53,11 +54,15 @@ export type NetworkFile = z.infer<typeof networkFileSchema>;
 export async function readNetworkFile(root: string): Promise<NetworkFile | undefined> {
   const value = await readOptionalResourceJson(path.join(root, NETWORK_FILE), { root });
 
-  if (value === undefined) return undefined;
+  if (value === undefined) {
+    return undefined;
+  }
 
   const parsed = networkFileSchema.safeParse(value);
 
-  if (parsed.success) return parsed.data;
+  if (parsed.success) {
+    return parsed.data;
+  }
 
   const issue = parsed.error.issues[0];
 
@@ -83,8 +88,9 @@ export async function writeNetworkFile(
   const text = `${JSON.stringify(file, null, 2)}\n`;
   const out = path.join(root, NETWORK_FILE);
 
-  if (options.check)
+  if (options.check) {
     return (await fs.readFile(out, 'utf8').catch(() => undefined)) === text ? 'current' : 'stale';
+  }
 
   await writeResourceFile(out, text);
 
@@ -92,8 +98,10 @@ export async function writeNetworkFile(
 }
 
 /** Whether a list of peers lets `other` through, or nothing when it cannot tell. */
-function lets(peers: NetworkPeer[], other: NetworkWorkload | undefined): boolean | undefined {
-  if (!other) return undefined;
+function lets(peers: Array<NetworkPeer>, other: NetworkWorkload | undefined): boolean | undefined {
+  if (!other) {
+    return undefined;
+  }
 
   const inNamespace = (p: NetworkPeer) =>
     'namespace' in p && other.namespace !== undefined && p.namespace === other.namespace;
@@ -102,8 +110,9 @@ function lets(peers: NetworkPeer[], other: NetworkWorkload | undefined): boolean
     peers.some(
       (p) => ('service' in p && p.service === other.service) || (inNamespace(p) && !('some' in p)),
     )
-  )
+  ) {
     return true;
+  }
 
   // Some of its namespace may: whether this workload is among them cannot be told.
   return peers.some((p) => inNamespace(p) && 'some' in p) ? undefined : false;
@@ -121,10 +130,10 @@ function lets(peers: NetworkPeer[], other: NetworkWorkload | undefined): boolean
  */
 export async function withNetworkPolicies(
   composed: ResourceGraph,
-  repositories: { repository: string; dir: string }[],
+  repositories: Array<{ repository: string; dir: string }>,
   onFinding: (message: string) => void,
 ): Promise<void> {
-  const workloads = new Map<string, (NetworkWorkload & { repository: string })[]>();
+  const workloads = new Map<string, Array<NetworkWorkload & { repository: string }>>();
 
   for (const { repository, dir } of repositories) {
     let file: NetworkFile | undefined;
@@ -136,22 +145,26 @@ export async function withNetworkPolicies(
       continue;
     }
 
-    for (const entry of file?.workloads ?? [])
+    for (const entry of file?.workloads ?? []) {
       workloads.set(entry.service, [
         ...(workloads.get(entry.service) ?? []),
         { ...entry, repository },
       ]);
+    }
   }
 
-  if (workloads.size === 0) return;
+  if (workloads.size === 0) {
+    return;
+  }
 
   for (const [service, described] of workloads) {
     const by = [...new Set(described.map(({ repository }) => repository))].sort();
 
-    if (by.length > 1)
+    if (by.length > 1) {
       onFinding(
         `${shownName(service)} is described by the network policy of ${by.join(' and ')}: each is checked`,
       );
+    }
   }
 
   const byKey = new Map(
@@ -163,7 +176,9 @@ export async function withNetworkPolicies(
   const say = (repository: string, message: string) => {
     const line = `${repository}: ${NETWORK_FILE}: ${message}`;
 
-    if (!said.has(line)) onFinding(line);
+    if (!said.has(line)) {
+      onFinding(line);
+    }
 
     said.add(line);
   };
@@ -171,48 +186,58 @@ export async function withNetworkPolicies(
   // The service behind each endpoint, so a call to an operation is a call to its service.
   const serviceOf = new Map<string, string>();
 
-  for (const { type, from, to } of composed.relationships)
+  for (const { type, from, to } of composed.relationships) {
     if (type === 'exposedBy' && from.kind === 'endpoint' && to.kind === 'service')
       serviceOf.set(resourceKey(from), to.id);
+  }
 
   for (const { type, from, to, provenance } of composed.relationships) {
-    if (type !== 'calls' || from.kind !== 'service') continue;
+    if (type !== 'calls' || from.kind !== 'service') {
+      continue;
+    }
 
     const callee = to.kind === 'service' ? to.id : serviceOf.get(resourceKey(to));
 
-    if (!callee || callee === from.id) continue;
+    if (!callee || callee === from.id) {
+      continue;
+    }
 
     const callers = workloads.get(from.id) ?? [];
     const targets = workloads.get(callee) ?? [];
     const how = provenance === 'observed' ? 'was seen calling' : 'calls';
 
-    for (const target of targets)
+    for (const target of targets) {
       for (const caller of callers.length > 0 ? callers : [undefined])
         if (target.ingress && lets(target.ingress, caller) === false)
           say(
             target.repository,
             `${shownName(from.id)} ${how} ${shownName(callee)}, and ${shownName(callee)}'s network policy does not let ${shownName(from.id)} reach it`,
           );
+    }
 
-    for (const caller of callers)
+    for (const caller of callers) {
       for (const target of targets.length > 0 ? targets : [undefined])
         if (caller.egress && lets(caller.egress, target) === false)
           say(
             caller.repository,
             `${shownName(from.id)} ${how} ${shownName(callee)}, and ${shownName(from.id)}'s network policy does not let it reach ${shownName(callee)}`,
           );
+    }
   }
 
   for (const { type, from, to } of composed.relationships) {
-    if (type !== 'exposedBy' || to.kind !== 'gateway' || from.kind !== 'endpoint') continue;
+    if (type !== 'exposedBy' || to.kind !== 'gateway' || from.kind !== 'endpoint') {
+      continue;
+    }
 
     const service = serviceOf.get(resourceKey(from));
 
-    for (const target of service ? (workloads.get(service) ?? []) : [])
+    for (const target of service ? (workloads.get(service) ?? []) : []) {
       if (!target.ingress && byKey.has(resourceKey(to)))
         say(
           target.repository,
           `${shownName(target.service)} is exposed through ${shownName(to.id)}, and its network policy lets any workload reach it directly`,
         );
+    }
   }
 }

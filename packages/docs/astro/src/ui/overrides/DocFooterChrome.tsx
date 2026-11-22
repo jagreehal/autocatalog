@@ -19,7 +19,8 @@ import {
 import { Separator } from '#ui/components/ui/separator.tsx';
 import type { ResourceLink } from '../../about';
 import { kindIcon } from '../../icons';
-import { DocLinks, type DocLink } from '../components/DocLinks';
+import { DocLinks } from '../components/DocLinks';
+import type { DocLink } from '../components/DocLinks';
 import { Icon } from '../components/Icon';
 import { ResourceLinks } from '../components/ResourceLinks';
 import { SourceLinks } from '../components/SourceLinks';
@@ -47,13 +48,13 @@ export interface DocFooterChromeProps {
   changed?: string | null;
   source?: string | null;
   edit?: string | null;
-  related: DocLink[];
-  linkedFrom: DocLink[];
+  related: Array<DocLink>;
+  linkedFrom: Array<DocLink>;
   /** What the catalog says is about this document. */
-  about: ResourceLink[];
+  about: Array<ResourceLink>;
   /** The repository the document is published from. */
   repository: string;
-  defined: DefinedResource[];
+  defined: Array<DefinedResource>;
   /** Starlight's own footer (edit link, last updated, pagination). */
   children?: ReactNode;
 }

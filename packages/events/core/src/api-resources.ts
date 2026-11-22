@@ -8,18 +8,18 @@ import {
   readDeclarationsFile,
   shownName,
   withFields,
-  type CallDeclaration,
 } from './consumes';
-import { isJsonObject, type JsonObject, type JsonValue } from './json';
+import type { CallDeclaration } from './consumes';
+import { isJsonObject } from './json';
+import type { JsonObject, JsonValue } from './json';
 import { derefLocal } from './json-ref';
-import {
-  relationshipKey,
-  resourceKey,
-  type ArchitectureCatalogResource,
-  type CatalogRelationship,
-  type CatalogResource,
-  type ResourceGraph,
-  type ResourceRef,
+import { relationshipKey, resourceKey } from './resource-graph';
+import type {
+  ArchitectureCatalogResource,
+  CatalogRelationship,
+  CatalogResource,
+  ResourceGraph,
+  ResourceRef,
 } from './resource-graph';
 import { findOpenApiDocuments, METHODS } from './scan-openapi';
 
@@ -59,7 +59,7 @@ export const endpointId = ({ method, path }: Pick<ApiOperation, 'method' | 'path
 export function apiOperations(
   doc: JsonObject,
   onProblem: (message: string) => void = () => undefined,
-): ApiOperation[] {
+): Array<ApiOperation> {
   const read = (node: JsonValue | undefined, where: string): JsonObject => {
     try {
       return objectAt(doc, node);
@@ -76,7 +76,9 @@ export function apiOperations(
     return METHODS.flatMap((method) => {
       const operation = pathItem[method];
 
-      if (!isJsonObject(operation)) return [];
+      if (!isJsonObject(operation)) {
+        return [];
+      }
 
       const operationId = text(operation.operationId);
       const summary = text(operation.summary);
@@ -133,8 +135,8 @@ export interface RepositoryApi {
 const slug = (value: string) =>
   value
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
+    .replaceAll(/[^a-z0-9]+/g, '-')
+    .replaceAll(/^-+|-+$/g, '');
 
 /** Where the scan looks for contracts, and so where a published spec lives. */
 const CONTRACTS = 'contracts';
@@ -148,16 +150,20 @@ export async function publishedApis(
   repository: string,
   repositoryRoot: string,
   warn: (message: string) => void,
-): Promise<RepositoryApi[]> {
+): Promise<Array<RepositoryApi>> {
   const root = path.join(repositoryRoot, CONTRACTS);
 
   // A real directory only: a symlink could point anywhere on the build machine,
   // and the spec gets published.
-  if (!fs.lstatSync(root, { throwIfNoEntry: false })?.isDirectory()) return [];
+  if (!fs.lstatSync(root, { throwIfNoEntry: false })?.isDirectory()) {
+    return [];
+  }
 
   const { documents, errors } = await findOpenApiDocuments({ root });
 
-  for (const error of errors) warn(`${repository}: ${CONTRACTS}/${error}`);
+  for (const error of errors) {
+    warn(`${repository}: ${CONTRACTS}/${error}`);
+  }
 
   // Named from the path without its extension; specs that share that name keep
   // the extension, then a number, so each one gets its own page.
@@ -174,7 +180,9 @@ export async function publishedApis(
     .map(({ relFile, doc }) => {
       let name = shared.has(bare(relFile)) ? slug(relFile) : bare(relFile);
 
-      for (let n = 2; taken.has(name); n += 1) name = `${slug(relFile)}-${n}`;
+      for (let n = 2; taken.has(name); n += 1) {
+        name = `${slug(relFile)}-${n}`;
+      }
       taken.add(name);
 
       return { repository, name, file: `${CONTRACTS}/${relFile}`, document: doc };
@@ -183,7 +191,7 @@ export async function publishedApis(
 
 export interface PublishedApi extends RepositoryApi {
   /** The services that serve it. */
-  services: string[];
+  services: Array<string>;
   /** Where the API's page lives, relative to the site's base. */
   url?: string;
 }
@@ -192,7 +200,7 @@ export interface PublishedApi extends RepositoryApi {
  * The path part of each `servers` URL, which a server's routes carry and a
  * spec's paths do not; `''` for a server at the root.
  */
-function basePathsOf(doc: JsonObject): string[] {
+function basePathsOf(doc: JsonObject): Array<string> {
   const servers = Array.isArray(doc.servers) ? doc.servers : [];
 
   const paths = servers.flatMap((server) => {
@@ -217,8 +225,8 @@ export function createEndpointGraph(
   const version = text(info.version);
   const basePaths = basePathsOf(api.document);
 
-  const resources: ArchitectureCatalogResource[] = [];
-  const relationships: CatalogRelationship[] = [];
+  const resources: Array<ArchitectureCatalogResource> = [];
+  const relationships: Array<CatalogRelationship> = [];
 
   for (const operation of apiOperations(api.document, onProblem)) {
     const { operationId, summary, method, path, deprecated, secured } = operation;
@@ -256,7 +264,7 @@ export function createEndpointGraph(
       },
     });
 
-    for (const service of api.services)
+    for (const service of api.services) {
       relationships.push({
         type: 'exposedBy',
         from: ref,
@@ -267,6 +275,7 @@ export function createEndpointGraph(
         needsReview: false,
         source,
       });
+    }
   }
 
   return {
@@ -284,15 +293,16 @@ export const endpointFacts = z.object({
 });
 
 /** The endpoints each service exposes, by service id. */
-export function endpointsByService(graph: ResourceGraph): Map<string, CatalogResource[]> {
+export function endpointsByService(graph: ResourceGraph): Map<string, Array<CatalogResource>> {
   const byKey = new Map(graph.resources.map((resource) => [resourceKey(resource.ref), resource]));
-  const exposed = new Map<string, CatalogResource[]>();
+  const exposed = new Map<string, Array<CatalogResource>>();
 
   for (const { type, from, to } of graph.relationships) {
     const endpoint = byKey.get(resourceKey(from));
 
-    if (type === 'exposedBy' && endpoint?.ref.kind === 'endpoint' && to.kind === 'service')
+    if (type === 'exposedBy' && endpoint?.ref.kind === 'endpoint' && to.kind === 'service') {
       exposed.set(to.id, [...(exposed.get(to.id) ?? []), endpoint]);
+    }
   }
 
   return exposed;
@@ -300,13 +310,15 @@ export function endpointsByService(graph: ResourceGraph): Map<string, CatalogRes
 
 /** A route as compared: `{id}` and `:id` are the same parameter, whatever it is called. */
 const comparableRoute = (route: string) =>
-  route.replace(/\{[^}]*\}|(?<=\/):[^/]+/g, '{}').replace(/(?<=.)\/+$/, '');
+  route.replaceAll(/\{[^}]*\}|(?<=\/):[^/]+/g, '{}').replace(/(?<=.)\/+$/, '');
 
 /** Whether `operation` names this endpoint, as written or below a server's base path. */
 function isOperation(endpoint: CatalogResource, operation: string): boolean {
   const facts = endpointFacts.safeParse(endpoint.attributes);
 
-  if (!facts.success) return false;
+  if (!facts.success) {
+    return false;
+  }
 
   const { method, path, basePaths } = facts.data;
   const [called, ...route] = operation.split(' ');
@@ -353,8 +365,9 @@ export function withoutCallerFields(graph: ResourceGraph): ResourceGraph {
   return {
     ...graph,
     relationships: graph.relationships.map((edge) => {
-      if (edge.type !== 'calls' || edge.to.kind !== 'endpoint' || !edge.attributes?.fields)
+      if (edge.type !== 'calls' || edge.to.kind !== 'endpoint' || !edge.attributes?.fields) {
         return edge;
+      }
 
       const { fields: _fields, ...attributes } = edge.attributes;
 
@@ -372,14 +385,14 @@ export interface EndpointCallOptions {
 export interface LinkedEndpointCalls {
   graph: ResourceGraph;
   /** What could not be joined to an endpoint, in words. */
-  unresolved: string[];
+  unresolved: Array<string>;
   /** Fields that wait for a lock to say who owns their service, in words. */
-  unverified: string[];
+  unverified: Array<string>;
 }
 
 export interface RepositoryCalls {
   repository: string;
-  calls: CallDeclaration[];
+  calls: Array<CallDeclaration>;
 }
 
 /**
@@ -392,7 +405,7 @@ export interface RepositoryCalls {
  */
 export function linkEndpointCalls(
   composed: ResourceGraph,
-  repositories: RepositoryCalls[],
+  repositories: Array<RepositoryCalls>,
   options: EndpointCallOptions = {},
 ): LinkedEndpointCalls {
   const exposed = endpointsByService(composed);
@@ -408,9 +421,9 @@ export function linkEndpointCalls(
   const unowned = new Set<string>();
   const edges = new Map<string, CatalogRelationship>();
   const callers = new Map<string, CatalogResource>();
-  const unresolved: string[] = [];
+  const unresolved: Array<string> = [];
 
-  for (const { repository, calls } of repositories)
+  for (const { repository, calls } of repositories) {
     for (const { service, target, operation, fields } of calls) {
       const all = exposed.get(target) ?? [];
       const picked = operation ? all.filter((e) => isOperation(e, operation)) : all;
@@ -457,13 +470,18 @@ export function linkEndpointCalls(
 
       if (!known.has(relationshipKey(between))) edges.set(relationshipKey(between), between);
     }
+  }
 
   for (const { type, from, to, evidence } of composed.relationships) {
-    if (type !== 'calls' || from.kind !== 'service' || to.kind !== 'service') continue;
+    if (type !== 'calls' || from.kind !== 'service' || to.kind !== 'service') {
+      continue;
+    }
 
     const all = exposed.get(to.id);
 
-    if (!all) continue;
+    if (!all) {
+      continue;
+    }
 
     for (const operation of evidence?.operations ?? []) {
       const picked = all.filter((endpoint) => isOperation(endpoint, operation));
@@ -486,7 +504,9 @@ export function linkEndpointCalls(
 
       const key = relationshipKey(edge);
 
-      if (!known.has(key) && !edges.has(key)) edges.set(key, edge);
+      if (!known.has(key) && !edges.has(key)) {
+        edges.set(key, edge);
+      }
     }
   }
 
@@ -521,7 +541,7 @@ export function linkEndpointCalls(
  */
 export async function withEndpoints(
   composed: ResourceGraph,
-  repositories: { repository: string; dir: string }[],
+  repositories: Array<{ repository: string; dir: string }>,
   onProblem: (message: string) => void,
   options: EndpointCallOptions & {
     /** Told about fields that wait for a lock; `onProblem` when not given. */
@@ -530,7 +550,7 @@ export async function withEndpoints(
 ): Promise<ResourceGraph> {
   let graph = withoutCallerFields(composed);
 
-  const calls: RepositoryCalls[] = [];
+  const calls: Array<RepositoryCalls> = [];
 
   for (const { repository, dir } of repositories) {
     for (const api of await publishedApis(repository, dir, onProblem)) {
@@ -544,10 +564,11 @@ export async function withEndpoints(
       // With a lock, a spec serves only a service the lock pins to its repository.
       const unpinned = declared && options.owners && options.owners.get(declared) !== repository;
 
-      if (unpinned)
+      if (unpinned) {
         onProblem(
           `${repository}: ${api.file}: x-autocatalog.service names ${declared}, which the lock does not pin to this repository, so no service exposes its operations`,
         );
+      }
 
       graph = mergeConsumerGraph(
         graph,

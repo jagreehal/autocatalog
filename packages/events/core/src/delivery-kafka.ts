@@ -2,7 +2,8 @@ import { parseAllDocuments } from 'yaml';
 import { z } from 'zod';
 import { emptyResourceGraph } from './architecture';
 import { brokerResource, named, nodeRef } from './delivery-model';
-import { jsonValueSchema, type JsonValue } from './json';
+import { jsonValueSchema } from './json';
+import type { JsonValue } from './json';
 import type { ResourceGraph } from './resource-graph';
 
 /**
@@ -47,8 +48,10 @@ const user = z.object({
 });
 
 /** Every Strimzi document in a YAML file, when it holds a topic or user. */
-export function parseStrimzi(text: string): JsonValue[] | undefined {
-  if (!STRIMZI.test(text) || !/kind:\s*Kafka(Topic|User)/.test(text)) return undefined;
+export function parseStrimzi(text: string): Array<JsonValue> | undefined {
+  if (!text.includes('kafka.strimzi.io/') || !/kind:\s*Kafka(Topic|User)/.test(text)) {
+    return undefined;
+  }
 
   try {
     return parseAllDocuments(text).map((doc) => jsonValueSchema.parse(doc.toJSON() ?? null));
@@ -91,13 +94,15 @@ export function strimziGraph(
 
     const publish = new Set<string>();
     const consume = new Set<string>();
-    const groups: Record<string, string[]> = {};
-    const notes: string[] = [];
+    const groups: Record<string, Array<string>> = {};
+    const notes: Array<string> = [];
 
     for (const account of users) {
       const authorization = account.spec.authorization;
 
-      if (!authorization) continue;
+      if (!authorization) {
+        continue;
+      }
 
       if (authorization.type !== 'simple') {
         notes.push(
@@ -107,32 +112,37 @@ export function strimziGraph(
       }
 
       for (const rule of authorization.acls) {
-        const operations = (rule.operations ?? (rule.operation ? [rule.operation] : [])).map((o) =>
-          o.toLowerCase(),
+        const operations = new Set(
+          (rule.operations ?? (rule.operation ? [rule.operation] : [])).map((o) => o.toLowerCase()),
         );
 
-        const can = (operation: string) =>
-          operations.includes(operation) || operations.includes('all');
+        const can = (operation: string) => operations.has(operation) || operations.has('all');
 
         if (rule.type === 'deny') {
-          if (rule.resource.type === 'topic' && covers(rule.resource, name))
+          if (rule.resource.type === 'topic' && covers(rule.resource, name)) {
             notes.push(`${named(account.metadata.name)} has a deny rule, which is not evaluated`);
+          }
           continue;
         }
 
         if (rule.resource.type === 'topic' && covers(rule.resource, name)) {
-          if (can('write')) publish.add(account.metadata.name);
+          if (can('write')) {
+            publish.add(account.metadata.name);
+          }
 
-          if (can('read')) consume.add(account.metadata.name);
+          if (can('read')) {
+            consume.add(account.metadata.name);
+          }
         }
 
-        if (rule.resource.type === 'group' && can('read'))
+        if (rule.resource.type === 'group' && can('read')) {
           groups[account.metadata.name] = [
             ...(groups[account.metadata.name] ?? []),
             rule.resource.patternType === 'prefix' || rule.resource.name === '*'
               ? `${rule.resource.name === '*' ? '' : rule.resource.name}*`
               : rule.resource.name,
           ];
+        }
       }
     }
 

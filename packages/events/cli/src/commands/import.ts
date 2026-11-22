@@ -9,8 +9,8 @@ import {
   loadedEventToAdapterEvent,
   pascalCase,
   publishCatalog,
-  type AdapterEvent,
 } from 'autocatalog-core';
+import type { AdapterEvent } from 'autocatalog-core';
 import { z } from 'zod';
 import { runValidate } from './validate';
 
@@ -21,13 +21,13 @@ export interface ImportEventFromManifest {
   name?: string;
   summary?: string;
   schemaPath?: string;
-  examplePaths?: string[];
+  examplePaths?: Array<string>;
   schemaUrl?: string;
-  exampleUrls?: string[];
+  exampleUrls?: Array<string>;
 }
 
 export interface ImportManifest {
-  events: ImportEventFromManifest[];
+  events: Array<ImportEventFromManifest>;
 }
 
 const paths = z.array(z.string()).optional();
@@ -48,7 +48,9 @@ const importEvent = z.object({
 function parseManifest(text: string, source: string): ImportManifest {
   const listed = z.object({ events: z.array(z.unknown()).min(1) }).safeParse(JSON.parse(text));
 
-  if (!listed.success) throw new Error(`manifest has no events: ${source}`);
+  if (!listed.success) {
+    throw new Error(`manifest has no events: ${source}`);
+  }
 
   return {
     events: listed.data.events.map((entry, i) => {
@@ -81,15 +83,15 @@ export interface RunImportOptions {
   name?: string;
   summary?: string;
   schemaPath?: string;
-  examplePaths?: string[];
+  examplePaths?: Array<string>;
   schemaUrl?: string;
-  exampleUrls?: string[];
+  exampleUrls?: Array<string>;
   dryRun?: boolean;
   githubTokenEnv?: string;
   cloneWith?: CloneStrategy;
   timeoutMs?: number;
   maxBytes?: number;
-  allowedHosts?: string[];
+  allowedHosts?: Array<string>;
 }
 
 interface RemoteFile {
@@ -105,10 +107,14 @@ function isHttpUrl(v: string): boolean {
 }
 
 function toRawGithubUrl(input: string): string {
-  if (!input.startsWith('https://github.com/')) return input;
+  if (!input.startsWith('https://github.com/')) {
+    return input;
+  }
   const m = input.match(/^https:\/\/github\.com\/([^/]+)\/([^/]+)\/blob\/([^/]+)\/(.+)$/);
 
-  if (!m) return input;
+  if (!m) {
+    return input;
+  }
 
   return `https://raw.githubusercontent.com/${m[1]}/${m[2]}/${m[3]}/${m[4]}`;
 }
@@ -149,19 +155,27 @@ export async function fetchRemoteJson(
       signal: AbortSignal.timeout(timeoutMs),
     });
 
-    if (res.status < 300 || res.status >= 400) break;
+    if (res.status < 300 || res.status >= 400) {
+      break;
+    }
 
     const location = res.headers.get('location');
 
-    if (!location) throw new Error(`Redirect without a location: ${target}`);
+    if (!location) {
+      throw new Error(`Redirect without a location: ${target}`);
+    }
 
-    if (hop === MAX_REDIRECTS) throw new Error(`Too many redirects: ${url}`);
+    if (hop === MAX_REDIRECTS) {
+      throw new Error(`Too many redirects: ${url}`);
+    }
     // Relative locations resolve against the hop they came from.
     target = new URL(location, target).toString();
     ensureAllowedRemoteUrl(target, allowedHosts);
   }
 
-  if (!res) throw new Error(`Failed to fetch ${target}`);
+  if (!res) {
+    throw new Error(`Failed to fetch ${target}`);
+  }
 
   if (!res.ok) {
     throw new Error(`Failed to fetch ${target}: ${res.status} ${res.statusText}`);
@@ -197,7 +211,9 @@ async function cloneRepo(input: {
     await ensureCmdAvailable('gh');
     const args = ['repo', 'clone', input.repo, input.dest, '--', '--depth', '1'];
 
-    if (input.ref) args.push('--branch', input.ref, '--single-branch');
+    if (input.ref) {
+      args.push('--branch', input.ref, '--single-branch');
+    }
     await new Promise<void>((resolve, reject) => {
       const env = { ...process.env };
 
@@ -216,8 +232,11 @@ async function cloneRepo(input: {
       const child = spawn('gh', args, { stdio: 'inherit', env });
       child.on('error', reject);
       child.on('exit', (code) => {
-        if (code === 0) resolve();
-        else reject(new Error(`gh clone failed with exit code ${code ?? 1}`));
+        if (code === 0) {
+          resolve();
+        } else {
+          reject(new Error(`gh clone failed with exit code ${code ?? 1}`));
+        }
       });
     });
 
@@ -227,14 +246,19 @@ async function cloneRepo(input: {
   await ensureCmdAvailable('git');
   const args = ['clone', '--depth', '1'];
 
-  if (input.ref) args.push('--branch', input.ref, '--single-branch');
+  if (input.ref) {
+    args.push('--branch', input.ref, '--single-branch');
+  }
   args.push(input.repo, input.dest);
   await new Promise<void>((resolve, reject) => {
     const child = spawn('git', args, { stdio: 'inherit' });
     child.on('error', reject);
     child.on('exit', (code) => {
-      if (code === 0) resolve();
-      else reject(new Error(`git clone failed with exit code ${code ?? 1}`));
+      if (code === 0) {
+        resolve();
+      } else {
+        reject(new Error(`git clone failed with exit code ${code ?? 1}`));
+      }
     });
   });
 }
@@ -263,7 +287,9 @@ export async function resolveInsideClone(root: string, relative: string): Promis
   const real = await fs.realpath(abs).catch((error: NodeJS.ErrnoException) => {
     // Missing files are the caller's problem to report, not a containment
     // failure; the read that follows produces the better message.
-    if (error.code === 'ENOENT') return abs;
+    if (error.code === 'ENOENT') {
+      return abs;
+    }
     throw error;
   });
 
@@ -310,7 +336,7 @@ async function prepareImportedEvent(input: {
   name?: string;
   summary?: string;
   schema: RemoteFile;
-  examples: RemoteFile[];
+  examples: Array<RemoteFile>;
   sourceType: 'github_clone' | 'url';
   githubRepo?: string;
   ref?: string;
@@ -321,7 +347,9 @@ async function prepareImportedEvent(input: {
     JSON.parse(Buffer.from(input.schema.bytes).toString('utf8')),
   );
 
-  if (!parsedSchema.success) throw new Error(`Schema for ${input.id} is not a JSON object`);
+  if (!parsedSchema.success) {
+    throw new Error(`Schema for ${input.id} is not a JSON object`);
+  }
   const schema = parsedSchema.data;
 
   const examples: AdapterEvent['examples'] = [];
@@ -337,7 +365,7 @@ async function prepareImportedEvent(input: {
     examples.push({ name: base, data: ex });
   }
 
-  const displayName = input.name ?? pascalCase(input.id).replace(/([a-z])([A-Z])/g, '$1 $2');
+  const displayName = input.name ?? pascalCase(input.id).replaceAll(/([a-z])([A-Z])/g, '$1 $2');
   const summary = input.summary ?? `Imported ${input.id}`;
 
   return {
@@ -368,7 +396,9 @@ function validateInputs(opts: RunImportOptions): string | null {
     return 'one source is required: --github-repo or --manifest-url or --schema-url';
   }
 
-  if (opts.manifestPath || opts.manifestUrl) return null;
+  if (opts.manifestPath || opts.manifestUrl) {
+    return null;
+  }
 
   if (!opts.id || !opts.domain || !opts.version || (!opts.schemaPath && !opts.schemaUrl)) {
     return 'single-event import requires --id --domain --version and one of --schema-path/--schema-url (or use manifest)';
@@ -397,7 +427,7 @@ export async function runImport(opts: RunImportOptions): Promise<number> {
   const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'autocatalog-import-'));
   const cloneDir = path.join(tempRoot, 'repo');
   let imported = 0;
-  const prepared: PreparedImport[] = [];
+  const prepared: Array<PreparedImport> = [];
 
   try {
     if (opts.githubRepo) {
@@ -428,10 +458,11 @@ export async function runImport(opts: RunImportOptions): Promise<number> {
           allowedHosts,
         });
 
-        const examples: RemoteFile[] = [];
+        const examples: Array<RemoteFile> = [];
 
-        for (const p of evt.exampleUrls ?? [])
+        for (const p of evt.exampleUrls ?? []) {
           examples.push(await fetchRemoteJson(p, timeoutMs, maxBytes, allowedHosts));
+        }
 
         for (const p of evt.examplePaths ?? []) {
           throw new Error(
@@ -467,7 +498,7 @@ export async function runImport(opts: RunImportOptions): Promise<number> {
           allowedHosts,
         });
 
-        const examples: RemoteFile[] = [];
+        const examples: Array<RemoteFile> = [];
 
         for (const p of evt.examplePaths ?? []) {
           examples.push(
@@ -475,8 +506,9 @@ export async function runImport(opts: RunImportOptions): Promise<number> {
           );
         }
 
-        for (const p of evt.exampleUrls ?? [])
+        for (const p of evt.exampleUrls ?? []) {
           examples.push(await fetchRemoteJson(p, timeoutMs, maxBytes, allowedHosts));
+        }
         prepared.push(
           await prepareImportedEvent({
             id: evt.id,
@@ -503,7 +535,7 @@ export async function runImport(opts: RunImportOptions): Promise<number> {
         allowedHosts,
       });
 
-      const examples: RemoteFile[] = [];
+      const examples: Array<RemoteFile> = [];
 
       for (const p of opts.examplePaths ?? []) {
         examples.push(
@@ -511,8 +543,9 @@ export async function runImport(opts: RunImportOptions): Promise<number> {
         );
       }
 
-      for (const p of opts.exampleUrls ?? [])
+      for (const p of opts.exampleUrls ?? []) {
         examples.push(await fetchRemoteJson(p, timeoutMs, maxBytes, allowedHosts));
+      }
       prepared.push(
         await prepareImportedEvent({
           id: opts.id!,
@@ -536,7 +569,9 @@ export async function runImport(opts: RunImportOptions): Promise<number> {
       .access(eventsRoot)
       .then(() => loadCatalog(eventsRoot, { skipVersioned: true }))
       .catch((error: NodeJS.ErrnoException) => {
-        if (error.code === 'ENOENT') return [];
+        if (error.code === 'ENOENT') {
+          return [];
+        }
         throw error;
       });
 

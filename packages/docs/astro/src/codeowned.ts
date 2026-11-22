@@ -3,10 +3,8 @@ import {
   ownerForPath,
   resolveResourceOwnership,
   resourceKey,
-  type CodeownersRule,
-  type OwnershipClaim,
-  type ResourceGraph,
 } from 'autocatalog-core';
+import type { CodeownersRule, OwnershipClaim, ResourceGraph } from 'autocatalog-core';
 
 /** A repository the site composes, and where its checkout is. */
 export interface OwnedRepository {
@@ -18,7 +16,7 @@ export interface OwnedRepository {
 export interface OwnedApi {
   repository: string;
   file: string;
-  services?: string[] | undefined;
+  services?: Array<string> | undefined;
 }
 
 // Who owns a repository as a whole: the rule matching a path no narrower rule
@@ -33,13 +31,15 @@ const ANY_PATH = '\0/\0';
  */
 export async function withCodeowners(
   graph: ResourceGraph,
-  repositories: readonly OwnedRepository[],
-  apis: readonly OwnedApi[],
+  repositories: ReadonlyArray<OwnedRepository>,
+  apis: ReadonlyArray<OwnedApi>,
   within: string,
 ): Promise<ResourceGraph> {
-  const rules = new Map<string, CodeownersRule[]>();
+  const rules = new Map<string, Array<CodeownersRule>>();
 
-  for (const { name, root } of repositories) rules.set(name, await loadCodeowners(root, within));
+  for (const { name, root } of repositories) {
+    rules.set(name, await loadCodeowners(root, within));
+  }
 
   const ownerIn = (repository: string, file: string) => {
     const found = rules.get(repository);
@@ -55,13 +55,15 @@ export async function withCodeowners(
     for (const service of api.services ?? []) {
       const teams = specOwners.get(service) ?? new Set<string>();
 
-      if (team) teams.add(team);
+      if (team) {
+        teams.add(team);
+      }
       specOwners.set(service, teams);
     }
   }
 
-  const claims = graph.resources.flatMap((resource): OwnershipClaim[] => {
-    const claim = (team: string | undefined, location: string): OwnershipClaim[] =>
+  const claims = graph.resources.flatMap((resource): Array<OwnershipClaim> => {
+    const claim = (team: string | undefined, location: string): Array<OwnershipClaim> =>
       team ? [{ resource: resource.ref, team, source: 'codeowners', location }] : [];
 
     if (resource.ref.kind === 'service') {
@@ -79,7 +81,9 @@ export async function withCodeowners(
     return repo && file ? claim(ownerIn(repo, file), file) : [];
   });
 
-  if (claims.length === 0) return graph;
+  if (claims.length === 0) {
+    return graph;
+  }
 
   const keys = new Set(claims.map(({ resource }) => resourceKey(resource)));
 

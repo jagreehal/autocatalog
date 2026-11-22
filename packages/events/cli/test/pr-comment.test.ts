@@ -29,7 +29,9 @@ function github(
 
     calls.push({ method, url, body: String(init?.body ?? '') });
 
-    if (status !== 200) return new Response('{}', { status });
+    if (status !== 200) {
+      return new Response('{}', { status });
+    }
 
     const listed = comments.map((c) => ({ user: { type: 'Bot' }, ...c }));
 

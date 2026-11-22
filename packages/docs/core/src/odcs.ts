@@ -5,7 +5,8 @@
  * checking consumers' expectations live in autocatalog-plugin-odcs, which
  * uses autotel-datacontract.
  */
-import { isJsonObject, type JsonObject } from 'autocatalog-core';
+import { isJsonObject } from 'autocatalog-core';
+import type { JsonObject } from 'autocatalog-core';
 import { parse } from 'yaml';
 import { z } from 'zod';
 
@@ -113,7 +114,7 @@ export interface OdcsObject {
   physicalName?: string | undefined;
   physicalType?: string | undefined;
   description?: string | undefined;
-  columns: OdcsColumn[];
+  columns: Array<OdcsColumn>;
   /** Quality rules on the object and its columns. */
   rules: number;
 }
@@ -136,8 +137,8 @@ export interface OdcsContract {
     usage?: string | undefined;
     limitations?: string | undefined;
   };
-  objects: OdcsObject[];
-  slas: OdcsSla[];
+  objects: Array<OdcsObject>;
+  slas: Array<OdcsSla>;
   team?: string | undefined;
   support: Array<{
     channel?: string | undefined;
@@ -149,7 +150,7 @@ export interface OdcsContract {
   /** ODCS 3.2's AI context: guidance written for agents. */
   ai: {
     instructions?: string | undefined;
-    constraints: string[];
+    constraints: Array<string>;
     verifiedStatements: Array<{ question: string; answer?: string | undefined }>;
   };
   price?: string | undefined;
@@ -178,8 +179,9 @@ export function readOdcs(source: string): OdcsContract {
   // JSON-safe: YAML dates and the like become what JSON carries.
   const written = json.parse(JSON.parse(JSON.stringify(document)));
 
-  if (!isJsonObject(written))
+  if (!isJsonObject(written)) {
     throw new Error('not an ODCS data contract: the file is not a mapping');
+  }
   const teamName = Array.isArray(c.team) ? c.team[0]?.name : c.team?.name;
 
   return {
@@ -225,7 +227,7 @@ export function readOdcs(source: string): OdcsContract {
     price:
       c.price?.priceAmount !== undefined
         ? `${c.price.priceAmount} ${c.price.priceCurrency ?? ''} ${c.price.priceUnit ?? ''}`
-            .replace(/\s+/g, ' ')
+            .replaceAll(/\s+/g, ' ')
             .trim()
         : undefined,
     document: written,
@@ -279,7 +281,9 @@ export function readTrackRecord(
   let unreadable = 0;
 
   for (const line of source.split('\n')) {
-    if (!line.trim()) continue;
+    if (!line.trim()) {
+      continue;
+    }
     let value: unknown;
 
     try {
@@ -296,8 +300,9 @@ export function readTrackRecord(
       continue;
     }
 
-    if (read.data.contract.id !== contract.id || read.data.contract.version !== contract.version)
+    if (read.data.contract.id !== contract.id || read.data.contract.version !== contract.version) {
       continue;
+    }
     byRun.set(read.data.at, [...(byRun.get(read.data.at) ?? []), read.data]);
   }
 
@@ -335,7 +340,7 @@ export function readTrackRecord(
   for (const [, reports] of runs) {
     const seen = new Map<string, boolean>();
 
-    for (const r of reports)
+    for (const r of reports) {
       for (const s of r.sla) {
         if (s.status === 'not-executable') continue;
         const key = `${s.property}:${s.element ?? ''}`;
@@ -343,13 +348,16 @@ export function readTrackRecord(
         if (!promised.has(key)) continue;
         seen.set(key, (seen.get(key) ?? true) && s.status === 'kept');
       }
+    }
 
     for (const [key, kept] of seen) {
       const [property = '', element = ''] = key.split(/:(.*)/s);
       const entry = slas.get(key) ?? { property, element, kept: 0, measured: 0 };
       entry.measured++;
 
-      if (kept) entry.kept++;
+      if (kept) {
+        entry.kept++;
+      }
       slas.set(key, entry);
     }
   }

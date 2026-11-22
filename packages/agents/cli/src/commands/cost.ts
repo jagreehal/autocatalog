@@ -5,26 +5,34 @@ import {
   loadCatalog,
   rollupCost,
   totalMonthlyCost,
-  type RollupKey,
 } from 'autocatalog-agents-core';
+import type { RollupKey } from 'autocatalog-agents-core';
 
 const fmt = (n: number): string => {
-  if (n >= 1000) return `$${n.toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
+  if (n >= 1000) {
+    return `$${n.toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
+  }
 
-  if (n >= 1) return `$${n.toFixed(2)}`;
+  if (n >= 1) {
+    return `$${n.toFixed(2)}`;
+  }
 
   return `$${n.toFixed(4)}`;
 };
 
 const parseAgentRef = (s: string): string | null => {
-  if (s.startsWith('agent/')) return s.slice('agent/'.length);
+  if (s.startsWith('agent/')) {
+    return s.slice('agent/'.length);
+  }
 
-  if (s.includes('/')) return null;
+  if (s.includes('/')) {
+    return null;
+  }
 
   return s;
 };
 
-export const runCost = async (args: string[]): Promise<number> => {
+export const runCost = async (args: Array<string>): Promise<number> => {
   let root = '.';
   let target: string | null = null;
   let by: RollupKey | null = null;
@@ -32,21 +40,29 @@ export const runCost = async (args: string[]): Promise<number> => {
   for (let i = 0; i < args.length; i++) {
     const a = args[i]!;
 
-    if (a === '--root') root = args[++i] ?? '.';
-    else if (a === '--by-domain') by = 'domain';
-    else if (a === '--by-owner') by = 'owner';
-    else if (a === '--by-model') by = 'model';
-    else if (a === '--by') {
+    if (a === '--root') {
+      root = args[++i] ?? '.';
+    } else if (a === '--by-domain') {
+      by = 'domain';
+    } else if (a === '--by-owner') {
+      by = 'owner';
+    } else if (a === '--by-model') {
+      by = 'model';
+    } else if (a === '--by') {
       const key = args[++i];
 
-      if (key === undefined) by = null;
-      else if (key === 'domain' || key === 'owner' || key === 'model') by = key;
-      else {
+      if (key === undefined) {
+        by = null;
+      } else if (key === 'domain' || key === 'owner' || key === 'model') {
+        by = key;
+      } else {
         process.stderr.write(`expected --by domain|owner|model, got "${key}"\n`);
 
         return 2;
       }
-    } else if (!target) target = a;
+    } else if (!target) {
+      target = a;
+    }
   }
 
   const cat = await loadCatalog(resolve(root));

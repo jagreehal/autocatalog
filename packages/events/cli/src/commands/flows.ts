@@ -2,15 +2,17 @@ import fs from 'node:fs/promises';
 import { findCatalogRoots } from 'autocatalog-core';
 import {
   checkLifecycles,
-  type FlowEvidence,
   headCommit,
   parseTransitionObservations,
   readDomainModel,
   readFlows,
-  type TransitionEvidence,
-  type TransitionObservations,
   verifyFlows,
   writeFlowEvidence,
+} from 'autocatalog-docs-core';
+import type {
+  FlowEvidence,
+  TransitionEvidence,
+  TransitionObservations,
 } from 'autocatalog-docs-core';
 import kleur from 'kleur';
 import { checkoutResources } from './docs';
@@ -130,12 +132,18 @@ export async function runFlowsVerify(opts: FlowsVerifyOptions): Promise<number> 
       ),
     );
   } else {
-    for (const { repository, evidence } of records) report(repository, evidence);
+    for (const { repository, evidence } of records) {
+      report(repository, evidence);
+    }
 
-    if (records.length === 0) console.log('No flow here declares a transition.');
+    if (records.length === 0) {
+      console.log('No flow here declares a transition.');
+    }
   }
 
-  for (const problem of problems) console.error(`${kleur.red('✗')} ${problem}`);
+  for (const problem of problems) {
+    console.error(`${kleur.red('✗')} ${problem}`);
+  }
 
   const contradicted = records.some(({ evidence }) => evidence.transitions.some(refuted));
 

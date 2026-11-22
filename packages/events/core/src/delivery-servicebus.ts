@@ -1,20 +1,10 @@
 import { z } from 'zod';
 import { emptyResourceGraph } from './architecture';
 import type { SourceLocation } from './adapter-event';
-import {
-  brokerResource,
-  deadLetterEdge,
-  nodeRef,
-  routeEdge,
-  type ServiceBusRule,
-} from './delivery-model';
-import {
-  isJsonObject,
-  jsonObjectSchema,
-  jsonValueSchema,
-  type JsonObject,
-  type JsonValue,
-} from './json';
+import { brokerResource, deadLetterEdge, nodeRef, routeEdge } from './delivery-model';
+import type { ServiceBusRule } from './delivery-model';
+import { isJsonObject, jsonObjectSchema, jsonValueSchema } from './json';
+import type { JsonObject, JsonValue } from './json';
 import type { CatalogResource, ResourceGraph } from './resource-graph';
 import { durationSeconds } from './schema';
 
@@ -41,13 +31,15 @@ interface ArmResource {
   type: string;
   name: string;
   properties: JsonObject;
-  resources: ArmResource[];
+  resources: Array<ArmResource>;
 }
 
 const armTemplate = z.object({ resources: z.array(armResource) });
 
 export function parseArmServiceBus(text: string): JsonValue | undefined {
-  if (!text.includes(SERVICE_BUS)) return undefined;
+  if (!text.includes(SERVICE_BUS)) {
+    return undefined;
+  }
 
   try {
     const value = jsonValueSchema.parse(JSON.parse(text));
@@ -59,7 +51,7 @@ export function parseArmServiceBus(text: string): JsonValue | undefined {
 }
 
 /** ARM gives Service Bus messages this long a life when none is set: in effect, forever. */
-const UNBOUNDED_SECONDS = 10_000 * 86400;
+const UNBOUNDED_SECONDS = 10_000 * 86_400;
 
 const optionalString = z.string().optional().catch(undefined);
 
@@ -75,14 +67,14 @@ interface Flat {
   /** The type with the namespace prefix, as `topics/subscriptions`. */
   kind: string;
   /** The name's segments after the namespace. */
-  path: string[];
+  path: Array<string>;
   properties: JsonObject;
   /** An ARM expression in the name: the resource cannot be placed. */
   expression: boolean;
 }
 
 /** Nested ARM resources flattened, each with its full type and name. */
-function flatten(resources: ArmResource[], parentType = '', parentName = ''): Flat[] {
+function flatten(resources: Array<ArmResource>, parentType = '', parentName = ''): Array<Flat> {
   return resources.flatMap((resource) => {
     const type =
       parentType && !resource.type.includes('/') ? `${parentType}/${resource.type}` : resource.type;
@@ -90,7 +82,7 @@ function flatten(resources: ArmResource[], parentType = '', parentName = ''): Fl
     const name =
       parentName && !resource.name.includes('/') ? `${parentName}/${resource.name}` : resource.name;
 
-    const self: Flat[] = type.startsWith(SERVICE_BUS)
+    const self: Array<Flat> = type.startsWith(SERVICE_BUS)
       ? [
           {
             kind: type.slice(SERVICE_BUS.length).replace(/^\//, ''),
@@ -114,10 +106,11 @@ export function serviceBusGraph(
   const environment = options.environment;
   const graph = emptyResourceGraph();
   const nodes = new Map<string, CatalogResource>();
-  const notes: string[] = [];
+  const notes: Array<string> = [];
 
-  if (flat.some((entry) => entry.expression))
+  if (flat.some((entry) => entry.expression)) {
     notes.push('a Service Bus resource is named by an ARM expression, which is not evaluated');
+  }
 
   /**
    * The shared access rules that cover an entity: the namespace's, and those of
@@ -145,7 +138,9 @@ export function serviceBusGraph(
   const hasAuthRules = flat.some((entry) => entry.kind.endsWith('authorizationRules'));
 
   const grantsFor = (scope: Scope) => {
-    if (!hasAuthRules) return undefined;
+    if (!hasAuthRules) {
+      return undefined;
+    }
 
     const entries = rights(scope);
 
@@ -198,12 +193,16 @@ export function serviceBusGraph(
   };
 
   for (const entry of flat) {
-    if (entry.expression) continue;
+    if (entry.expression) {
+      continue;
+    }
 
     if (entry.kind === 'topics') {
       const [topic] = entry.path;
 
-      if (!topic) continue;
+      if (!topic) {
+        continue;
+      }
 
       const resource = brokerResource(nodeRef('servicebus-topic', topic), source, {
         system: 'servicebus',
@@ -217,22 +216,27 @@ export function serviceBusGraph(
       graph.resources.push(resource);
     }
 
-    if (entry.kind === 'queues' && entry.path[0])
+    if (entry.kind === 'queues' && entry.path[0]) {
       store(entry.path[0], entry.properties, 'queue', { kind: 'queues', name: entry.path[0] });
+    }
   }
 
   for (const entry of flat) {
-    if (entry.expression || entry.kind !== 'topics/subscriptions') continue;
+    if (entry.expression || entry.kind !== 'topics/subscriptions') {
+      continue;
+    }
 
     const [topic, subscription] = entry.path;
 
-    if (!topic || !subscription || !nodes.has(`topic:${topic}`)) continue;
+    if (!topic || !subscription || !nodes.has(`topic:${topic}`)) {
+      continue;
+    }
 
     const id = `${topic}/${subscription}`;
 
     store(id, entry.properties, 'subscription', { kind: 'topics', name: topic });
 
-    const rules: ServiceBusRule[] = flat
+    const rules: Array<ServiceBusRule> = flat
       .filter(
         (rule) =>
           rule.kind === 'topics/subscriptions/rules' &&

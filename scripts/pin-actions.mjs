@@ -29,7 +29,9 @@ for (const action of fs.readdirSync(path.join(root, 'actions'))) {
 
   const pinned = text.replace(pin, `$1'${version}'`);
 
-  if (pinned === text) continue;
+  if (pinned === text) {
+    continue;
+  }
 
   if (check) {
     console.error(

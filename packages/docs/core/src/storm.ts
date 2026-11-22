@@ -37,7 +37,7 @@ export interface StormColumn {
   repeats?: string | undefined;
   /** The flow that zooms into it, as `<repository>/<id>`. */
   subflow?: string | undefined;
-  rows: Record<StormRow, StormSticky[]>;
+  rows: Record<StormRow, Array<StormSticky>>;
 }
 
 /** A problem or open question, from a finding or from a failure nothing handles. */
@@ -61,7 +61,7 @@ export interface StormEnding {
   /** The state it leaves, or `unchanged` when it records none. */
   status: string;
   /** What happens next: who is told, what is saved. */
-  policies: string[];
+  policies: Array<string>;
 }
 
 export interface StormScenario {
@@ -76,10 +76,10 @@ export interface StormScenario {
 }
 
 export interface StormBoard {
-  columns: StormColumn[];
-  hotspots: StormHotspot[];
-  endings: StormEnding[];
-  scenarios: StormScenario[];
+  columns: Array<StormColumn>;
+  hotspots: Array<StormHotspot>;
+  endings: Array<StormEnding>;
+  scenarios: Array<StormScenario>;
   /** Each step's track, by id. */
   tracks: Map<string, FlowTrack>;
 }
@@ -113,14 +113,17 @@ export function stormTracks(flow: Flow): Map<string, FlowTrack> {
   }
 
   for (const step of flow.steps) {
-    if (step.track) tracks.set(step.id, step.track);
-    else if (compensations.has(step.id) || !tracks.has(step.id)) tracks.set(step.id, 'failure');
+    if (step.track) {
+      tracks.set(step.id, step.track);
+    } else if (compensations.has(step.id) || !tracks.has(step.id)) {
+      tracks.set(step.id, 'failure');
+    }
   }
 
   return tracks;
 }
 
-const emptyRows = (): Record<StormRow, StormSticky[]> => ({
+const emptyRows = (): Record<StormRow, Array<StormSticky>> => ({
   who: [],
   command: [],
   decidedBy: [],
@@ -135,13 +138,15 @@ const stageOf = (step: FlowStep) => step.stage ?? step.command?.name ?? step.tit
  * The happy steps in the order a run meets them: the track first, then any the
  * author put on it, each after the step that leads to it.
  */
-function happyOrder(flow: Flow, tracks: Map<string, FlowTrack>): FlowStep[] {
+function happyOrder(flow: Flow, tracks: Map<string, FlowTrack>): Array<FlowStep> {
   const byId = new Map(flow.steps.map((step) => [step.id, step]));
-  const ordered: FlowStep[] = [];
+  const ordered: Array<FlowStep> = [];
   const seen = new Set<string>();
 
   const visit = (step: FlowStep) => {
-    if (seen.has(step.id) || tracks.get(step.id) !== 'happy') return;
+    if (seen.has(step.id) || tracks.get(step.id) !== 'happy') {
+      return;
+    }
 
     seen.add(step.id);
     ordered.push(step);
@@ -149,13 +154,17 @@ function happyOrder(flow: Flow, tracks: Map<string, FlowTrack>): FlowStep[] {
     for (const { id } of step.next) {
       const next = byId.get(id);
 
-      if (next) visit(next);
+      if (next) {
+        visit(next);
+      }
     }
   };
 
   visit(startOf(flow));
 
-  for (const step of flow.steps) visit(step);
+  for (const step of flow.steps) {
+    visit(step);
+  }
 
   return ordered;
 }
@@ -177,7 +186,9 @@ function anchorOf(
 
   while (queue.length > 0) {
     for (const before of leadsTo(queue.shift()!)) {
-      if (tracks.get(before.id) === 'happy') return before;
+      if (tracks.get(before.id) === 'happy') {
+        return before;
+      }
 
       if (!seen.has(before.id)) {
         seen.add(before.id);
@@ -196,7 +207,7 @@ const sticky = (kind: StickyKind, text: string, extra: Partial<StormSticky> = {}
 });
 
 /** Who and what a step involves, in the row above its command. */
-function whoOf(step: FlowStep): StormSticky[] {
+function whoOf(step: FlowStep): Array<StormSticky> {
   const own =
     step.kind === 'actor'
       ? [sticky('actor', step.title, { summary: step.summary, step: step.id })]
@@ -237,7 +248,7 @@ export const stormed = (flow: Flow) =>
 export const unhandled = (step: FlowStep) =>
   step.policies.length === 0 && step.next.length === 0 && !step.transition;
 
-const add = (stickies: StormSticky[], item: StormSticky) => {
+const add = (stickies: Array<StormSticky>, item: StormSticky) => {
   const same = (existing: StormSticky) =>
     existing.kind === item.kind && existing.text.toLowerCase() === item.text.toLowerCase();
 
@@ -252,17 +263,19 @@ const add = (stickies: StormSticky[], item: StormSticky) => {
  * each track and the policies under them. A failure that nothing handles
  * raises a hotspot of its own.
  */
-export function stormBoard(flow: Flow, notes: FlowNote[] = []): StormBoard {
+export function stormBoard(flow: Flow, notes: Array<FlowNote> = []): StormBoard {
   const tracks = stormTracks(flow);
   const open = new Map<string, number>();
 
   const own = notes.filter((note) => note.repository === flow.repository && note.flow === flow.id);
 
   for (const note of own) {
-    if (note.hotspot && note.step) open.set(note.step, (open.get(note.step) ?? 0) + 1);
+    if (note.hotspot && note.step) {
+      open.set(note.step, (open.get(note.step) ?? 0) + 1);
+    }
   }
 
-  const columns: StormColumn[] = [];
+  const columns: Array<StormColumn> = [];
   const columnOf = new Map<string, StormColumn>();
 
   for (const step of happyOrder(flow, tracks)) {
@@ -277,7 +290,7 @@ export function stormBoard(flow: Flow, notes: FlowNote[] = []): StormBoard {
     columnOf.set(step.id, column);
   }
 
-  const derived: StormHotspot[] = [];
+  const derived: Array<StormHotspot> = [];
   const strict = stormed(flow);
 
   for (const step of flow.steps) {
@@ -296,13 +309,19 @@ export function stormBoard(flow: Flow, notes: FlowNote[] = []): StormBoard {
     column.repeats ??= step.repeats;
     column.subflow ??= step.subflow && qualified(step.subflow, flow.repository);
 
-    for (const item of whoOf(step)) add(rows.who, item);
+    for (const item of whoOf(step)) {
+      add(rows.who, item);
+    }
 
-    if (step.command) add(rows.command, sticky('command', step.command.name, step.command));
+    if (step.command) {
+      add(rows.command, sticky('command', step.command.name, step.command));
+    }
 
     const decidedBy = step.decidedBy ?? (step.transition && step.transition.entity);
 
-    if (decidedBy) add(rows.decidedBy, sticky('aggregate', decidedBy));
+    if (decidedBy) {
+      add(rows.decidedBy, sticky('aggregate', decidedBy));
+    }
 
     const track = tracks.get(step.id)!;
 
@@ -317,7 +336,9 @@ export function stormBoard(flow: Flow, notes: FlowNote[] = []): StormBoard {
       );
     }
 
-    for (const policy of step.policies) add(rows.policy, sticky('policy', policy.text));
+    for (const policy of step.policies) {
+      add(rows.policy, sticky('policy', policy.text));
+    }
 
     if (strict && track === 'failure' && unhandled(step)) {
       const title = `No policy after “${step.title}”: nothing happens next`;
@@ -375,7 +396,7 @@ export interface BigPictureLane {
   id: string;
   title: string;
   summary?: string | undefined;
-  events: string[];
+  events: Array<string>;
   failures: number;
   hotspots: number;
 }
@@ -384,7 +405,7 @@ export interface BigPictureLane {
  * Every flow as one lane of a big-picture board: the facts a run meets on the
  * happy track, how many ways it can fail, and how many hotspots are open.
  */
-export function bigPicture(flows: Flow[], notes: FlowNote[] = []): BigPictureLane[] {
+export function bigPicture(flows: Array<Flow>, notes: Array<FlowNote> = []): Array<BigPictureLane> {
   return flows.map((flow) => {
     const board = stormBoard(flow, notes);
 

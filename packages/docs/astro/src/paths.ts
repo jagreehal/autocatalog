@@ -1,4 +1,5 @@
-import { type Doc, readDocs } from 'autocatalog-docs-core';
+import { readDocs } from 'autocatalog-docs-core';
+import type { Doc } from 'autocatalog-docs-core';
 import { audienceReader, docForAudience } from './audience';
 import { docsSiteConfig } from './config';
 import { docPage, entryId } from './ui/lib/docs';

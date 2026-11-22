@@ -3,10 +3,8 @@ import {
   AUTOCATALOG_GRAPH_SPEC,
   isJsonObject,
   summarizeResourceGraph,
-  type JsonObject,
-  type JsonValue,
-  type ResourceGraph,
 } from 'autocatalog-core';
+import type { JsonObject, JsonValue, ResourceGraph } from 'autocatalog-core';
 import type { Doc, DocsManifest, ReadDocsOptions } from 'autocatalog-docs-core';
 import { z } from 'zod';
 import type { DocsCatalog } from './catalog';
@@ -87,7 +85,9 @@ const internal = (value: JsonValue | undefined) =>
  * whole document is internal or nothing in it is left.
  */
 export function publicApiDocument(document: JsonObject): JsonObject | undefined {
-  if (internal(document)) return undefined;
+  if (internal(document)) {
+    return undefined;
+  }
 
   const { paths, webhooks, components, ...rest } = objectWithoutAutocatalog(document);
 
@@ -101,7 +101,9 @@ export function publicApiDocument(document: JsonObject): JsonObject | undefined 
   const resolve = (type: Referable, name: string): JsonObject | undefined => {
     const key = `${type}/${name}`;
 
-    if (filtered.has(key)) return filtered.get(key);
+    if (filtered.has(key)) {
+      return filtered.get(key);
+    }
 
     filtered.set(key, undefined);
 
@@ -147,14 +149,18 @@ export function publicApiDocument(document: JsonObject): JsonObject | undefined 
     isJsonObject(items) ? Object.values(items) : [],
   );
 
-  if (published.length === 0) return undefined;
+  if (published.length === 0) {
+    return undefined;
+  }
 
   // Tags last: a component pruned here may be the only user of one.
   return withoutUnusedTags(withoutUnusedComponents(kept));
 }
 
 function withoutAutocatalog(value: JsonValue): JsonValue {
-  if (Array.isArray(value)) return value.map(withoutAutocatalog);
+  if (Array.isArray(value)) {
+    return value.map(withoutAutocatalog);
+  }
 
   return isJsonObject(value) ? objectWithoutAutocatalog(value) : value;
 }
@@ -176,7 +182,9 @@ type Lookup = (pointer: string, type: Referable) => JsonObject | undefined;
 
 /** Paths, webhooks or a callback's expressions: each with an operation left. */
 function publicItems(items: JsonValue, lookup: Lookup): JsonObject {
-  if (!isJsonObject(items)) return {};
+  if (!isJsonObject(items)) {
+    return {};
+  }
 
   return Object.fromEntries(
     Object.entries(items).flatMap(([key, item]) => {
@@ -192,7 +200,9 @@ function publicItems(items: JsonValue, lookup: Lookup): JsonObject {
  * names is published; one this cannot follow goes, and its own fields stay.
  */
 function publicPathItem(item: JsonValue | undefined, lookup: Lookup): JsonObject | undefined {
-  if (!isJsonObject(item) || internal(item)) return undefined;
+  if (!isJsonObject(item) || internal(item)) {
+    return undefined;
+  }
 
   return Object.fromEntries(
     Object.entries(item).flatMap(([field, value]) => {
@@ -202,7 +212,9 @@ function publicPathItem(item: JsonValue | undefined, lookup: Lookup): JsonObject
         return pointer !== undefined && lookup(pointer, 'pathItems') ? [[field, value]] : [];
       }
 
-      if (!METHODS.has(field)) return [[field, value]];
+      if (!METHODS.has(field)) {
+        return [[field, value]];
+      }
 
       return isJsonObject(value) && !internal(value)
         ? [[field, publicOperation(value, lookup)]]
@@ -216,7 +228,9 @@ function publicPathItem(item: JsonValue | undefined, lookup: Lookup): JsonObject
  * that only shares parameters does not. A cycle was cut when it was filtered.
  */
 function operates(item: JsonObject, lookup: Lookup): boolean {
-  if (Object.keys(item).some((field) => METHODS.has(field))) return true;
+  if (Object.keys(item).some((field) => METHODS.has(field))) {
+    return true;
+  }
 
   const pointer = z.string().safeParse(item.$ref).data;
   const target = pointer === undefined ? undefined : lookup(pointer, 'pathItems');
@@ -228,7 +242,9 @@ function operates(item: JsonObject, lookup: Lookup): boolean {
 function publicOperation(operation: JsonObject, lookup: Lookup): JsonObject {
   const { callbacks, ...rest } = operation;
 
-  if (!isJsonObject(callbacks)) return operation;
+  if (!isJsonObject(callbacks)) {
+    return operation;
+  }
 
   const kept = Object.fromEntries(
     Object.entries(callbacks).flatMap(([name, callback]) => {
@@ -243,18 +259,22 @@ function publicOperation(operation: JsonObject, lookup: Lookup): JsonObject {
 
 /** A callback: path items by expression, or a $ref to one in components. */
 function publicCallback(callback: JsonValue | undefined, lookup: Lookup): JsonObject | undefined {
-  if (!isJsonObject(callback) || internal(callback)) return undefined;
+  if (!isJsonObject(callback) || internal(callback)) {
+    return undefined;
+  }
 
   const pointer = z.string().safeParse(callback.$ref).data;
 
-  if (pointer !== undefined) return lookup(pointer, 'callbacks') ? callback : undefined;
+  if (pointer !== undefined) {
+    return lookup(pointer, 'callbacks') ? callback : undefined;
+  }
 
   const kept = publicItems(callback, lookup);
 
   return Object.keys(kept).length > 0 ? kept : undefined;
 }
 
-function operationsOf(document: JsonObject): JsonObject[] {
+function operationsOf(document: JsonObject): Array<JsonObject> {
   const pathItems = isJsonObject(document.components) ? document.components.pathItems : undefined;
 
   return [document.paths, document.webhooks, pathItems].flatMap((items) =>
@@ -271,7 +291,9 @@ function operationsOf(document: JsonObject): JsonObject[] {
 }
 
 function withoutUnusedTags(document: JsonObject): JsonObject {
-  if (!Array.isArray(document.tags)) return document;
+  if (!Array.isArray(document.tags)) {
+    return document;
+  }
 
   const used = new Set(
     operationsOf(document).flatMap((operation) =>
@@ -289,7 +311,9 @@ function withoutUnusedTags(document: JsonObject): JsonObject {
 export function componentRef(ref: string): [string, string] | undefined {
   const match = /^#\/components\/([^/]+)\/([^/]+)$/.exec(ref);
 
-  if (!match) return undefined;
+  if (!match) {
+    return undefined;
+  }
 
   const unescape = (part: string) =>
     decodeURIComponent(part).replaceAll('~1', '/').replaceAll('~0', '~');
@@ -305,29 +329,41 @@ export function componentRef(ref: string): [string, string] | undefined {
 function withoutUnusedComponents(document: JsonObject): JsonObject {
   const { components, ...rest } = document;
 
-  if (!isJsonObject(components)) return document;
+  if (!isJsonObject(components)) {
+    return document;
+  }
 
   const used = new Set<string>();
 
   const visit = (value: JsonValue | undefined): void => {
-    if (Array.isArray(value)) value.forEach(visit);
+    if (Array.isArray(value)) {
+      value.forEach(visit);
+    }
 
-    if (!isJsonObject(value)) return;
+    if (!isJsonObject(value)) {
+      return;
+    }
 
     const pointer = z.string().safeParse(value.$ref).data;
     const ref = pointer === undefined ? undefined : componentRef(pointer);
 
     const use = ([type, name]: [string, string]) => {
-      if (used.has(`${type}/${name}`)) return;
+      if (used.has(`${type}/${name}`)) {
+        return;
+      }
 
       used.add(`${type}/${name}`);
 
       const group = components[type];
 
-      if (isJsonObject(group)) visit(group[name]);
+      if (isJsonObject(group)) {
+        visit(group[name]);
+      }
     };
 
-    if (ref) use(ref);
+    if (ref) {
+      use(ref);
+    }
 
     // A discriminator names its schemas by $ref or by bare name, outside any $ref.
     const mapping = z
@@ -338,8 +374,11 @@ function withoutUnusedComponents(document: JsonObject): JsonObject {
       for (const target of Object.values(mapping)) {
         const named = target.startsWith('#') ? componentRef(target) : undefined;
 
-        if (named) use(named);
-        else if (!target.includes('/')) use(['schemas', target]);
+        if (named) {
+          use(named);
+        } else if (!target.includes('/')) {
+          use(['schemas', target]);
+        }
       }
     }
 

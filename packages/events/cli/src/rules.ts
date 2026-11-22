@@ -7,11 +7,8 @@ import {
   ruleFindings,
   ruleResult,
   rulesConfig,
-  type DriftFinding,
-  type ResourceGraph,
-  type RuleContext,
-  type RuleOutcome,
 } from 'autocatalog-core';
+import type { DriftFinding, ResourceGraph, RuleContext, RuleOutcome } from 'autocatalog-core';
 import { AdapterExecutionError, runIsolated } from './adapters';
 
 const RULE_PROTOCOL = 'autocatalog/rule-v1';
@@ -40,7 +37,7 @@ try {
 `;
 
 /** The rule files a repository keeps, relative to its root. */
-export async function discoverRules(root: string): Promise<string[]> {
+export async function discoverRules(root: string): Promise<Array<string>> {
   const entries = await fs.readdir(path.join(root, RULES_DIRECTORY)).catch(() => []);
 
   return entries
@@ -53,7 +50,9 @@ async function readRulesConfig(root: string) {
   const file = path.join(root, RULES_DIRECTORY, RULES_CONFIG_FILE);
   const text = await fs.readFile(file, 'utf8').catch(() => undefined);
 
-  if (text === undefined) return {};
+  if (text === undefined) {
+    return {};
+  }
 
   try {
     return rulesConfig.parse(JSON.parse(text));
@@ -100,10 +99,12 @@ export async function runRules(input: {
   graphs: () => Promise<{ current: ResourceGraph; base?: ResourceGraph }>;
   baseLabel?: string;
   allowCodeExecution?: boolean;
-}): Promise<DriftFinding[]> {
+}): Promise<Array<DriftFinding>> {
   const files = await discoverRules(input.root);
 
-  if (files.length === 0) return [];
+  if (files.length === 0) {
+    return [];
+  }
 
   if (!input.allowCodeExecution) {
     throw new AdapterExecutionError(

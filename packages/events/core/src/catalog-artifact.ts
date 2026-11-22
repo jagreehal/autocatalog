@@ -32,7 +32,7 @@ export interface CatalogArtifact {
   spec: typeof AUTOCATALOG_ARTIFACT_SPEC;
   repository?: ArtifactRepository;
   validation: { status: 'valid'; diagnostics: [] };
-  events: CatalogArtifactEntry[];
+  events: Array<CatalogArtifactEntry>;
 }
 
 export interface ArtifactIntegrityDiagnostic {
@@ -46,7 +46,7 @@ export function sha256(value: string | Uint8Array): string {
 }
 
 export async function hashTree(root: string): Promise<string> {
-  const files: string[] = [];
+  const files: Array<string> = [];
 
   async function walk(directory: string): Promise<void> {
     const entries = await fs.readdir(directory, { withFileTypes: true });
@@ -54,9 +54,13 @@ export async function hashTree(root: string): Promise<string> {
     for (const entry of entries) {
       const target = path.join(directory, entry.name);
 
-      if (entry.isDirectory()) await walk(target);
-      else if (entry.isFile()) files.push(target);
-      else throw new Error(`Unsupported file type in Catalog artifact: ${target}`);
+      if (entry.isDirectory()) {
+        await walk(target);
+      } else if (entry.isFile()) {
+        files.push(target);
+      } else {
+        throw new Error(`Unsupported file type in Catalog artifact: ${target}`);
+      }
     }
   }
 
@@ -123,10 +127,10 @@ const entrySchema = z.object({
 /** Verify a producer index against every loaded Event folder and byte on disk. */
 export async function verifyCatalogArtifact(
   eventsRoot: string,
-  events: LoadedEvent[],
+  events: Array<LoadedEvent>,
   /** Event folders the read left out on purpose, such as history: not checked, not missing. */
   skipped: ReadonlySet<string> = new Set(),
-): Promise<ArtifactIntegrityDiagnostic[]> {
+): Promise<Array<ArtifactIntegrityDiagnostic>> {
   const root = path.resolve(eventsRoot);
   const artifactPath = path.join(root, AUTOCATALOG_ARTIFACT_FILE);
   let raw: string;
@@ -134,7 +138,9 @@ export async function verifyCatalogArtifact(
   try {
     raw = await fs.readFile(artifactPath, 'utf8');
   } catch (error) {
-    if (error instanceof Error && 'code' in error && error.code === 'ENOENT') return [];
+    if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
+      return [];
+    }
 
     return [{ code: 'artifact_invalid', message: String(error), path: artifactPath }];
   }
@@ -165,7 +171,7 @@ export async function verifyCatalogArtifact(
     ];
   }
 
-  const diagnostics: ArtifactIntegrityDiagnostic[] = [];
+  const diagnostics: Array<ArtifactIntegrityDiagnostic> = [];
 
   const loadedByPath = new Map(
     events.map((event) => [
@@ -206,7 +212,9 @@ export async function verifyCatalogArtifact(
     portablePaths.add(portablePath);
     const loaded = loadedByPath.get(entry.path);
 
-    if (!loaded && skipped.has(entry.path)) continue;
+    if (!loaded && skipped.has(entry.path)) {
+      continue;
+    }
 
     if (
       !loaded ||
@@ -283,7 +291,7 @@ export interface CatalogFreshness {
 export async function readCatalogFreshness(
   eventsRoot: string,
   repoRoot: string,
-  git: (args: string[], cwd: string) => Promise<string>,
+  git: (args: Array<string>, cwd: string) => Promise<string>,
 ): Promise<CatalogFreshness> {
   let repository: ArtifactRepository | undefined;
 

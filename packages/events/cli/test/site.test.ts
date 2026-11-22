@@ -14,7 +14,7 @@ import {
 
 const base = { root: '.', cache: '.autocatalog/repos', out: 'dist', dev: false };
 
-const made: string[] = [];
+const made: Array<string> = [];
 
 const tempDir = async (prefix: string) => {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), prefix));
@@ -29,13 +29,13 @@ afterAll(() =>
 );
 
 describe('ac site --fingerprint', () => {
-  const git = (cwd: string, ...args: string[]) =>
+  const git = (cwd: string, ...args: Array<string>) =>
     execFileSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@t', ...args], {
       cwd,
       stdio: 'ignore',
     });
 
-  const printed = async (repos: string[]) => {
+  const printed = async (repos: Array<string>) => {
     const log = vi.spyOn(console, 'log').mockImplementation(() => undefined);
 
     expect(
@@ -123,7 +123,7 @@ describe('autocatalog.site.json beside a build', () => {
 });
 
 describe('a brand folder', () => {
-  const folder = async (files: string[]) => {
+  const folder = async (files: Array<string>) => {
     const dir = await tempDir('ac-brand-');
 
     await Promise.all(files.map((file) => fs.writeFile(path.join(dir, file), '')));

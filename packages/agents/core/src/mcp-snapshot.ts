@@ -4,13 +4,15 @@ import {
   compatibilityViolations,
   jsonObjectSchema,
   jsonValueSchema,
-  type JsonObject,
-  type JsonValue,
 } from 'autocatalog-core';
+import type { JsonObject, JsonValue } from 'autocatalog-core';
 import { z } from 'zod';
-import { toId, type DiscoveredSource } from './discovery.js';
-import { entitiesOf, type Catalog } from './loader.js';
-import { DIR_BY_KIND, type McpServer, type SideEffect, type Risk } from './schemas.js';
+import { toId } from './discovery.js';
+import type { DiscoveredSource } from './discovery.js';
+import { entitiesOf } from './loader.js';
+import type { Catalog } from './loader.js';
+import { DIR_BY_KIND } from './schemas.js';
+import type { McpServer, SideEffect, Risk } from './schemas.js';
 
 export const MCP_SNAPSHOT_SPEC = 'autocatalog/mcp-snapshot-v1';
 
@@ -81,10 +83,10 @@ const publishedToolName = (name: string): string =>
 
 /** New changes ahead of the old, newest first, without the `info` noise. */
 export const appendMcpChanges = (
-  log: McpChangeRecord[],
-  changes: McpChange[],
+  log: Array<McpChangeRecord>,
+  changes: Array<McpChange>,
   at: string,
-): McpChangeRecord[] =>
+): Array<McpChangeRecord> =>
   [
     ...changes.flatMap(({ severity, kind, connection, tool }) =>
       severity === 'info'
@@ -123,7 +125,9 @@ export const mcpServerFacts = (cat: Catalog, server: string): JsonObject => {
 
   const changes = cat.changes.get(server);
 
-  if (changes?.length) facts.changes = changes;
+  if (changes?.length) {
+    facts.changes = changes;
+  }
 
   return facts;
 };
@@ -133,7 +137,7 @@ export const mcpServerFacts = (cat: Catalog, server: string): JsonObject => {
  * this is reversible, and lowercase so a case-insensitive disk cannot merge them.
  */
 const connectionFile = (connection: string): string =>
-  encodeURIComponent(connection).replace(/%[0-9A-F]{2}|[^a-z0-9-]/g, (match) =>
+  encodeURIComponent(connection).replaceAll(/%[0-9A-F]{2}|[^a-z0-9-]/g, (match) =>
     match.length === 3 ? match : `%${match.charCodeAt(0).toString(16).toUpperCase()}`,
   );
 
@@ -157,11 +161,15 @@ export const createMcpSnapshot = (input: Omit<McpSnapshot, 'spec'>): McpSnapshot
 };
 
 const sortKeys = (value: JsonValue): JsonValue => {
-  if (Array.isArray(value)) return value.map(sortKeys);
+  if (Array.isArray(value)) {
+    return value.map(sortKeys);
+  }
 
   const record = jsonObjectSchema.safeParse(value);
 
-  if (!record.success) return value;
+  if (!record.success) {
+    return value;
+  }
 
   return Object.fromEntries(
     Object.entries(record.data)
@@ -184,7 +192,7 @@ export type McpChange = {
   kind: string;
   message: string;
   /** Agents the change reaches. */
-  agents: string[];
+  agents: Array<string>;
 };
 
 /**
@@ -193,7 +201,7 @@ export type McpChange = {
  */
 export const cleanServerText = (text: string, limit = 160): string => {
   // eslint-disable-next-line no-control-regex
-  const line = text.replace(/[\u0000-\u001f\u007f-\u009f]+/g, ' ').trim();
+  const line = text.replaceAll(/[\u0000-\u001f\u007f-\u009f]+/g, ' ').trim();
 
   return line.length > limit ? `${line.slice(0, limit)}…` : line;
 };
@@ -250,11 +258,11 @@ const HINTS = ['readOnlyHint', 'destructiveHint', 'idempotentHint', 'openWorldHi
 export const diffMcpSnapshots = (
   previous: McpSnapshot,
   current: McpSnapshot,
-  reach: (tool: string) => string[] = () => [],
-): McpChange[] => {
+  reach: (tool: string) => Array<string> = () => [],
+): Array<McpChange> => {
   const before = new Map(previous.tools.map((tool) => [tool.name, tool]));
   const after = new Map(current.tools.map((tool) => [tool.name, tool]));
-  const changes: McpChange[] = [];
+  const changes: Array<McpChange> = [];
   const comparesHints = previous.source === current.source;
 
   const add = (tool: string, change: Pick<McpChange, 'severity' | 'kind' | 'message'>) =>
@@ -311,7 +319,7 @@ export const diffMcpSnapshots = (
 };
 
 /** The agents a tool on a server reaches: by the tool, or by declaring the whole server. */
-export const agentsUsingMcpTool = (cat: Catalog, server: string, tool: string): string[] => {
+export const agentsUsingMcpTool = (cat: Catalog, server: string, tool: string): Array<string> => {
   const entities = entitiesOf(cat, 'tool').filter(
     (entity) => entity.server === server && (entity.mcp_name ?? entity.id) === tool,
   );
@@ -338,16 +346,18 @@ export const renderMcpChange = (change: McpChange): string =>
   `${MARKS[change.severity]} ${change.server}/${cleanServerText(change.tool, 80)}: ${change.message}${reachOf(change)}`;
 
 const escapeData = (text: string): string =>
-  text.replace(/%/g, '%25').replace(/\r/g, '%0D').replace(/\n/g, '%0A');
+  text.replaceAll('%', '%25').replaceAll('\r', '%0D').replaceAll('\n', '%0A');
 
 const escapeProperty = (text: string): string =>
-  escapeData(text).replace(/:/g, '%3A').replace(/,/g, '%2C');
+  escapeData(text).replaceAll(':', '%3A').replaceAll(',', '%2C');
 
 /** One GitHub Actions annotation per change, for a scheduled job's run page. */
-export const renderMcpChangesGitHub = (changes: McpChange[]): string =>
+export const renderMcpChangesGitHub = (changes: Array<McpChange>): string =>
   changes
     .flatMap((change) => {
-      if (change.severity === 'info') return [];
+      if (change.severity === 'info') {
+        return [];
+      }
 
       const level = change.severity === 'breaking' ? 'error' : 'warning';
       const title = escapeProperty(`${change.server}/${cleanServerText(change.tool, 80)}`);
@@ -359,9 +369,13 @@ export const renderMcpChangesGitHub = (changes: McpChange[]): string =>
 const sideEffectsOf = (tool: McpToolSnapshot): SideEffect => {
   const { readOnlyHint, destructiveHint } = tool.annotations ?? {};
 
-  if (readOnlyHint === true) return 'read-only';
+  if (readOnlyHint === true) {
+    return 'read-only';
+  }
 
-  if (destructiveHint === true) return 'destructive';
+  if (destructiveHint === true) {
+    return 'destructive';
+  }
 
   return destructiveHint === false ? 'mutating' : 'unknown';
 };

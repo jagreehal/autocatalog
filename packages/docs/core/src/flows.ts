@@ -1,14 +1,12 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import {
-  normaliseEventId,
-  parseFrontmatter,
-  resourceKey,
-  type WorkflowObservation,
-  type WorkflowStepObservation,
-  type CatalogRelationship,
-  type CatalogResource,
-  type ResourceRef,
+import { normaliseEventId, parseFrontmatter, resourceKey } from 'autocatalog-core';
+import type {
+  WorkflowObservation,
+  WorkflowStepObservation,
+  CatalogRelationship,
+  CatalogResource,
+  ResourceRef,
 } from 'autocatalog-core';
 import { z } from 'zod';
 import { aboutReference, resolveAbout } from './about';
@@ -38,7 +36,7 @@ export interface FlowStep {
   /** The state change this step records, when it makes one. A failure may make none. */
   transition?: FlowTransition | undefined;
   /** The business rules that hold here. */
-  rules: FlowRule[];
+  rules: Array<FlowRule>;
   /** How to tell this step has stalled, and what to do. Prose: nothing times it. */
   stuck?: { signs: string; recovery?: string | undefined } | undefined;
   /** The code that implements it, checked by `ac flows verify`. */
@@ -48,13 +46,13 @@ export interface FlowStep {
   /** The request that leads to it, which can be refused. */
   command?: FlowCommand | undefined;
   /** Who takes part: people, the systems involved, and what a reader sees. */
-  actors: FlowNamed[];
-  systems: FlowNamed[];
-  readModels: FlowNamed[];
+  actors: Array<FlowNamed>;
+  systems: Array<FlowNamed>;
+  readModels: Array<FlowNamed>;
   /** What decides whether it happens: an aggregate, an entity, a record. */
   decidedBy?: string | undefined;
   /** What happens whenever it does: "Whenever a work fails, record it and carry on". */
-  policies: FlowRule[];
+  policies: Array<FlowRule>;
   /** Set by the author. Unset, the board works it out from the branches. */
   track?: FlowTrack | undefined;
   /** Another flow that zooms into this step, as `<id>` or `<repository>/<id>`. */
@@ -98,7 +96,7 @@ export interface FlowScenario {
 export interface FlowTransition {
   entity: string;
   field: string;
-  from: string[];
+  from: Array<string>;
   to: string;
   via?: string | undefined;
 }
@@ -130,7 +128,7 @@ export interface Flow {
   summary?: string | undefined;
   /** The Markdown narrative below the frontmatter. */
   body: string;
-  steps: FlowStep[];
+  steps: Array<FlowStep>;
   /** How its map is grouped when it opens: by what, and as lanes or boxes. */
   lanes?: { by: FlowGroupBy; style: 'lanes' | 'boxes' } | undefined;
   /** The workflow that runs it, as autotel names it, when that is not its id or title. */
@@ -138,7 +136,7 @@ export interface Flow {
   /** What its steps change, unless a step says otherwise. */
   entity?: string | undefined;
   field?: string | undefined;
-  scenarios: FlowScenario[];
+  scenarios: Array<FlowScenario>;
 }
 
 const text = z.string().trim().min(1);
@@ -267,14 +265,14 @@ type AuthoredStep = z.infer<typeof stepSchema>;
 const POINTERS = ['event', 'service', 'agent', 'actor', 'externalSystem', 'custom'] as const;
 
 export interface ReadFlowsResult {
-  flows: Flow[];
+  flows: Array<Flow>;
   /** One line per flow left out, naming its file and what is wrong. */
-  failures: string[];
+  failures: Array<string>;
   /**
    * One line per hop the catalog does not back: the flow says a service
    * produces an event, and no producer declaration says so.
    */
-  warnings: string[];
+  warnings: Array<string>;
 }
 
 /**
@@ -293,7 +291,7 @@ export interface ReadFlowsOptions {
 
 export function readFlows(
   repositories: Array<{ repository: string; dir: string }>,
-  catalog: { resources: CatalogResource[]; relationships: CatalogRelationship[] },
+  catalog: { resources: Array<CatalogResource>; relationships: Array<CatalogRelationship> },
   options: ReadFlowsOptions = {},
 ): ReadFlowsResult {
   const result: ReadFlowsResult = { flows: [], failures: [], warnings: [] };
@@ -302,9 +300,11 @@ export function readFlows(
     const folder = path.join(dir, FLOWS_DIR);
 
     // A real directory only: a symlink could point anywhere on the build machine.
-    if (!fs.lstatSync(folder, { throwIfNoEntry: false })?.isDirectory()) continue;
+    if (!fs.lstatSync(folder, { throwIfNoEntry: false })?.isDirectory()) {
+      continue;
+    }
 
-    let entries: fs.Dirent[];
+    let entries: Array<fs.Dirent>;
 
     // One repository's unreadable folder leaves its flows out, not everyone's.
     try {
@@ -317,7 +317,9 @@ export function readFlows(
     }
 
     for (const entry of entries) {
-      if (!entry.isFile() || !entry.name.endsWith('.md')) continue;
+      if (!entry.isFile() || !entry.name.endsWith('.md')) {
+        continue;
+      }
 
       const file = `${FLOWS_DIR}/${entry.name}`;
       const where = `${repository}/${file}`;
@@ -367,7 +369,7 @@ export function readFlows(
  * What a board would show as a gap: a failure nothing handles, and a stage
  * that zooms into a flow no repository declares.
  */
-export function stormWarnings(flows: Flow[]): string[] {
+export function stormWarnings(flows: Array<Flow>): Array<string> {
   const ids = new Set(flows.map((flow) => `${flow.repository}/${flow.id}`));
 
   return flows.flatMap((flow) => {
@@ -393,7 +395,7 @@ function readFlow(
   repository: string,
   file: string,
   raw: string,
-  resources: CatalogResource[],
+  resources: Array<CatalogResource>,
   options: ReadFlowsOptions,
 ): Flow {
   const id = path.posix.basename(file, '.md');
@@ -406,12 +408,16 @@ function readFlow(
 
   const parsed = flowSchema.safeParse(data);
 
-  if (!parsed.success) throw new Error(z.prettifyError(parsed.error).replace(/\n+/g, '; '));
+  if (!parsed.success) {
+    throw new Error(z.prettifyError(parsed.error).replace(/\n+/g, '; '));
+  }
 
   const ids = new Set<string>();
 
   for (const step of parsed.data.steps) {
-    if (ids.has(step.id)) throw new Error(`step '${step.id}' appears twice`);
+    if (ids.has(step.id)) {
+      throw new Error(`step '${step.id}' appears twice`);
+    }
     ids.add(step.id);
   }
 
@@ -466,10 +472,10 @@ const sameName = (a: string, b: string) => normaliseEventId(a) === normaliseEven
 export interface FlowWorkflow {
   found?: WorkflowRuns;
   /** The repositories that each record a workflow it could be, when more than one does. */
-  ambiguous: string[];
+  ambiguous: Array<string>;
 }
 
-export function flowWorkflow(flow: Flow, runs: WorkflowRuns[]): FlowWorkflow {
+export function flowWorkflow(flow: Flow, runs: Array<WorkflowRuns>): FlowWorkflow {
   const names = flow.workflow ? [flow.workflow] : [flow.id, flow.title];
 
   const named = runs.filter((run) => names.some((name) => sameName(name, run.workflow.name)));
@@ -489,20 +495,23 @@ export interface FlowStepRuns {
   /** By flow step id. */
   steps: Map<string, WorkflowStepObservation>;
   /** Workflow steps no flow step names. */
-  unnamed: string[];
+  unnamed: Array<string>;
 }
 
 export function flowStepRuns(flow: Flow, workflow: WorkflowObservation): FlowStepRuns {
   const steps = new Map<string, WorkflowStepObservation>();
-  const unnamed: string[] = [];
+  const unnamed: Array<string> = [];
 
   for (const ran of workflow.steps) {
     const step = flow.steps.find(
       (candidate) => sameName(candidate.id, ran.name) || sameName(candidate.title, ran.name),
     );
 
-    if (step) steps.set(step.id, ran);
-    else unnamed.push(ran.name);
+    if (step) {
+      steps.set(step.id, ran);
+    } else {
+      unnamed.push(ran.name);
+    }
   }
 
   return { steps, unnamed };
@@ -511,7 +520,7 @@ export function flowStepRuns(flow: Flow, workflow: WorkflowObservation): FlowSte
 function resolveStep(
   step: AuthoredStep,
   ids: Set<string>,
-  resources: CatalogResource[],
+  resources: Array<CatalogResource>,
   repository: string,
   options: ReadFlowsOptions,
   defaults: { entity?: string | undefined; field?: string | undefined },
@@ -528,7 +537,9 @@ function resolveStep(
   ];
 
   for (const { id } of next) {
-    if (!ids.has(id)) throw new Error(`step '${step.id}' leads to '${id}', which is not a step`);
+    if (!ids.has(id)) {
+      throw new Error(`step '${step.id}' leads to '${id}', which is not a step`);
+    }
   }
 
   const compensatedBy = step.compensated_by;
@@ -634,11 +645,13 @@ function resolveStep(
 function resolveCommand(
   step: AuthoredStep,
   authored: { name?: string | undefined; ref?: string | undefined; summary?: string | undefined },
-  resources: CatalogResource[],
+  resources: Array<CatalogResource>,
   repository: string,
   options: ReadFlowsOptions,
 ): FlowCommand {
-  if (!authored.ref) return { name: authored.name!, summary: authored.summary };
+  if (!authored.ref) {
+    return { name: authored.name!, summary: authored.summary };
+  }
 
   const reference = `command/${authored.ref}`;
   const resolution = resolveAbout(reference, resources, repository);
@@ -669,7 +682,7 @@ function resolveCommand(
  * service or agent leading to an event it is not said to produce, or an event
  * leading to one it is not said to reach.
  */
-function unbacked(flow: Flow, relationships: CatalogRelationship[]): string[] {
+function unbacked(flow: Flow, relationships: Array<CatalogRelationship>): Array<string> {
   const edges = new Set(
     relationships.flatMap(({ type, from, to }) =>
       type === 'produces' || type === 'consumes'
@@ -685,7 +698,9 @@ function unbacked(flow: Flow, relationships: CatalogRelationship[]): string[] {
     step.next.flatMap(({ id }) => {
       const after = steps.get(id)!;
 
-      if (!step.ref || !after.ref) return [];
+      if (!step.ref || !after.ref) {
+        return [];
+      }
 
       if (actors.has(step.kind) && after.kind === 'event') {
         return edges.has(`produces ${resourceKey(step.ref)} ${resourceKey(after.ref)}`)

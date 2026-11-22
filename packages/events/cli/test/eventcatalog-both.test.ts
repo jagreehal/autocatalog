@@ -3,12 +3,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import utils from '@eventcatalog/sdk';
-import {
-  AUTOCATALOG_GRAPH_SPEC,
-  scanArchitecture,
-  type ResourceGraph,
-  type ServiceCatalogResource,
-} from 'autocatalog-core';
+import { AUTOCATALOG_GRAPH_SPEC, scanArchitecture } from 'autocatalog-core';
+import type { ResourceGraph, ServiceCatalogResource } from 'autocatalog-core';
 import { runFromEventCatalog } from '../src/commands/from-eventcatalog';
 import { exportToEventCatalog, loadEventCatalogSources } from '../src/eventcatalog';
 
@@ -34,7 +30,7 @@ async function write(file: string, body: string): Promise<void> {
   await fs.writeFile(target, body);
 }
 
-const page = (lines: string[]) => `---\n${lines.join('\n')}\n---\n\nBody.\n`;
+const page = (lines: Array<string>) => `---\n${lines.join('\n')}\n---\n\nBody.\n`;
 
 async function source() {
   const ec = 'ec/domains/Orders';
@@ -286,7 +282,7 @@ describe('a resource graph from another repository', () => {
     ...(owner && { owner }),
   });
 
-  const graph = (...resources: ServiceCatalogResource[]): ResourceGraph => ({
+  const graph = (...resources: Array<ServiceCatalogResource>): ResourceGraph => ({
     spec: AUTOCATALOG_GRAPH_SPEC,
     resources,
     relationships: [],

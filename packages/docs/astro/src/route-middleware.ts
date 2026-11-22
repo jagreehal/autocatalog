@@ -38,10 +38,14 @@ export const onRequest = defineRouteMiddleware(async (context) => {
 
   // Starlight's 404 is a splash page, which has no sidebar and so no shell. A
   // reader who lands on a dead link needs the way back more than anyone.
-  if (route.id === '404') route.hasSidebar = true;
+  if (route.id === '404') {
+    route.hasSidebar = true;
+  }
 
   // "Overview" once in "On this page", when the page's first heading is its own.
-  if (route.toc) route.toc.items = withoutRepeatedOverview(route.toc.items);
+  if (route.toc) {
+    route.toc.items = withoutRepeatedOverview(route.toc.items);
+  }
 
   const catalog = await docsCatalog();
 
@@ -60,7 +64,9 @@ export const onRequest = defineRouteMiddleware(async (context) => {
     for (const side of ['prev', 'next'] as const) {
       const link = route.pagination[side];
 
-      if (link && !(await opens(link.href, canRead))) route.pagination[side] = undefined;
+      if (link && !(await opens(link.href, canRead))) {
+        route.pagination[side] = undefined;
+      }
     }
   }
 
@@ -80,7 +86,9 @@ export const onRequest = defineRouteMiddleware(async (context) => {
     for (const side of ['prev', 'next'] as const) {
       const link = route.pagination[side];
 
-      if (link && !shown.has(link.href)) route.pagination[side] = undefined;
+      if (link && !shown.has(link.href)) {
+        route.pagination[side] = undefined;
+      }
     }
 
     // The page names its section before it paints, so moving to another one
@@ -88,11 +96,13 @@ export const onRequest = defineRouteMiddleware(async (context) => {
     route.head.push({
       tag: 'script',
       // A label is the site's text: `<` is escaped so none can close the script.
-      content: `document.documentElement.dataset.section = ${JSON.stringify(section.label).replaceAll('<', '\\u003c')};`,
+      content: `document.documentElement.dataset.section = ${JSON.stringify(section.label).replaceAll('<', String.raw`\u003c`)};`,
     });
   }
 
-  if (!(id in catalog.manifest) || !documentTwinsServed()) return;
+  if (!(id in catalog.manifest) || !documentTwinsServed()) {
+    return;
+  }
 
   route.head.push({
     tag: 'link',
@@ -111,20 +121,24 @@ type SidebarEntry = StarlightRouteData['sidebar'][number];
 
 /** The sidebar without the documents this reader may not open, or groups left empty. */
 async function readable(
-  entries: SidebarEntry[],
+  entries: Array<SidebarEntry>,
   canRead: (doc: AccessDoc) => boolean,
-): Promise<SidebarEntry[]> {
-  const kept: SidebarEntry[] = [];
+): Promise<Array<SidebarEntry>> {
+  const kept: Array<SidebarEntry> = [];
 
   for (const entry of entries) {
     if (entry.type === 'link') {
-      if (await opens(entry.href, canRead)) kept.push(entry);
+      if (await opens(entry.href, canRead)) {
+        kept.push(entry);
+      }
       continue;
     }
 
     const children = await readable(entry.entries, canRead);
 
-    if (children.length > 0) kept.push({ ...entry, entries: children });
+    if (children.length > 0) {
+      kept.push({ ...entry, entries: children });
+    }
   }
 
   return kept;

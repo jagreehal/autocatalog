@@ -1,10 +1,13 @@
 import type Ajv from 'ajv';
 import type { ValidateFunction } from 'ajv';
-import { jsonSchemaAjv, jsonSchemaDialect, type JsonSchemaDialect } from './json-schema-dialect';
+import { jsonSchemaAjv, jsonSchemaDialect } from './json-schema-dialect';
+import type { JsonSchemaDialect } from './json-schema-dialect';
 import { fieldPaths, guaranteedFieldPaths } from './fields';
-import { isJsonObject, type JsonObject, type JsonValue } from './json';
+import { isJsonObject } from './json';
+import type { JsonObject, JsonValue } from './json';
 import { validateCloudEvent } from './cloudevents';
-import { loadCatalogSnapshot, type LoadedEvent } from './load';
+import { loadCatalogSnapshot } from './load';
+import type { LoadedEvent } from './load';
 
 /**
  * Where a project keeps its own rules for Event manifests, beside the docs
@@ -44,9 +47,9 @@ export interface ValidationWarning {
 }
 
 export interface ValidationResult {
-  events: LoadedEvent[];
-  errors: ValidationError[];
-  warnings: ValidationWarning[];
+  events: Array<LoadedEvent>;
+  errors: Array<ValidationError>;
+  warnings: Array<ValidationWarning>;
 }
 
 const SUPPORTED_SPEC = 'autocatalog/v2';
@@ -58,7 +61,9 @@ const VERSION_RE = /^[vV]?\d+(?:\.\d+\.\d+(?:-[0-9A-Za-z-.]+)?(?:\+[0-9A-Za-z-.]
 function valueAt(data: JsonValue, path: string): JsonValue | undefined {
   let node: JsonValue | undefined = data;
 
-  for (const key of path.split('.')) node = isJsonObject(node) ? node[key] : undefined;
+  for (const key of path.split('.')) {
+    node = isJsonObject(node) ? node[key] : undefined;
+  }
 
   return node;
 }
@@ -68,20 +73,23 @@ function valueAt(data: JsonValue, path: string): JsonValue | undefined {
  * by the idempotency key. Without a key, or with a value no other example has,
  * it shows a consumer nothing it could deduplicate.
  */
-function duplicateExampleWarnings(evt: LoadedEvent): ValidationWarning[] {
+function duplicateExampleWarnings(evt: LoadedEvent): Array<ValidationWarning> {
   const key = evt.frontmatter.delivery?.idempotencyKey;
 
-  return evt.examples.flatMap((ex): ValidationWarning[] => {
-    if (ex.case !== 'duplicate') return [];
+  return evt.examples.flatMap((ex): Array<ValidationWarning> => {
+    if (ex.case !== 'duplicate') {
+      return [];
+    }
 
-    const warn = (message: string): ValidationWarning[] => [
+    const warn = (message: string): Array<ValidationWarning> => [
       { code: 'duplicate_example_unmatched', message, path: ex.path },
     ];
 
-    if (!key)
+    if (!key) {
       return warn(
         `Duplicate example "${ex.name}" has no delivery.idempotencyKey to recognise it by`,
       );
+    }
 
     const value = JSON.stringify(valueAt(ex.data, key));
 
@@ -125,8 +133,8 @@ export async function validateCatalog(
   eventsRoot: string,
   opts: ValidateCatalogOptions = {},
 ): Promise<ValidationResult> {
-  const errors: ValidationError[] = [];
-  const warnings: ValidationWarning[] = [];
+  const errors: Array<ValidationError> = [];
+  const warnings: Array<ValidationWarning> = [];
   const snapshot = await loadCatalogSnapshot(eventsRoot, { mode: 'collect' });
   const events = snapshot.events;
 
@@ -146,15 +154,15 @@ export async function validateCatalog(
 
   try {
     policy = opts.policy && compile(opts.policy);
-  } catch (err) {
+  } catch (error) {
     errors.push({
       code: 'schema_invalid_json_schema',
-      message: `${EVENT_MANIFEST_CONTRACT_PATH}: ${err instanceof Error ? err.message : String(err)}`,
+      message: `${EVENT_MANIFEST_CONTRACT_PATH}: ${error instanceof Error ? error.message : String(error)}`,
     });
   }
 
   // Per-event validation
-  const byKey = new Map<string, LoadedEvent[]>();
+  const byKey = new Map<string, Array<LoadedEvent>>();
 
   for (const evt of events) {
     if (evt.frontmatter.spec !== SUPPORTED_SPEC) {
@@ -223,46 +231,49 @@ export async function validateCatalog(
     ] as const) {
       const field = evt.frontmatter.delivery?.[key];
 
-      if (field === undefined || guaranteed.has(field)) continue;
+      if (field === undefined || guaranteed.has(field)) {
+        continue;
+      }
 
-      if (!paths.has(field))
+      if (!paths.has(field)) {
         errors.push({
           code: 'delivery_key_unknown',
           message: `The ${label} "${field}" is not in the schema, so consumers cannot use it`,
           path: evt.folder.path,
         });
-      else
+      } else {
         warnings.push({
           code: 'delivery_key_optional',
           message: `The ${label} "${field}" is optional in the schema; an event without it ${without}`,
           path: evt.folder.path,
         });
+      }
     }
 
     let validate;
 
     try {
       validate = compile(evt.schema);
-    } catch (err) {
+    } catch (error) {
       errors.push({
         code: 'schema_invalid_json_schema',
-        message: err instanceof Error ? err.message : String(err),
+        message: error instanceof Error ? error.message : String(error),
         path: evt.schemaPath,
       });
       continue;
     }
 
     for (const ex of evt.examples) {
-      const problems: ValidationError[] = [];
+      const problems: Array<ValidationError> = [];
 
-      if (evt.frontmatter.envelope?.mode === 'structured')
+      if (evt.frontmatter.envelope?.mode === 'structured') {
         for (const finding of validateCloudEvent(ex.data, evt.schema))
           problems.push({
             code: 'example_does_not_match_schema',
             message: `Example "${ex.name}": ${finding.message}`,
             path: evt.folder.path,
           });
-      else if (!validate(ex.data)) {
+      } else if (!validate(ex.data)) {
         const detail = (validate.errors ?? [])
           .map((e) => `${e.instancePath} ${e.message}`)
           .join('; ');
@@ -275,13 +286,15 @@ export async function validateCatalog(
       }
 
       // An invalid example is the one that has to fail: it shows what to reject.
-      if (ex.case !== 'invalid') errors.push(...problems);
-      else if (problems.length === 0)
+      if (ex.case !== 'invalid') {
+        errors.push(...problems);
+      } else if (problems.length === 0) {
         errors.push({
           code: 'invalid_example_is_valid',
           message: `Example "${ex.name}" is under examples/invalid/ but the schema accepts it, so it shows nothing a consumer must reject`,
           path: ex.path,
         });
+      }
     }
 
     warnings.push(...duplicateExampleWarnings(evt));
@@ -306,7 +319,9 @@ export async function validateCatalog(
   for (const evt of events) {
     const ref = evt.frontmatter.deprecation?.replacedBy;
 
-    if (!ref) continue;
+    if (!ref) {
+      continue;
+    }
 
     const found = events.some(
       (e) => e.frontmatter.id === ref.id && (!ref.version || e.frontmatter.version === ref.version),

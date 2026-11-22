@@ -47,7 +47,7 @@ const published = createEndpointGraph({
   services: ['customers'],
 });
 
-const traced = (operations: string[]): CatalogRelationship => ({
+const traced = (operations: Array<string>): CatalogRelationship => ({
   type: 'calls',
   from: { kind: 'service', id: 'billing' },
   to: { kind: 'service', id: 'customers' },
@@ -56,7 +56,7 @@ const traced = (operations: string[]): CatalogRelationship => ({
   evidence: { count: 1, sampleTraceIds: [], coverage: 'unknown', operations },
 });
 
-const withEdges = (...edges: CatalogRelationship[]): ResourceGraph => ({
+const withEdges = (...edges: Array<CatalogRelationship>): ResourceGraph => ({
   ...published,
   relationships: [...published.relationships, ...edges],
 });
@@ -229,7 +229,7 @@ it('reads the APIs and calls of repositories that have no site', async () => {
     }),
   );
 
-  const problems: string[] = [];
+  const problems: Array<string> = [];
 
   const graph = await withEndpoints(
     emptyResourceGraph(),
@@ -309,7 +309,7 @@ it('exposes no operation of a spec that names a service the lock pins elsewhere'
     JSON.stringify({ ...document, 'x-autocatalog': { service: 'users-api' } }),
   );
 
-  const problems: string[] = [];
+  const problems: Array<string> = [];
 
   const graph = await withEndpoints(
     emptyResourceGraph(),
@@ -405,7 +405,7 @@ describe('drift', () => {
   });
 
   it('names the caller a widened response enum breaks, by the field it reads', async () => {
-    const tiered = (values: string[]) =>
+    const tiered = (values: Array<string>) =>
       spec({ email: { type: 'string' }, tier: { type: 'string', enum: values } });
 
     await write(before, tiered(['gold']));

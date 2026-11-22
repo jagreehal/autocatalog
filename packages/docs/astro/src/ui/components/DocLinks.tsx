@@ -23,9 +23,9 @@ export interface DocLink {
 
 export interface DocLinksProps {
   /** Edges this document declares in `related`. */
-  related: DocLink[];
+  related: Array<DocLink>;
   /** Edges other documents declare towards this one. Derived, never authored. */
-  linkedFrom: DocLink[];
+  linkedFrom: Array<DocLink>;
 }
 
 export function DocLinks({ related, linkedFrom }: DocLinksProps) {
@@ -34,7 +34,9 @@ export function DocLinks({ related, linkedFrom }: DocLinksProps) {
     { kind: 'linked-from', heading: 'Linked from', links: linkedFrom },
   ].filter((section) => section.links.length > 0);
 
-  if (sections.length === 0) return null;
+  if (sections.length === 0) {
+    return null;
+  }
 
   return (
     <aside

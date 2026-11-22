@@ -3,7 +3,8 @@ import path from 'node:path';
 import { z } from 'zod';
 import { parseAdapterEventMeta, readVendorMeta } from './adapter-event';
 import type { AdapterEvent, AdapterEventMeta, ProvenanceValue } from './adapter-event';
-import { isJsonObject, type JsonObject, type JsonValue } from './json';
+import { isJsonObject } from './json';
+import type { JsonObject, JsonValue } from './json';
 import type {
   DiscoveryOutput,
   DiscoveryAdapter,
@@ -16,7 +17,7 @@ import { readOptionalResourceJson } from './resource-files';
 export interface ScanJsonSchemaOptions {
   root: string;
   /** Directory names never descended into. Always includes node_modules, events, etc. */
-  exclude?: string[];
+  exclude?: Array<string>;
   /** Absolute or relative path of the events output dir — skipped when under root. */
   outDir?: string;
   signal?: AbortSignal;
@@ -56,7 +57,7 @@ export interface JsonSchemaScanFinding extends ScanFindingBase {
 }
 
 function titleCase(pascal: string): string {
-  return pascal.replace(/([a-z])([A-Z])/g, '$1 $2');
+  return pascal.replaceAll(/([a-z])([A-Z])/g, '$1 $2');
 }
 
 /** "payment.completed" or "https://example.com/schemas/payment.completed.json" → id */
@@ -67,17 +68,22 @@ export function idFromSchemaId(schemaId: string): string | undefined {
 
     // An empty derivation must fall through to the filename, not be returned as
     // an id: `?? ` keeps an empty string, and only `undefined` falls back.
-    if (base && base !== '/')
+    if (base && base !== '/') {
       return (base.includes('.') ? base : idFromFilename(base)) || undefined;
+    }
   } catch {
     // not a URL
   }
 
   const cleaned = schemaId.replace(/^#\/?/, '').trim();
 
-  if (!cleaned) return undefined;
+  if (!cleaned) {
+    return undefined;
+  }
 
-  if (cleaned.includes('.')) return cleaned.replace(/\.schema\.json$|\.json$/i, '');
+  if (cleaned.includes('.')) {
+    return cleaned.replace(/\.schema\.json$|\.json$/i, '');
+  }
 
   return idFromFilename(cleaned);
 }
@@ -86,13 +92,15 @@ export function idFromSchemaId(schemaId: string): string | undefined {
 export function idFromFilename(name: string): string {
   const base = name.replace(/(\.schema)?\.json$/i, '').replace(/\.schema$/i, '');
 
-  if (base.includes('.')) return base.toLowerCase();
-
-  if (base.includes('-') || base.includes('_')) {
-    return base.replace(/[-_]+/g, '.').toLowerCase();
+  if (base.includes('.')) {
+    return base.toLowerCase();
   }
 
-  const split = base.replace(/([a-z0-9])([A-Z])/g, '$1.$2');
+  if (base.includes('-') || base.includes('_')) {
+    return base.replaceAll(/[-_]+/g, '.').toLowerCase();
+  }
+
+  const split = base.replaceAll(/([a-z0-9])([A-Z])/g, '$1.$2');
   // Stripping a trailing "Schema" must never consume the whole name: a file or
   // `$id` that is literally `schema` would otherwise produce an empty id, and an
   // event with no id fails the discovery contract and takes the scan with it.
@@ -148,7 +156,9 @@ export function domainForJsonPath(relFile: string, fallbackId: string): GuessedD
   for (let i = parts.length - 2; i >= 0; i--) {
     const seg = parts[i]!;
 
-    if (!GENERIC_PATH_SEGMENTS.has(seg.toLowerCase())) return { domain: seg, from: 'path' };
+    if (!GENERIC_PATH_SEGMENTS.has(seg.toLowerCase())) {
+      return { domain: seg, from: 'path' };
+    }
   }
 
   return { domain: fallbackId.split('.')[0]!, from: 'id' };
@@ -185,7 +195,9 @@ export function looksLikeJsonSchema(value: JsonValue): value is JsonObject {
 function readAutocatalogExtension(schema: JsonObject): AdapterEventMeta | undefined {
   const vendor = readVendorMeta(schema);
 
-  if (vendor) return vendor;
+  if (vendor) {
+    return vendor;
+  }
   const defs = schema.$defs;
 
   if (isJsonObject(defs) && isJsonObject(defs.autocatalog)) {
@@ -207,10 +219,14 @@ async function loadSidecarMeta(schemaPath: string): Promise<AdapterEventMeta | u
   for (const candidate of candidates) {
     try {
       // A symlink could name any file on this machine; only the repository's own files are read.
-      if (!(await fs.lstat(candidate)).isFile()) continue;
+      if (!(await fs.lstat(candidate)).isFile()) {
+        continue;
+      }
       const raw: JsonValue = JSON.parse(await fs.readFile(candidate, 'utf8'));
 
-      if (isJsonObject(raw)) return parseAdapterEventMeta(raw);
+      if (isJsonObject(raw)) {
+        return parseAdapterEventMeta(raw);
+      }
     } catch {
       // missing or invalid
     }
@@ -225,13 +241,15 @@ async function walkJsonFiles(
   outAbs?: string,
   signal?: AbortSignal,
   maxFiles = 50_000,
-): Promise<string[]> {
-  const results: string[] = [];
+): Promise<Array<string>> {
+  const results: Array<string> = [];
 
   async function walk(dir: string): Promise<void> {
     signal?.throwIfAborted();
 
-    if (outAbs && (dir === outAbs || dir.startsWith(outAbs + path.sep))) return;
+    if (outAbs && (dir === outAbs || dir.startsWith(outAbs + path.sep))) {
+      return;
+    }
     let entries;
 
     try {
@@ -246,16 +264,26 @@ async function walkJsonFiles(
       // Directories are walked and regular files read. A symlink is neither: it
       // could name any file on this machine, and the catalog gets published.
       if (entry.isDirectory()) {
-        if (!exclude.has(entry.name) && !entry.name.startsWith('.')) await walk(full);
+        if (!exclude.has(entry.name) && !entry.name.startsWith('.')) {
+          await walk(full);
+        }
       } else if (entry.isFile() && entry.name.endsWith('.json')) {
-        if (SKIP_BASENAMES.has(entry.name)) continue;
+        if (SKIP_BASENAMES.has(entry.name)) {
+          continue;
+        }
 
-        if (SKIP_BASENAME_RE.test(entry.name)) continue;
+        if (SKIP_BASENAME_RE.test(entry.name)) {
+          continue;
+        }
 
-        if (entry.name.endsWith('.autocatalog.json')) continue;
+        if (entry.name.endsWith('.autocatalog.json')) {
+          continue;
+        }
         results.push(full);
 
-        if (results.length > maxFiles) throw new Error(`JSON file limit exceeded (${maxFiles})`);
+        if (results.length > maxFiles) {
+          throw new Error(`JSON file limit exceeded (${maxFiles})`);
+        }
       }
     }
   }
@@ -283,8 +311,9 @@ async function commandSchemas(directory: string, root: string): Promise<Set<stri
   const parsed = commandDeclaration.safeParse(value);
   const conventional = path.relative(root, directory).split(path.sep).includes('commands');
 
-  if (!parsed.success || (parsed.data.kind ?? (conventional ? 'command' : '')) !== 'command')
+  if (!parsed.success || (parsed.data.kind ?? (conventional ? 'command' : '')) !== 'command') {
     return new Set();
+  }
 
   return new Set(
     [parsed.data.schema, parsed.data.outcome?.schema].flatMap((file) =>
@@ -311,13 +340,21 @@ function eventFromJsonSchemaFile(input: {
 
   const inferredFields: Record<string, ProvenanceValue> = {};
 
-  if (!meta?.id) inferredFields.id = 'inferred';
+  if (!meta?.id) {
+    inferredFields.id = 'inferred';
+  }
 
-  if (!meta?.version) inferredFields.version = 'inferred';
+  if (!meta?.version) {
+    inferredFields.version = 'inferred';
+  }
 
-  if (!meta?.domain) inferredFields.domain = 'inferred';
+  if (!meta?.domain) {
+    inferredFields.domain = 'inferred';
+  }
 
-  if (!meta?.summary) inferredFields.summary = 'inferred';
+  if (!meta?.summary) {
+    inferredFields.summary = 'inferred';
+  }
 
   const hasDeclaredMeta = Boolean(meta && (meta.id || meta.version || meta.producers));
   // needsReview stays about identity. A domain guessed from the id is weaker
@@ -384,8 +421,8 @@ export async function discoverJsonSchemas(opts: ScanJsonSchemaOptions): Promise<
   const outAbs = opts.outDir ? path.resolve(opts.outDir) : undefined;
   const files = await walkJsonFiles(root, exclude, outAbs, opts.signal, opts.maxFiles);
 
-  const candidates: DiscoveryCandidate[] = [];
-  const errors: string[] = [];
+  const candidates: Array<DiscoveryCandidate> = [];
+  const errors: Array<string> = [];
   const commandsByDirectory = new Map<string, Promise<Set<string>>>();
 
   for (const file of files) {
@@ -395,10 +432,13 @@ export async function discoverJsonSchemas(opts: ScanJsonSchemaOptions): Promise<
 
     const directory = path.dirname(file);
 
-    if (!commandsByDirectory.has(directory))
+    if (!commandsByDirectory.has(directory)) {
       commandsByDirectory.set(directory, commandSchemas(directory, root));
+    }
 
-    if ((await commandsByDirectory.get(directory))?.has(file)) continue;
+    if ((await commandsByDirectory.get(directory))?.has(file)) {
+      continue;
+    }
     let parsed: JsonValue;
 
     try {
@@ -410,17 +450,20 @@ export async function discoverJsonSchemas(opts: ScanJsonSchemaOptions): Promise<
       }
 
       parsed = JSON.parse(await fs.readFile(file, 'utf8'));
-    } catch (err) {
-      errors.push(`${relFile}: ${err instanceof Error ? err.message : String(err)}`);
+    } catch (error) {
+      errors.push(`${relFile}: ${error instanceof Error ? error.message : String(error)}`);
       continue;
     }
 
-    if (!looksLikeJsonSchema(parsed)) continue;
+    if (!looksLikeJsonSchema(parsed)) {
+      continue;
+    }
 
     const schema = parsed;
 
-    if (isJsonObject(schema['x-autocatalog']) && schema['x-autocatalog'].kind === 'command')
+    if (isJsonObject(schema['x-autocatalog']) && schema['x-autocatalog'].kind === 'command') {
       continue;
+    }
     const embedded = readAutocatalogExtension(schema);
     const sidecar = await loadSidecarMeta(file);
     // Sidecar wins over x-autocatalog for declared overrides

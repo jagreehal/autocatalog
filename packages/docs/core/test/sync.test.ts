@@ -42,7 +42,9 @@ async function writeLocal(schema: JsonObject): Promise<string> {
 const serving =
   (schema: JsonValue) =>
   async (url: string): Promise<JsonValue> => {
-    if (url !== CANONICAL) throw new Error(`unexpected url ${url}`);
+    if (url !== CANONICAL) {
+      throw new Error(`unexpected url ${url}`);
+    }
 
     return schema;
   };

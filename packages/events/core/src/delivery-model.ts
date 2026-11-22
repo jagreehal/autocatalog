@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { SourceLocation } from './adapter-event';
-import { jsonObjectSchema, jsonValueSchema, type JsonObject, type JsonValue } from './json';
+import { jsonObjectSchema, jsonValueSchema } from './json';
+import type { JsonObject, JsonValue } from './json';
 import type { CatalogRelationship, CatalogResource, ResourceRef } from './resource-graph';
 
 /**
@@ -128,7 +129,9 @@ export type RouteAttributes = z.infer<typeof routeAttributes>;
 
 /** A node's attributes, or undefined for a resource that is not a broker node. */
 export function nodeOf(resource: CatalogResource): BrokerNode | undefined {
-  if (resource.ref.kind !== 'queue') return undefined;
+  if (resource.ref.kind !== 'queue') {
+    return undefined;
+  }
 
   const parsed = brokerNode.safeParse(resource.attributes);
 
@@ -140,7 +143,7 @@ export function routeOf(edge: CatalogRelationship): RouteAttributes {
 }
 
 /** The bindings a `routesTo` edge carries. */
-export const edgeBindings = (edge: CatalogRelationship): DeliveryBinding[] =>
+export const edgeBindings = (edge: CatalogRelationship): Array<DeliveryBinding> =>
   routeOf(edge).bindings ?? [];
 
 /** Drop the keys a reader left undefined, so attributes stay JSON. */
@@ -206,7 +209,7 @@ export const nodeRef = (namespace: string, id: string): ResourceRef<'queue'> => 
 });
 
 /** Transport protocols and the systems a destination of that name may live in. */
-export const PROTOCOL_SYSTEMS = new Map<string, readonly BrokerSystem[]>([
+export const PROTOCOL_SYSTEMS = new Map<string, ReadonlyArray<BrokerSystem>>([
   ['amqp', ['rabbitmq', 'servicebus']],
   ['rabbitmq', ['rabbitmq']],
   ['kafka', ['kafka']],
@@ -219,7 +222,7 @@ export const PROTOCOL_SYSTEMS = new Map<string, readonly BrokerSystem[]>([
 /** Seconds as a reader says them: `90 seconds`, `4 hours`, `7 days`. */
 export function durationWords(seconds: number): string {
   const units: Array<[number, string]> = [
-    [86400, 'day'],
+    [86_400, 'day'],
     [3600, 'hour'],
     [60, 'minute'],
     [1, 'second'],
@@ -262,7 +265,7 @@ export const deliveryEvent = z.object({
 export type DeliveryEvent = z.infer<typeof deliveryEvent>;
 
 /** Whether a transport names a broker delivery can read. */
-export const isDeliveryTransport = (transport: { address?: string; protocols?: string[] }) =>
+export const isDeliveryTransport = (transport: { address?: string; protocols?: Array<string> }) =>
   transport.address !== undefined &&
   (transport.protocols ?? []).some((protocol) => PROTOCOL_SYSTEMS.has(protocol));
 
@@ -271,8 +274,8 @@ export function deliveryEventOf(event: {
   frontmatter: {
     domain: string;
     id: string;
-    producers?: string[];
-    transport?: Array<{ address?: string; protocols: string[] }>;
+    producers?: Array<string>;
+    transport?: Array<{ address?: string; protocols: Array<string> }>;
     provenance?: { fields?: Record<string, string> };
   };
   examples: Array<{ name: string; data: JsonValue }>;
@@ -285,7 +288,9 @@ export function deliveryEventOf(event: {
     return parsed.success && isDeliveryTransport(parsed.data) ? [parsed.data] : [];
   });
 
-  if (transports.length === 0) return undefined;
+  if (transports.length === 0) {
+    return undefined;
+  }
 
   return {
     event: `${fm.domain}/${fm.id}`,
@@ -304,7 +309,7 @@ export function deliveryEventOf(event: {
  * the finding is printed. The fence outruns any backticks inside it.
  */
 export function named(name: string): string {
-  const flat = name.replace(/[\r\n]+/g, ' ');
+  const flat = name.replaceAll(/[\r\n]+/g, ' ');
   const longest = Math.max(0, ...[...flat.matchAll(/`+/g)].map(([run]) => run.length));
   const fence = '`'.repeat(longest + 1);
   const pad = flat.startsWith('`') || flat.endsWith('`') ? ' ' : '';

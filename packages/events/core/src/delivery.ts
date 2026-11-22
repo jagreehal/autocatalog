@@ -3,7 +3,8 @@ import path from 'node:path';
 import { z } from 'zod';
 import type { SourceLocation } from './adapter-event';
 import { emptyResourceGraph, mergeArchitectureGraphs } from './architecture';
-import { deliveryNeedsOf, isSafeName, UNSAFE_CONSUMER, type ConsumerDeclaration } from './consumes';
+import { deliveryNeedsOf, isSafeName, UNSAFE_CONSUMER } from './consumes';
+import type { ConsumerDeclaration } from './consumes';
 import { cloudFormationGraph, parseCloudFormation } from './delivery-aws';
 import { parseStrimzi, strimziGraph } from './delivery-kafka';
 import {
@@ -12,8 +13,8 @@ import {
   rabbitPatternMatches,
   sqlFilterMatches,
   topicMatches,
-  type HeaderValue,
 } from './delivery-match';
+import type { HeaderValue } from './delivery-match';
 import {
   deliveryEvent,
   deliveryEventOf,
@@ -22,32 +23,29 @@ import {
   nodeOf,
   PROTOCOL_SYSTEMS,
   routeOf,
-  type BrokerNode,
-  type DeliveryBinding,
-  type DeliveryEvent,
-  type DeliveryTransport,
-  type RouteAttributes,
+} from './delivery-model';
+import type {
+  BrokerNode,
+  DeliveryBinding,
+  DeliveryEvent,
+  DeliveryTransport,
+  RouteAttributes,
 } from './delivery-model';
 import { looksLikeRabbitMqDefinitions, rabbitMqGraph } from './delivery-rabbitmq';
 import { parseArmServiceBus, serviceBusGraph } from './delivery-servicebus';
 import type { DriftFinding } from './drift';
-import { isJsonObject, jsonValueSchema, type JsonObject, type JsonValue } from './json';
+import { isJsonObject, jsonValueSchema } from './json';
+import type { JsonObject, JsonValue } from './json';
 import type { LoadedEvent } from './load';
 import type { ResourceDiscoveryResult } from './model-resources';
-import {
-  ResourceReadError,
-  readResourceSource,
-  resourceFiles,
-  type ResourceScanOptions,
-} from './resource-files';
-import {
-  AUTOCATALOG_GRAPH_SPEC,
-  relationshipKey,
-  resourceKey,
-  type CatalogRelationship,
-  type CatalogResource,
-  type ResourceGraph,
-  type ResourceRef,
+import { ResourceReadError, readResourceSource, resourceFiles } from './resource-files';
+import type { ResourceScanOptions } from './resource-files';
+import { AUTOCATALOG_GRAPH_SPEC, relationshipKey, resourceKey } from './resource-graph';
+import type {
+  CatalogRelationship,
+  CatalogResource,
+  ResourceGraph,
+  ResourceRef,
 } from './resource-graph';
 import { durationSeconds } from './schema';
 
@@ -89,9 +87,9 @@ const TEST_FOLDERS = ['test', 'tests', '__tests__', 'fixtures', '__fixtures__'];
 export async function scanDeliveryResources(
   options: ResourceScanOptions & { environment?: string },
 ): Promise<ResourceDiscoveryResult> {
-  const errors: string[] = [];
-  const skipped: string[] = [];
-  const fragments: ResourceGraph[] = [];
+  const errors: Array<string> = [];
+  const skipped: Array<string> = [];
+  const fragments: Array<ResourceGraph> = [];
   const strimzi: Array<{ value: JsonValue; file: string }> = [];
   const environment = options.environment;
 
@@ -109,7 +107,9 @@ export async function scanDeliveryResources(
       text = await readResourceSource(file, options);
     } catch (error) {
       // Only a file named as broker configuration is missed out loud.
-      if (named) errors.push(error instanceof Error ? error.message : String(error));
+      if (named) {
+        errors.push(error instanceof Error ? error.message : String(error));
+      }
 
       continue;
     }
@@ -124,8 +124,9 @@ export async function scanDeliveryResources(
           throw new ResourceReadError('not-json', `${relative}: not valid JSON`);
         }
 
-        if (looksLikeRabbitMqDefinitions(value))
+        if (looksLikeRabbitMqDefinitions(value)) {
           fragments.push(rabbitMqGraph(value, { file: relative, text, environment }));
+        }
 
         continue;
       }
@@ -146,7 +147,9 @@ export async function scanDeliveryResources(
 
       const kafka = relative.endsWith('.json') ? undefined : parseStrimzi(text);
 
-      if (kafka) strimzi.push(...kafka.map((value) => ({ value, file: relative })));
+      if (kafka) {
+        strimzi.push(...kafka.map((value) => ({ value, file: relative })));
+      }
     } catch (error) {
       errors.push(
         error instanceof ResourceReadError
@@ -156,7 +159,9 @@ export async function scanDeliveryResources(
     }
   }
 
-  if (strimzi.length) fragments.push(strimziGraph(strimzi, { environment }));
+  if (strimzi.length) {
+    fragments.push(strimziGraph(strimzi, { environment }));
+  }
 
   return {
     graph: errors.length ? emptyResourceGraph() : mergeArchitectureGraphs(...fragments),
@@ -176,22 +181,25 @@ interface Node {
 
 class Broker {
   readonly nodes = new Map<string, Node>();
-  readonly out = new Map<string, CatalogRelationship[]>();
+  readonly out = new Map<string, Array<CatalogRelationship>>();
 
   constructor(readonly graph: ResourceGraph) {
     for (const resource of graph.resources) {
       const node = nodeOf(resource);
 
-      if (node)
+      if (node) {
         this.nodes.set(resourceKey(resource.ref), {
           resource,
           node,
           key: resourceKey(resource.ref),
         });
+      }
     }
 
     for (const edge of graph.relationships) {
-      if (edge.type !== 'routesTo') continue;
+      if (edge.type !== 'routesTo') {
+        continue;
+      }
 
       const key = resourceKey(edge.from);
 
@@ -205,8 +213,8 @@ class Broker {
 
   find(
     name: string,
-    filter: { systems?: string[]; role?: 'router' | 'store'; vhost?: string } = {},
-  ): Node[] {
+    filter: { systems?: Array<string>; role?: 'router' | 'store'; vhost?: string } = {},
+  ): Array<Node> {
     return [...this.nodes.values()].filter(
       ({ resource, node }) =>
         resource.ref.id === name &&
@@ -216,12 +224,14 @@ class Broker {
     );
   }
 
-  has(systems: string[]): boolean {
+  has(systems: Array<string>): boolean {
     return [...this.nodes.values()].some(({ node }) => systems.includes(node.system));
   }
 
   get environment(): string | undefined {
-    for (const { node } of this.nodes.values()) if (node.environment) return node.environment;
+    for (const { node } of this.nodes.values()) {
+      if (node.environment) return node.environment;
+    }
 
     return undefined;
   }
@@ -259,13 +269,21 @@ function bindingMatches(
   binding: DeliveryBinding,
   message: DeliveryMessage,
 ): boolean | undefined {
-  if (type === 'fanout') return true;
+  if (type === 'fanout') {
+    return true;
+  }
 
-  if (type === 'direct') return binding.routingKey === message.routingKey;
+  if (type === 'direct') {
+    return binding.routingKey === message.routingKey;
+  }
 
-  if (type === 'topic') return topicMatches(binding.routingKey, message.routingKey);
+  if (type === 'topic') {
+    return topicMatches(binding.routingKey, message.routingKey);
+  }
 
-  if (type !== 'headers') return undefined;
+  if (type !== 'headers') {
+    return undefined;
+  }
 
   const mode = optionalString.parse(binding.arguments['x-match']) ?? 'all';
   const withX = mode.endsWith('-with-x');
@@ -274,7 +292,9 @@ function bindingMatches(
     ([key]) => key !== 'x-match' && (withX || !key.startsWith('x-')),
   );
 
-  if (wanted.some(([, value]) => !headerValue.safeParse(value).success)) return undefined;
+  if (wanted.some(([, value]) => !headerValue.safeParse(value).success)) {
+    return undefined;
+  }
 
   const hit = ([key, value]: [string, JsonValue]) =>
     key in message.headers && (value === '' || message.headers[key] === value);
@@ -296,14 +316,18 @@ export function describeBinding(type: string | undefined, binding: DeliveryBindi
       : parts.join(mode.startsWith('any') ? ' or ' : ' and ');
   }
 
-  if (type === 'fanout') return 'all messages';
+  if (type === 'fanout') {
+    return 'all messages';
+  }
 
   return `routing key ${binding.routingKey === '' ? '(empty)' : binding.routingKey}`;
 }
 
 /** One filter condition as words: `= GBP`, `> 0`, `starts with G`, `not EUR`, `present`. */
 function describeCondition(condition: JsonValue): string {
-  if (!isJsonObject(condition)) return `= ${String(condition)}`;
+  if (!isJsonObject(condition)) {
+    return `= ${String(condition)}`;
+  }
 
   const [operator] = Object.keys(condition);
   const operand = operator === undefined ? undefined : condition[operator];
@@ -337,14 +361,19 @@ function describeCondition(condition: JsonValue): string {
 function describePattern(pattern: JsonObject, prefix = ''): string {
   return Object.entries(pattern)
     .map(([key, rule]) => {
-      if (key === '$or' && Array.isArray(rule))
+      if (key === '$or' && Array.isArray(rule)) {
         return `(${rule.map((alt) => (isJsonObject(alt) ? describePattern(alt, prefix) : '')).join(' or ')})`;
+      }
 
       const name = prefix ? `${prefix}.${key}` : key;
 
-      if (isJsonObject(rule)) return describePattern(rule, name);
+      if (isJsonObject(rule)) {
+        return describePattern(rule, name);
+      }
 
-      if (!Array.isArray(rule)) return `${name} ${JSON.stringify(rule)}`;
+      if (!Array.isArray(rule)) {
+        return `${name} ${JSON.stringify(rule)}`;
+      }
 
       const plain = rule.every((value) => !isJsonObject(value));
 
@@ -360,8 +389,9 @@ function correlationMatches(filter: JsonObject, message: DeliveryMessage): boole
 
   for (const [key, value] of Object.entries(filter)) {
     if (key === 'properties') {
-      for (const [name, wanted] of Object.entries(isJsonObject(value) ? value : {}))
+      for (const [name, wanted] of Object.entries(isJsonObject(value) ? value : {})) {
         results.push(message.headers[name] === wanted);
+      }
     } else if (key === 'label' || key === 'subject') {
       results.push(message.routingKey === value);
     } else if (value !== null && value !== '') {
@@ -450,21 +480,23 @@ interface Blocked {
 }
 
 interface Routed {
-  stores: Map<string, DeliveryHop[]>;
-  unknown: string[];
+  stores: Map<string, Array<DeliveryHop>>;
+  unknown: Array<string>;
   /** Destinations a route names that the configuration does not declare. */
-  missing: string[];
+  missing: Array<string>;
   /** Routes the message matched but the destination does not let through. */
-  blocked: Blocked[];
+  blocked: Array<Blocked>;
   /** Routes taken, for their own failure handling. */
-  taken: CatalogRelationship[];
+  taken: Array<CatalogRelationship>;
 }
 
 function route(broker: Broker, message: DeliveryMessage, start: Node): Routed {
   const result: Routed = { stores: new Map(), unknown: [], missing: [], blocked: [], taken: [] };
 
-  const visit = (current: Node, trail: DeliveryHop[], seen: Set<string>) => {
-    if (seen.has(current.key)) return;
+  const visit = (current: Node, trail: Array<DeliveryHop>, seen: Set<string>) => {
+    if (seen.has(current.key)) {
+      return;
+    }
 
     seen.add(current.key);
     result.unknown.push(
@@ -472,7 +504,9 @@ function route(broker: Broker, message: DeliveryMessage, start: Node): Routed {
     );
 
     if (current.node.role === 'store') {
-      if (!result.stores.has(current.key)) result.stores.set(current.key, trail);
+      if (!result.stores.has(current.key)) {
+        result.stores.set(current.key, trail);
+      }
 
       return;
     }
@@ -482,7 +516,9 @@ function route(broker: Broker, message: DeliveryMessage, start: Node): Routed {
     for (const edge of broker.out.get(current.key) ?? []) {
       const attributes = routeOf(edge);
 
-      if (attributes.alternate || attributes.disabled) continue;
+      if (attributes.alternate || attributes.disabled) {
+        continue;
+      }
 
       result.unknown.push(
         ...attributes.unevaluated.map(
@@ -499,7 +535,9 @@ function route(broker: Broker, message: DeliveryMessage, start: Node): Routed {
         continue;
       }
 
-      if (!hit) continue;
+      if (!hit) {
+        continue;
+      }
 
       matched = true;
 
@@ -522,7 +560,9 @@ function route(broker: Broker, message: DeliveryMessage, start: Node): Routed {
 
       const next = broker.get(edge.to);
 
-      if (!next) continue;
+      if (!next) {
+        continue;
+      }
 
       result.taken.push(edge);
 
@@ -552,7 +592,7 @@ function route(broker: Broker, message: DeliveryMessage, start: Node): Routed {
         vhost: current.node.vhost ?? '/',
       });
 
-      if (alternate)
+      if (alternate) {
         visit(
           alternate,
           [
@@ -561,7 +601,9 @@ function route(broker: Broker, message: DeliveryMessage, start: Node): Routed {
           ],
           seen,
         );
-      else result.missing.push(current.node.alternate);
+      } else {
+        result.missing.push(current.node.alternate);
+      }
     }
   };
 
@@ -578,13 +620,19 @@ function connected(broker: Broker, from: Node, to: Node): boolean {
   while (stack.length) {
     const key = stack.pop()!;
 
-    if (key === to.key) return true;
+    if (key === to.key) {
+      return true;
+    }
 
-    if (seen.has(key)) continue;
+    if (seen.has(key)) {
+      continue;
+    }
 
     seen.add(key);
 
-    for (const edge of broker.out.get(key) ?? []) stack.push(resourceKey(edge.to));
+    for (const edge of broker.out.get(key) ?? []) {
+      stack.push(resourceKey(edge.to));
+    }
   }
 
   return false;
@@ -636,13 +684,13 @@ export interface ExampleDelivery {
   /** Whether it reaches the consumer's store; undefined when that could not be evaluated. */
   reaches: boolean | undefined;
   /** Producer's destination → … → the consumer's store, when it reaches it. */
-  path: DeliveryHop[];
+  path: Array<DeliveryHop>;
 }
 
 export interface ConsumerDelivery {
   /** `domain/id`. */
   event: string;
-  producers: string[];
+  producers: Array<string>;
   system: string;
   /** Where the producer publishes. */
   exchange: string;
@@ -651,11 +699,11 @@ export interface ConsumerDelivery {
   /** The store the consumer reads. */
   queue: string;
   group?: string;
-  examples: ExampleDelivery[];
+  examples: Array<ExampleDelivery>;
   /** Where a message the consumer gives up on ends up. */
-  deadLetter?: { exchange: string; queues: string[]; path: DeliveryHop[] };
+  deadLetter?: { exchange: string; queues: Array<string>; path: Array<DeliveryHop> };
   /** What the store promises, in words: retention, attempts, group. */
-  facts: string[];
+  facts: Array<string>;
   /** The store's attempt limit, for verification. */
   maxAttempts?: number;
   /** The RabbitMQ vhost the route lives in, for verification. */
@@ -664,8 +712,8 @@ export interface ConsumerDelivery {
 
 export interface DeliveryReport {
   environment?: string;
-  routes: ConsumerDelivery[];
-  findings: DeliveryFinding[];
+  routes: Array<ConsumerDelivery>;
+  findings: Array<DeliveryFinding>;
   /** False when anything on a route was not evaluated: no clean result is claimed. */
   complete: boolean;
 }
@@ -674,7 +722,9 @@ function valueAt(data: JsonValue | undefined, dotted: string): JsonValue | undef
   let current: JsonValue | undefined = data;
 
   for (const part of dotted.split('.')) {
-    if (!isJsonObject(current)) return undefined;
+    if (!isJsonObject(current)) {
+      return undefined;
+    }
 
     current = current[part];
   }
@@ -683,19 +733,24 @@ function valueAt(data: JsonValue | undefined, dotted: string): JsonValue | undef
 }
 
 /** The headers a producer sets from one payload, from the fields its transport names. */
-function headersOf(data: JsonValue | undefined, fields: string[] = []): DeliveryMessage['headers'] {
+function headersOf(
+  data: JsonValue | undefined,
+  fields: Array<string> = [],
+): DeliveryMessage['headers'] {
   const headers: DeliveryMessage['headers'] = {};
 
   for (const field of fields) {
     const value = headerValue.safeParse(valueAt(data, field));
 
-    if (value.success) headers[field] = value.data;
+    if (value.success) {
+      headers[field] = value.data;
+    }
   }
 
   return headers;
 }
 
-const systemsOf = (transport: DeliveryTransport): string[] => [
+const systemsOf = (transport: DeliveryTransport): Array<string> => [
   ...new Set(transport.protocols.flatMap((protocol) => PROTOCOL_SYSTEMS.get(protocol) ?? [])),
 ];
 
@@ -705,27 +760,36 @@ export const shownHeaders = (headers: DeliveryMessage['headers']) =>
     .join(', ');
 
 /** What a store promises a consumer, in words, for the path's reader. */
-function storeFacts(node: BrokerNode, group?: string): string[] {
-  const facts: string[] = [];
+function storeFacts(node: BrokerNode, group?: string): Array<string> {
+  const facts: Array<string> = [];
 
-  if (node.retentionSeconds !== undefined)
+  if (node.retentionSeconds !== undefined) {
     facts.push(`keeps unread messages for ${durationWords(node.retentionSeconds)}`);
-  else if (node.retentionUnbounded) facts.push('keeps messages until they are read');
-  else if (node.retentionDefault) facts.push("keeps messages for the cluster's default retention");
+  } else if (node.retentionUnbounded) {
+    facts.push('keeps messages until they are read');
+  } else if (node.retentionDefault) {
+    facts.push("keeps messages for the cluster's default retention");
+  }
 
-  if (node.maxAttempts !== undefined)
+  if (node.maxAttempts !== undefined) {
     facts.push(
       `up to ${node.maxAttempts} deliveries${node.redeliveryDelaySeconds ? `, ${durationWords(node.redeliveryDelaySeconds)} apart` : ''}`,
     );
-  else if (node.system === 'rabbitmq' || node.system === 'sqs')
+  } else if (node.system === 'rabbitmq' || node.system === 'sqs') {
     facts.push('redelivers a failed message without limit');
+  }
 
-  if (node.idleExpirySeconds !== undefined)
+  if (node.idleExpirySeconds !== undefined) {
     facts.push(`deleted after ${durationWords(node.idleExpirySeconds)} without a consumer`);
+  }
 
-  if (node.maxLength !== undefined) facts.push(`holds at most ${node.maxLength} messages`);
+  if (node.maxLength !== undefined) {
+    facts.push(`holds at most ${node.maxLength} messages`);
+  }
 
-  if (group) facts.push(`consumer group ${named(group)}`);
+  if (group) {
+    facts.push(`consumer group ${named(group)}`);
+  }
 
   return facts;
 }
@@ -737,18 +801,21 @@ function storeFacts(node: BrokerNode, group?: string): string[] {
  */
 export function analyzeDelivery(input: {
   graph: ResourceGraph;
-  events: DeliveryEvent[];
-  consumers: ConsumerDeclaration[];
+  events: Array<DeliveryEvent>;
+  consumers: Array<ConsumerDeclaration>;
 }): DeliveryReport {
   const broker = new Broker(input.graph);
-  const findings: DeliveryFinding[] = [];
-  const routes: ConsumerDelivery[] = [];
+  const findings: Array<DeliveryFinding> = [];
+  const routes: Array<ConsumerDelivery> = [];
 
-  if (broker.nodes.size === 0) return { routes, findings, complete: true };
+  if (broker.nodes.size === 0) {
+    return { routes, findings, complete: true };
+  }
 
   for (const event of input.events) {
-    for (const transport of event.transports)
+    for (const transport of event.transports) {
       analyzeTransport(broker, event, transport, input.consumers, findings, routes);
+    }
   }
 
   const unique = dedupe(findings);
@@ -765,15 +832,17 @@ function analyzeTransport(
   broker: Broker,
   event: DeliveryEvent,
   transport: DeliveryTransport,
-  allConsumers: ConsumerDeclaration[],
-  findings: DeliveryFinding[],
-  routes: ConsumerDelivery[],
+  allConsumers: Array<ConsumerDeclaration>,
+  findings: Array<DeliveryFinding>,
+  routes: Array<ConsumerDelivery>,
 ) {
   const name = event.event;
   const systems = systemsOf(transport);
 
   // An event bound for a broker this configuration does not describe is someone else's to check.
-  if (!broker.has(systems)) return;
+  if (!broker.has(systems)) {
+    return;
+  }
 
   const address =
     transport.address === '' && systems.includes('eventbridge') ? 'default' : transport.address;
@@ -808,13 +877,14 @@ function analyzeTransport(
     (consumer) => consumer.event === name && (consumer.queue || start.node.role === 'store'),
   );
 
-  if (consumers.length > 0 && event.examples.length === 0)
+  if (consumers.length > 0 && event.examples.length === 0) {
     findings.push({
       confidence: 'unknown',
       code: 'no_examples',
       event: name,
       message: `${named(name)} has no committed example, so its filters were not checked against a real message`,
     });
+  }
 
   const readers = new Map<string, Array<{ service: string; group?: string }>>();
 
@@ -847,7 +917,7 @@ function analyzeTransport(
 
     const reachableAtAll = connected(broker, start, store);
 
-    if (!reachableAtAll)
+    if (!reachableAtAll) {
       findings.push({
         confidence: 'confirmed',
         code: 'no_route',
@@ -856,9 +926,10 @@ function analyzeTransport(
         message: `${named(consumer.service)} declares that it consumes ${named(name)} from ${named(queueName)}, but nothing routes ${named(address)} to it`,
         ...(store.resource.source && { source: store.resource.source }),
       });
+    }
 
-    const taken: CatalogRelationship[] = [];
-    const deliveries: ExampleDelivery[] = [];
+    const taken: Array<CatalogRelationship> = [];
+    const deliveries: Array<ExampleDelivery> = [];
 
     for (const example of event.examples) {
       const headers = headersOf(example.data, transport.headers);
@@ -877,7 +948,7 @@ function analyzeTransport(
 
       taken.push(...routed.taken);
 
-      for (const note of routed.unknown)
+      for (const note of routed.unknown) {
         findings.push({
           confidence: 'unknown',
           code: 'not_evaluated',
@@ -885,8 +956,9 @@ function analyzeTransport(
           consumer: consumer.service,
           message: note,
         });
+      }
 
-      for (const blocked of routed.blocked)
+      for (const blocked of routed.blocked) {
         findings.push({
           confidence: blocked.access === 'denied' ? 'confirmed' : 'possible',
           code: 'delivery_blocked',
@@ -898,6 +970,7 @@ function analyzeTransport(
               : `no access policy read here lets ${named(blocked.from.id)} deliver to ${named(blocked.to.id)}, so it cannot deliver unless one is attached elsewhere`,
           ...(blocked.source && { source: blocked.source }),
         });
+      }
 
       const reaches = path ? true : routed.unknown.length ? undefined : false;
 
@@ -948,11 +1021,13 @@ function producerAccess(
   start: Node,
   transport: DeliveryTransport,
   event: DeliveryEvent,
-  findings: DeliveryFinding[],
+  findings: Array<DeliveryFinding>,
 ) {
   const identity = transport.identity;
 
-  if (!identity) return;
+  if (!identity) {
+    return;
+  }
 
   const who = event.producers.map(named).join(', ') || 'the producer';
   const grants = start.node.grants;
@@ -997,36 +1072,41 @@ function producerAccess(
 
   // RabbitMQ topic permissions narrow which routing keys a user may publish with.
   for (const permission of start.node.topicPermissions ?? []) {
-    if (permission.user !== identity) continue;
+    if (permission.user !== identity) {
+      continue;
+    }
 
     const allowed = rabbitPatternMatches(permission.write, transport.routingKey ?? '');
 
-    if (allowed === false)
+    if (allowed === false) {
       findings.push({
         confidence: 'confirmed',
         code: 'publish_denied',
         event: event.event,
         message: `${who} publishes as ${named(identity)}, whose topic permission on ${where} does not cover routing key ${transport.routingKey ? named(transport.routingKey) : '(empty)'}`,
       });
-    else if (allowed === undefined)
+    } else if (allowed === undefined) {
       findings.push({
         confidence: 'unknown',
         code: 'not_evaluated',
         event: event.event,
         message: `the topic permission of ${named(identity)} on ${where} uses a pattern that is not evaluated`,
       });
+    }
   }
 }
 
 function consumerAccess(
   store: Node,
   consumer: ConsumerDeclaration,
-  findings: DeliveryFinding[],
+  findings: Array<DeliveryFinding>,
   event: string,
 ) {
   const identity = consumer.identity;
 
-  if (!identity) return;
+  if (!identity) {
+    return;
+  }
 
   const grants = store.node.grants;
   const where = `${store.node.entity} ${named(store.resource.ref.id)}`;
@@ -1048,14 +1128,14 @@ function consumerAccess(
     return;
   }
 
-  if (grants.undecided?.consume.includes(identity))
+  if (grants.undecided?.consume.includes(identity)) {
     findings.push({
       ...base,
       confidence: 'unknown',
       code: 'not_evaluated',
       message: `whether ${named(consumer.service)} may consume from ${where} as ${named(identity)} depends on a policy condition or resource that is not evaluated`,
     });
-  else if (!grants.consume.includes(identity))
+  } else if (!grants.consume.includes(identity)) {
     findings.push({
       ...base,
       confidence: grants.complete ? 'confirmed' : 'possible',
@@ -1064,6 +1144,7 @@ function consumerAccess(
         ? `${named(consumer.service)} consumes as ${named(identity)}, which cannot consume from ${where}`
         : `${named(consumer.service)} consumes as ${named(identity)}, and nothing read here lets it consume from ${where}`,
     });
+  }
 
   if (grants.groups && consumer.group) {
     const group = consumer.group;
@@ -1072,13 +1153,14 @@ function consumerAccess(
       pattern.endsWith('*') ? group.startsWith(pattern.slice(0, -1)) : pattern === group,
     );
 
-    if (!allowed)
+    if (!allowed) {
       findings.push({
         ...base,
         confidence: grants.complete ? 'confirmed' : 'possible',
         code: 'group_denied',
         message: `${named(consumer.service)} consumes as ${named(identity)}, which may not join consumer group ${named(group)}`,
       });
+    }
   }
 }
 
@@ -1086,9 +1168,9 @@ function consumerAccess(
 function storeNeeds(
   store: Node,
   consumer: ConsumerDeclaration,
-  findings: DeliveryFinding[],
+  findings: Array<DeliveryFinding>,
   event: string,
-  taken: CatalogRelationship[],
+  taken: Array<CatalogRelationship>,
 ) {
   const node = store.node;
   const name = store.resource.ref.id;
@@ -1102,78 +1184,86 @@ function storeNeeds(
   const recovery = consumer.recovery ? durationSeconds(consumer.recovery) : undefined;
 
   if (recovery !== undefined) {
-    if (node.retentionSeconds !== undefined && node.retentionSeconds < recovery)
+    if (node.retentionSeconds !== undefined && node.retentionSeconds < recovery) {
       findings.push({
         ...base,
         confidence: 'policy',
         code: 'retention_short',
         message: `${named(name)} keeps unread messages for ${durationWords(node.retentionSeconds)}, shorter than the ${durationWords(recovery)} ${named(consumer.service)} declares it may be down`,
       });
+    }
 
-    if (node.retentionDefault)
+    if (node.retentionDefault) {
       findings.push({
         ...base,
         confidence: 'unknown',
         code: 'not_evaluated',
         message: `${named(name)} uses the cluster's default retention, so the ${durationWords(recovery)} recovery window of ${named(consumer.service)} is not checked`,
       });
+    }
 
-    if (node.idleExpirySeconds !== undefined && node.idleExpirySeconds < recovery)
+    if (node.idleExpirySeconds !== undefined && node.idleExpirySeconds < recovery) {
       findings.push({
         ...base,
         confidence: 'policy',
         code: 'retention_short',
         message: `${named(name)} is deleted after ${durationWords(node.idleExpirySeconds)} without a consumer, shorter than the ${durationWords(recovery)} ${named(consumer.service)} declares it may be down`,
       });
+    }
 
-    if (node.maxLength !== undefined)
+    if (node.maxLength !== undefined) {
       findings.push({
         ...base,
         confidence: 'possible',
         code: 'retention_short',
         message: `${named(name)} holds at most ${node.maxLength} messages, so a backlog longer than that while ${named(consumer.service)} is down is lost`,
       });
+    }
   }
 
   const expected = consumer.deadLetter?.maxAttempts;
 
   if (expected !== undefined) {
-    if (node.maxAttempts === undefined && (node.system === 'rabbitmq' || node.system === 'sqs'))
+    if (node.maxAttempts === undefined && (node.system === 'rabbitmq' || node.system === 'sqs')) {
       findings.push({
         ...base,
         confidence: 'policy',
         code: 'attempts_mismatch',
         message: `${named(name)} redelivers a failed message without limit, so the ${expected} attempts ${named(consumer.service)} expects are not enforced`,
       });
-    else if (node.maxAttempts !== undefined && node.maxAttempts !== expected)
+    } else if (node.maxAttempts !== undefined && node.maxAttempts !== expected) {
       findings.push({
         ...base,
         confidence: 'policy',
         code: 'attempts_mismatch',
         message: `${named(consumer.service)} expects to give up after ${expected} attempts, but ${named(name)} delivers up to ${node.maxAttempts} times`,
       });
+    }
   }
 
   const window = consumer.processingWindow ? durationSeconds(consumer.processingWindow) : undefined;
 
-  if (window === undefined) return;
+  if (window === undefined) {
+    return;
+  }
 
   if (node.maxAttempts !== undefined && node.redeliveryDelaySeconds) {
     const worst = node.maxAttempts * node.redeliveryDelaySeconds;
 
-    if (worst > window)
+    if (worst > window) {
       findings.push({
         ...base,
         confidence: 'policy',
         code: 'retries_exceed_window',
         message: `a failing message on ${named(name)} can be retried for up to ${durationWords(worst)} (${node.maxAttempts} attempts, ${durationWords(node.redeliveryDelaySeconds)} apart), longer than the ${durationWords(window)} ${named(consumer.service)} declares`,
       });
+    }
   }
 
   for (const edge of taken) {
     const age = routeOf(edge).maxAgeSeconds;
 
-    if (age !== undefined && age > window)
+    if (age !== undefined && age > window) {
       findings.push({
         ...base,
         confidence: 'policy',
@@ -1181,23 +1271,28 @@ function storeNeeds(
         message: `${named(edge.from.id)} retries delivery to ${named(edge.to.id)} for up to ${durationWords(age)}, longer than the ${durationWords(window)} ${named(consumer.service)} declares`,
         ...(edge.source && { source: edge.source }),
       });
+    }
   }
 }
 
 /** A route's own failure destination, such as an SNS subscription's or an EventBridge target's. */
 function routeFailures(
   broker: Broker,
-  taken: CatalogRelationship[],
-  findings: DeliveryFinding[],
+  taken: Array<CatalogRelationship>,
+  findings: Array<DeliveryFinding>,
   event: string,
   consumer: string,
 ) {
   for (const edge of taken) {
     const target = routeOf(edge).deadLetter;
 
-    if (target === undefined) continue;
+    if (target === undefined) {
+      continue;
+    }
 
-    if (broker.find(target, { role: 'store' }).length > 0) continue;
+    if (broker.find(target, { role: 'store' }).length > 0) {
+      continue;
+    }
 
     const unresolved = target === '(not resolved)';
 
@@ -1220,7 +1315,7 @@ function deadLetterRoute(
   event: DeliveryEvent,
   transport: DeliveryTransport,
   consumer: ConsumerDeclaration,
-  findings: DeliveryFinding[],
+  findings: Array<DeliveryFinding>,
 ): ConsumerDelivery['deadLetter'] {
   const declared = consumer.deadLetter?.queue;
   const dl = store.node.deadLetter;
@@ -1233,13 +1328,14 @@ function deadLetterRoute(
   };
 
   if (!dl) {
-    if (declared)
+    if (declared) {
       findings.push({
         ...base,
         confidence: 'policy',
         code: 'dead_letter_mismatch',
         message: `${named(consumer.service)} expects rejected messages in ${named(declared)}, but ${named(name)} has no dead-letter destination`,
       });
+    }
 
     return undefined;
   }
@@ -1260,8 +1356,8 @@ function deadLetterRoute(
     return { exchange: dl.target, queues: [], path: [] };
   }
 
-  let queues: string[];
-  let trail: DeliveryHop[];
+  let queues: Array<string>;
+  let trail: Array<DeliveryHop>;
 
   if (target.node.role === 'store') {
     queues = [target.resource.ref.id];
@@ -1283,22 +1379,24 @@ function deadLetterRoute(
     queues = [...routed.stores.values()].map((hops) => hops.at(-1)!.ref.id).sort();
     trail = [...routed.stores.values()][0] ?? [];
 
-    if (queues.length === 0 && routed.unknown.length === 0)
+    if (queues.length === 0 && routed.unknown.length === 0) {
       findings.push({
         ...base,
         confidence: 'confirmed',
         code: 'dead_letter_dropped',
         message: `${named(name)} dead-letters to ${named(dl.target)}, which routes nowhere, so a rejected message is dropped`,
       });
+    }
   }
 
-  if (declared && queues.length > 0 && !queues.includes(declared))
+  if (declared && queues.length > 0 && !queues.includes(declared)) {
     findings.push({
       ...base,
       confidence: 'policy',
       code: 'dead_letter_mismatch',
       message: `${named(consumer.service)} expects rejected messages in ${named(declared)}, but ${named(name)} dead-letters to ${queues.map(named).join(', ')}`,
     });
+  }
 
   return { exchange: dl.target, queues, path: trail };
 }
@@ -1310,7 +1408,7 @@ function deadLetterRoute(
 function groupFindings(
   broker: Broker,
   readers: Map<string, Array<{ service: string; group?: string }>>,
-  findings: DeliveryFinding[],
+  findings: Array<DeliveryFinding>,
   event: string,
 ) {
   for (const [key, list] of readers) {
@@ -1337,7 +1435,9 @@ function groupFindings(
     }
 
     for (const [group, services] of byGroup) {
-      if (services.size < 2) continue;
+      if (services.size < 2) {
+        continue;
+      }
 
       const names = [...services].sort();
 
@@ -1358,7 +1458,7 @@ function groupFindings(
 const findingKey = (f: DeliveryFinding) =>
   `${f.code}\0${f.event}\0${f.consumer ?? ''}\0${f.message}`;
 
-function dedupe(findings: DeliveryFinding[]): DeliveryFinding[] {
+function dedupe(findings: Array<DeliveryFinding>): Array<DeliveryFinding> {
   return [...new Map(findings.map((finding) => [findingKey(finding), finding])).values()];
 }
 
@@ -1366,9 +1466,11 @@ function dedupe(findings: DeliveryFinding[]): DeliveryFinding[] {
 // Inputs, from one repository or the company's composed graph
 
 /** The events in a loaded catalog that delivery can route. */
-export function deliveryEvents(events: LoadedEvent[]): DeliveryEvent[] {
+export function deliveryEvents(events: Array<LoadedEvent>): Array<DeliveryEvent> {
   return events.flatMap((event) => {
-    if (event.folder.isVersioned) return [];
+    if (event.folder.isVersioned) {
+      return [];
+    }
 
     const delivery = deliveryEventOf(event);
 
@@ -1379,9 +1481,11 @@ export function deliveryEvents(events: LoadedEvent[]): DeliveryEvent[] {
 const eventDelivery = z.object({ delivery: deliveryEvent });
 
 /** The events a composed graph carries delivery inputs for, from every repository. */
-export function deliveryEventsFromGraph(graph: ResourceGraph): DeliveryEvent[] {
+export function deliveryEventsFromGraph(graph: ResourceGraph): Array<DeliveryEvent> {
   return graph.resources.flatMap((resource) => {
-    if (resource.ref.kind !== 'event') return [];
+    if (resource.ref.kind !== 'event') {
+      return [];
+    }
 
     const parsed = eventDelivery.safeParse(resource.attributes);
 
@@ -1404,7 +1508,7 @@ const edgeDeadLetter = z
   .catch({});
 
 /** Consumers that declared where they read, from the composed graph's `consumes` edges. */
-export function deliveryConsumersFromGraph(graph: ResourceGraph): ConsumerDeclaration[] {
+export function deliveryConsumersFromGraph(graph: ResourceGraph): Array<ConsumerDeclaration> {
   const domains = new Map(
     graph.resources
       .filter((resource) => resource.ref.kind === 'event')
@@ -1415,11 +1519,15 @@ export function deliveryConsumersFromGraph(graph: ResourceGraph): ConsumerDeclar
   );
 
   return graph.relationships.flatMap((edge) => {
-    if (edge.type !== 'consumes' || edge.from.kind !== 'event') return [];
+    if (edge.type !== 'consumes' || edge.from.kind !== 'event') {
+      return [];
+    }
 
     const needs = deliveryNeedsOf(edge);
 
-    if (!needs) return [];
+    if (!needs) {
+      return [];
+    }
 
     const domain =
       domains.get(resourceKey(edge.from)) || (edge.from.namespace?.split('/').at(-1) ?? '');
@@ -1429,7 +1537,9 @@ export function deliveryConsumersFromGraph(graph: ResourceGraph): ConsumerDeclar
 
     // Names from another site's index land in pull-request Markdown: one not
     // safe to print is counted under a placeholder, so the gate still fires.
-    if (!isSafeName(event)) return [];
+    if (!isSafeName(event)) {
+      return [];
+    }
 
     return [
       {
@@ -1444,8 +1554,8 @@ export function deliveryConsumersFromGraph(graph: ResourceGraph): ConsumerDeclar
 
 export interface DeliveryInputs {
   graph: ResourceGraph;
-  events: DeliveryEvent[];
-  consumers: ConsumerDeclaration[];
+  events: Array<DeliveryEvent>;
+  consumers: Array<ConsumerDeclaration>;
 }
 
 /** The company's inputs, read from its composed graph (the site's `/catalog.json`). */
@@ -1526,8 +1636,8 @@ const ruleOf = (delivery: ExampleDelivery | undefined): string | undefined =>
  * and no longer would, a configuration problem the change introduces, and
  * anything it leaves unevaluated, so an incomplete check never reads as a pass.
  */
-export function driftDelivery(base: DeliveryReport, current: DeliveryReport): DriftFinding[] {
-  const findings: DriftFinding[] = [];
+export function driftDelivery(base: DeliveryReport, current: DeliveryReport): Array<DriftFinding> {
+  const findings: Array<DriftFinding> = [];
   const where = current.environment ?? base.environment;
   const env = where ? ` in ${named(where)}` : '';
 
@@ -1537,7 +1647,9 @@ export function driftDelivery(base: DeliveryReport, current: DeliveryReport): Dr
     );
 
     for (const example of before.examples) {
-      if (!example.reaches) continue;
+      if (!example.reaches) {
+        continue;
+      }
 
       // By name, or by what it carries when the change renames it. With no
       // match, the route is lost when no example on it still arrives.
@@ -1566,7 +1678,9 @@ export function driftDelivery(base: DeliveryReport, current: DeliveryReport): Dr
         continue;
       }
 
-      if (after && arrives) continue;
+      if (after && arrives) {
+        continue;
+      }
 
       const [domain = '', id = ''] = before.event.split('/');
       const shown = shownHeaders(example.headers);
@@ -1595,11 +1709,15 @@ export function driftDelivery(base: DeliveryReport, current: DeliveryReport): Dr
   const known = new Set(base.findings.map(findingKey));
 
   for (const finding of current.findings) {
-    if (known.has(findingKey(finding))) continue;
+    if (known.has(findingKey(finding))) {
+      continue;
+    }
 
     // A filtered example is reported above when it used to arrive; one that
     // never did is not this change's doing.
-    if (finding.code === 'example_filtered') continue;
+    if (finding.code === 'example_filtered') {
+      continue;
+    }
 
     const [domain = '', id = ''] = finding.event.split('/');
     const unknown = finding.confidence === 'unknown';

@@ -9,9 +9,8 @@ import {
   renderDriftMarkdown,
   compareSemverish,
   renderVersionChangelog,
-  type DriftFinding,
-  type DriftReport,
 } from '../src/drift';
+import type { DriftFinding, DriftReport } from '../src/drift';
 import type { JsonObject } from '../src/json';
 import { UNSAFE_CONSUMER } from '../src/consumes';
 import type { SnapshotObservation } from '../src/snapshot';
@@ -352,7 +351,11 @@ describe('driftCatalogs', () => {
 });
 
 describe('renames', () => {
-  type Schema = { type: string; required: string[]; properties: Record<string, { type: string }> };
+  type Schema = {
+    type: string;
+    required: Array<string>;
+    properties: Record<string, { type: string }>;
+  };
 
   const renamed = (from: string, to: string, schema: Schema = paymentSchema): Schema => {
     const { [from]: moved = { type: 'string' }, ...properties } = schema.properties;
@@ -573,7 +576,7 @@ describe('compatibilityBreaks', () => {
   // Compatibility is decided from the value sets on the diff, not from the
   // kind: a kind can only name one direction, and an enum change is routinely
   // both.
-  const enumDiff = (added: unknown[], removed: unknown[]): DriftFinding['diff'] => ({
+  const enumDiff = (added: Array<unknown>, removed: Array<unknown>): DriftFinding['diff'] => ({
     kind: 'enum_changed',
     path: 'status',
     detail: '',
@@ -757,7 +760,7 @@ describe('compareSemverish', () => {
 });
 
 describe('runtime drift against a snapshot', () => {
-  const observation = (name: string, fieldPaths: string[]) => ({
+  const observation = (name: string, fieldPaths: Array<string>) => ({
     name,
     observedCount: 3,
     firstSeen: '2026-01-01T00:00:00Z',
@@ -1210,7 +1213,7 @@ describe('runtime drift against a snapshot', () => {
 
     await both(paymentManifest, typed);
 
-    const run = (types: string[], values: string[]) =>
+    const run = (types: Array<string>, values: Array<string>) =>
       only({
         'payment.completed': {
           fieldStats: { amount: { types }, status: { types: ['string'], sampleValues: values } },

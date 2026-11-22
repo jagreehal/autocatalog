@@ -6,12 +6,13 @@ import {
   consumerUsage,
   findingPointer,
   placeFinding,
-  type DriftFinding,
 } from './drift';
+import type { DriftFinding } from './drift';
 import { endpointId } from './api-resources';
 import type { EventConsumers } from './consumes';
 import { fieldPaths } from './fields';
-import { isJsonObject, type JsonObject, type JsonValue } from './json';
+import { isJsonObject } from './json';
+import type { JsonObject, JsonValue } from './json';
 import { derefLocal } from './json-ref';
 import { findOpenApiDocuments, METHODS } from './scan-openapi';
 import { sourceLines } from './source-lines';
@@ -24,13 +25,13 @@ interface Operation {
   /** Its name in the catalog, as `GET /customers/{id}`. */
   endpoint: string;
   /** The response statuses it documents. */
-  statuses: string[];
+  statuses: Array<string>;
   request: JsonObject;
   response: JsonObject;
   /** Where the operation sits in its document, as pointer steps. */
-  at: string[];
+  at: Array<string>;
   /** Where each synthesised property's schema sits in the document, per side. */
-  fields: Record<Side, Record<string, string[]>>;
+  fields: Record<Side, Record<string, Array<string>>>;
 }
 
 const objectAt = (doc: JsonObject, node: JsonValue | undefined): JsonObject => {
@@ -50,9 +51,13 @@ function rehome(node: JsonObject): JsonObject {
 }
 
 function rehomeValue(key: string, value: JsonValue): JsonValue {
-  if (Array.isArray(value)) return value.map((item) => rehomeValue('', item));
+  if (Array.isArray(value)) {
+    return value.map((item) => rehomeValue('', item));
+  }
 
-  if (isJsonObject(value)) return rehome(value);
+  if (isJsonObject(value)) {
+    return rehome(value);
+  }
 
   const ref = key === '$ref' ? z.string().safeParse(value) : undefined;
 
@@ -66,7 +71,7 @@ function rehomeValue(key: string, value: JsonValue): JsonValue {
 function contentSchema(
   doc: JsonObject,
   content: JsonValue | undefined,
-): { schema: JsonValue; at: string[] } {
+): { schema: JsonValue; at: Array<string> } {
   const media = objectAt(doc, content);
 
   const type =
@@ -93,7 +98,9 @@ function operationsOf(relFile: string, doc: JsonObject): Map<string, Operation> 
     const pathItem = objectAt(doc, item);
 
     for (const method of METHODS) {
-      if (!isJsonObject(pathItem[method])) continue;
+      if (!isJsonObject(pathItem[method])) {
+        continue;
+      }
       const operation = pathItem[method];
       const at = ['paths', route, method];
       const properties: JsonObject = {};
@@ -112,8 +119,11 @@ function operationsOf(relFile: string, doc: JsonObject): Map<string, Operation> 
           properties[key] = param.schema ?? content.schema;
           fields.request[key] = [...owner, 'parameters', String(index), 'schema'];
 
-          if (param.required === true) required.add(key);
-          else required.delete(key);
+          if (param.required === true) {
+            required.add(key);
+          } else {
+            required.delete(key);
+          }
         }
       }
 
@@ -123,7 +133,9 @@ function operationsOf(relFile: string, doc: JsonObject): Map<string, Operation> 
         properties.body = content.schema;
         fields.request.body = [...at, 'requestBody', ...content.at];
 
-        if (body.required === true) required.add('body');
+        if (body.required === true) {
+          required.add('body');
+        }
       }
 
       const responses = Object.fromEntries(
@@ -173,7 +185,9 @@ function onSide(side: Side, finding: DriftFinding): DriftFinding {
       : schema.map((mode) => (mode === 'backward' ? 'forward' : 'backward')),
   );
 
-  if (finding.kind === 'field_removed' || finding.kind === 'field_renamed') api.add('backward');
+  if (finding.kind === 'field_removed' || finding.kind === 'field_renamed') {
+    api.add('backward');
+  }
 
   const compatibility = (['backward', 'forward'] as const).filter((mode) => api.has(mode));
 
@@ -213,10 +227,10 @@ export async function driftOpenApi(
   baselineRoot: string,
   currentRoot: string,
   options: {
-    exclude?: string[];
+    exclude?: Array<string>;
     consumersOf?: (file: string, operation: string) => EventConsumers | undefined;
   } = {},
-): Promise<DriftFinding[]> {
+): Promise<Array<DriftFinding>> {
   const [baseScan, currScan] = await Promise.all([
     findOpenApiDocuments({ root: baselineRoot, exclude: options.exclude }),
     findOpenApiDocuments({ root: currentRoot, exclude: options.exclude }),
@@ -224,7 +238,9 @@ export async function driftOpenApi(
 
   const errors = [...baseScan.errors, ...currScan.errors];
 
-  if (errors.length > 0) throw new Error(`Could not read OpenAPI documents: ${errors.join('; ')}`);
+  if (errors.length > 0) {
+    throw new Error(`Could not read OpenAPI documents: ${errors.join('; ')}`);
+  }
 
   const operations = (scan: typeof baseScan) =>
     new Map(scan.documents.flatMap(({ relFile, doc }) => [...operationsOf(relFile, doc)]));
@@ -248,7 +264,7 @@ export async function driftOpenApi(
 
   const lines = new Map(currScan.documents.map(({ relFile, raw }) => [relFile, sourceLines(raw)]));
 
-  const advise = (op: Operation, changes: DriftFinding[]) =>
+  const advise = (op: Operation, changes: Array<DriftFinding>) =>
     adviseBreaking(changes, {
       from: baseVersions.get(op.relFile) ?? '',
       to: currVersions.get(op.relFile),
@@ -264,7 +280,7 @@ export async function driftOpenApi(
     return placeFinding(f, lines.get(op.relFile), prefix ? [...prefix, ...rest] : op.at);
   };
 
-  const findings: DriftFinding[] = [];
+  const findings: Array<DriftFinding> = [];
 
   const callersOf = (op: Operation) => options.consumersOf?.(op.relFile, op.endpoint);
 
@@ -273,7 +289,7 @@ export async function driftOpenApi(
    * statuses that have the field. One no status has stays, so a typo still
    * reads as a caller that has not said, never as one that is safe.
    */
-  const responseFields = (was: Operation, now: Operation): Record<string, string[]> => {
+  const responseFields = (was: Operation, now: Operation): Record<string, Array<string>> => {
     const known = new Set([...fieldPaths(was.response), ...fieldPaths(now.response)]);
     const statuses = [...new Set([...was.statuses, ...now.statuses])];
 
@@ -346,7 +362,9 @@ export async function driftOpenApi(
           return { ...rest, consumers: [] };
         }
 
-        if (change.consumers.length > 0 || !change.diff) return change;
+        if (change.consumers.length > 0 || !change.diff) {
+          return change;
+        }
 
         const usage = consumerUsage(callers, fields, change.diff.path, known);
 

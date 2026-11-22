@@ -3,7 +3,7 @@ import { z } from 'zod';
 /** A value `JSON.parse` (or a YAML/Avro/proto-JSON loader) can produce. */
 export type JsonPrimitive = string | number | boolean | null;
 
-export type JsonValue = JsonPrimitive | JsonValue[] | JsonObject;
+export type JsonValue = JsonPrimitive | Array<JsonValue> | JsonObject;
 
 export interface JsonObject {
   [key: string]: JsonValue;

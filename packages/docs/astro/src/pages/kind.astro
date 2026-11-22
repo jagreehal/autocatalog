@@ -23,7 +23,7 @@ const catalog = await docsCatalog();
 const kind =
   Astro.props.kind ?? catalog.kinds.find((each) => `/${each.path}` === Astro.routePattern);
 
-if (!kind) return Astro.rewrite('/404');
+if (!kind) {return Astro.rewrite('/404');}
 
 const page = kindIndexProps(readableCatalog(catalog, Astro.locals.canRead), kind);
 ---

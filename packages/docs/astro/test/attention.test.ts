@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { attentionSnapshot, hasAttention, type AttentionSource } from '../src/attention';
+import { attentionSnapshot, hasAttention } from '../src/attention';
+import type { AttentionSource } from '../src/attention';
 
 const emptyCatalog: AttentionSource = {
   events: [],

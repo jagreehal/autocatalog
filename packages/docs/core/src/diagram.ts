@@ -4,11 +4,8 @@ import {
   isServiceCatalogResource,
   normaliseEventId,
   resourceKey,
-  type CatalogResource,
-  type LoadedEvent,
-  type ResourceGraph,
-  type ResourceRef,
 } from 'autocatalog-core';
+import type { CatalogResource, LoadedEvent, ResourceGraph, ResourceRef } from 'autocatalog-core';
 import type { Flow, FlowGroupBy, FlowStep } from './flows';
 
 // The catalog as EventCatalog's visualiser draws it (MIT, @eventcatalog/visualiser):
@@ -100,8 +97,8 @@ export interface FlowStepData {
 
 /** A map of the catalog: what is drawn, and what a snapshot says of each edge. */
 export interface Diagram {
-  nodes: DiagramNode[];
-  edges: DiagramEdge[];
+  nodes: Array<DiagramNode>;
+  edges: Array<DiagramEdge>;
   /** Runtime evidence by edge id, only where a snapshot covers the map. */
   evidence?: Record<string, EdgeEvidence>;
   /** A flow's steps by node id: what the walkthrough calls each one, and their lanes. */
@@ -112,13 +109,13 @@ export interface Diagram {
 
 /** What a repository's snapshot said of one event, for the map's edges. */
 export interface EventRuntime {
-  declaredProducers: string[];
-  declaredConsumers: string[];
+  declaredProducers: Array<string>;
+  declaredConsumers: Array<string>;
   /** Absent when the repository has a snapshot that never saw the event. */
   observed?: {
     count: number;
-    producers: string[];
-    consumers: string[];
+    producers: Array<string>;
+    consumers: Array<string>;
     sources: Array<{ producer?: string | undefined; count: number }>;
   };
 }
@@ -132,7 +129,7 @@ export interface EventRuntime {
 export function runtimeByEvent(
   events: Array<{ repository?: string | undefined; event: LoadedEvent }>,
   /** Repositories whose snapshot was read, even one that matched nothing. */
-  snapshots: string[],
+  snapshots: Array<string>,
 ): Map<string, EventRuntime> {
   const covered = new Set([
     ...snapshots,
@@ -143,7 +140,9 @@ export function runtimeByEvent(
 
   return new Map(
     events.flatMap(({ repository, event }): Array<[string, EventRuntime]> => {
-      if (!covered.has(repository ?? '')) return [];
+      if (!covered.has(repository ?? '')) {
+        return [];
+      }
 
       const fm = event.frontmatter;
       const seen = fm.observed;
@@ -185,7 +184,9 @@ export function edgeEvidence(
   const key = normaliseEventId(event);
 
   if (role === 'produces') {
-    if (seen && seen.producers.length === 0) return undefined;
+    if (seen && seen.producers.length === 0) {
+      return undefined;
+    }
 
     const ran = seen?.producers.includes(service) ?? false;
 
@@ -249,7 +250,9 @@ const EDGES = new Map<string, { type: DiagramEdgeType; label: string; reverse?: 
 
 /** The visualiser draws a query as its own node; here a query is a command tagged `query`. */
 const nodeType = (resource: CatalogResource): DiagramNodeType | undefined => {
-  if (resource.ref.kind === 'command' && resource.tags.includes('query')) return 'query';
+  if (resource.ref.kind === 'command' && resource.tags.includes('query')) {
+    return 'query';
+  }
 
   // A server someone else runs sits outside the company, as any vendor does.
   if (
@@ -294,12 +297,14 @@ export function catalogDiagram(
       ]),
   );
 
-  const nodes: DiagramNode[] = graph.resources.flatMap((resource) => {
+  const nodes: Array<DiagramNode> = graph.resources.flatMap((resource) => {
     const type = nodeType(resource);
 
     const id = resourceKey(resource.ref);
 
-    if (!type || (only && !only.has(id))) return [];
+    if (!type || (only && !only.has(id))) {
+      return [];
+    }
 
     const model = models.get(id);
 
@@ -320,12 +325,14 @@ export function catalogDiagram(
 
   const evidence: Record<string, EdgeEvidence> = {};
 
-  const edges = graph.relationships.flatMap((relationship): DiagramEdge[] => {
+  const edges = graph.relationships.flatMap((relationship): Array<DiagramEdge> => {
     const source = resourceKey(relationship.from);
 
     const target = resourceKey(relationship.to);
 
-    if (!drawn.has(source) || !drawn.has(target)) return [];
+    if (!drawn.has(source) || !drawn.has(target)) {
+      return [];
+    }
 
     const known = EDGES.get(relationship.type);
 
@@ -343,7 +350,9 @@ export function catalogDiagram(
 
       const edge = seen && edgeEvidence(relationship.type, event.id, service.id, seen);
 
-      if (edge) evidence[id] = edge;
+      if (edge) {
+        evidence[id] = edge;
+      }
     }
 
     return [
@@ -364,10 +373,14 @@ export function catalogDiagram(
 
     const seen = runtime?.get(`${resource.ref.namespace}/${resource.ref.id}`);
 
-    if (resource.ref.kind !== 'event' || !drawn.has(event) || !seen?.observed) continue;
+    if (resource.ref.kind !== 'event' || !drawn.has(event) || !seen?.observed) {
+      continue;
+    }
 
     for (const producer of seen.observed.producers) {
-      if (seen.declaredProducers.includes(producer)) continue;
+      if (seen.declaredProducers.includes(producer)) {
+        continue;
+      }
 
       const service = resourceKey({ kind: 'service', id: producer });
 
@@ -380,12 +393,16 @@ export function catalogDiagram(
 
       const edge = edgeEvidence('produces', resource.ref.id, producer, seen);
 
-      if (edge) evidence[id] = edge;
+      if (edge) {
+        evidence[id] = edge;
+      }
       edges.push({ id, source: service, target: event, type: 'publishes', label: 'publishes' });
     }
   }
 
-  if (edges.length === 0) return undefined;
+  if (edges.length === 0) {
+    return undefined;
+  }
 
   return { nodes, edges, ...(Object.keys(evidence).length > 0 && { evidence }) };
 }
@@ -411,9 +428,13 @@ export function serviceNeighbourhood(graph: ResourceGraph, name: string): Set<st
   );
 
   for (const [from, to] of ends) {
-    if (from === centre) near.add(to);
+    if (from === centre) {
+      near.add(to);
+    }
 
-    if (to === centre) near.add(from);
+    if (to === centre) {
+      near.add(from);
+    }
   }
 
   for (const [from, to, edge] of ends) {
@@ -457,9 +478,13 @@ export function domainNeighbourhood(graph: ResourceGraph, domain: string): Set<s
 
     const to = resourceKey(edge.to);
 
-    if (members.has(from)) near.add(to);
+    if (members.has(from)) {
+      near.add(to);
+    }
 
-    if (members.has(to)) near.add(from);
+    if (members.has(to)) {
+      near.add(from);
+    }
   }
 
   return near;
@@ -492,9 +517,13 @@ function lanesOf(
     Object.entries(step.lane ?? {}).map(([lane, name]) => [lane, { id: name, name }]),
   );
 
-  if ((step.kind === 'actor' || step.kind === 'external') && !step.lane) return { external: true };
+  if ((step.kind === 'actor' || step.kind === 'external') && !step.lane) {
+    return { external: true };
+  }
 
-  if (!resource) return step.lane ? authored : undefined;
+  if (!resource) {
+    return step.lane ? authored : undefined;
+  }
 
   const domain = isEventCatalogResource(resource)
     ? resource.attributes.domain
@@ -536,11 +565,13 @@ export function flowDiagram(
   const resources: Record<string, CatalogResource> = {};
   const steps: Record<string, FlowStepData> = {};
 
-  const nodes: DiagramNode[] = flow.steps.map((step) => {
+  const nodes: Array<DiagramNode> = flow.steps.map((step) => {
     const resource = resourceOf(step.ref);
     const stepLanes = lanesOf(step, resource, agentDomains);
 
-    if (resource) resources[step.id] = resource;
+    if (resource) {
+      resources[step.id] = resource;
+    }
 
     // The walkthrough names a step by its title, whatever kind of node it is.
     steps[step.id] = {
@@ -559,7 +590,7 @@ export function flowDiagram(
     };
   });
 
-  const edges: DiagramEdge[] = flow.steps.flatMap((step) =>
+  const edges: Array<DiagramEdge> = flow.steps.flatMap((step) =>
     step.next.map((next) => ({
       id: `${step.id}->${next.id}`,
       source: step.id,
@@ -571,7 +602,9 @@ export function flowDiagram(
 
   // A compensation runs only when a later step fails, so its edge says so.
   for (const step of flow.steps) {
-    if (!step.compensatedBy) continue;
+    if (!step.compensatedBy) {
+      continue;
+    }
 
     edges.push({
       id: `${step.id}->${step.compensatedBy.id}:compensation`,

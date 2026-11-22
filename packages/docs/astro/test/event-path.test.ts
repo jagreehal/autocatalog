@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { eventFrontmatter, indexFields, type JsonObject } from 'autocatalog-core';
+import { eventFrontmatter, indexFields } from 'autocatalog-core';
+import type { JsonObject } from 'autocatalog-core';
 import type { CatalogEvent } from '../src/catalog';
 import { eventPath, eventsForService, fieldCarriers } from '../src/event-path';
 
@@ -7,7 +8,7 @@ import { eventPath, eventsForService, fieldCarriers } from '../src/event-path';
 // share neither schema nor services.
 const published = (
   repository: string,
-  producers: string[],
+  producers: Array<string>,
   properties: JsonObject,
   extra: { name?: string; version?: string } = {},
 ): CatalogEvent => ({

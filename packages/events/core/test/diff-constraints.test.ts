@@ -1,15 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import {
-  assessEventChange,
-  compatibilityBreaks,
-  diffSchemas,
-  summariseDrift,
-  type JsonObject,
-} from '../src/index';
+import { assessEventChange, compatibilityBreaks, diffSchemas, summariseDrift } from '../src/index';
+import type { JsonObject } from '../src/index';
 
 // Properties stay plain JSON: JSON Schema allows boolean schemas, which the
 // cases below use and SchemaNode's `properties` does not describe.
-const wrap = (properties: JsonObject, required: string[] = []): JsonObject =>
+const wrap = (properties: JsonObject, required: Array<string> = []): JsonObject =>
   required.length ? { type: 'object', properties, required } : { type: 'object', properties };
 
 const assess = (previous: JsonObject, proposed: JsonObject) =>
@@ -557,7 +552,7 @@ describe('property-count bounds and formats have a direction', () => {
 });
 
 describe('consumer field usage', () => {
-  const usage = (previous: JsonObject, proposed: JsonObject, fields: string[]) =>
+  const usage = (previous: JsonObject, proposed: JsonObject, fields: Array<string>) =>
     assessEventChange({
       domain: 'orders',
       eventId: 'order.placed',

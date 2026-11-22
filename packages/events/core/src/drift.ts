@@ -2,15 +2,21 @@ import { createHash } from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { z } from 'zod';
-import { diffSchemas, type DiffResult, type SchemaNode } from './diff';
-import { fieldConstraints, fieldPaths, type FieldConstraint } from './fields';
-import { jsonObjectSchema, type JsonValue } from './json';
-import { loadCatalog, type LoadedEvent } from './load';
+import { diffSchemas } from './diff';
+import type { DiffResult, SchemaNode } from './diff';
+import { fieldConstraints, fieldPaths } from './fields';
+import type { FieldConstraint } from './fields';
+import { jsonObjectSchema } from './json';
+import type { JsonValue } from './json';
+import { loadCatalog } from './load';
+import type { LoadedEvent } from './load';
 import { durationSeconds } from './schema';
-import { matchSnapshot, suggestRenames, type ArchitectureSnapshot } from './snapshot';
+import { matchSnapshot, suggestRenames } from './snapshot';
+import type { ArchitectureSnapshot } from './snapshot';
 import { isSafeName, UNSAFE_CONSUMER } from './consumes';
 import { readsAsPastTense } from './naming';
-import { rehearser, type Rehearsal } from './rehearse';
+import { rehearser } from './rehearse';
+import type { Rehearsal } from './rehearse';
 import { schemaPointer, sourceLines } from './source-lines';
 import type { ResourceRef } from './resource-graph';
 
@@ -79,13 +85,13 @@ export interface DriftFinding {
     | 'rule_failed';
   message: string;
   /** Consumers this change can break (empty for additive/info). */
-  consumers: string[];
+  consumers: Array<string>;
   /**
    * How `consumers` was narrowed by the fields consumers declare they read, set
    * when one of them declared any. A consumer that never said is kept in
    * `consumers` as `unspecified`: silence or invalid paths are not evidence it is safe.
    */
-  usage?: { reads: string[]; unspecified: string[]; unaffected: string[] };
+  usage?: { reads: Array<string>; unspecified: Array<string>; unaffected: Array<string> };
   /**
    * The compatibility modes this change fails, when the schema rules alone
    * would answer wrongly: an API response is read by the client, so its
@@ -123,7 +129,7 @@ export interface DriftFinding {
 }
 
 export interface DriftReport {
-  findings: DriftFinding[];
+  findings: Array<DriftFinding>;
   breaking: number;
   suspicious: number;
   additive: number;
@@ -155,9 +161,13 @@ function classify(diff: DiffResult): Classification {
       return { severity: 'breaking', kind: 'field_removed' };
     // A wider type set is the enum widening again: old values still pass.
     case 'type_changed':
-      if (diff.typeDirection === 'widened') return { severity: 'additive', kind: 'type_widened' };
+      if (diff.typeDirection === 'widened') {
+        return { severity: 'additive', kind: 'type_widened' };
+      }
 
-      if (diff.typeDirection === 'narrowed') return { severity: 'breaking', kind: 'type_narrowed' };
+      if (diff.typeDirection === 'narrowed') {
+        return { severity: 'breaking', kind: 'type_narrowed' };
+      }
 
       return { severity: 'breaking', kind: 'type_changed' };
     case 'required_added':
@@ -267,7 +277,7 @@ const KEYWORD_TAIL =
 function changedField(diffPath: string): string {
   return diffPath
     .replace(/^\(root\)/, '')
-    .replace(/\|(?:anyOf|oneOf|allOf)(?:\[\d+\])?/g, '')
+    .replaceAll(/\|(?:anyOf|oneOf|allOf)(?:\[\d+\])?/g, '')
     .replace(KEYWORD_TAIL, '')
     .replace(/^\./, '');
 }
@@ -282,8 +292,8 @@ export function overlaps(changed: string, declared: string): boolean {
 
 /** Sort consumers by whether they said they read the changed field. */
 export function consumerUsage(
-  consumers: string[],
-  consumerFields: Record<string, string[]> | undefined,
+  consumers: Array<string>,
+  consumerFields: Record<string, Array<string>> | undefined,
   diffPath: string,
   knownFields: Set<string>,
 ): DriftFinding['usage'] {
@@ -293,7 +303,9 @@ export function consumerUsage(
       ? consumerFields[consumer]
       : undefined;
 
-  if (!consumers.some((consumer) => declaredBy(consumer))) return undefined;
+  if (!consumers.some((consumer) => declaredBy(consumer))) {
+    return undefined;
+  }
   const field = changedField(diffPath);
   const usage: NonNullable<DriftFinding['usage']> = { reads: [], unspecified: [], unaffected: [] };
 
@@ -304,8 +316,11 @@ export function consumerUsage(
     // paths, since a field removed by this change is still a valid declaration.
     if (!declared || declared.some((path) => !knownFields.has(path))) {
       usage.unspecified.push(consumer);
-    } else if (declared.some((path) => overlaps(field, path))) usage.reads.push(consumer);
-    else usage.unaffected.push(consumer);
+    } else if (declared.some((path) => overlaps(field, path))) {
+      usage.reads.push(consumer);
+    } else {
+      usage.unaffected.push(consumer);
+    }
   }
 
   return usage;
@@ -321,13 +336,13 @@ export function consumerUsage(
 export function assessEventChange(input: {
   domain: string;
   eventId: string;
-  consumers: string[];
+  consumers: Array<string>;
   /** Payload paths each consumer reads, by consumer name. */
-  consumerFields?: Record<string, string[]>;
+  consumerFields?: Record<string, Array<string>>;
   source?: DriftFinding['source'];
   previous: SchemaNode;
   proposed: SchemaNode;
-}): DriftFinding[] {
+}): Array<DriftFinding> {
   const { domain, eventId, consumers, consumerFields, source, previous, proposed } = input;
   const knownFields = new Set<string>();
 
@@ -336,7 +351,9 @@ export function assessEventChange(input: {
       const parsed = jsonObjectSchema.safeParse(schema);
 
       if (parsed.success) {
-        for (const field of fieldPaths(parsed.data)) knownFields.add(field);
+        for (const field of fieldPaths(parsed.data)) {
+          knownFields.add(field);
+        }
       }
     }
   }
@@ -374,7 +391,9 @@ export function assessEventChange(input: {
   return folded.map((finding) => {
     const reaches = finding.severity === 'breaking' || finding.severity === 'suspicious';
 
-    if (!reaches || !finding.diff || !rehearse) return finding;
+    if (!reaches || !finding.diff || !rehearse) {
+      return finding;
+    }
     const rehearsal = rehearse(finding.diff, finding.rename?.from);
 
     return rehearsal ? { ...finding, rehearsal } : finding;
@@ -392,8 +411,8 @@ const parentPath = (diffPath: string): string =>
  * same type, and exactly one of each — anything looser guesses, and a wrong
  * guess hides a removal.
  */
-function foldRenames(findings: DriftFinding[]): DriftFinding[] {
-  const byParent = new Map<string, { removed: DriftFinding[]; added: DriftFinding[] }>();
+function foldRenames(findings: Array<DriftFinding>): Array<DriftFinding> {
+  const byParent = new Map<string, { removed: Array<DriftFinding>; added: Array<DriftFinding> }>();
 
   for (const finding of findings) {
     const side =
@@ -403,7 +422,9 @@ function foldRenames(findings: DriftFinding[]): DriftFinding[] {
           ? 'added'
           : undefined;
 
-    if (!side || !finding.diff) continue;
+    if (!side || !finding.diff) {
+      continue;
+    }
     const parent = parentPath(finding.diff.path);
     const group = byParent.get(parent) ?? { removed: [], added: [] };
     group[side].push(finding);
@@ -417,9 +438,13 @@ function foldRenames(findings: DriftFinding[]): DriftFinding[] {
     const [was] = removed;
     const [now] = added;
 
-    if (removed.length !== 1 || added.length !== 1 || !was?.diff || !now?.diff) continue;
+    if (removed.length !== 1 || added.length !== 1 || !was?.diff || !now?.diff) {
+      continue;
+    }
 
-    if (was.diff.detail !== now.diff.detail) continue;
+    if (was.diff.detail !== now.diff.detail) {
+      continue;
+    }
     const from = was.diff.path;
     const to = now.diff.path;
 
@@ -440,14 +465,16 @@ function foldRenames(findings: DriftFinding[]): DriftFinding[] {
       compatibility: (['backward', 'forward'] as const).filter((mode) => modes.has(mode)),
     });
 
-    for (const part of [now, ...required]) folded.add(part);
+    for (const part of [now, ...required]) {
+      folded.add(part);
+    }
   }
 
   return findings.flatMap((f) => (folded.has(f) ? [] : [renamed.get(f) ?? f]));
 }
 
 /** Roll findings up into the report shape CI and the MCP tools both return. */
-export function summariseDrift(findings: DriftFinding[]): DriftReport {
+export function summariseDrift(findings: Array<DriftFinding>): DriftReport {
   const count = (severity: DriftSeverity) =>
     findings.filter((finding) => finding.severity === severity).length;
 
@@ -474,7 +501,9 @@ function majorOf(version: string): number | undefined {
 function nextMajor(version: string): string {
   const match = /^(v?)(\d+)(\.)?/i.exec(version);
 
-  if (!match) return 'a new major version';
+  if (!match) {
+    return 'a new major version';
+  }
   const [, prefix = '', major = '0', dotted] = match;
 
   return `${prefix}${Number(major) + 1}${dotted ? '.0.0' : ''}`;
@@ -511,7 +540,7 @@ function keepCompatible(f: DriftFinding, readers: string): string {
  * severity gate. A minor or patch bump is not that, and the advice says so.
  */
 export function adviseBreaking(
-  findings: DriftFinding[],
+  findings: Array<DriftFinding>,
   version: {
     from: string;
     /** Absent when the contract itself is gone and there is no version to bump. */
@@ -520,7 +549,7 @@ export function adviseBreaking(
     field?: string;
     readers?: 'consumers' | 'clients';
   },
-): DriftFinding[] {
+): Array<DriftFinding> {
   const { from, to, readers = 'consumers' } = version;
   const bump = version.field ? `bump ${version.field}` : 'bump';
   const fromMajor = majorOf(from);
@@ -528,7 +557,9 @@ export function adviseBreaking(
   const majorBump = fromMajor !== undefined && toMajor !== undefined && toMajor > fromMajor;
 
   return findings.map((f) => {
-    if (f.severity !== 'breaking') return f;
+    if (f.severity !== 'breaking') {
+      return f;
+    }
     const notify = f.consumers.length > 0 ? f.consumers.join(', ') : `its ${readers}`;
 
     if (majorBump) {
@@ -541,7 +572,9 @@ export function adviseBreaking(
 
     const keep = keepCompatible(f, readers);
 
-    if (to === undefined) return { ...f, advice: `Next: ${keep}, and notify ${notify}` };
+    if (to === undefined) {
+      return { ...f, advice: `Next: ${keep}, and notify ${notify}` };
+    }
     const notMajor = to === from ? '' : ` (${to} is not a major bump)`;
 
     return {
@@ -562,12 +595,18 @@ async function contractLines(
 ): Promise<ReturnType<typeof sourceLines> | undefined> {
   const src = e.frontmatter.source;
 
-  if (!sourceRoot || !src?.file || src.line !== undefined) return undefined;
+  if (!sourceRoot || !src?.file || src.line !== undefined) {
+    return undefined;
+  }
 
-  if (src.symbol !== path.basename(src.file)) return undefined;
+  if (src.symbol !== path.basename(src.file)) {
+    return undefined;
+  }
   const file = path.resolve(sourceRoot, src.file);
 
-  if (path.relative(sourceRoot, file).startsWith('..')) return undefined;
+  if (path.relative(sourceRoot, file).startsWith('..')) {
+    return undefined;
+  }
 
   try {
     return sourceLines(await fs.readFile(file, 'utf8'));
@@ -580,7 +619,7 @@ async function contractLines(
 export function placeFinding(
   f: DriftFinding,
   lineAt: ReturnType<typeof sourceLines> | undefined,
-  steps: string[] | undefined,
+  steps: Array<string> | undefined,
 ): DriftFinding {
   const line = steps && lineAt?.(steps);
 
@@ -588,8 +627,10 @@ export function placeFinding(
 }
 
 /** The steps from the contract root to what a finding is about, as far as its diff path says. */
-export function findingPointer(f: DriftFinding): string[] | undefined {
-  if (f.rename) return schemaPointer(f.rename.to);
+export function findingPointer(f: DriftFinding): Array<string> | undefined {
+  if (f.rename) {
+    return schemaPointer(f.rename.to);
+  }
 
   return f.diff ? schemaPointer(f.diff.path) : undefined;
 }
@@ -607,8 +648,8 @@ export function findingPointer(f: DriftFinding): string[] | undefined {
 function architectureChanges(
   base: LoadedEvent,
   curr: LoadedEvent,
-  consumers: string[],
-): DriftFinding[] {
+  consumers: Array<string>,
+): Array<DriftFinding> {
   const finding = (
     kind: DriftFinding['kind'],
     message: string,
@@ -623,7 +664,8 @@ function architectureChanges(
     source: sourceOf(curr),
   });
 
-  const missing = (from: string[], other: string[]) => from.filter((name) => !other.includes(name));
+  const missing = (from: Array<string>, other: Array<string>) =>
+    from.filter((name) => !other.includes(name));
   const was = base.frontmatter;
   const now = curr.frontmatter;
 
@@ -642,7 +684,9 @@ function architectureChanges(
     ),
   ];
 
-  if (missing(now.producers, was.producers).length > 0) findings.push(...publishers(curr));
+  if (missing(now.producers, was.producers).length > 0) {
+    findings.push(...publishers(curr));
+  }
 
   const ownerBefore = was.owner?.team;
   const ownerAfter = now.owner?.team;
@@ -660,10 +704,12 @@ function architectureChanges(
  * An event is a fact one boundary records, so one service publishes it. Two
  * publishers usually means two facts sharing a name, or a command in disguise.
  */
-function publishers(event: LoadedEvent): DriftFinding[] {
+function publishers(event: LoadedEvent): Array<DriftFinding> {
   const producers = [...new Set(event.frontmatter.producers)].sort();
 
-  if (producers.length < 2) return [];
+  if (producers.length < 2) {
+    return [];
+  }
 
   return [
     {
@@ -693,22 +739,26 @@ const DELIVERY_PROMISES = [
 function deliveryChanges(
   base: LoadedEvent,
   curr: LoadedEvent,
-  consumers: string[],
-): DriftFinding[] {
+  consumers: Array<string>,
+): Array<DriftFinding> {
   return DELIVERY_PROMISES.flatMap(([field, label, removed]) => {
     const was = base.frontmatter.delivery?.[field];
     const now = curr.frontmatter.delivery?.[field];
 
-    if (was === now) return [];
+    if (was === now) {
+      return [];
+    }
 
     const lateness =
       field === 'maxLateness' && was !== undefined && now !== undefined
         ? Math.sign(durationSeconds(now)! - durationSeconds(was)!)
         : undefined;
 
-    if (lateness === 0) return [];
+    if (lateness === 0) {
+      return [];
+    }
 
-    const finding = (severity: DriftSeverity, message: string): DriftFinding[] => [
+    const finding = (severity: DriftSeverity, message: string): Array<DriftFinding> => [
       {
         domain: curr.frontmatter.domain,
         eventId: curr.frontmatter.id,
@@ -720,19 +770,23 @@ function deliveryChanges(
       },
     ];
 
-    if (was === undefined) return finding('additive', `${label} added: ${now}`);
+    if (was === undefined) {
+      return finding('additive', `${label} added: ${now}`);
+    }
 
-    if (now === undefined)
+    if (now === undefined) {
       return finding(
         'breaking',
         `${label} removed${removed ? `${removed} ${was}` : ` (was ${was})`}`,
       );
+    }
 
     // A shorter window keeps every promise the longer one made.
-    if (lateness !== undefined)
+    if (lateness !== undefined) {
       return lateness > 0
         ? finding('breaking', `${label} lengthened: ${was} → ${now}`)
         : finding('additive', `${label} shortened: ${was} → ${now}`);
+    }
 
     return finding('breaking', `${label} changed: ${was} → ${now}`);
   });
@@ -748,9 +802,9 @@ export interface DriftCatalogsOptions {
    * Consumers an event has beyond the ones its own frontmatter names, such as
    * agents that declare they consume it in a catalog of their own.
    */
-  consumersOf?: (domain: string, id: string) => string[];
+  consumersOf?: (domain: string, id: string) => Array<string>;
   /** Payload paths those extra consumers declare they read, by consumer name. */
-  consumerFieldsOf?: (domain: string, id: string) => Record<string, string[]>;
+  consumerFieldsOf?: (domain: string, id: string) => Record<string, Array<string>>;
   /**
    * The current source tree. When set, findings on JSON Schema contracts carry
    * the line of the field they are about, so annotations land on it.
@@ -781,11 +835,11 @@ interface RuntimeConsumer {
  * is a report, and the label says which, since neither is a declaration.
  */
 function runtimeConsumers(
-  events: LoadedEvent[],
+  events: Array<LoadedEvent>,
   snapshot: ArchitectureSnapshot,
-): Map<string, RuntimeConsumer[]> {
+): Map<string, Array<RuntimeConsumer>> {
   const { matches } = matchSnapshot(events, (event) => event.frontmatter, snapshot);
-  const consumers = new Map<string, RuntimeConsumer[]>();
+  const consumers = new Map<string, Array<RuntimeConsumer>>();
 
   for (const [name, event] of matches) {
     const observation = snapshot.events[name];
@@ -818,11 +872,11 @@ export async function driftCatalogs(
 
   const seen = options.snapshot
     ? runtimeConsumers(baseline, options.snapshot)
-    : new Map<string, RuntimeConsumer[]>();
+    : new Map<string, Array<RuntimeConsumer>>();
 
   const baseByKey = new Map(baseline.map((e) => [key(e), e]));
   const currByKey = new Map(current.map((e) => [key(e), e]));
-  const findings: DriftFinding[] = [];
+  const findings: Array<DriftFinding> = [];
 
   for (const [k, base] of baseByKey) {
     const curr = currByKey.get(k);
@@ -938,19 +992,20 @@ export async function driftCatalogs(
 
   for (const [k, curr] of currByKey) {
     if (!baseByKey.has(k)) {
-      findings.push({
-        domain: curr.frontmatter.domain,
-        eventId: curr.frontmatter.id,
-        severity: 'additive',
-        kind: 'event_added',
-        message: `new event added to the catalog`,
-        consumers: [],
-        source: sourceOf(curr),
-      });
+      findings.push(
+        {
+          domain: curr.frontmatter.domain,
+          eventId: curr.frontmatter.id,
+          severity: 'additive',
+          kind: 'event_added',
+          message: `new event added to the catalog`,
+          consumers: [],
+          source: sourceOf(curr),
+        },
+        ...publishers(curr),
+      );
 
-      findings.push(...publishers(curr));
-
-      if (!readsAsPastTense(curr.frontmatter.id, curr.frontmatter.name))
+      if (!readsAsPastTense(curr.frontmatter.id, curr.frontmatter.name)) {
         findings.push({
           domain: curr.frontmatter.domain,
           eventId: curr.frontmatter.id,
@@ -960,6 +1015,7 @@ export async function driftCatalogs(
           consumers: [],
           source: sourceOf(curr),
         });
+      }
     }
   }
 
@@ -1007,7 +1063,7 @@ const code = (text: string): string =>
   CODE_SPAN.test(text) ? `\`${text}\`` : 'a field whose name is not safe to print';
 
 /** A digest of what a finding saw, comparable across runs without carrying sample values. */
-const digest = (...parts: JsonValue[]): string =>
+const digest = (...parts: Array<JsonValue>): string =>
   createHash('sha256').update(JSON.stringify(parts)).digest('hex').slice(0, 16);
 
 /** A runtime type name, as autotel records `typeof`. */
@@ -1026,9 +1082,9 @@ const TYPE_NAME = /^[a-z]{1,20}$/;
  * Nothing here is a schema change, so no compatibility strategy fails on it.
  */
 export function runtimeDrift(
-  current: LoadedEvent[],
+  current: Array<LoadedEvent>,
   snapshot: ArchitectureSnapshot,
-): DriftFinding[] {
+): Array<DriftFinding> {
   const { matches, undocumented } = matchSnapshot(current, (e) => e.frontmatter, snapshot);
   const window = snapshot.generatedAt ? ` (snapshot of ${snapshot.generatedAt})` : '';
   const seen = new Set(matches.values());
@@ -1042,7 +1098,9 @@ export function runtimeDrift(
   const renameNote = (side: 'observed' | 'documented', name: string): string => {
     const pair = renames.find((rename) => rename[side] === name);
 
-    if (!pair) return '';
+    if (!pair) {
+      return '';
+    }
 
     const verb = pair.similarity >= 0.8 ? 'probably' : 'possibly';
 
@@ -1106,9 +1164,11 @@ export function runtimeDrift(
     const values = Object.entries(observation.fieldStats ?? {}).flatMap(([field, stats]) => {
       const constraint = constraints.get(field);
 
-      if (!constraint) return [];
+      if (!constraint) {
+        return [];
+      }
 
-      const out: DriftFinding[] = [];
+      const out: Array<DriftFinding> = [];
       const samples = stats.sampleValues ?? [];
 
       if (constraint.types) {
@@ -1178,8 +1238,8 @@ export function runtimeDrift(
 
     const unexpected = (
       kind: 'producer_unexpected' | 'channel_unexpected',
-      used: string[],
-      declared: string[],
+      used: Array<string>,
+      declared: Array<string>,
       what: { one: string; list: string },
     ) =>
       used.flatMap((name) =>
@@ -1220,7 +1280,9 @@ export function runtimeDrift(
     // What a test run dead-lettered is worth reading in the pull request, and
     // a test may do it on purpose, so it informs.
     const deadLettered = (observation.observedConsumers ?? []).flatMap((outcome) => {
-      if (!outcome.deadLettered) return [];
+      if (!outcome.deadLettered) {
+        return [];
+      }
 
       const reasons = (outcome.deadLetterReasons ?? [])
         .map((reason) => `${code(reason.reason)} (${reason.count})`)
@@ -1276,10 +1338,10 @@ const findingKey = (f: DriftFinding): string =>
  * fixes it and the gate gets switched off.
  */
 export function newSinceBase(
-  findings: DriftFinding[],
-  baseline: DriftFinding[],
+  findings: Array<DriftFinding>,
+  baseline: Array<DriftFinding>,
   baseLabel = 'the base',
-): DriftFinding[] {
+): Array<DriftFinding> {
   const before = new Set(baseline.map(findingKey));
 
   return findings.map((f) =>
@@ -1315,7 +1377,9 @@ export type CompatibilityMode = 'backward' | 'forward' | 'full' | 'none';
  * schema still parses the data. Teams asking for BACKWARD expect BACKWARD.
  */
 export function compatibilityViolations(finding: DriftFinding): Array<'backward' | 'forward'> {
-  if (finding.compatibility) return finding.compatibility;
+  if (finding.compatibility) {
+    return finding.compatibility;
+  }
 
   switch (finding.kind) {
     case 'event_removed':
@@ -1337,9 +1401,13 @@ export function compatibilityViolations(finding: DriftFinding): Array<'backward'
     // A format is a constraint like any other: adding one tightens, dropping
     // one loosens, and swapping one for another could be either.
     case 'format_changed':
-      if (finding.diff?.constraint?.direction === 'tightened') return ['backward'];
+      if (finding.diff?.constraint?.direction === 'tightened') {
+        return ['backward'];
+      }
 
-      if (finding.diff?.constraint?.direction === 'loosened') return ['forward'];
+      if (finding.diff?.constraint?.direction === 'loosened') {
+        return ['forward'];
+      }
 
       return ['backward', 'forward'];
     case 'required_added':
@@ -1359,12 +1427,16 @@ export function compatibilityViolations(finding: DriftFinding): Array<'backward'
       const introduced = finding.diff?.enumIntroduced ?? false;
 
       // A new reader rejects old data that used a value no longer accepted.
-      if (removed > 0 || introduced) violations.push('backward');
+      if (removed > 0 || introduced) {
+        violations.push('backward');
+      }
 
       // An old reader rejects new data that uses a value it never knew. When an
       // enum is introduced over an unrestricted field the old schema already
       // accepted every one of those values, so they are not new to it.
-      if ((added > 0 && !introduced) || finding.diff?.enumDropped) violations.push('forward');
+      if ((added > 0 && !introduced) || finding.diff?.enumDropped) {
+        violations.push('forward');
+      }
 
       return violations;
     }
@@ -1391,7 +1463,9 @@ export function compatibilityViolations(finding: DriftFinding): Array<'backward'
 
       // If the object refuses unknown properties now, old payloads still
       // carrying the field are rejected outright.
-      if (finding.diff?.containerClosedAfter) violations.push('backward');
+      if (finding.diff?.containerClosedAfter) {
+        violations.push('backward');
+      }
 
       return violations;
     }
@@ -1399,11 +1473,15 @@ export function compatibilityViolations(finding: DriftFinding): Array<'backward'
     case 'field_added':
       // A property schema of `false` forbids the field: old payloads carrying
       // it are now rejected, so a new reader cannot read old data.
-      if (finding.diff?.propertyForbidden) return ['backward'];
+      if (finding.diff?.propertyForbidden) {
+        return ['backward'];
+      }
 
       // Typing a field the old schema left free rejects old payloads that
       // carried it as something else.
-      if (finding.diff?.constrainsPreviouslyFree) return ['backward'];
+      if (finding.diff?.constrainsPreviouslyFree) {
+        return ['backward'];
+      }
 
       // The required case is reported separately as required_added. An optional
       // field is only safe while the old schema tolerated unknown properties:
@@ -1415,8 +1493,13 @@ export function compatibilityViolations(finding: DriftFinding): Array<'backward'
 }
 
 /** Findings that violate the chosen strategy. Empty for `none`. */
-export function compatibilityBreaks(report: DriftReport, mode: CompatibilityMode): DriftFinding[] {
-  if (mode === 'none') return [];
+export function compatibilityBreaks(
+  report: DriftReport,
+  mode: CompatibilityMode,
+): Array<DriftFinding> {
+  if (mode === 'none') {
+    return [];
+  }
   const wanted: Array<'backward' | 'forward'> = mode === 'full' ? ['backward', 'forward'] : [mode];
 
   return report.findings.filter((finding) =>
@@ -1428,7 +1511,7 @@ export function compatibilityBreaks(report: DriftReport, mode: CompatibilityMode
 export const driftEventLabel = (f: DriftFinding): string =>
   f.domain ? `${f.domain}/${f.eventId}` : f.eventId;
 
-const SEVERITY_ORDER: DriftSeverity[] = ['breaking', 'suspicious', 'additive', 'info'];
+const SEVERITY_ORDER: Array<DriftSeverity> = ['breaking', 'suspicious', 'additive', 'info'];
 
 const SEVERITY_MARK: Record<DriftSeverity, string> = {
   breaking: '✖ BREAKING',
@@ -1449,7 +1532,9 @@ const rehearsalOf = (f: DriftFinding): string =>
 
 /** Which consumers said they read the field, which never said, and which it spares. */
 function usageNote(f: DriftFinding): string {
-  if (!f.usage) return '';
+  if (!f.usage) {
+    return '';
+  }
 
   const parts = [
     ['reads it', f.usage.reads],
@@ -1464,9 +1549,11 @@ function usageNote(f: DriftFinding): string {
 
 /** Render a drift report as markdown, grouped by event, breaking first. */
 export function renderDriftMarkdown(report: DriftReport): string {
-  if (report.findings.length === 0) return 'No contract drift detected.\n';
+  if (report.findings.length === 0) {
+    return 'No contract drift detected.\n';
+  }
 
-  const lines: string[] = ['# Contract drift', ''];
+  const lines: Array<string> = ['# Contract drift', ''];
   const acknowledged = report.acknowledged > 0 ? ` (${report.acknowledged} acknowledged)` : '';
 
   lines.push(
@@ -1474,7 +1561,7 @@ export function renderDriftMarkdown(report: DriftReport): string {
     '',
   );
 
-  const byEvent = new Map<string, DriftFinding[]>();
+  const byEvent = new Map<string, Array<DriftFinding>>();
 
   for (const f of report.findings) {
     const k = driftEventLabel(f);
@@ -1522,9 +1609,10 @@ const ANNOTATION_LEVEL: Record<DriftSeverity, 'error' | 'warning' | 'notice'> = 
 // GitHub reads workflow commands line by line, so real newlines would end the
 // annotation early and the delimiters would end a property value early.
 const escapeData = (s: string): string =>
-  s.replace(/%/g, '%25').replace(/\r/g, '%0D').replace(/\n/g, '%0A');
+  s.replaceAll('%', '%25').replaceAll('\r', '%0D').replaceAll('\n', '%0A');
 
-const escapeProp = (s: string): string => escapeData(s).replace(/:/g, '%3A').replace(/,/g, '%2C');
+const escapeProp = (s: string): string =>
+  escapeData(s).replaceAll(':', '%3A').replaceAll(',', '%2C');
 
 /**
  * Render a drift report as GitHub Actions workflow commands, so breaking
@@ -1544,7 +1632,9 @@ export function renderDriftGitHub(report: DriftReport): string {
       if (f.source) {
         props.unshift(`file=${escapeProp(f.source.file)}`);
 
-        if (f.source.line !== undefined) props.splice(1, 0, `line=${f.source.line}`);
+        if (f.source.line !== undefined) {
+          props.splice(1, 0, `line=${f.source.line}`);
+        }
       }
 
       const impact = f.consumers.length > 0 ? ` — breaks ${f.consumers.join(', ')}` : '';
@@ -1573,10 +1663,14 @@ export function compareSemverish(a: string, b: string): number {
   for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
     const d = (pa[i] ?? 0) - (pb[i] ?? 0);
 
-    if (d !== 0) return d;
+    if (d !== 0) {
+      return d;
+    }
   }
 
-  if (preA.length === 0 || preB.length === 0) return preB.length - preA.length;
+  if (preA.length === 0 || preB.length === 0) {
+    return preB.length - preA.length;
+  }
 
   // Semver: digits-only identifiers compare as numbers and sort before the
   // rest, which compare in ASCII order, so rc10 sorts before rc2.
@@ -1590,11 +1684,17 @@ export function compareSemverish(a: string, b: string): number {
     const ny = /^\d+$/.test(y);
 
     // Compare digits by length, then text: Number() loses precision past 2^53.
-    if (nx && ny && x !== y) return x.length - y.length || (x < y ? -1 : 1);
+    if (nx && ny && x !== y) {
+      return x.length - y.length || (x < y ? -1 : 1);
+    }
 
-    if (nx !== ny) return nx ? -1 : 1;
+    if (nx !== ny) {
+      return nx ? -1 : 1;
+    }
 
-    if (!nx && x !== y) return x < y ? -1 : 1;
+    if (!nx && x !== y) {
+      return x < y ? -1 : 1;
+    }
   }
 
   return ia.length - ib.length;

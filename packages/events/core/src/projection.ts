@@ -1,17 +1,20 @@
 import type { CatalogSnapshot, LoadedEvent } from './load';
-import { catalogToLlmText, type LlmEventInput } from './llm';
+import { catalogToLlmText } from './llm';
+import type { LlmEventInput } from './llm';
 import {
   createEventResourceGraph,
   isEventCatalogResource,
   isServiceCatalogResource,
   resourceKey,
   summarizeResourceGraph,
-  type CatalogRelationship,
-  type CatalogResource,
-  type EventCatalogResource,
-  type ResourceGraph,
-  type ResourceGraphSummary,
-  type ServiceCatalogResource,
+} from './resource-graph';
+import type {
+  CatalogRelationship,
+  CatalogResource,
+  EventCatalogResource,
+  ResourceGraph,
+  ResourceGraphSummary,
+  ServiceCatalogResource,
 } from './resource-graph';
 
 export interface GraphNode {
@@ -29,14 +32,14 @@ export interface GraphEdge {
 }
 
 export interface GraphData {
-  nodes: GraphNode[];
-  edges: GraphEdge[];
-  domains: string[];
+  nodes: Array<GraphNode>;
+  edges: Array<GraphEdge>;
+  domains: Array<string>;
 }
 
 export interface ServiceSummary {
   name: string;
-  domains: string[];
+  domains: Array<string>;
   produces: Array<{ id: string; name: string; domain: string }>;
   consumes: Array<{ id: string; name: string; domain: string }>;
 }
@@ -47,23 +50,23 @@ export interface CatalogSearchRecord {
   version: string;
   domain: string;
   summary: string;
-  tags: string[];
+  tags: Array<string>;
   url: string;
   text: string;
 }
 
 export interface CatalogProjection {
-  events: LoadedEvent[];
-  currentEvents: LoadedEvent[];
+  events: Array<LoadedEvent>;
+  currentEvents: Array<LoadedEvent>;
   resourceGraph: ResourceGraph;
-  resources: CatalogResource[];
-  relationships: CatalogRelationship[];
+  resources: Array<CatalogResource>;
+  relationships: Array<CatalogRelationship>;
   resourceMap: Map<string, CatalogResource>;
   resourceSummary: ResourceGraphSummary;
-  domains: string[];
+  domains: Array<string>;
   services: Map<string, ServiceSummary>;
   graph: GraphData;
-  searchRecords: CatalogSearchRecord[];
+  searchRecords: Array<CatalogSearchRecord>;
   eventMap: Map<string, LoadedEvent>;
 }
 
@@ -94,12 +97,16 @@ function buildGraphFromResourceGraph(resourceGraph: ResourceGraph): GraphData {
     architectureResources.map((resource) => [resourceKey(resource.ref), resource]),
   );
 
-  const edges = resourceGraph.relationships.flatMap((relationship): GraphEdge[] => {
-    if (relationship.type !== 'produces' && relationship.type !== 'consumes') return [];
+  const edges = resourceGraph.relationships.flatMap((relationship): Array<GraphEdge> => {
+    if (relationship.type !== 'produces' && relationship.type !== 'consumes') {
+      return [];
+    }
     const from = byKey.get(resourceKey(relationship.from));
     const to = byKey.get(resourceKey(relationship.to));
 
-    if (!from || !to) return [];
+    if (!from || !to) {
+      return [];
+    }
 
     return [{ from: legacyNodeId(from), to: legacyNodeId(to), kind: relationship.type }];
   });
@@ -132,11 +139,11 @@ export function toLlmInput(event: LoadedEvent): LlmEventInput {
 }
 
 /** The whole catalog as one markdown document an agent can read in one call. */
-export function catalogSnapshotToLlmText(events: LoadedEvent[]): string {
+export function catalogSnapshotToLlmText(events: Array<LoadedEvent>): string {
   return catalogToLlmText(events.map(toLlmInput));
 }
 
-export function buildGraph(events: LoadedEvent[]): GraphData {
+export function buildGraph(events: Array<LoadedEvent>): GraphData {
   return buildGraphFromResourceGraph(createEventResourceGraph(events));
 }
 
@@ -148,7 +155,9 @@ function buildServicesFromResourceGraph(resourceGraph: ResourceGraph): Map<strin
   );
 
   for (const resource of resourceGraph.resources) {
-    if (!isServiceCatalogResource(resource)) continue;
+    if (!isServiceCatalogResource(resource)) {
+      continue;
+    }
     services.set(resource.ref.id, {
       name: resource.title,
       domains: [...resource.attributes.domains],
@@ -175,15 +184,23 @@ function buildServicesFromResourceGraph(resourceGraph: ResourceGraph): Map<strin
           ? to
           : undefined;
 
-    if (!event || !service) continue;
+    if (!event || !service) {
+      continue;
+    }
     const summary = services.get(service.ref.id);
 
-    if (!summary) continue;
+    if (!summary) {
+      continue;
+    }
     const item = { id: event.ref.id, name: event.title, domain: event.attributes.domain };
 
-    if (relationship.type === 'produces') summary.produces.push(item);
+    if (relationship.type === 'produces') {
+      summary.produces.push(item);
+    }
 
-    if (relationship.type === 'consumes') summary.consumes.push(item);
+    if (relationship.type === 'consumes') {
+      summary.consumes.push(item);
+    }
   }
 
   for (const service of services.values()) {
@@ -195,11 +212,13 @@ function buildServicesFromResourceGraph(resourceGraph: ResourceGraph): Map<strin
   return new Map([...services].sort(([a], [b]) => a.localeCompare(b)));
 }
 
-export function buildServices(events: LoadedEvent[]): Map<string, ServiceSummary> {
+export function buildServices(events: Array<LoadedEvent>): Map<string, ServiceSummary> {
   return buildServicesFromResourceGraph(createEventResourceGraph(events));
 }
 
-export function createCatalogProjection(input: CatalogSnapshot | LoadedEvent[]): CatalogProjection {
+export function createCatalogProjection(
+  input: CatalogSnapshot | Array<LoadedEvent>,
+): CatalogProjection {
   const events = Array.isArray(input) ? input : input.events;
   const currentEvents = events.filter((event) => !event.folder.isVersioned);
   const resourceGraph = createEventResourceGraph(currentEvents);
@@ -208,7 +227,7 @@ export function createCatalogProjection(input: CatalogSnapshot | LoadedEvent[]):
     resourceGraph.resources.map((resource) => [resourceKey(resource.ref), resource]),
   );
 
-  const byId = new Map<string, LoadedEvent[]>();
+  const byId = new Map<string, Array<LoadedEvent>>();
   const eventMap = new Map<string, LoadedEvent>();
 
   for (const event of currentEvents) {
@@ -220,7 +239,9 @@ export function createCatalogProjection(input: CatalogSnapshot | LoadedEvent[]):
   }
 
   for (const [id, matches] of byId) {
-    if (matches.length === 1) eventMap.set(id, matches[0]!);
+    if (matches.length === 1) {
+      eventMap.set(id, matches[0]!);
+    }
   }
 
   const searchRecords = currentEvents

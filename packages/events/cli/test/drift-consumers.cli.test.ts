@@ -5,15 +5,11 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import {
-  AUTOCATALOG_GRAPH_SPEC,
-  createConsumerResourceGraph,
-  type EventCatalogResource,
-  type ResourceGraph,
-} from 'autocatalog-core';
+import { AUTOCATALOG_GRAPH_SPEC, createConsumerResourceGraph } from 'autocatalog-core';
+import type { EventCatalogResource, ResourceGraph } from 'autocatalog-core';
 import { runDrift } from '../src/commands/drift';
 
-const here = path.dirname(fileURLToPath(import.meta.url));
+const here = import.meta.dirname;
 
 const starter = path.resolve(here, '../../../../fixtures/event-starter/events');
 

@@ -27,7 +27,7 @@ const NOT_SHIPPED =
  * because `new Server(...)` alone could be anything. `name` is absent where the
  * code passes a variable, and the package or folder names the server instead.
  */
-const SDKS: Array<{ file: RegExp; imports: RegExp; creates: RegExp[] }> = [
+const SDKS: Array<{ file: RegExp; imports: RegExp; creates: Array<RegExp> }> = [
   {
     file: /\.(ts|tsx|mts|cts|js|mjs|cjs)$/,
     imports: /['"](@modelcontextprotocol\/(sdk|server)[^'"]*|fastmcp)['"]/,
@@ -97,10 +97,14 @@ const publishedAs = async (root: string, file: string): Promise<Published | unde
     if (python !== null) {
       const name = PythonManifest.parse(parseToml(python)).project?.name;
 
-      if (name) return { name, package: { registry: 'pypi', name } };
+      if (name) {
+        return { name, package: { registry: 'pypi', name } };
+      }
     }
 
-    if (dir === '.' || dir === dirname(dir)) return undefined;
+    if (dir === '.' || dir === dirname(dir)) {
+      return undefined;
+    }
   }
 };
 
@@ -108,15 +112,19 @@ const publishedAs = async (root: string, file: string): Promise<Published | unde
 export const findMcpServersInCode = async (
   root: string,
   { relPath, text }: Pick<ScanFile, 'relPath' | 'text'>,
-): Promise<BuiltMcpServer[]> => {
+): Promise<Array<BuiltMcpServer>> => {
   const file = relPath.split('\\').join('/');
   const sdk = SDKS.find(({ file: pattern }) => pattern.test(file));
 
-  if (!sdk || !sdk.imports.test(text)) return [];
+  if (!sdk || !sdk.imports.test(text)) {
+    return [];
+  }
 
   const found = sdk.creates.flatMap((pattern) => [...text.matchAll(pattern)]);
 
-  if (found.length === 0) return [];
+  if (found.length === 0) {
+    return [];
+  }
 
   const published = await publishedAs(root, file).catch(() => undefined);
 
@@ -174,7 +182,9 @@ export const readMcpServerJson = ({
 
   const parsed = ServerJson.safeParse(json);
 
-  if (!parsed.success) return undefined;
+  if (!parsed.success) {
+    return undefined;
+  }
 
   const { name, description, remotes, packages } = parsed.data;
   const [listed] = packages ?? [];

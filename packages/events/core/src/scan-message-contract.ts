@@ -1,9 +1,11 @@
-import { type Dirent, readdirSync } from 'node:fs';
+import { readdirSync } from 'node:fs';
+import type { Dirent } from 'node:fs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { parseAdapterEventMeta } from './adapter-event';
 import type { AdapterEvent, AdapterEventMeta, ProvenanceValue } from './adapter-event';
-import { isJsonObject, type JsonObject, type JsonValue } from './json';
+import { isJsonObject } from './json';
+import type { JsonObject, JsonValue } from './json';
 import type {
   DiscoveryAdapter,
   DiscoveryCandidate,
@@ -26,7 +28,7 @@ import { DEFAULT_SCAN_EXCLUDE, pascalCase } from './utils';
 export interface ScanMessageContractOptions {
   root: string;
   /** Folder names skipped anywhere, or absolute paths skipped exactly. */
-  exclude?: string[];
+  exclude?: Array<string>;
   outDir?: string;
   signal?: AbortSignal;
   maxFiles?: number;
@@ -53,10 +55,14 @@ const VERSIONED = /^(.+?)[._-]v(\d+)$/i;
  * rule out 4.5), and a null says the field is written, not what it holds.
  */
 export function inferJsonSchema(value: JsonValue): JsonObject {
-  if (value === null) return {};
+  if (value === null) {
+    return {};
+  }
 
   if (Array.isArray(value)) {
-    if (value.length === 0) return { type: 'array' };
+    if (value.length === 0) {
+      return { type: 'array' };
+    }
     const items = value.map(inferJsonSchema);
     const first = JSON.stringify(items[0]);
 
@@ -75,7 +81,9 @@ export function inferJsonSchema(value: JsonValue): JsonObject {
     };
   }
 
-  if (value === true || value === false) return { type: 'boolean' };
+  if (value === true || value === false) {
+    return { type: 'boolean' };
+  }
 
   return { type: Number.isFinite(value) ? 'number' : 'string' };
 }
@@ -89,7 +97,7 @@ export function hasMessageContracts(root: string): boolean {
   const exclude = new Set(DEFAULT_SCAN_EXCLUDE);
 
   const walk = (dir: string): boolean => {
-    let entries: Dirent[];
+    let entries: Array<Dirent>;
 
     try {
       entries = readdirSync(dir, { withFileTypes: true });
@@ -115,13 +123,15 @@ async function walkApprovedFiles(
   outAbs?: string,
   signal?: AbortSignal,
   maxFiles = 50_000,
-): Promise<string[]> {
-  const results: string[] = [];
+): Promise<Array<string>> {
+  const results: Array<string> = [];
 
   async function walk(dir: string): Promise<void> {
     signal?.throwIfAborted();
 
-    if (outAbs && (dir === outAbs || dir.startsWith(outAbs + path.sep))) return;
+    if (outAbs && (dir === outAbs || dir.startsWith(outAbs + path.sep))) {
+      return;
+    }
     let entries;
 
     try {
@@ -136,8 +146,9 @@ async function walkApprovedFiles(
       // Directories are walked and regular files read. A symlink is neither: it
       // could name any file on this machine, and the catalog gets published.
       if (entry.isDirectory()) {
-        if (!exclude.has(entry.name) && !exclude.has(full) && !entry.name.startsWith('.'))
+        if (!exclude.has(entry.name) && !exclude.has(full) && !entry.name.startsWith('.')) {
           await walk(full);
+        }
       } else if (
         entry.isFile() &&
         path.basename(dir) === CONTRACTS_DIR &&
@@ -168,16 +179,20 @@ async function loadSidecarMeta(file: string): Promise<AdapterEventMeta | undefin
 
   try {
     stat = await fs.lstat(sidecar);
-  } catch (err) {
-    if (err instanceof Error && 'code' in err && err.code === 'ENOENT') return undefined;
-    throw err;
+  } catch (error) {
+    if (error instanceof Error && 'code' in error && error.code === 'ENOENT') return undefined;
+    throw error;
   }
 
   // A symlink could name any file on this machine; only the repository's own files are read.
-  if (!stat.isFile()) throw new Error('sidecar is not a regular file');
+  if (!stat.isFile()) {
+    throw new Error('sidecar is not a regular file');
+  }
   const raw: JsonValue = JSON.parse(await fs.readFile(sidecar, 'utf8'));
 
-  if (!isJsonObject(raw)) throw new Error('sidecar is not a JSON object');
+  if (!isJsonObject(raw)) {
+    throw new Error('sidecar is not a JSON object');
+  }
 
   return parseAdapterEventMeta(raw);
 }
@@ -264,15 +279,15 @@ async function eventFromApproved(
  */
 export async function discoverMessageContracts(
   opts: ScanMessageContractOptions,
-): Promise<DiscoveryOutput & { skipped: string[] }> {
+): Promise<DiscoveryOutput & { skipped: Array<string> }> {
   const root = path.resolve(opts.root);
   const exclude = new Set([...DEFAULT_SCAN_EXCLUDE, ...(opts.exclude ?? [])]);
   const outAbs = opts.outDir ? path.resolve(opts.outDir) : undefined;
   const files = await walkApprovedFiles(root, exclude, outAbs, opts.signal, opts.maxFiles);
   const maxFileBytes = opts.maxFileBytes ?? 5 * 1024 * 1024;
 
-  const errors: string[] = [];
-  const skipped: string[] = [];
+  const errors: Array<string> = [];
+  const skipped: Array<string> = [];
   // Per directory and message: the current snapshot and the pinned versions beside it.
   const byMessage = new Map<string, Array<Approved & { file: string }>>();
 
@@ -291,8 +306,8 @@ export async function discoverMessageContracts(
       }
 
       text = await fs.readFile(file, 'utf8');
-    } catch (err) {
-      errors.push(`${relFile}: ${err instanceof Error ? err.message : String(err)}`);
+    } catch (error) {
+      errors.push(`${relFile}: ${error instanceof Error ? error.message : String(error)}`);
       continue;
     }
 
@@ -319,7 +334,7 @@ export async function discoverMessageContracts(
     byMessage.set(key, group);
   }
 
-  const candidates: DiscoveryCandidate[] = [];
+  const candidates: Array<DiscoveryCandidate> = [];
 
   for (const group of byMessage.values()) {
     // The unversioned snapshot is what today's test pins; otherwise the highest.
@@ -329,9 +344,9 @@ export async function discoverMessageContracts(
 
     try {
       candidate = await eventFromApproved(current!, current!.file);
-    } catch (err) {
+    } catch (error) {
       const sidecar = current!.relFile.replace(/\.txt$/, '.autocatalog.json');
-      errors.push(`${sidecar}: ${err instanceof Error ? err.message : String(err)}`);
+      errors.push(`${sidecar}: ${error instanceof Error ? error.message : String(error)}`);
       continue;
     }
 

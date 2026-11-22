@@ -14,7 +14,7 @@ import {
 const json = (body: JsonValue, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
 
-const repo = (name: string, topics: string[], archived = false) => ({
+const repo = (name: string, topics: Array<string>, archived = false) => ({
   name,
   clone_url: `https://github.com/acme/${name}.git`,
   topics,
@@ -41,13 +41,15 @@ describe('listRepositories', () => {
   });
 
   it('falls back from organisation to user, and keeps only live repositories with the topic', async () => {
-    const seen: string[] = [];
+    const seen: Array<string> = [];
 
     const fetch = async (url: string, init?: { headers?: Record<string, string> }) => {
       seen.push(url);
       expect(init?.headers?.authorization).toBe('Bearer t0ken');
 
-      if (url.includes('/orgs/')) return json({ message: 'Not Found' }, 404);
+      if (url.includes('/orgs/')) {
+        return json({ message: 'Not Found' }, 404);
+      }
 
       return json([
         repo('payments', ['catalog-publisher']),
@@ -104,7 +106,7 @@ describe('cloneRepositories', () => {
     await fs.mkdir(path.join(origin, 'docs'), { recursive: true });
     await fs.writeFile(path.join(origin, 'docs', 'runbook.md'), '# Runbook\n');
 
-    const git = (...args: string[]) =>
+    const git = (...args: Array<string>) =>
       execFileSync('git', ['-c', 'user.email=a@b.c', '-c', 'user.name=t', ...args], {
         cwd: origin,
       });

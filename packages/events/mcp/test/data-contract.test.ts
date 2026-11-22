@@ -71,7 +71,7 @@ context:
 
   const one = await client.callTool({ name: 'data_contract', arguments: { id: 'revenue' } });
   // SAFETY: data_contract answers with one text block, as asText writes it.
-  const text = (one.content as Array<{ text: string }>)[0]!.text;
+  const text = (one.content as Array<{ text: string }>)[0].text;
   expect(text).toContain('Amounts are in cents.');
   expect(text).toContain('SELECT SUM(amount_cents) FROM revenue');
   expect(text).toContain('"kept":1,"measured":1');

@@ -3,14 +3,16 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { applySnapshot, readSnapshot, type AdapterEvent } from '../src/index';
-import { suggestRenames, type WorkflowObservation } from '../src/snapshot';
+import { applySnapshot, readSnapshot } from '../src/index';
+import type { AdapterEvent } from '../src/index';
+import { suggestRenames } from '../src/snapshot';
+import type { WorkflowObservation } from '../src/snapshot';
 
-const here = path.dirname(fileURLToPath(import.meta.url));
+const here = import.meta.dirname;
 
 const fixtureSnapshot = path.resolve(here, '../../../../fixtures/demo-repo/runtime-snapshot.json');
 
-const event = (id: string, consumers: string[]): AdapterEvent => ({
+const event = (id: string, consumers: Array<string>): AdapterEvent => ({
   id,
   version: '1.0.0',
   name: id,
@@ -230,7 +232,7 @@ describe('consumer outcomes', () => {
 });
 
 describe('matching names', () => {
-  const run = (...names: string[]) => ({
+  const run = (...names: Array<string>) => ({
     spec: 'autotel-architecture/v0',
     generatedAt: '',
     service: 's',

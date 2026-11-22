@@ -11,7 +11,9 @@ interface Context {
 export async function onRequest(context: Context, next: () => Promise<Response>) {
   const asked = context.url.searchParams.has('staff');
 
-  if (asked) context.cookies.set('staff', '1', { path: '/' });
+  if (asked) {
+    context.cookies.set('staff', '1', { path: '/' });
+  }
 
   const staff = asked || context.cookies.get('staff')?.value === '1';
 

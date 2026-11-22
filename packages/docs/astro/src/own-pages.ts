@@ -25,7 +25,9 @@ export function ownPageRoutes(dir: string): Array<[string, string]> {
   for (const entry of fs.globSync('**/*', { cwd: dir }).sort()) {
     const file = entry.split(path.sep).join('/');
 
-    if (!ROUTED.test(file) || file.split('/').some((part) => part.startsWith('_'))) continue;
+    if (!ROUTED.test(file) || file.split('/').some((part) => part.startsWith('_'))) {
+      continue;
+    }
 
     routes.push([
       `/${file.replace(ROUTED, '').replace(/(^|\/)index$/, '')}`,
@@ -58,7 +60,9 @@ export function ownPageImports(
     name: 'autocatalog-docs-own-pages',
     enforce: 'pre',
     load(id) {
-      if (id !== `\0${MARKDOWN_MODULE}`) return null;
+      if (id !== `\0${MARKDOWN_MODULE}`) {
+        return null;
+      }
 
       const entries = routes.flatMap(([pattern, file]) =>
         MARKDOWN.test(file)
@@ -69,7 +73,9 @@ export function ownPageImports(
       return `export default {${entries.join(',')}};`;
     },
     async resolveId(source, importer) {
-      if (source === MARKDOWN_MODULE) return `\0${MARKDOWN_MODULE}`;
+      if (source === MARKDOWN_MODULE) {
+        return `\0${MARKDOWN_MODULE}`;
+      }
 
       if (!importer || !inside(importer.split('?')[0]!) || /^[./\0]|^[a-z]+:/.test(source)) {
         return null;

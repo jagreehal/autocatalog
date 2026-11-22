@@ -50,26 +50,27 @@ const moduleSchema = z.object({
 
 /** Every extension folded into the fields the site's config takes. */
 export interface SiteExtensions {
-  middleware: string[];
-  routeMiddleware: string[];
+  middleware: Array<string>;
+  routeMiddleware: Array<string>;
   components: Record<string, string>;
   blocks: Record<string, string>;
-  customCss: string[];
-  head: HeadEntry[];
-  remarkPlugins: UnifiedPluginEntry[];
-  rehypePlugins: UnifiedPluginEntry[];
-  plugins: StarlightPlugin[];
-  integrations: AstroIntegration[];
+  customCss: Array<string>;
+  head: Array<HeadEntry>;
+  remarkPlugins: Array<UnifiedPluginEntry>;
+  rehypePlugins: Array<UnifiedPluginEntry>;
+  plugins: Array<StarlightPlugin>;
+  integrations: Array<AstroIntegration>;
 }
 
 const local = (dir: string) => (file: string) =>
   file.startsWith('.') ? path.resolve(dir, file) : file;
 
-const list = (value: string | string[] | undefined) => (value === undefined ? [] : [value].flat());
+const list = (value: string | Array<string> | undefined) =>
+  value === undefined ? [] : [value].flat();
 
 /** Merge extensions in order. `dir` is where each one's relative paths start. */
 export function mergeSiteExtensions(
-  extensions: { dir: string; extension: SiteExtension }[],
+  extensions: Array<{ dir: string; extension: SiteExtension }>,
 ): SiteExtensions {
   const merged: SiteExtensions = {
     middleware: [],
@@ -120,8 +121,8 @@ export function mergeSiteExtensions(
 }
 
 /** Import each extension module (absolute paths) and merge what they export. */
-export async function loadSiteExtensions(files: string[]): Promise<SiteExtensions> {
-  const loaded: { dir: string; extension: SiteExtension }[] = [];
+export async function loadSiteExtensions(files: Array<string>): Promise<SiteExtensions> {
+  const loaded: Array<{ dir: string; extension: SiteExtension }> = [];
 
   for (const file of files) {
     const parsed = moduleSchema.safeParse(
@@ -155,7 +156,9 @@ export async function loadSiteExtensions(files: string[]): Promise<SiteExtension
       name: 'autocatalog-site-middleware',
       hooks: {
         'astro:config:setup': ({ addMiddleware }) => {
-          for (const entrypoint of merged.middleware) addMiddleware({ entrypoint, order: 'post' });
+          for (const entrypoint of merged.middleware) {
+            addMiddleware({ entrypoint, order: 'post' });
+          }
         },
       },
     });
@@ -165,7 +168,7 @@ export async function loadSiteExtensions(files: string[]): Promise<SiteExtension
 }
 
 // Resolving from this file finds every package autocatalog-docs-astro depends on.
-const SITE_IMPORTER = fileURLToPath(import.meta.url);
+const SITE_IMPORTER = import.meta.filename;
 
 const REACT = /^react(-dom)?(\/|$)/;
 
@@ -195,8 +198,8 @@ export function siteDependencies(project: string | undefined): AstroIntegration 
 
 /** Packages the server loads from the site's node_modules, and those it bundles. */
 export interface SiteBundling {
-  external: string[];
-  noExternal: string[];
+  external: Array<string>;
+  noExternal: Array<string>;
 }
 
 /**
@@ -229,7 +232,7 @@ function manifestAt(dir: string): z.infer<typeof manifestSchema> {
 }
 
 /** The names a project's package.json depends on; none without one. */
-function dependenciesOf(project: string | undefined): string[] {
+function dependenciesOf(project: string | undefined): Array<string> {
   return project ? Object.keys(manifestAt(project).dependencies ?? {}) : [];
 }
 
@@ -252,7 +255,9 @@ function resolveFromSite(): AstroIntegration {
                 name: 'autocatalog-site-resolve',
                 enforce: 'pre',
                 async resolveId(source, importer, options) {
-                  if (!importer || /^[./\0]|:/.test(source)) return null;
+                  if (!importer || /^[./\0]|:/.test(source)) {
+                    return null;
+                  }
 
                   // One React for every page, whatever imports it: two cannot share hooks.
                   if (REACT.test(source)) {

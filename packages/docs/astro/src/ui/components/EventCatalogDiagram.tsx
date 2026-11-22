@@ -31,7 +31,9 @@ export function EventCatalogDiagram({
   // Starlight's theme as the reader toggles it, without touching EventCatalog's
   // own saved preference.
   useEffect(() => {
-    if (!embed) return;
+    if (!embed) {
+      return;
+    }
 
     const sync = () => {
       const theme = document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';

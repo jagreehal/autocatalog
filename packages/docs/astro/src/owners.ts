@@ -1,10 +1,6 @@
 import { z } from 'astro/zod';
-import {
-  isAgentSystemCatalogResource,
-  resourceKey,
-  type CatalogResource,
-  type ResourceGraph,
-} from 'autocatalog-core';
+import { isAgentSystemCatalogResource, resourceKey } from 'autocatalog-core';
+import type { CatalogResource, ResourceGraph } from 'autocatalog-core';
 import { catalogHref, skillHref } from './view';
 
 /** Everything one owner owns, across every kind that carries ownership. */
@@ -21,9 +17,9 @@ export interface Owner {
   /** A contact URL an owned event's manifest declares, when one does. */
   contact?: string;
   /** Owned resources in kind, then key, order. */
-  resources: CatalogResource[];
+  resources: Array<CatalogResource>;
   /** The repositories that publish or define anything this owner owns. */
-  repositories: string[];
+  repositories: Array<string>;
 }
 
 /**
@@ -34,7 +30,7 @@ export interface Owner {
 export function ownerKey(name: string): string {
   return name
     .trim()
-    .replace(/\s+/g, ' ')
+    .replaceAll(/\s+/g, ' ')
     .replace(/^@/, '')
     .normalize('NFC')
     .toLocaleLowerCase('en-US');
@@ -44,7 +40,7 @@ export function ownerKey(name: string): string {
 // keeps that list in the entity's attributes.
 const coOwners = z.array(z.string());
 
-function ownersOf(resource: CatalogResource): string[] {
+function ownersOf(resource: CatalogResource): Array<string> {
   const extra = isAgentSystemCatalogResource(resource)
     ? coOwners.safeParse(resource.attributes.owners)
     : undefined;
@@ -56,7 +52,7 @@ const KIND_ORDER = ['document', 'event'];
 
 /** A kind with no heading of its own, as a column says it: `repository` is Repositories. */
 function pluralHeading(kind: string): string {
-  const words = kind.replace(/[-_]+/g, ' ');
+  const words = kind.replaceAll(/[-_]+/g, ' ');
   const plural = words.endsWith('y') ? `${words.slice(0, -1)}ies` : `${words}s`;
 
   return `${plural[0]!.toUpperCase()}${plural.slice(1)}`;
@@ -86,14 +82,17 @@ const KIND_HEADINGS = new Map([
 /** An owner's resources by kind, documents and events first, each under its heading. */
 export function byKind(
   owner: Owner,
-): Array<{ kind: string; heading: string; resources: CatalogResource[] }> {
-  const groups = new Map<string, CatalogResource[]>();
+): Array<{ kind: string; heading: string; resources: Array<CatalogResource> }> {
+  const groups = new Map<string, Array<CatalogResource>>();
 
   for (const resource of owner.resources) {
     const bucket = groups.get(resource.ref.kind);
 
-    if (bucket) bucket.push(resource);
-    else groups.set(resource.ref.kind, [resource]);
+    if (bucket) {
+      bucket.push(resource);
+    } else {
+      groups.set(resource.ref.kind, [resource]);
+    }
   }
 
   return [...groups].map(([kind, resources]) => ({
@@ -112,7 +111,7 @@ const kindRank = (kind: string): number => {
 /**
  * Every owner the graph names, in name order, including imported service ownership.
  */
-export function buildOwners(graph: ResourceGraph): Owner[] {
+export function buildOwners(graph: ResourceGraph): Array<Owner> {
   const byKey = new Map<
     string,
     { spellings: Set<string>; resources: Map<string, CatalogResource> }
@@ -122,7 +121,9 @@ export function buildOwners(graph: ResourceGraph): Owner[] {
     for (const name of ownersOf(resource)) {
       const key = ownerKey(name);
 
-      if (!key) continue;
+      if (!key) {
+        continue;
+      }
       const entry = byKey.get(key) ?? { spellings: new Set(), resources: new Map() };
       entry.spellings.add(name.trim());
       entry.resources.set(resourceKey(resource.ref), resource);
@@ -145,10 +146,12 @@ export function buildOwners(graph: ResourceGraph): Owner[] {
   return [...byKey]
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([key, entry]) => {
-      const stem = key.replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-|-$/g, '') || 'owner';
+      const stem = key.replaceAll(/[^\p{L}\p{N}]+/gu, '-').replaceAll(/^-|-$/g, '') || 'owner';
       let slug = stem;
 
-      for (let n = 2; taken.has(slug); n++) slug = `${stem}-${n}`;
+      for (let n = 2; taken.has(slug); n++) {
+        slug = `${stem}-${n}`;
+      }
       taken.add(slug);
 
       const resources = [...entry.resources]
@@ -179,10 +182,10 @@ export function buildOwners(graph: ResourceGraph): Owner[] {
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
-const built = new WeakMap<ResourceGraph, Owner[]>();
+const built = new WeakMap<ResourceGraph, Array<Owner>>();
 
 /** {@link buildOwners}, once per graph: every event and document page asks. */
-export function graphOwners(graph: ResourceGraph): Owner[] {
+export function graphOwners(graph: ResourceGraph): Array<Owner> {
   let owners = built.get(graph);
 
   if (!owners) {
@@ -194,7 +197,7 @@ export function graphOwners(graph: ResourceGraph): Owner[] {
 }
 
 /** The owner page a name belongs on, if the graph knows that owner. */
-export function ownerFor(owners: Owner[], name: string): Owner | undefined {
+export function ownerFor(owners: Array<Owner>, name: string): Owner | undefined {
   const key = ownerKey(name);
 
   return owners.find((owner) => owner.key === key);
@@ -213,13 +216,21 @@ export function resourceHref(resource: CatalogResource): string {
   const base = import.meta.env.BASE_URL.replace(/\/$/, '');
   const { kind, namespace, id } = resource.ref;
 
-  if (kind === 'document' && resource.url) return `${base}${resource.url}`;
+  if (kind === 'document' && resource.url) {
+    return `${base}${resource.url}`;
+  }
 
-  if (kind === 'event' && namespace) return `${base}/events/${namespace}/${id}/`;
+  if (kind === 'event' && namespace) {
+    return `${base}/events/${namespace}/${id}/`;
+  }
 
-  if (kind === 'mcp-server') return `${base}/mcp-servers/${id}/`;
+  if (kind === 'mcp-server') {
+    return `${base}/mcp-servers/${id}/`;
+  }
 
-  if (kind === 'skill' || kind === 'agent-plugin') return skillHref(`${base}/`, resource);
+  if (kind === 'skill' || kind === 'agent-plugin') {
+    return skillHref(`${base}/`, resource);
+  }
 
   return catalogHref(resource.ref);
 }
@@ -231,12 +242,18 @@ export function resourceHref(resource: CatalogResource): string {
  * has no link rather than a guessed one.
  */
 export function ownerContact(owner: Owner, onGitHub: boolean): string | undefined {
-  if (owner.contact && SAFE_CONTACT.test(owner.contact)) return owner.contact;
+  if (owner.contact && SAFE_CONTACT.test(owner.contact)) {
+    return owner.contact;
+  }
   const name = owner.name.trim();
 
-  if (/^https?:\/\/\S+$/.test(name)) return name;
+  if (/^https?:\/\/\S+$/.test(name)) {
+    return name;
+  }
 
-  if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(name)) return `mailto:${name}`;
+  if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(name)) {
+    return `mailto:${name}`;
+  }
 
   const team = /^@?([A-Za-z0-9-]+)\/([A-Za-z0-9._-]+)$/.exec(name);
 
@@ -253,7 +270,7 @@ const SAFE_CONTACT = /^(https?:\/\/|mailto:)\S+$/i;
  * nothing, means nothing is shown.
  */
 function agreed(
-  resources: CatalogResource[],
+  resources: Array<CatalogResource>,
   repositoryOf: Map<string, string>,
   pick: (owner: NonNullable<CatalogResource['owner']>) => string | undefined,
 ): string | undefined {
@@ -264,7 +281,9 @@ function agreed(
     const values = declared.get(repository) ?? new Set<string>();
     const value = resource.owner && pick(resource.owner);
 
-    if (value) values.add(value);
+    if (value) {
+      values.add(value);
+    }
     declared.set(repository, values);
   }
 

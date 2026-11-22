@@ -3,12 +3,8 @@
  * installed `node_modules`, works across Zod majors, reads past `.transform()`,
  * and never runs another repository's module side effects.
  */
-import {
-  isJsonObject,
-  type JsonObject,
-  type JsonPrimitive,
-  type JsonValue,
-} from 'autocatalog-core/plugin';
+import { isJsonObject } from 'autocatalog-core/plugin';
+import type { JsonObject, JsonPrimitive, JsonValue } from 'autocatalog-core/plugin';
 import ts from 'typescript';
 import { z } from 'zod';
 
@@ -19,7 +15,7 @@ function propertiesOf(schema: JsonObject): JsonObject {
   return isJsonObject(schema.properties) ? schema.properties : {};
 }
 
-function requiredOf(schema: JsonObject): string[] {
+function requiredOf(schema: JsonObject): Array<string> {
   return requiredList.parse(schema.required);
 }
 
@@ -33,7 +29,7 @@ export interface StaticSchema {
   /** JSON Schema, as far as we could resolve it. */
   schema: JsonObject;
   /** Set when something in the chain could not be represented. */
-  limits: StaticLimit[];
+  limits: Array<StaticLimit>;
 }
 
 export interface StaticExport {
@@ -42,20 +38,20 @@ export interface StaticExport {
   /** Present when the export is a plain schema. */
   schema?: StaticSchema;
   /** Present when the export is z.discriminatedUnion / z.union of named members. */
-  unionMembers?: string[];
+  unionMembers?: Array<string>;
   /** Present when the export is defineEvent(meta, schema). */
   defineEventMeta?: JsonObject;
   /**
    * Present when the export is an array of object literals: a registry of
    * events written out by hand, each `schema` resolved to JSON Schema.
    */
-  registryItems?: RegistryItem[];
+  registryItems?: Array<RegistryItem>;
 }
 
 /** One record of a hand-written registry, with its `schema` resolved. */
 export interface RegistryItem {
   item: JsonObject;
-  limits: StaticLimit[];
+  limits: Array<StaticLimit>;
 }
 
 /** Unrepresentable in JSON Schema — we keep what we have and flag it. */
@@ -134,7 +130,7 @@ const LENGTH_BOUNDS = new Map([
   ],
 ]);
 
-const escapeRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const escapeRegExp = (text: string) => text.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
 
 /** An integer, bounded to the safe range where nothing tighter is declared, as Zod does. */
 function safeInteger(schema: JsonObject): JsonObject {
@@ -164,7 +160,9 @@ function lineOf(sf: ts.SourceFile, node: ts.Node): number {
 
 /** `5`, `-5`, `- -5` → the number. */
 function numberValue(node: ts.Expression): number | undefined {
-  if (ts.isNumericLiteral(node)) return Number(node.text);
+  if (ts.isNumericLiteral(node)) {
+    return Number(node.text);
+  }
 
   if (ts.isPrefixUnaryExpression(node) && node.operator === ts.SyntaxKind.MinusToken) {
     const inner = numberValue(node.operand);
@@ -176,17 +174,27 @@ function numberValue(node: ts.Expression): number | undefined {
 }
 
 function literalValue(node: ts.Expression): JsonPrimitive | undefined {
-  if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) return node.text;
+  if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) {
+    return node.text;
+  }
 
   const number = numberValue(node);
 
-  if (number !== undefined) return number;
+  if (number !== undefined) {
+    return number;
+  }
 
-  if (node.kind === ts.SyntaxKind.TrueKeyword) return true;
+  if (node.kind === ts.SyntaxKind.TrueKeyword) {
+    return true;
+  }
 
-  if (node.kind === ts.SyntaxKind.FalseKeyword) return false;
+  if (node.kind === ts.SyntaxKind.FalseKeyword) {
+    return false;
+  }
 
-  if (node.kind === ts.SyntaxKind.NullKeyword) return null;
+  if (node.kind === ts.SyntaxKind.NullKeyword) {
+    return null;
+  }
 
   return undefined;
 }
@@ -195,13 +203,17 @@ function literalValue(node: ts.Expression): JsonPrimitive | undefined {
 function literalTree(node: ts.Expression): JsonValue | undefined {
   const simple = literalValue(node);
 
-  if (simple !== undefined) return simple;
+  if (simple !== undefined) {
+    return simple;
+  }
 
   if (ts.isArrayLiteralExpression(node)) {
     return node.elements.map(literalTree).filter((v) => v !== undefined);
   }
 
-  if (ts.isObjectLiteralExpression(node)) return objectLiteralTree(node);
+  if (ts.isObjectLiteralExpression(node)) {
+    return objectLiteralTree(node);
+  }
 
   return undefined;
 }
@@ -210,7 +222,9 @@ function objectLiteralTree(node: ts.ObjectLiteralExpression): JsonObject {
   const out: JsonObject = {};
 
   for (const prop of node.properties) {
-    if (!ts.isPropertyAssignment(prop)) continue;
+    if (!ts.isPropertyAssignment(prop)) {
+      continue;
+    }
 
     const key = ts.isIdentifier(prop.name)
       ? prop.name.text
@@ -218,10 +232,14 @@ function objectLiteralTree(node: ts.ObjectLiteralExpression): JsonObject {
         ? prop.name.text
         : null;
 
-    if (!key) continue;
+    if (!key) {
+      continue;
+    }
     const value = literalTree(prop.initializer);
 
-    if (value !== undefined) out[key] = value;
+    if (value !== undefined) {
+      out[key] = value;
+    }
   }
 
   return out;
@@ -236,14 +254,16 @@ function objectLiteralTree(node: ts.ObjectLiteralExpression): JsonObject {
  * (so `z.object(...)` is the root).
  */
 function unwindChain(expr: ts.Expression, isLocal: (name: string) => boolean) {
-  const calls: ts.CallExpression[] = [];
+  const calls: Array<ts.CallExpression> = [];
   let current: ts.Expression = expr;
 
   while (ts.isCallExpression(current) && ts.isPropertyAccessExpression(current.expression)) {
     const base = current.expression.expression;
 
     // `z.object({...})` / `v.string()` — the call itself is the root factory.
-    if (ts.isIdentifier(base) && !isLocal(base.text)) break;
+    if (ts.isIdentifier(base) && !isLocal(base.text)) {
+      break;
+    }
     calls.unshift(current);
     current = base;
   }
@@ -257,7 +277,9 @@ function methodName(call: ts.CallExpression): string {
 
 /** `z.object({...})` → the object literal argument, if this is a z.<fn>(...) call. */
 function zodFactory(expr: ts.Expression): { fn: string; args: ts.NodeArray<ts.Expression> } | null {
-  if (!ts.isCallExpression(expr)) return null;
+  if (!ts.isCallExpression(expr)) {
+    return null;
+  }
   const callee = expr.expression;
 
   if (ts.isPropertyAccessExpression(callee) && ts.isIdentifier(callee.expression)) {
@@ -291,7 +313,9 @@ class Resolver {
         for (const member of node.members) {
           const name = ts.isIdentifier(member.name) ? member.name.text : null;
 
-          if (!name) continue;
+          if (!name) {
+            continue;
+          }
           const value = member.initializer ? literalValue(member.initializer) : name;
           this.enumMembers.set(`${node.name.text}.${name}`, value ?? name);
         }
@@ -303,7 +327,9 @@ class Resolver {
   private literal(node: ts.Expression): JsonPrimitive | undefined {
     const direct = literalValue(node);
 
-    if (direct !== undefined) return direct;
+    if (direct !== undefined) {
+      return direct;
+    }
 
     if (ts.isPropertyAccessExpression(node) && ts.isIdentifier(node.expression)) {
       return this.enumMembers.get(`${node.expression.text}.${node.name.text}`);
@@ -321,7 +347,7 @@ class Resolver {
    * as JSON Schema, whether written as JSON Schema or as Zod.
    */
   registryItem(literal: ts.ObjectLiteralExpression, symbol: string): RegistryItem {
-    const limits: StaticLimit[] = [];
+    const limits: Array<StaticLimit> = [];
     const item = objectLiteralTree(literal);
 
     const schemaProp = literal.properties
@@ -335,7 +361,9 @@ class Resolver {
       for (let hops = 0; ts.isIdentifier(expr) && this.consts.has(expr.text) && hops < 16; hops++) {
         const next = this.consts.get(expr.text)!;
 
-        if (!ts.isObjectLiteralExpression(next)) break;
+        if (!ts.isObjectLiteralExpression(next)) {
+          break;
+        }
         expr = next;
       }
 
@@ -348,7 +376,7 @@ class Resolver {
   }
 
   /** Resolve an expression to JSON Schema, following .extend()/.omit()/.pick() chains. */
-  resolve(expr: ts.Expression, limits: StaticLimit[], symbol: string): JsonObject {
+  resolve(expr: ts.Expression, limits: Array<StaticLimit>, symbol: string): JsonObject {
     const { root, calls } = unwindChain(expr, (n) => this.consts.has(n));
 
     let schema: JsonObject;
@@ -378,7 +406,7 @@ class Resolver {
     return schema;
   }
 
-  private fromFactory(expr: ts.Expression, limits: StaticLimit[], symbol: string): JsonObject {
+  private fromFactory(expr: ts.Expression, limits: Array<StaticLimit>, symbol: string): JsonObject {
     const factory = zodFactory(expr);
 
     if (!factory) {
@@ -395,7 +423,9 @@ class Resolver {
       case 'strictObject': {
         const literal = args[0];
 
-        if (!literal || !ts.isObjectLiteralExpression(literal)) return { type: 'object' };
+        if (!literal || !ts.isObjectLiteralExpression(literal)) {
+          return { type: 'object' };
+        }
 
         return this.objectFromLiteral(literal, limits, symbol);
       }
@@ -469,7 +499,9 @@ class Resolver {
         // z.email(), z.uuid() and the other top-level string formats.
         const format = FORMATS.get(fn);
 
-        if (format) return { type: 'string', format };
+        if (format) {
+          return { type: 'string', format };
+        }
         limits.push({ symbol, reason: `unsupported z.${fn}()` });
 
         return {};
@@ -485,7 +517,7 @@ class Resolver {
     schema: JsonObject,
     name: string,
     call: ts.CallExpression,
-    limits: StaticLimit[],
+    limits: Array<StaticLimit>,
     symbol: string,
   ): JsonObject | undefined {
     const [arg] = call.arguments;
@@ -506,26 +538,36 @@ class Resolver {
       return value === undefined ? unreadable() : { ...schema, [bound.keyword]: value };
     }
 
-    if (type === 'number' && name === 'safe') return safeInteger(schema);
+    if (type === 'number' && name === 'safe') {
+      return safeInteger(schema);
+    }
 
     const lengths = LENGTH_BOUNDS.get(type)?.get(name);
 
     if (lengths) {
       const value = arg && numberValue(arg);
 
-      if (value === undefined) return unreadable();
+      if (value === undefined) {
+        return unreadable();
+      }
 
       return { ...schema, ...Object.fromEntries(lengths.map((keyword) => [keyword, value])) };
     }
 
-    if (type !== 'string') return undefined;
+    if (type !== 'string') {
+      return undefined;
+    }
 
     const format = FORMATS.get(name);
 
-    if (format) return { ...schema, format };
+    if (format) {
+      return { ...schema, format };
+    }
 
     if (name === 'regex') {
-      if (!arg || !ts.isRegularExpressionLiteral(arg)) return unreadable();
+      if (!arg || !ts.isRegularExpressionLiteral(arg)) {
+        return unreadable();
+      }
 
       return { ...schema, pattern: arg.text.slice(1, arg.text.lastIndexOf('/')) };
     }
@@ -543,14 +585,16 @@ class Resolver {
 
   private objectFromLiteral(
     literal: ts.ObjectLiteralExpression,
-    limits: StaticLimit[],
+    limits: Array<StaticLimit>,
     symbol: string,
   ): JsonObject {
     const properties: Record<string, JsonObject> = {};
-    const required: string[] = [];
+    const required: Array<string> = [];
 
     for (const prop of literal.properties) {
-      if (!ts.isPropertyAssignment(prop)) continue;
+      if (!ts.isPropertyAssignment(prop)) {
+        continue;
+      }
 
       const key = ts.isIdentifier(prop.name)
         ? prop.name.text
@@ -558,12 +602,16 @@ class Resolver {
           ? prop.name.text
           : null;
 
-      if (!key) continue;
+      if (!key) {
+        continue;
+      }
 
       const optional = this.isOptional(prop.initializer);
       properties[key] = this.resolve(prop.initializer, limits, symbol);
 
-      if (!optional) required.push(key);
+      if (!optional) {
+        required.push(key);
+      }
     }
 
     return required.length
@@ -580,16 +628,20 @@ class Resolver {
   private applyMethod(
     schema: JsonObject,
     call: ts.CallExpression,
-    limits: StaticLimit[],
+    limits: Array<StaticLimit>,
     symbol: string,
   ): JsonObject {
     const name = methodName(call);
 
-    if (TRANSPARENT.has(name)) return schema;
+    if (TRANSPARENT.has(name)) {
+      return schema;
+    }
 
     const constrained = this.constraint(schema, name, call, limits, symbol);
 
-    if (constrained) return constrained;
+    if (constrained) {
+      return constrained;
+    }
 
     if (OPAQUE.has(name)) {
       limits.push({ symbol, reason: `.${name}() cannot be represented in JSON Schema` });
@@ -601,7 +653,9 @@ class Resolver {
       case 'extend': {
         const arg = call.arguments[0];
 
-        if (!arg || !ts.isObjectLiteralExpression(arg)) return schema;
+        if (!arg || !ts.isObjectLiteralExpression(arg)) {
+          return schema;
+        }
         const added = this.objectFromLiteral(arg, limits, symbol);
 
         return {
@@ -619,7 +673,9 @@ class Resolver {
       case 'pick': {
         const arg = call.arguments[0];
 
-        if (!arg || !ts.isObjectLiteralExpression(arg)) return schema;
+        if (!arg || !ts.isObjectLiteralExpression(arg)) {
+          return schema;
+        }
 
         const keys = new Set(
           arg.properties
@@ -636,7 +692,9 @@ class Resolver {
         for (const key of Object.keys(props)) {
           const keep = name === 'pick' ? keys.has(key) : !keys.has(key);
 
-          if (!keep) delete props[key];
+          if (!keep) {
+            delete props[key];
+          }
         }
 
         return {
@@ -658,7 +716,9 @@ class Resolver {
       case 'merge': {
         const arg = call.arguments[0];
 
-        if (!arg) return schema;
+        if (!arg) {
+          return schema;
+        }
         const other = this.resolve(arg, limits, symbol);
 
         return {
@@ -688,7 +748,7 @@ export function importsZod(text: string): boolean {
  * Syntax errors for an already-parsed file, via the public Program API. A
  * single-file program with no lib and no resolution does no further parsing.
  */
-function syntaxErrors(sf: ts.SourceFile): readonly ts.Diagnostic[] {
+function syntaxErrors(sf: ts.SourceFile): ReadonlyArray<ts.Diagnostic> {
   const host: ts.CompilerHost = { ...ts.createCompilerHost({}), getSourceFile: () => sf };
 
   return ts
@@ -700,7 +760,7 @@ function syntaxErrors(sf: ts.SourceFile): readonly ts.Diagnostic[] {
  * Parse one TypeScript source file and return its exported Zod schemas.
  * Never executes anything.
  */
-export function staticExports(text: string, fileName: string): StaticExport[] {
+export function staticExports(text: string, fileName: string): Array<StaticExport> {
   const sf = ts.createSourceFile(fileName, text, ts.ScriptTarget.Latest, true);
 
   // ts.createSourceFile is error-tolerant: it happily parses broken source and
@@ -718,16 +778,22 @@ export function staticExports(text: string, fileName: string): StaticExport[] {
   }
 
   const resolver = new Resolver(sf);
-  const out: StaticExport[] = [];
+  const out: Array<StaticExport> = [];
 
   sf.forEachChild((node) => {
-    if (!ts.isVariableStatement(node)) return;
+    if (!ts.isVariableStatement(node)) {
+      return;
+    }
     const exported = node.modifiers?.some((m) => m.kind === ts.SyntaxKind.ExportKeyword);
 
-    if (!exported) return;
+    if (!exported) {
+      return;
+    }
 
     for (const decl of node.declarationList.declarations) {
-      if (!ts.isIdentifier(decl.name) || !decl.initializer) continue;
+      if (!ts.isIdentifier(decl.name) || !decl.initializer) {
+        continue;
+      }
       const symbol = decl.name.text;
       const line = lineOf(sf, decl);
 
@@ -753,7 +819,7 @@ export function staticExports(text: string, fileName: string): StaticExport[] {
         const meta =
           metaArg && ts.isObjectLiteralExpression(metaArg) ? objectLiteralTree(metaArg) : {};
 
-        const limits: StaticLimit[] = [];
+        const limits: Array<StaticLimit> = [];
         out.push({
           symbol,
           line,
@@ -771,7 +837,9 @@ export function staticExports(text: string, fileName: string): StaticExport[] {
           .filter(ts.isObjectLiteralExpression)
           .map((literal) => resolver.registryItem(literal, symbol));
 
-        if (items.length > 0) out.push({ symbol, line, registryItems: items });
+        if (items.length > 0) {
+          out.push({ symbol, line, registryItems: items });
+        }
         continue;
       }
 
@@ -792,7 +860,7 @@ export function staticExports(text: string, fileName: string): StaticExport[] {
       }
 
       // A plain schema export.
-      const limits: StaticLimit[] = [];
+      const limits: Array<StaticLimit> = [];
       const schema = resolver.resolve(decl.initializer, limits, symbol);
 
       if (Object.keys(schema).length > 0 || limits.length > 0) {

@@ -1,6 +1,7 @@
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { icons, type IconName } from './icons';
+import { icons } from './icons';
+import type { IconName } from './icons';
 
 /** The attributes that draw a sidebar link's icon: a type, so Starlight's attribute record takes it. */
 export type SidebarIconAttrs = {

@@ -6,21 +6,23 @@
 export function dropRepeatedTitle(html: string, title: string): string {
   const match = /^\s*<h1(?:\s[^>]*)?>([\s\S]*?)<\/h1>/.exec(html);
 
-  if (!match || normalise(textOf(match[1] ?? '')) !== normalise(title)) return html;
+  if (!match || normalise(textOf(match[1] ?? '')) !== normalise(title)) {
+    return html;
+  }
 
   return html.slice(match[0].length);
 }
 
 function textOf(html: string): string {
   return html
-    .replace(/<[^>]*>/g, '')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;|&#x27;/g, "'");
+    .replaceAll(/<[^>]*>/g, '')
+    .replaceAll('&amp;', '&')
+    .replaceAll('&lt;', '<')
+    .replaceAll('&gt;', '>')
+    .replaceAll('&quot;', '"')
+    .replaceAll(/&#39;|&#x27;/g, "'");
 }
 
 function normalise(text: string): string {
-  return text.replace(/\s+/g, ' ').trim().toLocaleLowerCase();
+  return text.replaceAll(/\s+/g, ' ').trim().toLocaleLowerCase();
 }

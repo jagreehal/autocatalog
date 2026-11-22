@@ -4,11 +4,12 @@ import path from 'node:path';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { afterEach, describe, expect, it } from 'vitest';
-import { applySnapshot, publishCatalog, readSnapshot, type AdapterEvent } from 'autocatalog-core';
+import { applySnapshot, publishCatalog, readSnapshot } from 'autocatalog-core';
+import type { AdapterEvent } from 'autocatalog-core';
 import { createServer } from '../src/server.js';
 import { describeEvent, investigationBundle, loadCatalog, resolveEvent } from '../src/tools.js';
 
-const roots: string[] = [];
+const roots: Array<string> = [];
 
 afterEach(async () => {
   await Promise.all(roots.splice(0).map((root) => fs.rm(root, { recursive: true, force: true })));

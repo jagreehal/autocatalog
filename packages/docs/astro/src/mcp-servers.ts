@@ -1,4 +1,5 @@
-import { resourceKey, type CatalogResource, type ResourceGraph } from 'autocatalog-core';
+import { resourceKey } from 'autocatalog-core';
+import type { CatalogResource, ResourceGraph } from 'autocatalog-core';
 import { z } from 'zod';
 
 export interface McpToolRow {
@@ -21,22 +22,22 @@ export interface McpServerRow {
   title: string;
   href: string;
   summary?: string | undefined;
-  owners: string[];
+  owners: Array<string>;
   origin: 'built' | 'third-party' | 'unknown';
   transport: string;
   /** Its address, package or program: how a person recognises it. */
   endpoint: string | undefined;
-  versions: string[];
+  versions: Array<string>;
   /** Repositories that define it. */
-  builtIn: string[];
+  builtIn: Array<string>;
   /** Repositories that configure it. */
-  repositories: string[];
-  agents: string[];
-  tools: McpToolRow[];
-  connections: string[];
+  repositories: Array<string>;
+  agents: Array<string>;
+  tools: Array<McpToolRow>;
+  connections: Array<string>;
   /** False until someone runs a snapshot, so no tools is not read as an empty server. */
   snapshotted: boolean;
-  changes: McpChangeRow[];
+  changes: Array<McpChangeRow>;
   needsReview: boolean;
 }
 
@@ -87,14 +88,18 @@ const behaviourOf = (tool: {
   readOnly?: boolean | undefined;
   destructive?: boolean | undefined;
 }): McpToolRow['behaviour'] => {
-  if (tool.readOnly) return 'read-only';
+  if (tool.readOnly) {
+    return 'read-only';
+  }
 
-  if (tool.destructive) return 'destructive';
+  if (tool.destructive) {
+    return 'destructive';
+  }
 
   return tool.destructive === false ? 'changes data' : undefined;
 };
 
-const sorted = (values: Iterable<string>): string[] => [...new Set(values)].sort();
+const sorted = (values: Iterable<string>): Array<string> => [...new Set(values)].sort();
 
 /** A discovered entry's owner until a person names one. */
 const UNREVIEWED_OWNER = 'review-needed';
@@ -103,7 +108,7 @@ const UNREVIEWED_OWNER = 'review-needed';
 export const mcpServerPath = (id: string): boolean => /^[\w.-]+$/.test(id) && !/^\.+$/.test(id);
 
 /** Every MCP server on the graph, with who runs it, who uses it and what it offers. */
-export function buildMcpServers(graph: ResourceGraph, base: string): McpServerRow[] {
+export function buildMcpServers(graph: ResourceGraph, base: string): Array<McpServerRow> {
   const byKey = new Map(graph.resources.map((resource) => [resourceKey(resource.ref), resource]));
   const isServer = (resource: CatalogResource) => resource.ref.kind === 'mcp-server';
 

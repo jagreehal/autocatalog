@@ -3,7 +3,8 @@ import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport } from 'ai';
 import * as React from 'react';
 import { createPortal } from 'react-dom';
-import Markdown, { type Components } from 'react-markdown';
+import Markdown from 'react-markdown';
+import type { Components } from 'react-markdown';
 import { Bubble, BubbleContent } from '#ui/components/ui/bubble.tsx';
 import { Button } from '#ui/components/ui/button.tsx';
 import { Checkbox } from '#ui/components/ui/checkbox.tsx';
@@ -43,8 +44,10 @@ import {
 } from '#ui/components/ui/trace.tsx';
 import { cn } from '#ui/lib/utils.ts';
 import type { ChatMessage } from '../index.ts';
-import { type ChatIconName, type ChatText, DEFAULT_CHAT_TEXT, fill } from '../text.ts';
-import { type ChatIcon, DEFAULT_CHAT_ICONS, renderIcon } from './customize.tsx';
+import { DEFAULT_CHAT_TEXT, fill } from '../text.ts';
+import type { ChatIconName, ChatText } from '../text.ts';
+import { DEFAULT_CHAT_ICONS, renderIcon } from './customize.tsx';
+import type { ChatIcon } from './customize.tsx';
 
 type Part = ChatMessage['parts'][number];
 
@@ -66,7 +69,7 @@ export interface ChatPanelProps {
   /** One line under the title, such as whose pages answer. */
   description?: string | undefined;
   /** Questions a reader can send with one click before asking their own. */
-  suggestions?: string[] | undefined;
+  suggestions?: Array<string> | undefined;
   /**
    * A form to message a person, with the conversation attached. It posts
    * `{ email, message, page, from, transcript }` as JSON to `api`.
@@ -102,7 +105,7 @@ interface Saved {
   id: string;
   open: boolean;
   view: ChatView;
-  messages: ChatMessage[];
+  messages: Array<ChatMessage>;
 }
 
 const textOf = (message: ChatMessage) =>
@@ -145,7 +148,7 @@ export interface ChatPanelState {
   side: 'right' | 'left';
   title: string;
   description: string | undefined;
-  suggestions: string[];
+  suggestions: Array<string>;
   support: ChatPanelProps['support'];
   /** The panel's words, the site's over the defaults. */
   text: ChatText;
@@ -161,7 +164,9 @@ const ChatPanelContext = React.createContext<ChatPanelState | null>(null);
 export function useChatPanel(): ChatPanelState {
   const state = React.useContext(ChatPanelContext);
 
-  if (!state) throw new Error('useChatPanel needs a <ChatRoot> around it');
+  if (!state) {
+    throw new Error('useChatPanel needs a <ChatRoot> around it');
+  }
 
   return state;
 }
@@ -179,7 +184,9 @@ export function ChatRoot(props: ChatRootProps) {
 
   React.useEffect(() => setMounted(true), []);
 
-  if (!mounted) return null;
+  if (!mounted) {
+    return null;
+  }
 
   return props.layout === 'inline' ? (
     <Root {...props} />
@@ -219,14 +226,18 @@ function Root({
 
   // Saved once a reply has finished, so a half-streamed answer is never restored.
   React.useEffect(() => {
-    if (!busy) save(storageKey, { id: chat.id, open, view, messages: chat.messages });
+    if (!busy) {
+      save(storageKey, { id: chat.id, open, view, messages: chat.messages });
+    }
   }, [busy, chat.id, chat.messages, open, view, storageKey]);
 
   React.useEffect(() => {
     const ask = (event: Event) => {
       const question = event instanceof CustomEvent ? String(event.detail ?? '').trim() : '';
 
-      if (!question) return;
+      if (!question) {
+        return;
+      }
 
       setOpen(true);
       setView('chat');
@@ -236,7 +247,9 @@ function Root({
     const toSupport = () => {
       delete document.documentElement.dataset.acSupport;
 
-      if (!support) return;
+      if (!support) {
+        return;
+      }
 
       setOpen(true);
       setSupportFrom('page');
@@ -247,7 +260,9 @@ function Root({
     window.addEventListener(SUPPORT_EVENT, toSupport);
 
     // Asked before the panel loaded.
-    if (document.documentElement.dataset.acSupport !== undefined) toSupport();
+    if (document.documentElement.dataset.acSupport !== undefined) {
+      toSupport();
+    }
 
     return () => {
       window.removeEventListener(ASK_EVENT, ask);
@@ -259,7 +274,9 @@ function Root({
     chat,
     busy,
     send: (question) => {
-      if (!question.trim() || busy) return;
+      if (!question.trim() || busy) {
+        return;
+      }
 
       void chat.sendMessage({ text: question.trim() });
     },
@@ -288,7 +305,9 @@ function Root({
 export function ChatLauncher({ children }: { children?: React.ReactNode }) {
   const { open, setOpen, side, icon, text, title } = useChatPanel();
 
-  if (open) return null;
+  if (open) {
+    return null;
+  }
 
   return (
     <div data-slot="chat-launcher" data-side={side}>
@@ -314,7 +333,9 @@ export function ChatWindow({
 }) {
   const { open, layout, side, title } = useChatPanel();
 
-  if (!open) return null;
+  if (!open) {
+    return null;
+  }
 
   return (
     <section
@@ -401,7 +422,9 @@ export function ChatHeader({ children }: { children?: React.ReactNode }) {
 export function ChatConversation({ children }: { children?: React.ReactNode }) {
   const { view, support } = useChatPanel();
 
-  if (view === 'support' && support) return null;
+  if (view === 'support' && support) {
+    return null;
+  }
 
   return (
     <MessageScrollerProvider autoScroll>
@@ -419,7 +442,9 @@ export function ChatConversation({ children }: { children?: React.ReactNode }) {
 export function ChatSuggestions() {
   const { suggestions, send } = useChatPanel();
 
-  if (suggestions.length === 0) return null;
+  if (suggestions.length === 0) {
+    return null;
+  }
 
   return (
     <div data-slot="chat-suggestions" className="flex flex-wrap justify-center gap-2">
@@ -512,7 +537,9 @@ export function ChatComposer() {
       onSubmit={(event) => {
         event.preventDefault();
 
-        if (busy || !draft.trim()) return;
+        if (busy || !draft.trim()) {
+          return;
+        }
 
         send(draft);
         setDraft('');
@@ -662,7 +689,9 @@ function Step({ part, streaming }: { part: Part; streaming: boolean }) {
     return <Thinking reasoning={part.text} running={part.state === 'streaming'} />;
   }
 
-  if (part.type !== 'tool-searchPages' && part.type !== 'tool-readPage') return null;
+  if (part.type !== 'tool-searchPages' && part.type !== 'tool-readPage') {
+    return null;
+  }
 
   const done = part.state === 'output-available';
   const running = !done && streaming;
@@ -686,7 +715,9 @@ function Thinking({ reasoning, running }: { reasoning: string; running: boolean 
   const { text, icon } = useChatPanel();
   const [expanded, setExpanded] = React.useState<boolean>();
 
-  if (!reasoning.trim()) return null;
+  if (!reasoning.trim()) {
+    return null;
+  }
 
   return (
     <TraceCollapsible isExpanded={expanded ?? running} onExpandedChange={setExpanded}>
@@ -707,7 +738,9 @@ export function ChatSupport() {
   const { messages } = chat;
   const [state, setState] = React.useState<'idle' | 'sending' | 'sent' | 'failed'>('idle');
 
-  if (view !== 'support' || !support) return null;
+  if (view !== 'support' || !support) {
+    return null;
+  }
 
   const onDone = () => {
     setState('idle');

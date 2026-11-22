@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { join, posix } from 'node:path';
-import { parse as parseJsonc, type ParseError } from 'jsonc-parser';
+import { parse as parseJsonc } from 'jsonc-parser';
+import type { ParseError } from 'jsonc-parser';
 import { parse as parseToml } from 'smol-toml';
 import { z } from 'zod';
 import {
@@ -8,23 +9,16 @@ import {
   isMcpCodeFile,
   isMcpServerJson,
   readMcpServerJson,
-  type BuiltMcpServer,
 } from './mcp-code.js';
-import {
-  forEachFile,
-  lineAt,
-  listFiles,
-  toId,
-  toName,
-  type DiscoveredSource,
-  type ScanFile,
-} from './discovery.js';
+import type { BuiltMcpServer } from './mcp-code.js';
+import { forEachFile, lineAt, listFiles, toId, toName } from './discovery.js';
+import type { DiscoveredSource, ScanFile } from './discovery.js';
 import type { McpPackage, McpServer } from './schemas.js';
 
 export const MCP_ADAPTER = 'mcp';
 
 /** One server as a client config writes it, before anything is kept. */
-type ConfiguredServer = { name: string; url: string | undefined; argv: string[] };
+type ConfiguredServer = { name: string; url: string | undefined; argv: Array<string> };
 
 export type DiscoveredMcpServer = {
   id: string;
@@ -35,11 +29,11 @@ export type DiscoveredMcpServer = {
   package?: McpPackage | undefined;
   command?: string | undefined;
   description?: string | undefined;
-  sources: DiscoveredSource[];
+  sources: Array<DiscoveredSource>;
   /** Set when configs disagree on the version of one package. */
-  versions?: string[] | undefined;
+  versions?: Array<string> | undefined;
   /** Filled for a folder of checkouts: the repositories that configure it. */
-  used_by?: string[] | undefined;
+  used_by?: Array<string> | undefined;
   /** Filled for a folder of checkouts: the repository whose code it is. */
   built_in?: string | undefined;
 };
@@ -47,9 +41,9 @@ export type DiscoveredMcpServer = {
 export type McpConfigDiscovery = {
   root: string;
   /** The config files read, whether or not they named a server. */
-  files: string[];
-  servers: DiscoveredMcpServer[];
-  warnings: string[];
+  files: Array<string>;
+  servers: Array<DiscoveredMcpServer>;
+  warnings: Array<string>;
 };
 
 // A field of the wrong shape reads as absent: one odd entry should not cost the
@@ -104,8 +98,8 @@ type ConfigDocument = z.infer<typeof ConfigDocument>;
 type ServerMap = z.infer<typeof ServerMap>;
 
 const argvOf = (entry: {
-  command?: string | string[] | undefined;
-  args?: string[] | undefined;
+  command?: string | Array<string> | undefined;
+  args?: Array<string> | undefined;
 }) => {
   const { command = [], args = [] } = entry;
 
@@ -114,14 +108,14 @@ const argvOf = (entry: {
   );
 };
 
-const fromServerMap = (map: ServerMap): ConfiguredServer[] =>
+const fromServerMap = (map: ServerMap): Array<ConfiguredServer> =>
   Object.entries(map ?? {}).flatMap(([name, entry]) =>
     entry
       ? [{ name, url: entry.url ?? entry.httpUrl ?? entry.serverUrl, argv: argvOf(entry) }]
       : [],
   );
 
-const fromIntegrations = ({ integrations = [] }: ConfigDocument): ConfiguredServer[] =>
+const fromIntegrations = ({ integrations = [] }: ConfigDocument): Array<ConfiguredServer> =>
   integrations.flatMap((entry) => {
     const name = entry?.name ?? entry?.namespace;
 
@@ -130,13 +124,13 @@ const fromIntegrations = ({ integrations = [] }: ConfigDocument): ConfiguredServ
       : [];
   });
 
-const fromClaudeHome = (doc: ConfigDocument): ConfiguredServer[] => [
+const fromClaudeHome = (doc: ConfigDocument): Array<ConfiguredServer> => [
   ...fromServerMap(doc.mcpServers),
   ...Object.values(doc.projects ?? {}).flatMap(({ mcpServers }) => fromServerMap(mcpServers)),
 ];
 
 /** The configs a repository commits, each with where it keeps its servers. */
-const CONFIGS: Array<{ file: RegExp; read: (doc: ConfigDocument) => ConfiguredServer[] }> = [
+const CONFIGS: Array<{ file: RegExp; read: (doc: ConfigDocument) => Array<ConfiguredServer> }> = [
   { file: /(^|\/)\.mcp\.json$/, read: (doc) => fromServerMap(doc.mcpServers) },
   { file: /(^|\/)\.cursor\/mcp\.json$/, read: (doc) => fromServerMap(doc.mcpServers) },
   { file: /(^|\/)\.gemini\/settings\.json$/, read: (doc) => fromServerMap(doc.mcpServers) },
@@ -149,7 +143,10 @@ const CONFIGS: Array<{ file: RegExp; read: (doc: ConfigDocument) => ConfiguredSe
 ];
 
 /** The same clients' per-person configs, relative to the home folder. */
-const HOME_CONFIGS: Array<{ file: string; read: (doc: ConfigDocument) => ConfiguredServer[] }> = [
+const HOME_CONFIGS: Array<{
+  file: string;
+  read: (doc: ConfigDocument) => Array<ConfiguredServer>;
+}> = [
   { file: '.claude.json', read: fromClaudeHome },
   { file: '.cursor/mcp.json', read: (doc) => fromServerMap(doc.mcpServers) },
   { file: '.gemini/settings.json', read: (doc) => fromServerMap(doc.mcpServers) },
@@ -196,12 +193,16 @@ const REDACTED = '{redacted}';
 
 /** The address without anything that can carry a credential. */
 const safeUrl = (raw: string): string | undefined => {
-  if (/\$\{|\{\{|\$[A-Z_]/.test(raw)) return undefined;
+  if (/\$\{|\{\{|\$[A-Z_]/.test(raw)) {
+    return undefined;
+  }
 
   try {
     const { origin, pathname, protocol } = new URL(raw);
 
-    if (protocol !== 'https:' && protocol !== 'http:') return undefined;
+    if (protocol !== 'https:' && protocol !== 'http:') {
+      return undefined;
+    }
 
     const path = pathname
       .split('/')
@@ -215,7 +216,7 @@ const safeUrl = (raw: string): string | undefined => {
   }
 };
 
-const RUNNERS: Array<{ prefix: string[]; registry: McpPackage['registry'] }> = [
+const RUNNERS: Array<{ prefix: Array<string>; registry: McpPackage['registry'] }> = [
   { prefix: ['npx'], registry: 'npm' },
   { prefix: ['bunx'], registry: 'npm' },
   { prefix: ['pnpx'], registry: 'npm' },
@@ -254,22 +255,30 @@ const CONTAINER_VALUE_FLAGS = new Set([
   '--label',
 ]);
 
-const packageSpec = (args: string[], registry: McpPackage['registry']): string | undefined => {
+const packageSpec = (args: Array<string>, registry: McpPackage['registry']): string | undefined => {
   for (let i = 0; i < args.length; i++) {
     const arg = args[i]!;
 
-    if (arg === '--') return args[i + 1];
+    if (arg === '--') {
+      return args[i + 1];
+    }
 
-    if (!arg.startsWith('-')) return arg;
+    if (!arg.startsWith('-')) {
+      return arg;
+    }
 
     if (registry === 'oci') {
-      if (CONTAINER_VALUE_FLAGS.has(arg)) i++;
+      if (CONTAINER_VALUE_FLAGS.has(arg)) {
+        i++;
+      }
     } else if (PACKAGE_FLAGS.has(arg)) {
       return args[i + 1];
     } else {
       const [flag, value] = arg.split(/=(.*)/);
 
-      if (value && PACKAGE_FLAGS.has(flag!)) return value;
+      if (value && PACKAGE_FLAGS.has(flag!)) {
+        return value;
+      }
     }
   }
 
@@ -295,7 +304,9 @@ const splitSpec = (spec: string, registry: McpPackage['registry']): [string, str
   if (registry === 'oci') {
     const colon = spec.lastIndexOf(':');
 
-    if (colon > spec.lastIndexOf('/')) return [spec.slice(0, colon), spec.slice(colon + 1)];
+    if (colon > spec.lastIndexOf('/')) {
+      return [spec.slice(0, colon), spec.slice(colon + 1)];
+    }
   }
 
   return [spec];
@@ -317,10 +328,12 @@ export const isPinned = (pkg: McpPackage): pkg is McpPackage & { version: string
   pkg.version.length <= MAX_VERSION_LENGTH &&
   EXACT_VERSION[pkg.registry].test(pkg.version);
 
-const parsePackage = (argv: string[]): McpPackage | undefined => {
+const parsePackage = (argv: Array<string>): McpPackage | undefined => {
   const [program, ...rest] = argv;
 
-  if (!program) return undefined;
+  if (!program) {
+    return undefined;
+  }
 
   const runner = RUNNERS.find(
     ({ prefix }) =>
@@ -328,22 +341,28 @@ const parsePackage = (argv: string[]): McpPackage | undefined => {
       prefix.slice(1).every((word, i) => rest[i] === word),
   );
 
-  if (!runner) return undefined;
+  if (!runner) {
+    return undefined;
+  }
 
   const spec = packageSpec(rest.slice(runner.prefix.length - 1), runner.registry);
 
-  if (!spec) return undefined;
+  if (!spec) {
+    return undefined;
+  }
 
   const [name, version] = splitSpec(spec, runner.registry);
 
-  if (!/^@?[a-z0-9][\w./-]*$/i.test(name) || looksSecret(name)) return undefined;
+  if (!/^@?[a-z0-9][\w./-]*$/i.test(name) || looksSecret(name)) {
+    return undefined;
+  }
 
   const found = { registry: runner.registry, name, version };
 
   return isPinned(found) ? found : { ...found, version: undefined };
 };
 
-const looksLocal = (argv: string[]): boolean =>
+const looksLocal = (argv: Array<string>): boolean =>
   argv.some((arg) => /^(\.{1,2}\/|\$\{)|\.(c|m)?(js|ts)$|\.py$/.test(arg));
 
 /** A slug that survives across repositories: the address, without `mcp` as noise. */
@@ -356,10 +375,10 @@ const endpointId = (url: string): string => {
 };
 
 /** A proxy to a remote server is that remote server. */
-const proxiedUrl = (argv: string[], pkg: McpPackage | undefined): string | undefined =>
+const proxiedUrl = (argv: Array<string>, pkg: McpPackage | undefined): string | undefined =>
   pkg?.name === 'mcp-remote' ? argv.find((arg) => /^https?:\/\//.test(arg)) : undefined;
 
-const programName = (argv: string[]): string | undefined => {
+const programName = (argv: Array<string>): string | undefined => {
   const name = argv[0] ? posix.basename(toPosix(argv[0])) : undefined;
 
   return name && /^[\w.+-]+$/.test(name) ? name : undefined;
@@ -368,15 +387,15 @@ const programName = (argv: string[]): string | undefined => {
 const PRIVATE_HOST =
   /^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)|\.(internal|local|corp|lan)$/;
 
-const isInternal = (value: string, internal: string[]): boolean =>
+const isInternal = (value: string, internal: Array<string>): boolean =>
   internal.some((suffix) => value === suffix || value.endsWith(`.${suffix}`));
 
 /** Where a server comes from, as far as its address shows. A person confirms it. */
 const originOf = (
   url: string | undefined,
   pkg: McpPackage | undefined,
-  argv: string[],
-  internal: string[],
+  argv: Array<string>,
+  internal: Array<string>,
 ): McpServer['origin'] => {
   if (url) {
     const { hostname } = new URL(url);
@@ -394,8 +413,8 @@ const originOf = (
 const normalise = (
   configured: ConfiguredServer,
   source: DiscoveredSource,
-  warnings: string[],
-  internal: string[],
+  warnings: Array<string>,
+  internal: Array<string>,
 ): DiscoveredMcpServer | undefined => {
   const { name, argv } = configured;
   const parsed = parsePackage(argv);
@@ -430,28 +449,32 @@ const normalise = (
 };
 
 const lineOfName = (content: string, name: string): number => {
-  const index = content.search(new RegExp(`["'.]${name.replace(/[^\w-]/g, '.')}["'\\]]`));
+  const index = content.search(new RegExp(`["'.]${name.replaceAll(/[^\w-]/g, '.')}["'\\]]`));
 
   return index === -1 ? 1 : lineAt(content, index);
 };
 
 const parseConfig = (file: string, content: string): ConfigDocument => {
-  if (file.endsWith('.toml')) return ConfigDocument.parse(parseToml(content));
+  if (file.endsWith('.toml')) {
+    return ConfigDocument.parse(parseToml(content));
+  }
 
-  const errors: ParseError[] = [];
+  const errors: Array<ParseError> = [];
   const document = ConfigDocument.parse(parseJsonc(content, errors, { allowTrailingComma: true }));
 
-  if (errors.length > 0) throw new Error(`invalid JSON at offset ${errors[0]!.offset}`);
+  if (errors.length > 0) {
+    throw new Error(`invalid JSON at offset ${errors[0]!.offset}`);
+  }
 
   return document;
 };
 
 type ConfigFile = Pick<ScanFile, 'text'> & {
   label: string;
-  read: (doc: ConfigDocument) => ConfiguredServer[];
+  read: (doc: ConfigDocument) => Array<ConfiguredServer>;
 };
 
-const repositoryConfigs = async (root: string): Promise<ConfigFile[]> => {
+const repositoryConfigs = async (root: string): Promise<Array<ConfigFile>> => {
   const found = await listFiles(root, (file) => configFor(file) !== undefined);
 
   return found
@@ -463,7 +486,7 @@ const repositoryConfigs = async (root: string): Promise<ConfigFile[]> => {
     .sort((a, b) => a.label.localeCompare(b.label));
 };
 
-const homeConfigs = async (home: string): Promise<ConfigFile[]> => {
+const homeConfigs = async (home: string): Promise<Array<ConfigFile>> => {
   const files = await Promise.all(
     HOME_CONFIGS.map(async ({ file, read }) => {
       const text = await readFile(join(home, file), 'utf8').catch(() => null);
@@ -479,12 +502,15 @@ export type McpConfigOptions = {
   /** Also read this person's own client configs, from this home folder. */
   home?: string | undefined;
   /** Hosts and package scopes the company owns, so they read as `built`. */
-  internal?: string[] | undefined;
+  internal?: Array<string> | undefined;
   /** `root` holds one checkout per folder, so a file's first segment names its repository. */
   perRepository?: boolean | undefined;
 };
 
-const toBuilt = (built: BuiltMcpServer, warnings: string[]): DiscoveredMcpServer | undefined => {
+const toBuilt = (
+  built: BuiltMcpServer,
+  warnings: Array<string>,
+): DiscoveredMcpServer | undefined => {
   const url = built.url ? safeUrl(built.url) : undefined;
 
   if (built.url && !url) {
@@ -524,7 +550,7 @@ export const discoverMcpServers = async (
   const { home, internal = [], perRepository } = options;
   const files = [...(await repositoryConfigs(root)), ...(home ? await homeConfigs(home) : [])];
   const servers = new Map<string, DiscoveredMcpServer>();
-  const warnings: string[] = [];
+  const warnings: Array<string> = [];
 
   // Only a config says what runs. Code naming a package has no opinion on its version.
   const add = (server: DiscoveredMcpServer, runs: boolean) => {
@@ -542,7 +568,9 @@ export const discoverMcpServers = async (
     known.description ??= server.description;
     known.package ??= server.package;
 
-    if (server.origin === 'built') known.origin = 'built';
+    if (server.origin === 'built') {
+      known.origin = 'built';
+    }
 
     const [was, now] = [known.package?.version, server.package?.version];
 
@@ -563,12 +591,12 @@ export const discoverMcpServers = async (
   };
 
   for (const { label: file, text: content, read } of files) {
-    let configured: ConfiguredServer[];
+    let configured: Array<ConfiguredServer>;
 
     try {
       configured = read(parseConfig(file, content));
-    } catch (cause) {
-      warnings.push(`${file}: ${cause instanceof Error ? cause.message : String(cause)}`);
+    } catch (error) {
+      warnings.push(`${file}: ${error instanceof Error ? error.message : String(error)}`);
       continue;
     }
 
@@ -576,11 +604,13 @@ export const discoverMcpServers = async (
       const source = { file, line: lineOfName(content, entry.name), symbol: entry.name };
       const server = normalise(entry, source, warnings, internal);
 
-      if (server) add(server, true);
+      if (server) {
+        add(server, true);
+      }
     }
   }
 
-  const codeHits: BuiltMcpServer[] = [];
+  const codeHits: Array<BuiltMcpServer> = [];
 
   await forEachFile(
     root,
@@ -589,7 +619,9 @@ export const discoverMcpServers = async (
       if (isMcpServerJson(file.relPath)) {
         const published = readMcpServerJson(file);
 
-        if (published) codeHits.push(published);
+        if (published) {
+          codeHits.push(published);
+        }
       } else {
         codeHits.push(...(await findMcpServersInCode(root, file)));
       }
@@ -602,13 +634,19 @@ export const discoverMcpServers = async (
   for (const built of codeHits.sort(byFile)) {
     const server = toBuilt(built, warnings);
 
-    if (!server) continue;
+    if (!server) {
+      continue;
+    }
 
-    if (perRepository) server.built_in = repositoryOf(built.source.file);
+    if (perRepository) {
+      server.built_in = repositoryOf(built.source.file);
+    }
 
     const known = servers.get(server.id);
 
-    if (known && server.built_in) known.built_in ??= server.built_in;
+    if (known && server.built_in) {
+      known.built_in ??= server.built_in;
+    }
 
     add(server, false);
   }
@@ -670,7 +708,7 @@ const Sightings = z.looseObject({
  * Where a discovered manifest was last seen, as `file#name` for each config.
  * Empty for a hand-written entry, which a scan never treats as stale.
  */
-export const mcpServerSightings = (stored: StoredMcpServer): string[] => {
+export const mcpServerSightings = (stored: StoredMcpServer): Array<string> => {
   const discovery = Sightings.safeParse(stored.discovery);
 
   return discovery.success && discovery.data.adapter === MCP_ADAPTER
@@ -725,7 +763,9 @@ export const refreshMcpServer = (
 ): StoredMcpServer => {
   const discovery = StoredDiscovery.safeParse(existing.discovery);
 
-  if (!discovery.success) return existing;
+  if (!discovery.success) {
+    return existing;
+  }
 
   const atRisk = mcpCredentialsAtRisk(existing, server);
 

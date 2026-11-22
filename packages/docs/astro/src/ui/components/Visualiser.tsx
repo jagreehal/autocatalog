@@ -1,7 +1,8 @@
 /** @jsxImportSource react */
-import { layoutGraph, NodeGraph } from '@eventcatalog/visualiser';
+import { DIAGRAM_FIT_VIEW_OPTIONS, layoutGraph, NodeGraph } from '@eventcatalog/visualiser';
 import type { DslGraph } from '@eventcatalog/visualiser';
-import { type CSSProperties, type KeyboardEvent, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import type { CSSProperties, KeyboardEvent } from 'react';
 import { PlayIcon } from 'lucide-react';
 import { Button } from '#ui/components/ui/button.tsx';
 import { ToggleGroup, ToggleGroupItem } from '#ui/components/ui/toggle-group.tsx';
@@ -11,12 +12,10 @@ import {
   edgesForFrame,
   edgeWeight,
   liveFrame,
+  readablePinch,
   replaySchedule,
-  type EdgeEvidence,
-  type LiveFeed,
-  type FlowStepData,
-  type VisualiserGraph,
 } from '#ui/lib/visualiser.ts';
+import type { EdgeEvidence, LiveFeed, FlowStepData, VisualiserGraph } from '#ui/lib/visualiser.ts';
 
 // The visualiser's legend counts and colours nodes by collection name, which
 // is plural, while its layout writes the singular node type. Both names draw
@@ -50,6 +49,7 @@ interface Props {
   /** How a flow's map is grouped when it opens. */
   lanes?: VisualiserGraph['lanes'];
   levels?: VisualiserGraph['levels'];
+  initialLevel?: VisualiserGraph['initialLevel'];
   proposed?: VisualiserGraph['proposed'];
 }
 
@@ -67,8 +67,11 @@ const WALKTHROUGH_START = 'Start walking through the flow';
 function startWalkthrough(root: HTMLElement | null, frames = 60): void {
   const start = root?.querySelector<HTMLButtonElement>(`button[title="${WALKTHROUGH_START}"]`);
 
-  if (start) start.click();
-  else if (frames > 0) requestAnimationFrame(() => startWalkthrough(root, frames - 1));
+  if (start) {
+    start.click();
+  } else if (frames > 0) {
+    requestAnimationFrame(() => startWalkthrough(root, frames - 1));
+  }
 }
 
 type Mode = (typeof MODES)[number];
@@ -84,7 +87,9 @@ function send(root: HTMLElement, id: string, hollow: boolean, reduced: boolean):
 
   const path = edge?.querySelector('path.react-flow__edge-path');
 
-  if (!edge || !(path instanceof SVGPathElement)) return;
+  if (!edge || !(path instanceof SVGPathElement)) {
+    return;
+  }
 
   if (reduced) {
     edge.classList.add('ac-pulse');
@@ -112,8 +117,11 @@ function send(root: HTMLElement, id: string, hollow: boolean, reduced: boolean):
     marker.setAttribute('cx', String(point.x));
     marker.setAttribute('cy', String(point.y));
 
-    if (t < 1) requestAnimationFrame(step);
-    else marker.remove();
+    if (t < 1) {
+      requestAnimationFrame(step);
+    } else {
+      marker.remove();
+    }
   };
 
   requestAnimationFrame(step);
@@ -135,6 +143,7 @@ export default function Visualiser({
   steps,
   lanes,
   levels,
+  initialLevel,
   proposed,
 }: Props) {
   const root = useRef<HTMLDivElement>(null);
@@ -147,9 +156,15 @@ export default function Visualiser({
 
   const [levelsLaid, setLevelsLaid] = useState<{ 1?: Laid; 2?: Laid }>({});
 
+  // The map reads its levels and the level it opens at only when it first
+  // mounts, so it waits for them; a layout that fails leaves the whole map.
+  const [levelsSettled, setLevelsSettled] = useState(levels === undefined);
+
   // The simpler levels, laid out once each, for the visualiser's level picker.
   useEffect(() => {
-    if (!levels) return;
+    if (!levels) {
+      return;
+    }
 
     let current = true;
 
@@ -172,21 +187,107 @@ export default function Visualiser({
 
         return [level, graph && mark(await layoutGraph(graph.nodes, graph.edges), graph)] as const;
       }),
-    ).then((entries) => {
-      if (current) setLevelsLaid(Object.fromEntries(entries.filter(([, laid]) => laid)));
-    });
+    )
+      .then((entries) => {
+        if (current) {
+          setLevelsLaid(Object.fromEntries(entries.filter(([, laid]) => laid)));
+        }
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        if (current) {
+          setLevelsSettled(true);
+        }
+      });
 
     return () => {
       current = false;
     };
   }, [levels, proposed, hrefs]);
 
+  const opensAtOverview = initialLevel === 1 && levelsLaid[1] !== undefined;
+
+  // Once the visualiser has fitted the overview to its box, zoom it to a
+  // readable size from its top left, where the flow begins. The reader pans
+  // from there, and Fit view still shows it all.
+  useEffect(() => {
+    const portal = document.getElementById(`${id}-portal`);
+
+    if (!opensAtOverview || !portal) {
+      return;
+    }
+
+    let last: number | undefined;
+    let still = 0;
+
+    const timer = window.setInterval(() => {
+      const viewport = portal.querySelector('.react-flow__viewport');
+
+      const pane = portal.querySelector('.react-flow__renderer');
+
+      if (!viewport || !pane) {
+        return;
+      }
+
+      const zoom = new DOMMatrix(getComputedStyle(viewport).transform).a;
+
+      still = zoom === last ? still + 1 : 0;
+      last = zoom;
+
+      if (still < 3) {
+        return;
+      }
+
+      clearInterval(timer);
+
+      const box = pane.getBoundingClientRect();
+
+      const nodes = [...portal.querySelectorAll('.react-flow__node')].map((node) =>
+        node.getBoundingClientRect(),
+      );
+
+      const { padding } = DIAGRAM_FIT_VIEW_OPTIONS;
+
+      const pinch = readablePinch(
+        zoom,
+        navigator.userAgent.includes('Mac'),
+        {
+          x: Math.min(...nodes.map(({ left }) => left)),
+          y: Math.min(...nodes.map(({ top }) => top)),
+        },
+        // The corner sits where the visualiser's own fit leaves it, clear of its controls.
+        {
+          x: box.left + Number.parseFloat(padding.left),
+          y: box.top + Number.parseFloat(padding.top),
+        },
+      );
+
+      if (!pinch) {
+        return;
+      }
+
+      pane.dispatchEvent(
+        new WheelEvent('wheel', {
+          ...pinch,
+          ctrlKey: true,
+          deltaMode: WheelEvent.DOM_DELTA_PAGE,
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
+    }, 100);
+
+    return () => clearInterval(timer);
+  }, [id, opensAtOverview]);
+
   // The visualiser reads its grouping style from the address alone, so a
   // flow's default style goes there, unless the reader's own choice already has.
   useEffect(() => {
     const url = new URL(window.location.href);
 
-    if (!lanes || url.searchParams.has('group')) return;
+    if (!lanes || url.searchParams.has('group')) {
+      return;
+    }
 
     url.searchParams.set('group', lanes.by);
     url.searchParams.set('groupStyle', lanes.style);
@@ -202,7 +303,9 @@ export default function Visualiser({
     const labels = new Map(graph.nodes.map((node) => [node.id, node.label]));
 
     void layoutGraph(graph.nodes, graph.edges).then(({ nodes, edges }) => {
-      if (!current) return;
+      if (!current) {
+        return;
+      }
 
       setLaid({
         // A node that opens a page says so to assistive technology: a link,
@@ -251,12 +354,14 @@ export default function Visualiser({
   useEffect(() => {
     const box = root.current;
 
-    if (!evidence || mode === 'static' || !box) return;
+    if (!evidence || mode === 'static' || !box) {
+      return;
+    }
 
     const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     if (mode === 'replay') {
-      const timers: number[] = [];
+      const timers: Array<number> = [];
 
       for (const edge of replaySchedule(evidence)) {
         timers.push(
@@ -273,7 +378,9 @@ export default function Visualiser({
       return () => timers.forEach((timer) => clearInterval(timer));
     }
 
-    if (!live) return;
+    if (!live) {
+      return;
+    }
 
     setStatus('Connecting…');
 
@@ -282,7 +389,9 @@ export default function Visualiser({
     source.addEventListener('open', () => setStatus('Live'));
     source.addEventListener('error', () => setStatus('Disconnected, retrying'));
     source.addEventListener(live.event, (message) => {
-      if (!(message instanceof MessageEvent)) return;
+      if (!(message instanceof MessageEvent)) {
+        return;
+      }
 
       let data: unknown;
 
@@ -295,7 +404,9 @@ export default function Visualiser({
       // A frame from someone else's server: one that is not an event firing moves nothing.
       const frame = liveFrame.safeParse(data);
 
-      if (!frame.success) return;
+      if (!frame.success) {
+        return;
+      }
 
       for (const edge of edgesForFrame(evidence, frame.data)) {
         send(box, edge.id, edge.hollow, reduced);
@@ -311,12 +422,16 @@ export default function Visualiser({
   const open = (nodeId: string | undefined) => {
     const href = nodeId === undefined ? undefined : hrefs[nodeId];
 
-    if (href) window.location.href = href;
+    if (href) {
+      window.location.href = href;
+    }
   };
 
   // React Flow makes every node focusable; Enter on one opens it, as a click does.
   const onKeyDown = (event: KeyboardEvent) => {
-    if (event.key !== 'Enter' || !(event.target instanceof HTMLElement)) return;
+    if (event.key !== 'Enter' || !(event.target instanceof HTMLElement)) {
+      return;
+    }
 
     open(event.target.closest<HTMLElement>('.react-flow__node')?.dataset.id);
   };
@@ -383,7 +498,7 @@ export default function Visualiser({
         className="min-h-0 flex-1 overflow-hidden rounded-xl border bg-background"
         data-graph-portal
       />
-      {laid && (
+      {laid && levelsSettled && (
         <NodeGraph
           id={id}
           nodes={laid.nodes}
@@ -400,6 +515,10 @@ export default function Visualiser({
             overviewGraph: { ...levelsLaid[1], label: 'domains and systems' },
           })}
           {...(levelsLaid[2] && { hiddenMessagesGraph: levelsLaid[2] })}
+          // Open at the level asked for once it is laid out; until then, the whole map.
+          {...(initialLevel !== undefined &&
+            initialLevel !== 3 &&
+            levelsLaid[initialLevel] && { initialLevel })}
           // As EventCatalog's own pages do outside message flows: no envelope
           // looping along every edge.
           disableMessageAnimation

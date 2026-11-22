@@ -11,11 +11,9 @@ steps:
       id: search_products
       label: Searches the catalog
   - id: search_products
-    title: Search Products
+    title: Products found
     summary: The storefront asks the search index for products matching the shopper's query.
-    custom:
-      title: Search Products
-      summary: 'Command: Search Products'
+    command: { ref: catalog/search-products }
     next_step:
       id: search_api
       label: Query
@@ -26,10 +24,8 @@ steps:
       id: add_item_to_cart
       label: Shopper picks a product
   - id: add_item_to_cart
-    title: Add Item To Cart
-    custom:
-      title: Add Item To Cart
-      summary: 'Command: Add Item To Cart'
+    title: Item added to cart
+    command: { ref: shopping/add-item-to-cart }
     next_step:
       id: cart_api_add
       label: Add to basket
@@ -41,18 +37,14 @@ steps:
       id: checkout_cart
       label: Shopper checks out
   - id: checkout_cart
-    title: Checkout Cart
-    custom:
-      title: Checkout Cart
-      summary: 'Command: Checkout Cart'
+    title: Checkout requested
+    command: { ref: shopping/checkout-cart }
     next_step:
       id: authenticate_customer
       label: Sign in first
   - id: authenticate_customer
-    title: Authenticate Customer
-    custom:
-      title: Authenticate Customer
-      summary: 'Command: Authenticate Customer'
+    title: Sign-in requested
+    command: { ref: customer/authenticate-customer }
     next_step:
       id: oauth_api
       label: Verify session
@@ -77,10 +69,8 @@ steps:
       id: get_product
       label: Look up live prices
   - id: get_product
-    title: Get Product
-    custom:
-      title: Get Product
-      summary: 'Command: Get Product'
+    title: Live prices found
+    command: { ref: catalog/get-product }
     next_step:
       id: product_api
       label: Query
@@ -91,10 +81,8 @@ steps:
       id: calculate_discount
       label: Prices returned
   - id: calculate_discount
-    title: Calculate Discount
-    custom:
-      title: Calculate Discount
-      summary: 'Command: Calculate Discount'
+    title: Discount requested
+    command: { ref: shopping/calculate-discount }
     next_step:
       id: promotion_service
       label: Apply promotions
@@ -130,10 +118,8 @@ steps:
       id: reserve_inventory
       label: Step 1 — hold the stock
   - id: reserve_inventory
-    title: Reserve Inventory
-    custom:
-      title: Reserve Inventory
-      summary: 'Command: Reserve Inventory'
+    title: Stock reservation requested
+    command: { ref: ordering/reserve-inventory }
     next_step:
       id: inventory_service
       label: Reserve items
@@ -158,10 +144,8 @@ steps:
       id: cancel_order_flow
       label: Abort checkout
   - id: authorize_payment
-    title: Authorize Payment
-    custom:
-      title: Authorize Payment
-      summary: 'Command: Authorize Payment'
+    title: Payment authorization requested
+    command: { ref: ordering/authorize-payment }
     next_step:
       id: payment_api
       label: Charge the order total
@@ -228,14 +212,14 @@ steps:
         label: Book the revenue
   - id: ledger_exporter
     title: Ledger Exporter
+    track: happy
     summary: Posts the payment to the finance ledger for reporting and reconciliation.
     service: Ledger Exporter
   - id: cancel_order_flow
-    title: Order Cancellation
+    stage: Order Cancellation
+    title: Order cancelled
     summary: Releases held stock, voids any payment and tells the customer. Click to expand the sub-flow.
-    custom:
-      title: Order Cancellation
-      summary: 'Flow: Order Cancellation'
+    flow: order-cancellation
     next_step:
       id: order_not_placed
       label: Checkout aborted
@@ -244,11 +228,10 @@ steps:
     custom:
       title: Order not placed
       summary: Checkout was aborted and every earlier step compensated. The shopper keeps their basket and can try again.
+    policy: Whenever checkout is aborted, keep the shopper's basket so they can try again
   - id: create_order
-    title: Create Order
-    custom:
-      title: Create Order
-      summary: 'Command: Create Order'
+    title: Order created
+    command: { ref: ordering/create-order }
     next_step:
       id: order_service
       label: Persist the order
@@ -263,29 +246,33 @@ steps:
     summary: The moment the sale is real. Three domains react to it in parallel.
     event: ordering/order-confirmed
     next_steps:
+      - id: warehouse_service
+        label: Start fulfilment
       - id: loyalty_service_award
         label: Award points
       - id: notification_service_confirm
         label: Email confirmation
-      - id: warehouse_service
-        label: Start fulfilment
   - id: loyalty_service_award
     title: Loyalty Service
+    track: happy
     service: Loyalty Service
     next_step:
       id: loyalty_points_earned
       label: Points credited
   - id: loyalty_points_earned
     title: Loyalty Points Earned
+    track: happy
     event: loyalty/loyalty-points-earned
   - id: notification_service_confirm
     title: Notification Service
+    track: happy
     service: Notification Service
     next_step:
       id: customer_notified
       label: Confirmation sent
   - id: customer_notified
     title: Customer Notified
+    track: happy
     event: notifications/customer-notified
   - id: warehouse_service
     title: Warehouse Service
@@ -312,10 +299,8 @@ steps:
       id: create_shipment
       label: Book a courier
   - id: create_shipment
-    title: Create Shipment
-    custom:
-      title: Create Shipment
-      summary: 'Command: Create Shipment'
+    title: Shipment requested
+    command: { ref: fulfilment/create-shipment }
     next_step:
       id: carrier_adapter
       label: Pick the cheapest carrier
@@ -358,6 +343,7 @@ steps:
     title: Notification Service
     summary: Emails the customer that their parcel is delayed and what happens next.
     service: Notification Service
+    policy: Whenever delivery fails, support rebooks it or starts a refund
   - id: shipment_delivered
     title: Shipment Delivered
     event: fulfilment/shipment-delivered
@@ -380,10 +366,8 @@ steps:
       title: Order delivered
       summary: The parcel is at the customer's door, the payment is booked and loyalty points are credited.
   - id: submit_review
-    title: Submit Review
-    custom:
-      title: Submit Review
-      summary: 'Command: Submit Review'
+    title: Review submission requested
+    command: { ref: reviews/submit-review }
     next_step:
       id: review_api
       label: Rate the product
@@ -408,11 +392,10 @@ steps:
   - id: rating_updated
     title: Rating Updated
     event: reviews/rating-updated
+    policy: Whenever the average rating changes, show it on the product page
   - id: request_return
-    title: Request Return
-    custom:
-      title: Request Return
-      summary: 'Command: Request Return'
+    title: Return request sent
+    command: { ref: returns/request-return }
     next_step:
       id: returns_api
       label: Start a return
@@ -481,6 +464,7 @@ steps:
     custom:
       title: Return complete
       summary: The item is back in the warehouse, the customer is refunded and their loyalty points are reversed.
+    policy: Whenever a return closes, put the item back in stock
 ---
 
 ## Overview

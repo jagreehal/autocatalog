@@ -3,8 +3,10 @@ import path from 'node:path';
 import { parse as parseYaml } from 'yaml';
 import { z } from 'zod';
 import { parseFrontmatter } from './frontmatter';
-import { jsonObjectSchema, jsonValueSchema, type JsonObject, type JsonValue } from './json';
-import { AUTOCATALOG_EVENT_FILE, eventFrontmatter, type EventFrontmatter } from './schema';
+import { jsonObjectSchema, jsonValueSchema } from './json';
+import type { JsonObject, JsonValue } from './json';
+import { AUTOCATALOG_EVENT_FILE, eventFrontmatter } from './schema';
+import type { EventFrontmatter } from './schema';
 import type { DiscoveredEventFolder } from './discover';
 import { discoverEventFolders } from './discover';
 import { verifyCatalogArtifact } from './catalog-artifact';
@@ -69,7 +71,7 @@ export interface LoadedEvent {
   body: string;
   schemaPath: string;
   schema: JsonObject;
-  examples: LoadedExample[];
+  examples: Array<LoadedExample>;
 }
 
 export type CatalogDiagnosticCode =
@@ -87,8 +89,8 @@ export interface CatalogDiagnostic {
 
 export interface CatalogSnapshot {
   root: string;
-  events: LoadedEvent[];
-  diagnostics: CatalogDiagnostic[];
+  events: Array<LoadedEvent>;
+  diagnostics: Array<CatalogDiagnostic>;
   valid: boolean;
 }
 
@@ -112,7 +114,7 @@ async function readJson(p: string): Promise<JsonValue> {
   return jsonValueSchema.parse(JSON.parse(raw));
 }
 
-async function listExampleFiles(eventFolder: string): Promise<string[]> {
+async function listExampleFiles(eventFolder: string): Promise<Array<string>> {
   const dir = path.join(eventFolder, 'examples');
 
   try {
@@ -165,7 +167,9 @@ async function resolveContainedFile(
   candidate: string,
   label: string,
 ): Promise<string> {
-  if (path.isAbsolute(candidate)) throw new Error(`${label} must be relative: ${candidate}`);
+  if (path.isAbsolute(candidate)) {
+    throw new Error(`${label} must be relative: ${candidate}`);
+  }
   const root = await fs.realpath(folderRoot);
   const lexical = path.resolve(root, candidate);
 
@@ -202,9 +206,9 @@ export async function loadEventFolder(folder: DiscoveredEventFolder): Promise<Lo
 
   try {
     frontmatter = eventFrontmatter.parse(await readJson(manifestPath));
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    throw new Error(`Invalid event metadata in ${folder.path}: ${message}`, { cause: err });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`Invalid event metadata in ${folder.path}: ${message}`, { cause: error });
   }
 
   if (await fileExists(mdxCandidate)) {
@@ -221,12 +225,14 @@ export async function loadEventFolder(folder: DiscoveredEventFolder): Promise<Lo
   try {
     const parsed = jsonObjectSchema.safeParse(await readJson(schemaPath));
 
-    if (!parsed.success) throw new Error('a JSON Schema document must be an object');
+    if (!parsed.success) {
+      throw new Error('a JSON Schema document must be an object');
+    }
     schema = parsed.data;
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
     throw new Error(`Could not read schema for ${manifestPath} at ${schemaPath}: ${message}`, {
-      cause: err,
+      cause: error,
     });
   }
 
@@ -235,7 +241,7 @@ export async function loadEventFolder(folder: DiscoveredEventFolder): Promise<Lo
   const exampleCandidates =
     explicitExamples.length > 0 ? explicitExamples : await listExampleFiles(folder.path);
 
-  const examples: LoadedExample[] = [];
+  const examples: Array<LoadedExample> = [];
   const config = await readExampleConfig(folder.path);
 
   for (const candidate of exampleCandidates) {
@@ -278,8 +284,8 @@ export async function loadCatalogSnapshot(
   const root = path.resolve(eventsRoot);
   await waitForCatalogPublication(root);
   const folders = await discoverEventFolders(eventsRoot);
-  const events: LoadedEvent[] = [];
-  const diagnostics: CatalogDiagnostic[] = [];
+  const events: Array<LoadedEvent> = [];
+  const diagnostics: Array<CatalogDiagnostic> = [];
   const skipped = new Set<string>();
 
   try {
@@ -322,7 +328,9 @@ export async function loadCatalogSnapshot(
 
   const snapshot = { root, events, diagnostics, valid: diagnostics.length === 0 };
 
-  if (!snapshot.valid && opts.mode !== 'collect') throw new CatalogLoadError(snapshot);
+  if (!snapshot.valid && opts.mode !== 'collect') {
+    throw new CatalogLoadError(snapshot);
+  }
 
   return snapshot;
 }
@@ -331,6 +339,6 @@ export async function loadCatalogSnapshot(
 export async function loadCatalog(
   eventsRoot: string,
   opts: Omit<LoadCatalogOptions, 'mode'> = {},
-): Promise<LoadedEvent[]> {
+): Promise<Array<LoadedEvent>> {
   return (await loadCatalogSnapshot(eventsRoot, { ...opts, mode: 'strict' })).events;
 }

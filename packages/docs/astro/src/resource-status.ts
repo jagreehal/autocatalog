@@ -24,7 +24,9 @@ export interface ResourceStatusInput {
 export function statusPills(input: ResourceStatusInput): Array<{ text: string; tone?: PillTone }> {
   const pills: Array<{ text: string; tone?: PillTone }> = [];
 
-  if (input.version) pills.push({ text: versionLabel(input.version) });
+  if (input.version) {
+    pills.push({ text: versionLabel(input.version) });
+  }
 
   if (input.status && input.status !== 'active') {
     pills.push({
@@ -33,16 +35,20 @@ export function statusPills(input: ResourceStatusInput): Array<{ text: string; t
     });
   }
 
-  if (input.needsReview) pills.push({ text: 'needs review', tone: 'warn' });
+  if (input.needsReview) {
+    pills.push({ text: 'needs review', tone: 'warn' });
+  }
 
-  if (input.newer) pills.push({ text: 'new version available', tone: 'warn' });
+  if (input.newer) {
+    pills.push({ text: 'new version available', tone: 'warn' });
+  }
 
   return pills;
 }
 
 /** Banners a reader cannot miss: draft, deprecated, review, newer version. */
-export function statusBanners(input: ResourceStatusInput): StatusBanner[] {
-  const banners: StatusBanner[] = [];
+export function statusBanners(input: ResourceStatusInput): Array<StatusBanner> {
+  const banners: Array<StatusBanner> = [];
 
   if (input.newer) {
     banners.push({

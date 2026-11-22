@@ -11,10 +11,8 @@ steps:
       id: create_product
       label: Submits the new product
   - id: create_product
-    title: Create Product
-    custom:
-      title: Create Product
-      summary: 'Command: Create Product'
+    title: Product submitted
+    command: { ref: catalog/create-product }
     next_step:
       id: product_api
       label: Create
@@ -22,8 +20,9 @@ steps:
     title: Product API
     summary: Validates the product and saves it with an outbox record in one transaction.
     service: Product API
+    systems: [Product Database]
     next_steps:
-      - id: product_database
+      - id: product_created
         label: Valid
       - id: validation_failed
         label: Missing data
@@ -32,13 +31,7 @@ steps:
     custom:
       title: Rejected
       summary: The product is missing required details (price, images or category). The merchandiser fixes it and resubmits.
-  - id: product_database
-    title: Product Database
-    custom:
-      title: Product Database
-    next_step:
-      id: product_created
-      label: Outbox publishes
+    policy: Whenever a product is rejected, the merchandiser fixes it and resubmits
   - id: product_created
     title: Product Created
     summary: Three teams pick the new product up in parallel.
@@ -64,31 +57,24 @@ steps:
       id: search_indexing
       label: Index for search
   - id: search_indexing
-    title: Product Search Indexing
+    stage: Product Search Indexing
+    title: Product indexed for search
     summary: Gets the product into the search index. Click to expand the sub-flow.
-    custom:
-      title: Product Search Indexing
-      summary: 'Flow: Product Search Indexing'
-    next_step:
-      id: search_index
-      label: Indexed
-  - id: search_index
-    title: Search Index
-    custom:
-      title: Search Index
+    flow: search-platform/product-search-indexing
+    systems: [Search Index]
     next_step:
       id: launch_ready
       label: Searchable
   - id: get_stock_level
-    title: Get Stock Level
-    custom:
-      title: Get Stock Level
-      summary: 'Command: Get Stock Level'
+    title: Stock level found
+    track: happy
+    command: { ref: fulfilment/get-stock-level }
     next_step:
       id: inventory_service
       label: Query
   - id: inventory_service
     title: Inventory Service
+    track: happy
     service: Inventory Service
     next_steps:
       - id: launch_ready
@@ -100,31 +86,32 @@ steps:
     custom:
       title: Awaiting stock
       summary: The launch waits until the first delivery is booked into the warehouse.
+    policy: Whenever there's nothing in the warehouse, hold the launch until the first delivery is booked in
   - id: calculate_discount
-    title: Calculate Discount
-    custom:
-      title: Calculate Discount
-      summary: 'Command: Calculate Discount'
+    title: Launch offer requested
+    track: happy
+    command: { ref: shopping/calculate-discount }
     next_step:
       id: promotion_service
       label: 10% launch week offer
   - id: promotion_service
     title: Promotion Service
+    track: happy
     service: Promotion Service
     next_step:
       id: discount_calculated
       label: Offer scheduled
   - id: discount_calculated
     title: Discount Calculated
+    track: happy
     event: shopping/discount-calculated
     next_step:
       id: launch_ready
       label: Offer live
   - id: launch_ready
-    title: Launch checklist
-    custom:
-      title: Launch checklist
-      summary: The product goes live once it's searchable, in stock and its launch offer is set.
+    title: Product ready to launch
+    summary: The product goes live once it's searchable, in stock and its launch offer is set.
+    policy: Once the product is searchable, in stock and its launch offer is set, announce the launch
     next_step:
       id: notification_service
       label: Announce the launch
@@ -150,10 +137,8 @@ steps:
       id: search_products
       label: Searches for it
   - id: search_products
-    title: Search Products
-    custom:
-      title: Search Products
-      summary: 'Command: Search Products'
+    title: Products found
+    command: { ref: catalog/search-products }
     next_step:
       id: search_api
       label: Query
@@ -164,10 +149,8 @@ steps:
       id: get_product
       label: Opens the product page
   - id: get_product
-    title: Get Product
-    custom:
-      title: Get Product
-      summary: 'Command: Get Product'
+    title: Product page loaded
+    command: { ref: catalog/get-product }
     next_step:
       id: product_api_read
       label: Query
@@ -178,10 +161,8 @@ steps:
       id: get_product_reviews
       label: Load reviews
   - id: get_product_reviews
-    title: Get Product Reviews
-    custom:
-      title: Get Product Reviews
-      summary: 'Command: Get Product Reviews'
+    title: Reviews loaded
+    command: { ref: reviews/get-product-reviews }
     next_step:
       id: review_api
       label: Query
@@ -199,10 +180,8 @@ steps:
       title: Product live
       summary: The product is searchable, in stock, on offer and selling — with reviews on its page.
   - id: flag_review
-    title: Flag Review
-    custom:
-      title: Flag Review
-      summary: 'Command: Flag Review'
+    title: Fault reported
+    command: { ref: reviews/flag-review }
     next_step:
       id: review_flagged
       label: Report a safety issue
@@ -213,10 +192,8 @@ steps:
       id: delete_product
       label: Merchandiser pulls it
   - id: delete_product
-    title: Delete Product
-    custom:
-      title: Delete Product
-      summary: 'Command: Delete Product'
+    title: Withdrawal requested
+    command: { ref: catalog/delete-product }
     next_step:
       id: product_api_recall
       label: Withdraw
@@ -237,6 +214,7 @@ steps:
     custom:
       title: Product withdrawn
       summary: The product is off the storefront and out of search while the fault is investigated.
+    policy: Whenever a product is withdrawn, investigate the fault before it goes back on sale
 ---
 
 ## Overview

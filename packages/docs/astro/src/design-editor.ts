@@ -11,15 +11,14 @@ import {
   runtimeByEvent,
   designSchema,
   resolveDesign,
-  type Design,
-  type DesignInput,
-  type StudioModel,
 } from 'autocatalog-docs-core';
+import type { Design, DesignInput, StudioModel } from 'autocatalog-docs-core';
 import { Document, isMap, isSeq } from 'yaml';
 import { z } from 'zod';
 import type { DocsCatalog } from './catalog';
 import { markDesignsChanged, markSaved } from './dev-signals';
-import { canvasModel, type DesignCheck } from './ui/lib/canvas-model';
+import { canvasModel } from './ui/lib/canvas-model';
+import type { DesignCheck } from './ui/lib/canvas-model';
 
 /** What the editor reads of the catalog: its graph, and its events with the snapshots read. */
 type CatalogView = Pick<DocsCatalog, 'graph' | 'events' | 'snapshots'>;
@@ -33,7 +32,7 @@ export interface EditableDesign {
   /** The file on disk. */
   file: string;
   /** The keys each resource has in the file, in order: a save keeps them so. */
-  order: string[][];
+  order: Array<string>[];
 }
 
 // The resources as the file lists them, keys in the order written.
@@ -51,7 +50,9 @@ export function editableDesign(
 
   const root = catalog.repositoryRoots[repository];
 
-  if (!design || !root) return undefined;
+  if (!design || !root) {
+    return undefined;
+  }
 
   // The site read the design from this file; it is not a path anyone sends.
   const file = path.join(root, design.file);
@@ -170,16 +171,22 @@ export function designYaml(input: ReturnType<typeof designFromModel>): string {
   for (const key of LISTS) {
     const list = document.get(key);
 
-    if (isSeq(list)) for (const item of list.items) if (isMap(item)) item.flow = true;
+    if (isSeq(list)) {
+      for (const item of list.items) if (isMap(item)) item.flow = true;
+    }
   }
 
   const layout = document.get('layout');
 
   if (isMap(layout)) {
     for (const level of layout.items) {
-      if (!isMap(level.value)) continue;
+      if (!isMap(level.value)) {
+        continue;
+      }
 
-      for (const place of level.value.items) if (isMap(place.value)) place.value.flow = true;
+      for (const place of level.value.items) {
+        if (isMap(place.value)) place.value.flow = true;
+      }
     }
   }
 
@@ -205,8 +212,8 @@ export function fromThisSite(request: Request, url: URL): boolean {
 const fileName = (title: string) =>
   title
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '');
+    .replaceAll(/[^a-z0-9]+/g, '-')
+    .replaceAll(/^-|-$/g, '');
 
 /**
  * Start a design in `repository`: an empty `designs/<id>.md`, its id from the
@@ -221,16 +228,21 @@ export function startDesign(
   const root = catalog.repositoryRoots[repository];
   const base = fileName(title);
 
-  if (!root)
+  if (!root) {
     return { ok: false, error: `The site does not read a repository called ${repository}.` };
+  }
 
-  if (!base) return { ok: false, error: 'Give the design a title with a letter or digit in it.' };
+  if (!base) {
+    return { ok: false, error: 'Give the design a title with a letter or digit in it.' };
+  }
 
   const folder = path.join(root, DESIGNS_DIR);
 
   let id = base;
 
-  for (let n = 2; fs.existsSync(path.join(folder, `${id}.md`)); n++) id = `${base}-${n}`;
+  for (let n = 2; fs.existsSync(path.join(folder, `${id}.md`)); n++) {
+    id = `${base}-${n}`;
+  }
 
   fs.mkdirSync(folder, { recursive: true });
   // `wx`: a file that appeared since the check above is left as it is.
@@ -256,15 +268,21 @@ export function unreadable(
 ): string | undefined {
   const root = catalog.repositoryRoots[repository];
 
-  if (!root || !/^[a-z0-9][a-z0-9._-]*$/i.test(id)) return undefined;
+  if (!root || !/^[a-z0-9][a-z0-9._-]*$/i.test(id)) {
+    return undefined;
+  }
 
   const file = path.join(root, DESIGNS_DIR, `${id}.md`);
 
-  if (!fs.existsSync(file)) return undefined;
+  if (!fs.existsSync(file)) {
+    return undefined;
+  }
 
   const parsed = designSchema.safeParse(parseFrontmatter(fs.readFileSync(file, 'utf8')).data);
 
-  if (!parsed.success) return z.prettifyError(parsed.error).replace(/\n+/g, '; ');
+  if (!parsed.success) {
+    return z.prettifyError(parsed.error).replace(/\n+/g, '; ');
+  }
 
   try {
     resolveDesign(parsed.data, catalog.graph, { repository, id, file });

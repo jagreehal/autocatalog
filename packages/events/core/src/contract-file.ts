@@ -2,7 +2,8 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { parse as parseProto } from 'protobufjs';
 import { parse as parseYaml } from 'yaml';
-import { isJsonObject, jsonValueSchema, type JsonObject } from './json';
+import { isJsonObject, jsonValueSchema } from './json';
+import type { JsonObject } from './json';
 import { eventFromAvroSchema, looksLikeAvroSchema } from './scan-avro';
 import { eventsFromProtoRoot } from './scan-protobuf';
 import { pascalCase } from './utils';
@@ -86,7 +87,9 @@ export async function readContractFile(
       return { ok: false, reason: `${file} is not an Avro record schema` };
     }
 
-    if (!isJsonObject(value)) return { ok: false, reason: `${file} is not a JSON Schema object` };
+    if (!isJsonObject(value)) {
+      return { ok: false, reason: `${file} is not a JSON Schema object` };
+    }
 
     return { ok: true, schema: value, format: 'json-schema' };
   } catch (error) {

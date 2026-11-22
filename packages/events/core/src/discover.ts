@@ -19,13 +19,15 @@ async function fileExists(p: string): Promise<boolean> {
   }
 }
 
-async function walk(dir: string, results: string[]): Promise<void> {
+async function walk(dir: string, results: Array<string>): Promise<void> {
   const entries = await fs.readdir(dir, { withFileTypes: true });
 
   for (const entry of entries) {
     const full = path.join(dir, entry.name);
 
-    if (!entry.isDirectory()) continue;
+    if (!entry.isDirectory()) {
+      continue;
+    }
 
     if (
       (await fileExists(path.join(full, AUTOCATALOG_EVENT_FILE))) ||
@@ -38,20 +40,22 @@ async function walk(dir: string, results: string[]): Promise<void> {
   }
 }
 
-export async function discoverEventFolders(eventsRoot: string): Promise<DiscoveredEventFolder[]> {
+export async function discoverEventFolders(
+  eventsRoot: string,
+): Promise<Array<DiscoveredEventFolder>> {
   const absRoot = path.resolve(eventsRoot);
-  const folders: string[] = [];
+  const folders: Array<string> = [];
 
   try {
     await walk(absRoot, folders);
-  } catch (err) {
+  } catch (error) {
     // Missing or unreadable events directory — return empty list and let the
     // caller (validateCatalog) translate this into a structured error if needed.
-    if (err instanceof Error && 'code' in err && err.code === 'ENOENT') {
+    if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
       return [];
     }
 
-    throw err;
+    throw error;
   }
 
   return folders.map((folder) => {

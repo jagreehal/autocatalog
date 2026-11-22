@@ -14,11 +14,8 @@ import {
   readVendorMeta,
   rewriteObjectRefs,
   rewriteRefs,
-  type AdapterEvent,
-  type AdapterEventMeta,
-  type JsonObject,
-  type JsonValue,
 } from 'autocatalog-core';
+import type { AdapterEvent, AdapterEventMeta, JsonObject, JsonValue } from 'autocatalog-core';
 import { z } from 'zod';
 
 export interface RunFromAsyncApiOptions {
@@ -72,7 +69,9 @@ const operationV2Messages = z
   .transform(({ message: single }) => {
     const choice = z.object({ oneOf: z.array(z.unknown()) }).safeParse(single);
 
-    if (choice.success) return choice.data.oneOf;
+    if (choice.success) {
+      return choice.data.oneOf;
+    }
 
     return single ? [single] : [];
   });
@@ -112,7 +111,7 @@ type Transport = NonNullable<NonNullable<AdapterEvent['meta']>['transport']>[num
 function transportOf(
   doc: AsyncApiDocument,
   address: string,
-  channel: { servers?: unknown[]; bindings: object },
+  channel: { servers?: Array<unknown>; bindings: object },
 ): Transport {
   const servers = channel.servers ?? Object.values(doc.servers);
 
@@ -162,12 +161,15 @@ async function readAsyncApiDocument(file: string): Promise<AsyncApiDocument> {
   } catch (error) {
     const code = error instanceof Error && 'code' in error ? error.code : undefined;
 
-    if (code === 'ENOENT') throw new Error(`no such file: ${resolved}`, { cause: error });
+    if (code === 'ENOENT') {
+      throw new Error(`no such file: ${resolved}`, { cause: error });
+    }
 
-    if (code === 'EISDIR')
+    if (code === 'EISDIR') {
       throw new Error(`${resolved} is a directory — pass the document itself`, {
         cause: error,
       });
+    }
     throw new Error(`could not read ${resolved}: ${describe(error)}`, { cause: error });
   }
 
@@ -212,10 +214,10 @@ interface ImportedMessage {
   meta?: AdapterEventMeta | undefined;
   version?: string | undefined;
   payload: AdapterEvent['schema'];
-  producers: string[];
-  consumers: string[];
+  producers: Array<string>;
+  consumers: Array<string>;
   examples: AdapterEvent['examples'];
-  transport: Transport[];
+  transport: Array<Transport>;
 }
 
 /**
@@ -234,7 +236,7 @@ function addTransport(entry: ImportedMessage, transport: Transport): void {
 function channelDomain(channelName: string): string {
   const seg = channelName.split(/[/.]/)[0] ?? channelName;
 
-  return seg.replace(/[^a-zA-Z0-9_-]/g, '') || 'events';
+  return seg.replaceAll(/[^a-zA-Z0-9_-]/g, '') || 'events';
 }
 
 // Case is load-bearing: the event folder is pascalCase(id), and pascalCase can
@@ -244,8 +246,8 @@ function messageId(msg: Message, channelName: string): string {
   const raw = msg.name ?? msg.title ?? channelName;
 
   const id = String(raw)
-    .replace(/[/\s]+/g, '.')
-    .replace(/[^a-zA-Z0-9._-]/g, '');
+    .replaceAll(/[/\s]+/g, '.')
+    .replaceAll(/[^a-zA-Z0-9._-]/g, '');
 
   // Separators alone survive the strip — a channel named "///" reduces to ".",
   // which is truthy, becomes an empty folder name, and fails the whole publish
@@ -262,13 +264,15 @@ function collectExamples(msg: Message): AdapterEvent['examples'] {
   return (msg.examples ?? []).flatMap((raw, i) => {
     const ex = example.safeParse(raw);
 
-    if (!ex.success || ex.data.payload === undefined) return [];
+    if (!ex.success || ex.data.payload === undefined) {
+      return [];
+    }
 
     const written = ex.data.name ?? `example-${i + 1}`;
     const exampleCase = exampleCaseOf(written);
 
     // A folder that is not a case cannot be part of a file name, so it joins it.
-    const name = exampleCase ? written.slice(exampleCase.length + 1) : written.replace(/\//g, '-');
+    const name = exampleCase ? written.slice(exampleCase.length + 1) : written.replaceAll('/', '-');
 
     return [{ name, data: ex.data.payload, ...(exampleCase && { case: exampleCase }) }];
   });
@@ -285,7 +289,9 @@ const eventCatalogVersion = z.string().optional().catch(undefined);
 
 /** x-autocatalog on the resolved message, and the version EventCatalog's extension names. */
 function messageMeta(message: JsonValue) {
-  if (!isJsonObject(message)) return { meta: undefined, version: undefined };
+  if (!isJsonObject(message)) {
+    return { meta: undefined, version: undefined };
+  }
 
   const meta = readVendorMeta(message);
 
@@ -311,11 +317,15 @@ function importPayload(doc: AsyncApiDocument, payload: JsonValue, prefix: string
   const local = (ref: string): string => {
     const match = /^#\/components\/schemas\/([^/]+)(.*)$/.exec(ref);
 
-    if (!match) return ref;
+    if (!match) {
+      return ref;
+    }
 
     const [, component = '', rest = ''] = match;
 
-    if (component === root) return `#${rest}`;
+    if (component === root) {
+      return `#${rest}`;
+    }
 
     const name = component.startsWith(`${prefix}_`)
       ? component.slice(prefix.length + 1)
@@ -361,7 +371,9 @@ const envelopeData = z.object({ properties: z.object({ data: jsonValueSchema }) 
 
 /** The event's schema: the payload, or its `data` when the payload is a CloudEvent. */
 function eventSchema(doc: AsyncApiDocument, payload: JsonValue, meta?: AdapterEventMeta) {
-  if (meta?.envelope?.mode !== 'structured') return payload;
+  if (meta?.envelope?.mode !== 'structured') {
+    return payload;
+  }
 
   const envelope = envelopeData.safeParse(deref(doc, payload));
 
@@ -389,8 +401,8 @@ function notAnEvent(doc: AsyncApiDocument, raw: JsonValue): boolean {
   );
 }
 
-function fromV2(doc: AsyncApiDocument, skipped: string[]): ImportedMessage[] {
-  const app = String(doc.info?.title ?? 'Application').replace(/\s+/g, '');
+function fromV2(doc: AsyncApiDocument, skipped: Array<string>): Array<ImportedMessage> {
+  const app = String(doc.info?.title ?? 'Application').replaceAll(/\s+/g, '');
   const out = new Map<string, ImportedMessage>();
 
   for (const [channelName, channelRaw] of Object.entries(doc.channels)) {
@@ -411,7 +423,9 @@ function fromV2(doc: AsyncApiDocument, skipped: string[]): ImportedMessage[] {
     ] as const) {
       const operation = channel[op];
 
-      if (!operation) continue;
+      if (!operation) {
+        continue;
+      }
 
       const messages = operationV2Messages.parse(operation);
 
@@ -419,7 +433,9 @@ function fromV2(doc: AsyncApiDocument, skipped: string[]): ImportedMessage[] {
         let entry: ImportedMessage;
 
         try {
-          if (notAnEvent(doc, jsonValueSchema.parse(msgRaw))) continue;
+          if (notAnEvent(doc, jsonValueSchema.parse(msgRaw))) {
+            continue;
+          }
 
           const msg = message.parse(deref(doc, msgRaw));
           const { meta, version } = messageMeta(jsonValueSchema.parse(deref(doc, msgRaw)));
@@ -427,7 +443,9 @@ function fromV2(doc: AsyncApiDocument, skipped: string[]): ImportedMessage[] {
 
           // A message that reduces to nothing addressable cannot become a
           // folder, and silently writing it at the domain root is worse.
-          if (!id) throw new Error('message has no usable name, title or channel');
+          if (!id) {
+            throw new Error('message has no usable name, title or channel');
+          }
 
           const domain = meta?.domain ?? channelDomain(channelName);
 
@@ -458,9 +476,13 @@ function fromV2(doc: AsyncApiDocument, skipped: string[]): ImportedMessage[] {
 
         addTransport(entry, transportOf(doc, channelName, channel));
 
-        if (role === 'producer' && !entry.producers.includes(app)) entry.producers.push(app);
+        if (role === 'producer' && !entry.producers.includes(app)) {
+          entry.producers.push(app);
+        }
 
-        if (role === 'consumer' && !entry.consumers.includes(app)) entry.consumers.push(app);
+        if (role === 'consumer' && !entry.consumers.includes(app)) {
+          entry.consumers.push(app);
+        }
         out.set(identityOf(entry), entry);
       }
     }
@@ -469,8 +491,8 @@ function fromV2(doc: AsyncApiDocument, skipped: string[]): ImportedMessage[] {
   return [...out.values()];
 }
 
-function fromV3(doc: AsyncApiDocument, skipped: string[]): ImportedMessage[] {
-  const app = String(doc.info?.title ?? 'Application').replace(/\s+/g, '');
+function fromV3(doc: AsyncApiDocument, skipped: Array<string>): Array<ImportedMessage> {
+  const app = String(doc.info?.title ?? 'Application').replaceAll(/\s+/g, '');
 
   const byChannel = new Map<
     string,
@@ -536,12 +558,16 @@ function fromV3(doc: AsyncApiDocument, skipped: string[]): ImportedMessage[] {
       let entry: ImportedMessage;
 
       try {
-        if (notAnEvent(doc, jsonValueSchema.parse(raw))) continue;
+        if (notAnEvent(doc, jsonValueSchema.parse(raw))) {
+          continue;
+        }
 
         const { meta, version } = messageMeta(jsonValueSchema.parse(deref(doc, raw)));
         const id = messageId(msg, channel.channelName);
 
-        if (!id) throw new Error('message has no usable name, title or channel');
+        if (!id) {
+          throw new Error('message has no usable name, title or channel');
+        }
 
         const domain = meta?.domain ?? channelDomain(channel.channelName);
 
@@ -573,10 +599,13 @@ function fromV3(doc: AsyncApiDocument, skipped: string[]): ImportedMessage[] {
 
       addTransport(entry, channel.transport);
 
-      if (operation.action === 'send' && !entry.producers.includes(app)) entry.producers.push(app);
+      if (operation.action === 'send' && !entry.producers.includes(app)) {
+        entry.producers.push(app);
+      }
 
-      if (operation.action === 'receive' && !entry.consumers.includes(app))
+      if (operation.action === 'receive' && !entry.consumers.includes(app)) {
         entry.consumers.push(app);
+      }
       out.set(identityOf(entry), entry);
     }
   }
@@ -599,12 +628,14 @@ export async function runFromAsyncApi(opts: RunFromAsyncApiOptions): Promise<num
   const docVersion = String(doc.info?.version ?? '1.0.0');
   // Every reason a message did not make it. An import that quietly drops things
   // is worse than one that fails, because the catalog looks complete.
-  const skipped: string[] = [];
-  let messages: ImportedMessage[];
+  const skipped: Array<string> = [];
+  let messages: Array<ImportedMessage>;
 
-  if (versionField.startsWith('2')) messages = fromV2(doc, skipped);
-  else if (versionField.startsWith('3')) messages = fromV3(doc, skipped);
-  else {
+  if (versionField.startsWith('2')) {
+    messages = fromV2(doc, skipped);
+  } else if (versionField.startsWith('3')) {
+    messages = fromV3(doc, skipped);
+  } else {
     console.error(
       kleur.red(`✗ unsupported asyncapi version "${versionField}" — 2.x and 3.x are supported`),
     );
@@ -612,7 +643,7 @@ export async function runFromAsyncApi(opts: RunFromAsyncApiOptions): Promise<num
     return 1;
   }
 
-  const events: AdapterEvent[] = messages.map((msg) => ({
+  const events: Array<AdapterEvent> = messages.map((msg) => ({
     id: msg.id,
     version: msg.version ?? docVersion,
     name: msg.name,
@@ -637,7 +668,9 @@ export async function runFromAsyncApi(opts: RunFromAsyncApiOptions): Promise<num
     // possible causes they hit.
     console.error(kleur.red('✗ nothing to import'));
 
-    for (const reason of skipped) console.error(kleur.yellow(`  ! ${reason}`));
+    for (const reason of skipped) {
+      console.error(kleur.yellow(`  ! ${reason}`));
+    }
     console.error(
       skipped.length > 0
         ? '  Every message in the document was skipped for the reasons above.'
@@ -648,20 +681,22 @@ export async function runFromAsyncApi(opts: RunFromAsyncApiOptions): Promise<num
   }
 
   // One event in several versions: the newest is the event, the rest its history.
-  const versions = new Map<string, AdapterEvent[]>();
+  const versions = new Map<string, Array<AdapterEvent>>();
 
   for (const event of events) {
     const key = `${event.domain}/${event.id}`;
     versions.set(key, [...(versions.get(key) ?? []), event]);
   }
 
-  const current: AdapterEvent[] = [];
+  const current: Array<AdapterEvent> = [];
   const history: Array<{ event: AdapterEvent; parentFolderName: string }> = [];
 
   for (const same of versions.values()) {
     const [newest, ...older] = [...same].sort((a, b) => compareSemverish(b.version, a.version));
 
-    if (!newest) continue;
+    if (!newest) {
+      continue;
+    }
 
     current.push(newest);
     history.push(...older.map((event) => ({ event, parentFolderName: newest.folderName })));
@@ -680,7 +715,9 @@ export async function runFromAsyncApi(opts: RunFromAsyncApiOptions): Promise<num
       console.log(`${kleur.green('✓')} ${msg.domain}/${msg.id}@${docVersion}`);
     }
 
-    for (const reason of skipped) console.warn(kleur.yellow(`  ! skipped ${reason}`));
+    for (const reason of skipped) {
+      console.warn(kleur.yellow(`  ! skipped ${reason}`));
+    }
     console.log(kleur.bold(`\n${messages.length} event(s) imported to ${opts.out}`));
 
     if (skipped.length > 0) {

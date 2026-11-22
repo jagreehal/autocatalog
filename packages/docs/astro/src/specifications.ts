@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { buildServices, isJsonObject, type JsonValue } from 'autocatalog-core';
+import { buildServices, isJsonObject } from 'autocatalog-core';
+import type { JsonValue } from 'autocatalog-core';
 import { parse as parseYaml } from 'yaml';
 import { z } from 'zod';
 import type { CatalogEvent } from './catalog';
@@ -23,7 +24,7 @@ export interface CatalogSpecification {
   title: string;
   summary?: string | undefined;
   /** The services its sidecar says it belongs to. */
-  services: string[];
+  services: Array<string>;
   source: string;
 }
 
@@ -65,15 +66,15 @@ type Sidecar = z.infer<typeof sidecarSchema>['specification'];
 const slug = (value: string) =>
   value
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
+    .replaceAll(/[^a-z0-9]+/g, '-')
+    .replaceAll(/^-+|-+$/g, '');
 
 /**
  * Regular files under a directory, skipping symlinks: one could name any file
  * on the build machine. A folder that cannot be read is named and skipped.
  */
-function files(dir: string, root: string, warn: (message: string) => void): string[] {
-  let entries: fs.Dirent[];
+function files(dir: string, root: string, warn: (message: string) => void): Array<string> {
+  let entries: Array<fs.Dirent>;
 
   try {
     entries = fs.readdirSync(dir, { withFileTypes: true });
@@ -88,7 +89,9 @@ function files(dir: string, root: string, warn: (message: string) => void): stri
   return entries.flatMap((entry) => {
     const full = path.join(dir, entry.name);
 
-    if (entry.isDirectory()) return entry.name.startsWith('.') ? [] : files(full, root, warn);
+    if (entry.isDirectory()) {
+      return entry.name.startsWith('.') ? [] : files(full, root, warn);
+    }
 
     return entry.isFile() ? [full] : [];
   });
@@ -100,7 +103,9 @@ function readSidecar(file: string, warn: (message: string) => void, where: strin
     `${path.basename(file, path.extname(file))}.autocatalog.json`,
   );
 
-  if (!fs.lstatSync(sidecar, { throwIfNoEntry: false })?.isFile()) return undefined;
+  if (!fs.lstatSync(sidecar, { throwIfNoEntry: false })?.isFile()) {
+    return undefined;
+  }
 
   let raw: JsonValue;
 
@@ -113,7 +118,9 @@ function readSidecar(file: string, warn: (message: string) => void, where: strin
   }
 
   // A JSON Schema's sidecar describes an event, not a specification.
-  if (!isJsonObject(raw) || !('specification' in raw)) return undefined;
+  if (!isJsonObject(raw) || !('specification' in raw)) {
+    return undefined;
+  }
 
   const parsed = sidecarSchema.safeParse(raw);
 
@@ -158,10 +165,12 @@ export function repositorySpecifications(
   repository: string,
   repositoryRoot: string,
   warn: (message: string) => void,
-): CatalogSpecification[] {
+): Array<CatalogSpecification> {
   const root = path.join(repositoryRoot, CONTRACTS);
 
-  if (!fs.lstatSync(root, { throwIfNoEntry: false })?.isDirectory()) return [];
+  if (!fs.lstatSync(root, { throwIfNoEntry: false })?.isDirectory()) {
+    return [];
+  }
 
   const found = files(root, repositoryRoot, (message) => warn(`${repository}: ${message}`)).flatMap(
     (full) => {
@@ -171,7 +180,9 @@ export function repositorySpecifications(
       const known = BY_EXTENSION.get(extension);
       const ambiguous = BY_CONTENT.get(extension);
 
-      if ((!known && !ambiguous) || full.endsWith('.autocatalog.json')) return [];
+      if ((!known && !ambiguous) || full.endsWith('.autocatalog.json')) {
+        return [];
+      }
 
       const sidecar: Sidecar | undefined = readSidecar(full, warn, where);
 
@@ -180,24 +191,29 @@ export function repositorySpecifications(
       // One file that cannot be read leaves out that file, not its neighbours.
       try {
         if (fs.statSync(full).size > MAX_BYTES) {
-          if (known || sidecar) warn(`${where}: larger than 1 MB, so it is not published`);
+          if (known || sidecar) {
+            warn(`${where}: larger than 1 MB, so it is not published`);
+          }
 
           return [];
         }
 
         source = fs.readFileSync(full, 'utf8');
       } catch (error) {
-        if (known || sidecar)
+        if (known || sidecar) {
           warn(
             `${where}: not read, so it is not published — ${error instanceof Error ? error.message : String(error)}`,
           );
+        }
 
         return [];
       }
 
       const asyncApi = ambiguous && asAsyncApi(source);
 
-      if (!known && !asyncApi && !sidecar) return [];
+      if (!known && !asyncApi && !sidecar) {
+        return [];
+      }
 
       if (source.includes('\0')) {
         warn(`${where}: not a text file, so it is not published`);
@@ -239,7 +255,9 @@ export function repositorySpecifications(
     .map((spec) => {
       let name = shared.has(bare(spec.file)) ? full(spec.file) : bare(spec.file);
 
-      for (let n = 2; taken.has(name); n += 1) name = `${full(spec.file)}-${n}`;
+      for (let n = 2; taken.has(name); n += 1) {
+        name = `${full(spec.file)}-${n}`;
+      }
       taken.add(name);
 
       return { ...spec, name };
@@ -260,8 +278,8 @@ export const specificationFilePath = (spec: CatalogSpecification) =>
  */
 export function servicesForSpecification(
   spec: CatalogSpecification,
-  events: CatalogEvent[],
-): string[] {
+  events: Array<CatalogEvent>,
+): Array<string> {
   // Only services with a page: one the sidecar names that no event mentions is
   // reported by the build, not linked to.
   return [...buildServices(events.map(({ event }) => event)).keys()]
@@ -273,16 +291,16 @@ export function servicesForSpecification(
 }
 
 export function specificationsForService(
-  specs: CatalogSpecification[],
-  events: CatalogEvent[],
+  specs: Array<CatalogSpecification>,
+  events: Array<CatalogEvent>,
   service: string,
-): CatalogSpecification[] {
+): Array<CatalogSpecification> {
   return specs.filter((spec) => servicesForSpecification(spec, events).includes(service));
 }
 
 export function specificationPageProps(
   spec: CatalogSpecification,
-  events: CatalogEvent[],
+  events: Array<CatalogEvent>,
   base: string,
 ): SpecificationPageProps {
   return {
@@ -300,7 +318,7 @@ export function specificationPageProps(
 }
 
 export function specificationsPageProps(
-  specs: CatalogSpecification[],
+  specs: Array<CatalogSpecification>,
   base: string,
 ): SpecificationsPageProps {
   return {

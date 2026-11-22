@@ -4,24 +4,29 @@ import {
   createRepositoryResource,
   relationshipKey,
   resourceKey,
-  type AgentSystemCatalogResource,
-  type AgentSystemResourceAttributes,
-  type CatalogRelationship,
-  type CatalogRelationshipType,
-  type CatalogResource,
-  type ProvenanceValue,
-  type ResourceGraph,
-  type ResourceRef,
-  type SourceLocation,
 } from 'autocatalog-core';
-import { type Catalog, refKey } from './loader.js';
-import { type Entity, type EntityKind, ENTITY_KINDS } from './schemas.js';
-import { linkEvents, type EventLink } from './events.js';
+import type {
+  AgentSystemCatalogResource,
+  AgentSystemResourceAttributes,
+  CatalogRelationship,
+  CatalogRelationshipType,
+  CatalogResource,
+  ProvenanceValue,
+  ResourceGraph,
+  ResourceRef,
+  SourceLocation,
+} from 'autocatalog-core';
+import { refKey } from './loader.js';
+import type { Catalog } from './loader.js';
+import { ENTITY_KINDS } from './schemas.js';
+import type { Entity, EntityKind } from './schemas.js';
+import { linkEvents } from './events.js';
+import type { EventLink } from './events.js';
 import { mcpServerFacts } from './mcp-snapshot.js';
 import { validateEdges } from './validator.js';
 
 export class AgentsResourceGraphError extends Error {
-  constructor(readonly failures: string[]) {
+  constructor(readonly failures: Array<string>) {
     super(
       `refusing to compile an Agent resource graph with ${failures.length} issue(s): ${failures.join('; ')}`,
     );
@@ -40,7 +45,7 @@ export interface CreateAgentsResourceGraphOptions {
    * edge to the exact Event resource and one that does not resolve fails the
    * graph. When omitted, no event edges are drawn.
    */
-  events?: GraphEvent[];
+  events?: Array<GraphEvent>;
 }
 
 /** An Event resource as the composed graph holds it, with the repository that publishes it. */
@@ -59,15 +64,21 @@ function entityRef(entity: Entity, repository?: string): ResourceRef<EntityKind>
   const namespace =
     entity.kind === 'skill' && !entity.plugin ? (entity.repository?.id ?? repository) : undefined;
 
-  if (namespace) ref.namespace = namespace;
+  if (namespace) {
+    ref.namespace = namespace;
+  }
 
-  if (entity.version) ref.version = entity.version;
+  if (entity.version) {
+    ref.version = entity.version;
+  }
 
   return ref;
 }
 
 function provenanceOf(entity: Entity): ProvenanceValue {
-  if (!entity.discovery) return 'declared';
+  if (!entity.discovery) {
+    return 'declared';
+  }
 
   return entity.discovery.confidence === 'inferred' ? 'inferred' : 'extracted';
 }
@@ -105,7 +116,9 @@ function sourceOf(catalog: Catalog, entity: Entity): SourceLocation | undefined 
 
   const meta = catalog.meta.get(refKey(entity.kind, entity.id));
 
-  if (!meta) return undefined;
+  if (!meta) {
+    return undefined;
+  }
 
   return { file: relative(catalog.root, meta.path).split('\\').join('/') };
 }
@@ -131,7 +144,7 @@ function attributesOf(entity: Entity, eventEdges: boolean): AgentSystemResourceA
   // graph built without the event catalog does not lose them.
   const events = eventEdges ? ['produces', 'consumes'] : [];
 
-  const relationshipFields: Partial<Record<EntityKind, string[]>> = {
+  const relationshipFields: Partial<Record<EntityKind, Array<string>>> = {
     agent: ['model', 'tools', 'servers', 'policies', 'domain', ...events],
     tool: ['domain', 'server', ...events],
     'mcp-server': ['snapshot'],
@@ -158,7 +171,7 @@ function attributesOf(entity: Entity, eventEdges: boolean): AgentSystemResourceA
 /** Event links placed on exact Event resources, and the ones that could not be. */
 interface EventEdges {
   edges: Array<{ link: EventLink; to: ResourceRef }>;
-  failures: string[];
+  failures: Array<string>;
 }
 
 /**
@@ -170,7 +183,7 @@ function resolveEventEdges(
   catalog: Catalog,
   options: CreateAgentsResourceGraphOptions,
 ): EventEdges {
-  const candidates = new Map<string, GraphEvent[]>();
+  const candidates = new Map<string, Array<GraphEvent>>();
 
   for (const event of options.events ?? []) {
     const key = `${event.domain}/${event.id}`;
@@ -218,7 +231,9 @@ export function createAgentsResourceGraph(
     ...(eventEdges?.failures ?? []),
   ];
 
-  if (failures.length > 0) throw new AgentsResourceGraphError(failures);
+  if (failures.length > 0) {
+    throw new AgentsResourceGraphError(failures);
+  }
 
   const resources = new Map<string, CatalogResource>();
   const relationships = new Map<string, CatalogRelationship>();
@@ -259,7 +274,9 @@ export function createAgentsResourceGraph(
   ) => {
     const to = refs.get(refKey(toKind, toId));
 
-    if (!to) return;
+    if (!to) {
+      return;
+    }
     const evidence = evidenceFor(from, field);
 
     const relationship: CatalogRelationship = {
@@ -282,8 +299,9 @@ export function createAgentsResourceGraph(
       const provenance = provenanceOf(entity);
       const attributes = attributesOf(entity, eventEdges !== undefined);
 
-      if (entity.kind === 'mcp-server')
+      if (entity.kind === 'mcp-server') {
         Object.assign(attributes, mcpServerFacts(catalog, entity.id));
+      }
 
       const resource: AgentSystemCatalogResource = {
         ref: entityRef(entity, options.repository),
@@ -325,20 +343,28 @@ export function createAgentsResourceGraph(
           addRelationship('governedBy', agent, 'policy', policy, 'policies');
         }
 
-        if (agent.domain) addRelationship('belongsTo', agent, 'domain', agent.domain, 'domain');
+        if (agent.domain) {
+          addRelationship('belongsTo', agent, 'domain', agent.domain, 'domain');
+        }
 
         const url = agent.repository?.url;
 
         const repository =
           agent.repository?.id ?? (url ? repositoryId(url) : null) ?? options.repository;
 
-        if (repository) addRepositoryEdge('defines', repository, resource, agent);
+        if (repository) {
+          addRepositoryEdge('defines', repository, resource, agent);
+        }
       } else if (entity.kind === 'tool') {
         const tool = entity;
 
-        if (tool.domain) addRelationship('belongsTo', tool, 'domain', tool.domain, 'domain');
+        if (tool.domain) {
+          addRelationship('belongsTo', tool, 'domain', tool.domain, 'domain');
+        }
 
-        if (tool.server) addRelationship('exposedBy', tool, 'mcp-server', tool.server, 'server');
+        if (tool.server) {
+          addRelationship('exposedBy', tool, 'mcp-server', tool.server, 'server');
+        }
       } else if (entity.kind === 'mcp-server') {
         const url = entity.repository?.url;
         const declared = entity.repository?.id ?? (url ? repositoryId(url) : null);
@@ -346,16 +372,22 @@ export function createAgentsResourceGraph(
         const local = entity.origin === 'built' && !entity.used_by ? options.repository : undefined;
         const definedBy = declared ?? local;
 
-        if (definedBy) addRepositoryEdge('defines', definedBy, resource, entity);
+        if (definedBy) {
+          addRepositoryEdge('defines', definedBy, resource, entity);
+        }
 
         const users = entity.used_by ?? (options.repository ? [options.repository] : []);
 
-        for (const user of users) addRepositoryEdge('usesServer', user, resource, entity);
+        for (const user of users) {
+          addRepositoryEdge('usesServer', user, resource, entity);
+        }
       } else if (entity.kind === 'skill') {
         // A plugin's skill is the plugin's; the plugin draws that edge.
         const owner = entity.repository?.id ?? options.repository;
 
-        if (!entity.plugin && owner) addRepositoryEdge('defines', owner, resource, entity);
+        if (!entity.plugin && owner) {
+          addRepositoryEdge('defines', owner, resource, entity);
+        }
       } else if (entity.kind === 'agent-plugin') {
         for (const skill of [...new Set(entity.skills)].sort()) {
           addRelationship('defines', entity, 'skill', skill, 'skills');
@@ -367,14 +399,18 @@ export function createAgentsResourceGraph(
 
         const builtIn = entity.repository?.id ?? (entity.path ? options.repository : undefined);
 
-        if (builtIn) addRepositoryEdge('defines', builtIn, resource, entity);
+        if (builtIn) {
+          addRepositoryEdge('defines', builtIn, resource, entity);
+        }
 
         // With `used_by`, this catalog gathers many repositories, as a sweep writes it.
         const users =
           entity.used_by ??
           (entity.enabled_in.length > 0 && options.repository ? [options.repository] : []);
 
-        for (const user of users) addRepositoryEdge('usesPlugin', user, resource, entity);
+        for (const user of users) {
+          addRepositoryEdge('usesPlugin', user, resource, entity);
+        }
       } else if (entity.kind === 'workflow') {
         const workflow = entity;
 
@@ -395,7 +431,9 @@ export function createAgentsResourceGraph(
   for (const { link, to } of eventEdges?.edges ?? []) {
     const from = catalog.entities.get(link.from.kind)?.get(link.from.id);
 
-    if (!from) continue;
+    if (!from) {
+      continue;
+    }
 
     // Same direction the event catalog draws for services: a producer points at
     // the event, and the event points at whoever consumes it.

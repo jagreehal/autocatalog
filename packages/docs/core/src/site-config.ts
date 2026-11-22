@@ -116,6 +116,19 @@ const link = z.strictObject({ label: z.string().trim().min(1), href: z.string().
  * block a site's `extend` adds checks its own props.
  */
 export const HOME_BLOCKS = {
+  /** One search field across the page, opening the site's search. */
+  search: z.strictObject({ block: z.literal('search') }),
+  /** Where the catalog's facts come from (extracted, declared, inferred), beside what needs attention. */
+  provenance: z.strictObject({
+    block: z.literal('provenance'),
+    title: z.string().trim().min(1).optional(),
+  }),
+  /** Every kind the catalog holds, its count and a link to its list; or these kinds. */
+  browse: z.strictObject({
+    block: z.literal('browse'),
+    title: z.string().trim().min(1).optional(),
+    kinds: z.array(z.string().trim().min(1)).optional(),
+  }),
   /** A heading, a line under it and links to act on. */
   hero: z.strictObject({
     block: z.literal('hero'),
@@ -182,7 +195,9 @@ export const HOME_BLOCKS = {
  * Blocks that show the company's own systems and upkeep, which a site for an
  * `audience` does not publish: naming one there fails the build.
  */
-export const INSIDE_ONLY_BLOCKS: readonly HomeBlockName[] = [
+export const INSIDE_ONLY_BLOCKS: ReadonlyArray<HomeBlockName> = [
+  'provenance',
+  'browse',
   'countCards',
   'graph',
   'recent',
@@ -193,7 +208,9 @@ export type HomeBlockName = keyof typeof HOME_BLOCKS;
 
 /** A built-in block, checked against its props; any other is a site's own, checked at build. */
 const layoutBlock = z.looseObject({ block: z.string().trim().min(1) }).superRefine((value, ctx) => {
-  if (!(value.block in HOME_BLOCKS)) return;
+  if (!(value.block in HOME_BLOCKS)) {
+    return;
+  }
 
   // SAFETY: the guard above returned for every name HOME_BLOCKS does not hold.
   const parsed = HOME_BLOCKS[value.block as HomeBlockName].safeParse(value);
@@ -206,25 +223,24 @@ const layoutBlock = z.looseObject({ block: z.string().trim().min(1) }).superRefi
 export type LayoutBlock = z.infer<typeof layoutBlock>;
 
 /** The home page with no `layouts.home`: the built-in page is exactly these blocks. */
-export const DEFAULT_HOME_LAYOUT: LayoutBlock[] = [
-  { block: 'countCards' },
+export const DEFAULT_HOME_LAYOUT: Array<LayoutBlock> = [
+  { block: 'search' },
+  { block: 'provenance' },
+  { block: 'browse' },
   { block: 'graph' },
   { block: 'recent' },
-  { block: 'docs' },
-  { block: 'attention' },
-  { block: 'explore' },
-  { block: 'tags' },
 ];
 
 /** The same for a site with an `audience`: guides and ways in, no map of the company. */
-export const DEFAULT_PUBLIC_HOME_LAYOUT: LayoutBlock[] = [
+export const DEFAULT_PUBLIC_HOME_LAYOUT: Array<LayoutBlock> = [
+  { block: 'search' },
   { block: 'docs' },
   { block: 'explore' },
   { block: 'tags' },
 ];
 
 /** The home layout a site gets when it writes none. */
-export const defaultHomeLayout = (config: Pick<SiteConfig, 'audience'>): LayoutBlock[] =>
+export const defaultHomeLayout = (config: Pick<SiteConfig, 'audience'>): Array<LayoutBlock> =>
   config.audience ? DEFAULT_PUBLIC_HOME_LAYOUT : DEFAULT_HOME_LAYOUT;
 
 /** Everything a company sets about its site, in `autocatalog.site.json`. */
@@ -342,7 +358,7 @@ export const siteConfigSchema = z.strictObject({
 });
 
 export type SiteConfig = Omit<z.infer<typeof siteConfigSchema>, '$schema' | 'extend'> & {
-  extend?: string[];
+  extend?: Array<string>;
 };
 
 export const SITE_CONFIG = 'autocatalog.site.json';
@@ -351,11 +367,15 @@ export const SITE_CONFIG = 'autocatalog.site.json';
 export function readSiteConfig(dir: string): SiteConfig {
   const file = path.join(dir, SITE_CONFIG);
 
-  if (!fs.existsSync(file)) return {};
+  if (!fs.existsSync(file)) {
+    return {};
+  }
 
   const parsed = siteConfigSchema.safeParse(JSON.parse(fs.readFileSync(file, 'utf8')));
 
-  if (!parsed.success) throw new Error(`${SITE_CONFIG}: ${z.prettifyError(parsed.error)}`);
+  if (!parsed.success) {
+    throw new Error(`${SITE_CONFIG}: ${z.prettifyError(parsed.error)}`);
+  }
 
   const { $schema: _schema, extend, ...config } = parsed.data;
 

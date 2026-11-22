@@ -2,7 +2,8 @@
 // `access` holds everything its frontmatter's `access:` lists, and the pages,
 // sidebar, home page and assistant all follow that one rule.
 import type { SiteAccess } from 'autocatalog-docs-astro';
-import { findReader, type Reader, readers } from './readers.ts';
+import { findReader, readers } from './readers.ts';
+import type { Reader } from './readers.ts';
 
 export default {
   reader: ({ cookies }) => findReader(cookies.get('reader')?.value),

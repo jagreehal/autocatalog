@@ -5,10 +5,8 @@ import {
   isServiceCatalogResource,
   relationshipKey,
   resourceKey,
-  type CatalogRelationship,
-  type CatalogResource,
-  type ResourceRef,
 } from 'autocatalog-core';
+import type { CatalogRelationship, CatalogResource, ResourceRef } from 'autocatalog-core';
 import { frontmatterSchema } from './frontmatter';
 import type { Doc } from './read-docs';
 import { documentRef } from './resource-graph';
@@ -22,7 +20,9 @@ import { documentRef } from './resource-graph';
  * Documents have none — `related:` is how one document names another.
  */
 export function aboutReference(resource: CatalogResource): string | undefined {
-  if (isDocumentCatalogResource(resource)) return undefined;
+  if (isDocumentCatalogResource(resource)) {
+    return undefined;
+  }
 
   if (isEventCatalogResource(resource)) {
     return `event/${resource.attributes.domain}/${resource.ref.id}`;
@@ -44,7 +44,7 @@ export type AboutResolution = { ref: ResourceRef } | { failure: string };
  */
 export function resolveAbout(
   reference: string,
-  resources: CatalogResource[],
+  resources: Array<CatalogResource>,
   repository?: string,
 ): AboutResolution {
   const named = resources.filter((resource) => aboutReference(resource) === reference);
@@ -55,7 +55,9 @@ export function resolveAbout(
 
   const pick = local.length > 0 ? local : named;
 
-  if (pick.length === 1) return { ref: pick[0]!.ref };
+  if (pick.length === 1) {
+    return { ref: pick[0]!.ref };
+  }
 
   // A domain is what its events and services name; no resource stands for it.
   const domain = /^domain\/(.+)$/.exec(reference)?.[1];
@@ -91,7 +93,7 @@ export function resolveAbout(
 export interface DescribesRelationships {
   relationships: Array<CatalogRelationship<'describes'>>;
   /** One line per `about:` entry that did not resolve, naming the document. */
-  failures: string[];
+  failures: Array<string>;
 }
 
 /**
@@ -101,12 +103,12 @@ export interface DescribesRelationships {
  * drawn as an edge to nothing.
  */
 export function createDescribesRelationships(
-  docs: Doc[],
-  resources: CatalogResource[],
+  docs: Array<Doc>,
+  resources: Array<CatalogResource>,
   options: { repositories?: ReadonlyMap<string, string> } = {},
 ): DescribesRelationships {
   const relationships = new Map<string, CatalogRelationship<'describes'>>();
-  const failures: string[] = [];
+  const failures: Array<string> = [];
 
   for (const doc of docs) {
     const repository = options.repositories?.get(doc.repo) ?? doc.repo;

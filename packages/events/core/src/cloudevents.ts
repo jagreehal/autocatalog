@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { jsonSchemaAjv, jsonSchemaDialect } from './json-schema-dialect';
-import { jsonObjectSchema, jsonValueSchema, type JsonObject, type JsonValue } from './json';
+import { jsonObjectSchema, jsonValueSchema } from './json';
+import type { JsonObject, JsonValue } from './json';
 
 export const cloudEventsEnvelope = z.object({
   type: z.literal('cloudevents'),
@@ -34,8 +35,9 @@ const contextSchema = z
   )
   .superRefine((context, ctx) => {
     // A source is a URI-reference, which permits paths such as /billing.
-    if (/\s/.test(context.source))
+    if (/\s/.test(context.source)) {
       ctx.addIssue({ code: 'custom', path: ['source'], message: 'not a URI-reference' });
+    }
   });
 
 /** What is wrong with an envelope, naming the attribute and never quoting a value. */
@@ -57,20 +59,25 @@ function decode(
   input: JsonValue,
   headers: Record<string, string> | undefined,
   mode: CloudEventsEnvelope['mode'],
-): DecodedCloudEvent | EnvelopeProblem[] {
+): DecodedCloudEvent | Array<EnvelopeProblem> {
   const context: JsonObject = {};
   let payload: JsonValue | undefined = input;
 
   if (mode === 'binary') {
-    if (!headers)
+    if (!headers) {
       return [{ message: 'CloudEvents binary mode is declared, but no ce- headers were supplied' }];
+    }
 
     for (const [name, value] of Object.entries(headers)) {
       const key = name.toLowerCase();
 
-      if (key === 'content-type') context.datacontenttype = value;
+      if (key === 'content-type') {
+        context.datacontenttype = value;
+      }
 
-      if (!key.startsWith('ce-')) continue;
+      if (!key.startsWith('ce-')) {
+        continue;
+      }
 
       // Values are percent-encoded outside printable ASCII, `"` and `%`.
       try {
@@ -82,11 +89,14 @@ function decode(
   } else {
     const event = jsonObjectSchema.safeParse(input);
 
-    if (!event.success) return [{ message: 'A structured CloudEvent is a JSON object' }];
+    if (!event.success) {
+      return [{ message: 'A structured CloudEvent is a JSON object' }];
+    }
     const { data, data_base64, ...attributes } = event.data;
 
-    if (data !== undefined && data_base64 !== undefined)
+    if (data !== undefined && data_base64 !== undefined) {
       return [{ attribute: 'data', message: 'data and data_base64 are mutually exclusive' }];
+    }
     Object.assign(context, attributes);
     payload = data;
 
@@ -96,7 +106,9 @@ function decode(
         .regex(/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/)
         .safeParse(data_base64);
 
-      if (!encoded.success) return [{ attribute: 'data_base64', message: 'not base64' }];
+      if (!encoded.success) {
+        return [{ attribute: 'data_base64', message: 'not base64' }];
+      }
       payload = encoded.data;
 
       if (String(context.datacontenttype ?? '').startsWith('application/json')) {
@@ -113,7 +125,7 @@ function decode(
 
   const parsed = contextSchema.safeParse(context);
 
-  const problems: EnvelopeProblem[] = [
+  const problems: Array<EnvelopeProblem> = [
     ...Object.keys(context)
       .filter((name) => !ATTRIBUTE_NAME.test(name))
       .map((attribute) => ({
@@ -126,7 +138,9 @@ function decode(
     })),
   ];
 
-  if (!parsed.success || problems.length) return problems;
+  if (!parsed.success || problems.length) {
+    return problems;
+  }
 
   return { mode, context: parsed.data, payload };
 }
@@ -142,7 +156,9 @@ export function decodeCloudEvent(
 ): DecodedCloudEvent {
   const decoded = decode(input, headers, mode);
 
-  if (Array.isArray(decoded)) throw new Error(describeProblem(decoded[0]!));
+  if (Array.isArray(decoded)) {
+    throw new Error(describeProblem(decoded[0]!));
+  }
 
   return decoded;
 }
@@ -163,20 +179,23 @@ export function validateCloudEvent(
   schema: JsonObject,
   headers?: Record<string, string>,
   mode: CloudEventsEnvelope['mode'] = headers ? 'binary' : 'structured',
-): CloudEventsFinding[] {
+): Array<CloudEventsFinding> {
   const decoded = decode(input, headers, mode);
 
-  if (Array.isArray(decoded))
+  if (Array.isArray(decoded)) {
     return decoded.map((problem) => ({
       code: 'cloudevents_envelope_invalid',
       ...(problem.attribute && { path: problem.attribute }),
       message: describeProblem(problem),
     }));
+  }
 
   // In the dialect ac validate compiled the same schema in.
   const validate = jsonSchemaAjv(jsonSchemaDialect(schema)).compile(schema);
 
-  if (validate(decoded.payload)) return [];
+  if (validate(decoded.payload)) {
+    return [];
+  }
 
   return (validate.errors ?? []).map((error) => ({
     code: 'cloudevents_payload_invalid',

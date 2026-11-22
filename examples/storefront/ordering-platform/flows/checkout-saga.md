@@ -21,30 +21,24 @@ steps:
       id: reserve_inventory
       label: Step 1 — reserve inventory
   - id: reserve_inventory
-    title: Reserve Inventory
-    custom:
-      title: Reserve Inventory
-      summary: 'Command: Reserve Inventory'
+    title: Inventory reserved
+    command: { ref: ordering/reserve-inventory }
     next_steps:
       - id: authorize_payment
         label: Reserved
       - id: compensate_release
         label: Out of stock
   - id: authorize_payment
-    title: Authorize Payment
-    custom:
-      title: Authorize Payment
-      summary: 'Command: Authorize Payment'
+    title: Payment authorized
+    command: { ref: ordering/authorize-payment }
     next_steps:
       - id: create_order
         label: Authorized
       - id: compensate_release
         label: Declined
   - id: create_order
-    title: Create Order
-    custom:
-      title: Create Order
-      summary: 'Command: Create Order'
+    title: Order created
+    command: { ref: ordering/create-order }
     next_step:
       id: saga_complete
       label: Order created
@@ -54,10 +48,9 @@ steps:
       title: Saga complete
       summary: Inventory reserved, payment authorized and order created. The saga succeeds.
   - id: compensate_release
-    title: Compensate
-    custom:
-      title: Compensate and abort
-      summary: A step failed. The orchestrator releases any reservation and voids any authorization, then aborts the saga without creating an order.
+    title: Saga aborted
+    summary: A step failed. The orchestrator releases any reservation and voids any authorization, then aborts the saga without creating an order.
+    policy: Whenever a step fails, release any reservation, void any authorization and abort without creating an order
 ---
 
 ## Overview

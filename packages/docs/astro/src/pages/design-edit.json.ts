@@ -33,8 +33,9 @@ export const POST: APIRoute = async ({ params, request, url }) => {
   const catalog = await docsCatalog();
   const editable = editableDesign(catalog, params.repository ?? '', params.id ?? '');
 
-  if (!editable)
+  if (!editable) {
     return json({ ok: false, errors: ['There is no such design.'], warnings: [] }, 404);
+  }
 
   const body = z
     .object({ model: z.unknown(), save: z.boolean().default(false), tab: z.string().default('') })
@@ -68,7 +69,9 @@ export const GET: APIRoute = async ({ params }) => {
   const [repository, id] = [params.repository ?? '', params.id ?? ''];
   const editable = editableDesign(catalog, repository, id);
 
-  if (editable) return json(openDesign(catalog, editable));
+  if (editable) {
+    return json(openDesign(catalog, editable));
+  }
 
   // Written by someone else so that it does not hold: say why, rather than that it is gone.
   const problem = unreadable(catalog, repository, id);

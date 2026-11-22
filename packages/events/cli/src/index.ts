@@ -6,10 +6,11 @@ import { runValidate } from './commands/validate';
 import { discoverAdapters, registerAdapterCommand } from './adapters';
 import { registerDeliveryCommands } from './commands/delivery';
 import { registerResourceCommands, withScanIdentities } from './commands/resources';
-import { FAIL_ON, type FailOn } from './federation-fail-on';
+import { FAIL_ON } from './federation-fail-on';
+import type { FailOn } from './federation-fail-on';
 
 /** `--fail-on gateway,network`: each a kind of finding `federation status` reports. */
-const failOnKinds = (value: string): FailOn[] => {
+const failOnKinds = (value: string): Array<FailOn> => {
   const kinds = value.split(',').map((kind) => kind.trim());
   const unknown = kinds.filter((kind) => !FAIL_ON.some((known) => known === kind));
 
@@ -426,7 +427,7 @@ export function buildProgram(): Command {
       "copy each event's index.mdx narrative; EventCatalog compiles it as MDX and runs any code in it, so only for repositories you trust",
       false,
     )
-    .action(async (dir: string, opts: { root: string[]; narrative: boolean }) => {
+    .action(async (dir: string, opts: { root: Array<string>; narrative: boolean }) => {
       const { exportToEventCatalog, loadEventCatalogSources } = await import('./eventcatalog');
 
       const result = await exportToEventCatalog({
@@ -442,7 +443,9 @@ export function buildProgram(): Command {
         `Wrote ${result.events} event(s) in ${result.versions} version(s), ${result.commands} command(s) and queries, ${result.services} service(s), ${result.dataStores} data store(s) and ${result.teams} team(s) across ${result.domains} domain(s) to ${dir}`,
       );
 
-      for (const reason of result.skipped) console.warn(`  ! ${reason}`);
+      for (const reason of result.skipped) {
+        console.warn(`  ! ${reason}`);
+      }
     });
 
   program
@@ -564,7 +567,9 @@ export function buildProgram(): Command {
     .command('health')
     .description('Score each event on completeness, ownership, examples, and versioning')
     .option('--cwd <dir>', 'project directory', process.cwd())
-    .option('--min <score>', 'exit nonzero if any event scores below this', (v) => parseInt(v, 10))
+    .option('--min <score>', 'exit nonzero if any event scores below this', (v) =>
+      Number.parseInt(v, 10),
+    )
     .action(async (opts: { cwd: string; min?: number }) => {
       const { runHealth } = await import('./commands/health');
       process.exit(await runHealth({ cwd: opts.cwd, min: opts.min }));
@@ -615,7 +620,7 @@ export function buildProgram(): Command {
     .option(
       '--example-path <path>',
       'example JSON path inside repo (repeatable)',
-      (v, prev: string[]) => {
+      (v, prev: Array<string>) => {
         prev.push(v);
 
         return prev;
@@ -625,7 +630,7 @@ export function buildProgram(): Command {
     .option(
       '--example-url <url>',
       'example JSON URL (repeatable)',
-      (v, prev: string[]) => {
+      (v, prev: Array<string>) => {
         prev.push(v);
 
         return prev;
@@ -638,7 +643,7 @@ export function buildProgram(): Command {
     .option(
       '--allow-host <host>',
       'allow additional remote host for URL import (repeatable)',
-      (v, prev: string[]) => {
+      (v, prev: Array<string>) => {
         prev.push(v);
 
         return prev;
@@ -663,12 +668,12 @@ export function buildProgram(): Command {
         summary?: string;
         schemaPath?: string;
         schemaUrl?: string;
-        examplePath: string[];
-        exampleUrl: string[];
+        examplePath: Array<string>;
+        exampleUrl: Array<string>;
         dryRun: boolean;
         githubTokenEnv?: string;
         cloneWith: 'gh' | 'git';
-        allowHost: string[];
+        allowHost: Array<string>;
         timeoutMs: string;
         maxBytes: string;
         overwrite: boolean;
@@ -820,7 +825,7 @@ export function buildProgram(): Command {
           printLayout?: string;
           topic?: string;
           owner?: string;
-          repo?: string[];
+          repo?: Array<string>;
           cache: string;
           out: string;
           site?: string;
@@ -840,7 +845,7 @@ export function buildProgram(): Command {
           liveEvent?: string;
           lock?: string;
           unlocked: boolean;
-          index?: string[];
+          index?: Array<string>;
           strict: boolean;
         },
       ) => {
@@ -888,11 +893,11 @@ export function buildProgram(): Command {
       async (opts: {
         topic?: string;
         owner?: string;
-        repo?: string[];
-        only?: string[];
+        repo?: Array<string>;
+        only?: Array<string>;
         ref?: string;
         latestTag?: boolean;
-        service?: string[];
+        service?: Array<string>;
         lock: string;
         cache: string;
       }) => {
@@ -926,11 +931,11 @@ export function buildProgram(): Command {
         opts: {
           topic?: string;
           owner?: string;
-          repo?: string[];
+          repo?: Array<string>;
           lock?: string;
           cache: string;
           format: 'text' | 'json';
-          failOn?: FailOn[];
+          failOn?: Array<FailOn>;
         },
       ) => {
         const { runFederationStatus } = await import('./federation');
@@ -953,7 +958,7 @@ export function buildProgram(): Command {
       async (opts: {
         owner?: string;
         topic?: string;
-        repo?: string[];
+        repo?: Array<string>;
         root: string;
         internal?: string;
         prune?: boolean;
@@ -983,7 +988,7 @@ export function buildProgram(): Command {
  * them when it is not. Deliberately not a dependency: an events-only project
  * should not install the agent model to run `ac scan`.
  */
-export async function runAgents(argv: string[]): Promise<number> {
+export async function runAgents(argv: Array<string>): Promise<number> {
   try {
     const { runAgentsCli } = await import('autocatalog-agents-cli');
 
@@ -992,7 +997,9 @@ export async function runAgents(argv: string[]): Promise<number> {
     const missing =
       error instanceof Error && 'code' in error && error.code === 'ERR_MODULE_NOT_FOUND';
 
-    if (!missing) throw error;
+    if (!missing) {
+      throw error;
+    }
     console.error(
       'Agent commands need autocatalog-agents-cli:\n  pnpm add -D autocatalog-agents-cli',
     );
@@ -1005,7 +1012,9 @@ export async function buildProgramWithAdapters(cwd: string): Promise<Command> {
   const program = buildProgram();
   const adapters = await discoverAdapters(cwd);
 
-  for (const a of adapters) registerAdapterCommand(program, a);
+  for (const a of adapters) {
+    registerAdapterCommand(program, a);
+  }
 
   return program;
 }

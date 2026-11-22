@@ -1,5 +1,6 @@
 import fs from 'node:fs/promises';
-import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
+import { createServer } from 'node:http';
+import type { IncomingMessage, Server, ServerResponse } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
@@ -19,7 +20,7 @@ kleur.enabled = false;
 
 let root: string;
 
-let servers: Server[] = [];
+let servers: Array<Server> = [];
 
 beforeEach(async () => {
   root = await fs.mkdtemp(path.join(os.tmpdir(), 'ac-snapshot-'));
@@ -51,7 +52,7 @@ const listen = async (
 };
 
 const body = async (req: IncomingMessage): Promise<Buffer> => {
-  const chunks: Buffer[] = [];
+  const chunks: Array<Buffer> = [];
 
   for await (const chunk of req) {
     // SAFETY: a request with no encoding set streams Buffers.
@@ -64,7 +65,7 @@ const body = async (req: IncomingMessage): Promise<Buffer> => {
 type Tools = Array<{ name: string; description: string; field?: string; destructive?: boolean }>;
 
 /** A real `2026-07-28` server from the v2 SDK, reading its tools on each request. */
-const modernServer = (tools: () => Tools, seen: Headers[] = []) => {
+const modernServer = (tools: () => Tools, seen: Array<Headers> = []) => {
   const handler = createMcpHandler(() => {
     const server = new McpServer({ name: 'modern', version: '2.0.0' });
 
@@ -87,7 +88,9 @@ const modernServer = (tools: () => Tools, seen: Headers[] = []) => {
     const headers = new Headers();
 
     for (const [name, value] of Object.entries(req.headers)) {
-      if (value) headers.set(name, String(value));
+      if (value) {
+        headers.set(name, String(value));
+      }
     }
 
     const data = await body(req);
@@ -163,7 +166,7 @@ const manifest = async (id: string, data: Parameters<typeof JSON.stringify>[0]) 
   );
 };
 
-const run = async (command: typeof runSnapshot, ...args: string[]) => {
+const run = async (command: typeof runSnapshot, ...args: Array<string>) => {
   let out = '';
 
   const capture = (chunk: string | Uint8Array) => {
@@ -277,7 +280,7 @@ describe('ac agents snapshot', () => {
   });
 
   it('sends credentials from the environment and never writes them', async () => {
-    const seen: Headers[] = [];
+    const seen: Array<Headers> = [];
     const url = await modernServer(() => [{ name: 'search', description: 'Search' }], seen);
 
     vi.stubEnv('VENDOR_TOKEN', 'tok_supersecret');
@@ -494,7 +497,7 @@ describe('ac agents snapshot', () => {
       description: 'From the list',
     });
 
-    const requests: string[] = [];
+    const requests: Array<string> = [];
 
     const url = await listen((req, res) => {
       requests.push(`${req.headers.authorization} ${req.url}`);

@@ -11,10 +11,10 @@ import {
   loadCatalog,
   loadCatalogSnapshot,
   publishCatalog,
-  type AdapterEvent,
 } from '../src/index';
+import type { AdapterEvent } from '../src/index';
 
-const roots: string[] = [];
+const roots: Array<string> = [];
 
 async function tempRoot(): Promise<string> {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'autocatalog-boundary-'));

@@ -6,7 +6,8 @@ import { isIcon } from './icons';
 import type { Stat } from './ui/components/Stats';
 import type { DocListItem } from './ui/lib/docs';
 import type { VisualiserGraph } from './ui/lib/visualiser';
-import type { HomeBlockData, RecentChange } from './ui/pages/HomeBlock';
+import type { CatalogProvenance, HomeBlockData, RecentChange } from './ui/pages/HomeBlock';
+import { RECENT_SHOWN } from './ui/pages/HomePage';
 import type { ExploreCard, HomePageProps } from './ui/pages/HomePage';
 
 /** One entry of a home layout: a built-in block with its data, or a site's own by name. */
@@ -19,17 +20,20 @@ const blockProps = z.record(z.string(), z.json());
 export interface HomeLayoutContext {
   base: string;
   /** The counts, chosen by these kinds, or as the home page chooses them. */
-  stats: (kinds?: string[]) => Stat[];
-  documents: DocListItem[];
+  stats: (kinds?: Array<string>) => Array<Stat>;
+  documents: Array<DocListItem>;
   /** Every document, by repository, for a `docs` block with no folder. */
   repos: HomePageProps['repos'];
-  apis: ExploreCard[];
+  apis: Array<ExploreCard>;
   /** The ways into the catalog, as the built-in page offers them. */
-  explore: ExploreCard[];
+  explore: Array<ExploreCard>;
   tags: HomePageProps['tags'];
   attention?: HomePageProps['attention'];
+  provenance?: CatalogProvenance | undefined;
+  /** The search page, when the site renders per request and has no search dialog. */
+  searchAction?: string | undefined;
   /** What changed most recently, newest first. */
-  recent: RecentChange[];
+  recent: Array<RecentChange>;
   map?: VisualiserGraph | undefined;
   catalogHref?: string | undefined;
 }
@@ -44,7 +48,7 @@ const inFolder = (item: DocListItem, folder: string) =>
     .split('/')
     .slice(1)
     .join('/')
-    .startsWith(`${folder.replace(/^\/|\/$/g, '')}/`);
+    .startsWith(`${folder.replaceAll(/^\/|\/$/g, '')}/`);
 
 /**
  * Each block of a home layout with the catalog's data it shows: `layouts.home`,
@@ -53,9 +57,9 @@ const inFolder = (item: DocListItem, folder: string) =>
  * block the site adds is passed its props as written.
  */
 export function resolveHomeLayout(
-  layout: LayoutBlock[],
+  layout: Array<LayoutBlock>,
   context: HomeLayoutContext,
-): HomeLayoutEntry[] {
+): Array<HomeLayoutEntry> {
   return layout.map((entry): HomeLayoutEntry => {
     if (!(entry.block in HOME_BLOCKS)) {
       const { block: name, ...props } = entry;
@@ -67,6 +71,23 @@ export function resolveHomeLayout(
     const block = HOME_BLOCKS[entry.block as HomeBlockName].parse(entry);
 
     switch (block.block) {
+      case 'search':
+        return { custom: false, data: { block: 'search', action: context.searchAction } };
+      case 'provenance':
+        return {
+          custom: false,
+          data: {
+            block: 'provenance',
+            title: block.title,
+            provenance: context.provenance,
+            attention: context.attention,
+          },
+        };
+      case 'browse':
+        return {
+          custom: false,
+          data: { block: 'browse', title: block.title, stats: context.stats(block.kinds) },
+        };
       case 'hero':
         return {
           custom: false,
@@ -127,7 +148,11 @@ export function resolveHomeLayout(
       case 'recent':
         return {
           custom: false,
-          data: { block: 'recent', title: block.title, items: context.recent },
+          data: {
+            block: 'recent',
+            title: block.title,
+            items: context.recent.slice(0, RECENT_SHOWN),
+          },
         };
       case 'attention':
         return { custom: false, data: { block: 'attention', attention: context.attention } };

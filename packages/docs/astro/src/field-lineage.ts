@@ -5,17 +5,17 @@ import type { PropNode } from './ui/lib/schema-tree';
 export interface FieldLineage {
   /** Other events (or this one) that declare the same path. */
   carriers: number;
-  consumers: string[];
-  producers: string[];
+  consumers: Array<string>;
+  producers: Array<string>;
   conflict?: string | undefined;
 }
 
 /** Attach lineage from the field index onto each property by dotted path. */
 export function withFieldLineage(
-  nodes: PropNode[],
+  nodes: Array<PropNode>,
   fields: Map<string, FieldSummary>,
   describeConflict?: (field: FieldSummary) => string | undefined,
-): PropNode[] {
+): Array<PropNode> {
   return nodes.map((node) => attach(node, fields, describeConflict));
 }
 
@@ -43,6 +43,6 @@ function attach(
 }
 
 /** Index fields for one event's schema paths. */
-export function fieldsByPath(fields: FieldSummary[]): Map<string, FieldSummary> {
+export function fieldsByPath(fields: Array<FieldSummary>): Map<string, FieldSummary> {
   return new Map(fields.map((field) => [field.path, field]));
 }

@@ -1,6 +1,5 @@
 import { createMarkdownProcessor } from '@astrojs/markdown-remark';
-import type { ResourceRef } from 'autocatalog-core';
-import type { WorkflowStepObservation } from 'autocatalog-core';
+import type { ResourceRef, WorkflowStepObservation } from 'autocatalog-core';
 import {
   bigPicture,
   flowDiagram,
@@ -32,7 +31,8 @@ import type {
   FlowStormView,
   FlowsPageProps,
 } from './ui/pages';
-import { pageOf, type CatalogGraphOptions } from './visualiser';
+import { pageOf } from './visualiser';
+import type { CatalogGraphOptions } from './visualiser';
 
 /** Where a flow's page lives on the site, relative to its base. */
 export const flowPath = (flow: Flow) => `flows/${flow.repository}/${flow.id}/`;
@@ -43,7 +43,7 @@ export function flowVisualiser(
   catalog: Pick<DocsCatalog, 'graph'>,
   base: string,
   pages: Pick<CatalogGraphOptions, 'servicePages' | 'eventPages'>,
-  notes: FlowNote[] = [],
+  notes: Array<FlowNote> = [],
 ): VisualiserGraph {
   const { nodes, edges, steps, lanes, resources } = flowDiagram(flow, catalog.graph);
 
@@ -62,7 +62,9 @@ export function flowVisualiser(
     const resource = resources[step.id];
     const href = resource ? pageOf(resource, base, pages) : step.url;
 
-    if (href) hrefs[step.id] = href;
+    if (href) {
+      hrefs[step.id] = href;
+    }
   }
 
   return {
@@ -73,14 +75,16 @@ export function flowVisualiser(
   };
 }
 
-const notesOf = (flow: Flow, notes: FlowNote[]) =>
+const notesOf = (flow: Flow, notes: Array<FlowNote>) =>
   notes.filter((note) => note.repository === flow.repository && note.flow === flow.id);
 
-function openHotspots(flow: Flow, notes: FlowNote[]): Map<string, number> {
+function openHotspots(flow: Flow, notes: Array<FlowNote>): Map<string, number> {
   const open = new Map<string, number>();
 
   for (const { hotspot, step } of notesOf(flow, notes)) {
-    if (hotspot && step) open.set(step, (open.get(step) ?? 0) + 1);
+    if (hotspot && step) {
+      open.set(step, (open.get(step) ?? 0) + 1);
+    }
   }
 
   return open;
@@ -117,7 +121,7 @@ const EVIDENCE_LABELS = [
   'Business rules',
 ];
 
-const evidenceRows = (row: TransitionEvidence): FlowPageEvidence[] =>
+const evidenceRows = (row: TransitionEvidence): Array<FlowPageEvidence> =>
   [row.declared, row.schema, row.code, observedLine(row), row.rules].map((value, index) => ({
     label: EVIDENCE_LABELS[index]!,
     value,
@@ -128,8 +132,10 @@ function stepEvidenceRows(
   evidence: FlowEvidence | undefined,
   flow: Flow,
   step: FlowStep,
-): FlowPageEvidence[] {
-  if (!evidence || !step.transition) return [];
+): Array<FlowPageEvidence> {
+  if (!evidence || !step.transition) {
+    return [];
+  }
 
   const row = stepEvidence(evidence, flow, step);
 
@@ -180,7 +186,7 @@ export const renderNarrative = async (body: string) =>
   (await (await narrative()).render(body)).code;
 
 /** Where a step sits in its flow page's list, so a sticky can lead to its facts. */
-export const stepAnchor = (id: string) => `step-${id.replace(/[^\w-]+/g, '-')}`;
+export const stepAnchor = (id: string) => `step-${id.replaceAll(/[^\w-]+/g, '-')}`;
 
 /**
  * A flow as an EventStorming board, with each sticky leading to its step, each
@@ -194,7 +200,7 @@ export function flowStormView(
   const board = stormBoard(flow, catalog.flowNotes);
   const titles = new Map(flow.steps.map((step) => [step.id, step.title]));
 
-  const view = (stickies: StormSticky[]) =>
+  const view = (stickies: Array<StormSticky>) =>
     stickies.map((sticky) => ({
       kind: sticky.kind,
       text: sticky.text,
@@ -204,7 +210,7 @@ export function flowStormView(
       href: sticky.step && `${base}${flowPath(flow)}#${stepAnchor(sticky.step)}`,
     }));
 
-  const columns: StormColumnView[] = board.columns.map((column) => {
+  const columns: Array<StormColumnView> = board.columns.map((column) => {
     const zoom = column.subflow
       ? catalog.flows.find(
           (candidate) => `${candidate.repository}/${candidate.id}` === column.subflow,
@@ -326,9 +332,9 @@ const stepLine = (ran: WorkflowStepObservation | undefined) =>
   ]);
 
 export function flowsPageProps(
-  flows: Flow[],
+  flows: Array<Flow>,
   base: string,
-  notes: FlowNote[] = [],
+  notes: Array<FlowNote> = [],
 ): FlowsPageProps {
   const byKey = new Map(flows.map((flow) => [`${flow.repository}/${flow.id}`, flow]));
 
@@ -353,7 +359,11 @@ export function flowsPageProps(
 }
 
 /** The flows a resource is a step in, as a card on its page; none when it is in none. */
-export function flowRecords(flows: Flow[], ref: ResourceRef, base: string): ResourceLinksProps[] {
+export function flowRecords(
+  flows: Array<Flow>,
+  ref: ResourceRef,
+  base: string,
+): Array<ResourceLinksProps> {
   // Any version: a page is about the resource, and a step names its current one.
   const same = (step: FlowStep) =>
     step.ref?.kind === ref.kind && step.ref.namespace === ref.namespace && step.ref.id === ref.id;

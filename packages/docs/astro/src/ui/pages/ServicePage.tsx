@@ -10,14 +10,14 @@ import {
   ItemTitle,
 } from '#ui/components/ui/item.tsx';
 import type { VisualiserGraph } from '../lib/visualiser';
-import {
-  EventCatalogDiagram,
-  type EventCatalogDiagramProps,
-} from '../components/EventCatalogDiagram';
+import { EventCatalogDiagram } from '../components/EventCatalogDiagram';
+import type { EventCatalogDiagramProps } from '../components/EventCatalogDiagram';
 import { Evidence } from '../components/Evidence';
-import { FlowStrip, type FlowStripProps } from '../components/FlowStrip';
+import { FlowStrip } from '../components/FlowStrip';
+import type { FlowStripProps } from '../components/FlowStrip';
 import { Graph } from '../components/Graph';
-import { ResourceLinks, type ResourceLinksProps } from '../components/ResourceLinks';
+import { ResourceLinks } from '../components/ResourceLinks';
+import type { ResourceLinksProps } from '../components/ResourceLinks';
 import { IconTile } from '../components/IconTile';
 
 export interface ServiceEvent {
@@ -36,12 +36,12 @@ export interface ServicePageProps {
   flow: Omit<FlowStripProps, 'label'>;
   visualiser?: VisualiserGraph | undefined;
   /** "Produces" and "Consumes", each only when the service has any. */
-  sections: Array<{ heading: string; slug: string; events: ServiceEvent[] }>;
+  sections: Array<{ heading: string; slug: string; events: Array<ServiceEvent> }>;
   /** The OpenAPI specs it serves, each with its reference page. */
   apis?: Array<{ title: string; file: string; href: string }> | undefined;
   documents: ResourceLinksProps['links'];
   /** Decisions, runbooks and incidents about it: one card per kind that has any. */
-  records?: ResourceLinksProps[] | undefined;
+  records?: Array<ResourceLinksProps> | undefined;
   /** When EventCatalog drew this service. Inline when it can embed, else a link. */
   diagram?: EventCatalogDiagramProps | undefined;
   /** Who owns it, when its own record says: imported from EventCatalog or Backstage. */

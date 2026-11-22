@@ -6,13 +6,13 @@ import {
   diffMcpSnapshots,
   renderMcpChangesGitHub,
   serialiseMcpSnapshot,
-  type McpToolSnapshot,
 } from './mcp-snapshot.js';
+import type { McpToolSnapshot } from './mcp-snapshot.js';
 
-const snapshot = (...tools: McpToolSnapshot[]) =>
+const snapshot = (...tools: Array<McpToolSnapshot>) =>
   createMcpSnapshot({ server: 's', connection: 'default', source: 'live', tools });
 
-const object = (properties: JsonObject, required: string[] = []) => ({
+const object = (properties: JsonObject, required: Array<string> = []) => ({
   type: 'object',
   properties,
   required,
@@ -42,7 +42,7 @@ describe('diffMcpSnapshots', () => {
   });
 
   it('breaks on narrowing what an input accepts, not on widening it', () => {
-    const accepts = (...values: string[]) => ({
+    const accepts = (...values: Array<string>) => ({
       name: 't',
       inputSchema: object({ a: { type: 'string', enum: values } }),
     });

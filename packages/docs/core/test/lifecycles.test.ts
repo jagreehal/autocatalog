@@ -3,13 +3,12 @@ import os from 'node:os';
 import path from 'node:path';
 import type { JsonObject } from 'autocatalog-core';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { type Flow, readFlows } from '../src/flows';
+import { readFlows } from '../src/flows';
+import type { Flow } from '../src/flows';
 import {
   checkLifecycles,
   FLOW_EVIDENCE_SPEC,
-  type FlowEvidence,
   flowNotes,
-  type LifecycleEntity,
   parseTransitionObservations,
   readFlowEvidence,
   stepEvidence,
@@ -17,6 +16,7 @@ import {
   verifyFlows,
   writeFlowEvidence,
 } from '../src/lifecycles';
+import type { FlowEvidence, LifecycleEntity } from '../src/lifecycles';
 
 let root: string;
 
@@ -83,7 +83,9 @@ steps:
 `;
 
 async function flows(...files: Array<[string, string]>) {
-  for (const [name, body] of files) await fs.writeFile(path.join(root, 'flows', name), body);
+  for (const [name, body] of files) {
+    await fs.writeFile(path.join(root, 'flows', name), body);
+  }
 
   const result = readFlows([{ repository: 'orders', dir: root }], {
     resources: [],
@@ -176,7 +178,7 @@ describe('checkLifecycles', () => {
   it('keeps apart lifecycles whose names read the same when joined', async () => {
     const lifecycle = { states: ['new', 'done'], initial: ['new'], terminal: [] };
 
-    const entities: LifecycleEntity[] = [
+    const entities: Array<LifecycleEntity> = [
       { id: 'a.b', lifecycles: { c: lifecycle } },
       { id: 'a', lifecycles: { 'b.c': lifecycle } },
     ];

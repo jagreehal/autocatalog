@@ -20,7 +20,7 @@ async function file(repository: string, rel: string, text: string) {
   await fs.writeFile(full, text);
 }
 
-const repos = (...names: string[]) =>
+const repos = (...names: Array<string>) =>
   names.map((repository) => ({ repository, dir: path.join(root, repository) }));
 
 const targets = {

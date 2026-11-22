@@ -12,7 +12,7 @@ export type Observations = {
   agents: Set<string>;
   modelUsage: Map<string, Set<string>>;
   toolUsage: Map<string, Set<string>>;
-  mcpCalls: McpCall[];
+  mcpCalls: Array<McpCall>;
   spanCount: number;
 };
 
@@ -51,16 +51,24 @@ type OtlpAttribute = z.infer<typeof OtlpAttributeSchema>;
 
 type OtlpSpan = z.infer<typeof OtlpSpanSchema>;
 
-const findAttr = (attrs: OtlpAttribute[] | undefined, key: string): string | undefined => {
-  if (!attrs) return undefined;
+const findAttr = (attrs: Array<OtlpAttribute> | undefined, key: string): string | undefined => {
+  if (!attrs) {
+    return undefined;
+  }
   const found = attrs.find((a) => a.key === key);
   const v = found?.value;
 
-  if (!v) return undefined;
+  if (!v) {
+    return undefined;
+  }
 
-  if (v.stringValue !== undefined) return v.stringValue;
+  if (v.stringValue !== undefined) {
+    return v.stringValue;
+  }
 
-  if (v.intValue !== undefined) return String(v.intValue);
+  if (v.intValue !== undefined) {
+    return String(v.intValue);
+  }
 
   return undefined;
 };
@@ -98,7 +106,9 @@ type McpToolRef = Pick<McpCall, 'tool'> & { server: string | undefined };
 const mcpCallOf = (span: OtlpSpan, raw: string): McpToolRef => {
   const [, integration, name] = ADDRESS.exec(raw) ?? [];
 
-  if (integration && name) return { server: integration, tool: name };
+  if (integration && name) {
+    return { server: integration, tool: name };
+  }
 
   const server = firstAttr(span.attributes, SERVER_KEYS);
 
@@ -109,13 +119,15 @@ const mcpCallOf = (span: OtlpSpan, raw: string): McpToolRef => {
 };
 
 const firstAttr = (
-  attrs: OtlpAttribute[] | undefined,
-  keys: readonly string[],
+  attrs: Array<OtlpAttribute> | undefined,
+  keys: ReadonlyArray<string>,
 ): string | undefined => {
   for (const k of keys) {
     const v = findAttr(attrs, k);
 
-    if (v) return v;
+    if (v) {
+      return v;
+    }
   }
 
   return undefined;
@@ -124,7 +136,9 @@ const firstAttr = (
 const looksLikeLlmSpan = (span: OtlpSpan): boolean => {
   const name = (span.name ?? '').toLowerCase();
 
-  if (/\b(llm|gen_ai|chat\.completion|completion|inference)\b/.test(name)) return true;
+  if (/\b(llm|gen_ai|chat\.completion|completion|inference)\b/.test(name)) {
+    return true;
+  }
 
   return firstAttr(span.attributes, MODEL_KEYS) !== undefined;
 };
@@ -132,7 +146,9 @@ const looksLikeLlmSpan = (span: OtlpSpan): boolean => {
 const looksLikeToolSpan = (span: OtlpSpan): boolean => {
   const name = (span.name ?? '').toLowerCase();
 
-  if (/\b(tool|function|call)\b/.test(name)) return true;
+  if (/\b(tool|function|call)\b/.test(name)) {
+    return true;
+  }
 
   return firstAttr(span.attributes, TOOL_KEYS) !== undefined;
 };
@@ -171,7 +187,9 @@ export const parseOtlpJson = (raw: string): Observations => {
           }
         }
 
-        if (!agentId) continue;
+        if (!agentId) {
+          continue;
+        }
 
         obs.agents.add(agentId);
         obs.spanCount += 1;
@@ -179,13 +197,17 @@ export const parseOtlpJson = (raw: string): Observations => {
         if (looksLikeLlmSpan(span)) {
           const modelId = firstAttr(spanAttrs, MODEL_KEYS);
 
-          if (modelId) addToSet(obs.modelUsage, agentId, modelId);
+          if (modelId) {
+            addToSet(obs.modelUsage, agentId, modelId);
+          }
         }
 
         if (looksLikeToolSpan(span)) {
           const raw = firstAttr(spanAttrs, TOOL_KEYS);
 
-          if (raw) addToSet(obs.toolUsage, agentId, mcpCallOf(span, raw).tool);
+          if (raw) {
+            addToSet(obs.toolUsage, agentId, mcpCallOf(span, raw).tool);
+          }
         }
       }
     }

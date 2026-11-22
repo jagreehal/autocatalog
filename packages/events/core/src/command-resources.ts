@@ -6,19 +6,12 @@ import {
   emptyResourceGraph,
   mergeArchitectureGraphs,
 } from './architecture';
-import {
-  resourceKey,
-  isArchitectureCatalogResource,
-  type ResourceGraph,
-  type ResourceRef,
-} from './resource-graph';
-import { jsonObjectSchema, isJsonObject, type JsonObject } from './json';
-import {
-  readResourceJson,
-  ResourceReadError,
-  resourceFiles,
-  type ResourceScanOptions,
-} from './resource-files';
+import { resourceKey, isArchitectureCatalogResource } from './resource-graph';
+import type { ResourceGraph, ResourceRef } from './resource-graph';
+import { jsonObjectSchema, isJsonObject } from './json';
+import type { JsonObject } from './json';
+import { readResourceJson, ResourceReadError, resourceFiles } from './resource-files';
+import type { ResourceScanOptions } from './resource-files';
 import type { ResourceDiscoveryResult } from './model-resources';
 
 export const commandManifest = z.object({
@@ -64,7 +57,9 @@ function parseCommandManifest(value: JsonObject): CommandManifest {
     error: (issue) => (issue.input === undefined ? MISSING : undefined),
   });
 
-  if (parsed.success) return parsed.data;
+  if (parsed.success) {
+    return parsed.data;
+  }
 
   throw new Error(
     parsed.error.issues
@@ -84,9 +79,11 @@ export interface CommandFinding {
   message: string;
 }
 
-export function validateCommands(graph: ResourceGraph): CommandFinding[] {
+export function validateCommands(graph: ResourceGraph): Array<CommandFinding> {
   return graph.resources.flatMap((resource) => {
-    if (!isArchitectureCatalogResource(resource) || resource.ref.kind !== 'command') return [];
+    if (!isArchitectureCatalogResource(resource) || resource.ref.kind !== 'command') {
+      return [];
+    }
 
     const handlers = new Set(
       graph.relationships
@@ -96,23 +93,25 @@ export function validateCommands(graph: ResourceGraph): CommandFinding[] {
         .map((edge) => resourceKey(edge.from)),
     );
 
-    const findings: CommandFinding[] = [];
+    const findings: Array<CommandFinding> = [];
 
-    if (handlers.size !== 1)
+    if (handlers.size !== 1) {
       findings.push({
         code: handlers.size ? 'command_multiple_handlers' : 'command_missing_handler',
         severity: 'breaking',
         resource: resource.ref,
         message: `${resource.ref.id} expects one logical handler; found ${handlers.size}`,
       });
+    }
 
-    if (!resource.attributes.outcome)
+    if (!resource.attributes.outcome) {
       findings.push({
         code: 'command_missing_outcome',
         severity: 'suspicious',
         resource: resource.ref,
         message: `${resource.ref.id} has no expected outcome`,
       });
+    }
 
     return findings;
   });
@@ -122,9 +121,9 @@ export function validateCommands(graph: ResourceGraph): CommandFinding[] {
 export async function scanCommandResources(
   options: ResourceScanOptions,
 ): Promise<ResourceDiscoveryResult> {
-  const fragments: ResourceGraph[] = [];
-  const errors: string[] = [];
-  const skipped: string[] = [];
+  const fragments: Array<ResourceGraph> = [];
+  const errors: Array<string> = [];
+  const skipped: Array<string> = [];
 
   const files = await resourceFiles(options, {
     include: (file) => /(schema|autocatalog)\.json$/.test(file),
@@ -139,7 +138,9 @@ export async function scanCommandResources(
       // Only a file that is, or says it is, a command can be wrong about it.
       // Any other JSON that cannot be read or parsed is not this scanner's concern.
       const value = await readResourceJson(file, options).catch((error: Error) => {
-        if (conventional || !(error instanceof ResourceReadError)) throw error;
+        if (conventional || !(error instanceof ResourceReadError)) {
+          throw error;
+        }
 
         return undefined;
       });
@@ -147,7 +148,9 @@ export async function scanCommandResources(
       const parsed = jsonObjectSchema.safeParse(value);
 
       if (!parsed.success) {
-        if (conventional) throw new Error('Command manifest must be an object');
+        if (conventional) {
+          throw new Error('Command manifest must be an object');
+        }
         continue;
       }
 
@@ -159,7 +162,9 @@ export async function scanCommandResources(
 
       const declaration = manifestFile ? parsed.data : embedded;
 
-      if (!declaration || (!manifestFile && declaration.kind !== 'command')) continue;
+      if (!declaration || (!manifestFile && declaration.kind !== 'command')) {
+        continue;
+      }
       const manifest = parseCommandManifest(declaration);
       const folder = path.dirname(file);
 
@@ -200,10 +205,14 @@ export async function scanCommandResources(
       const graph = emptyResourceGraph();
       graph.resources.push(resource);
 
-      for (const service of [...manifest.senders, ...(manifest.handler ? [manifest.handler] : [])])
+      for (const service of [
+        ...manifest.senders,
+        ...(manifest.handler ? [manifest.handler] : []),
+      ]) {
         graph.resources.push(architectureService(service));
+      }
 
-      for (const sender of manifest.senders)
+      for (const sender of manifest.senders) {
         graph.relationships.push({
           type: 'sends',
           from: { kind: 'service', id: sender },
@@ -211,8 +220,9 @@ export async function scanCommandResources(
           provenance: 'declared',
           needsReview: false,
         });
+      }
 
-      if (manifest.handler)
+      if (manifest.handler) {
         graph.relationships.push({
           type: 'handles',
           from: { kind: 'service', id: manifest.handler },
@@ -220,6 +230,7 @@ export async function scanCommandResources(
           provenance: 'declared',
           needsReview: false,
         });
+      }
       const replyTo = manifest.outcome?.replyTo;
 
       if (replyTo) {
@@ -242,8 +253,11 @@ export async function scanCommandResources(
       fragments.push(graph);
     } catch (error) {
       // A read error already names its file.
-      if (error instanceof ResourceReadError) errors.push(error.message);
-      else errors.push(`${relative}: ${error instanceof Error ? error.message : String(error)}`);
+      if (error instanceof ResourceReadError) {
+        errors.push(error.message);
+      } else {
+        errors.push(`${relative}: ${error instanceof Error ? error.message : String(error)}`);
+      }
     }
   }
 

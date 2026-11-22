@@ -5,13 +5,8 @@ import { plainText } from 'autocatalog-chatbot';
 import { docsCatalog } from '../catalog';
 import { docsSiteConfig } from '../config';
 import { kindHeader } from '../kinds';
-import {
-  COPY_MARKDOWN_LABEL,
-  type PageAction,
-  pageHeader,
-  resourceContext,
-  withMarkdownCopy,
-} from '../shell';
+import { COPY_MARKDOWN_LABEL, pageHeader, resourceContext, withMarkdownCopy } from '../shell';
+import type { PageAction } from '../shell';
 import { PageTitleChrome } from '../ui/overrides/PageTitleChrome';
 import { documentTwinsServed } from '../document-twins';
 import { docHref } from '../view';
@@ -65,7 +60,7 @@ const site = docsSiteConfig();
 const markdownActions = site.pageActions && (!isDoc || documentTwinsServed());
 
 // A site can leave the Markdown actions out; what a page itself offers stays.
-const actions: PageAction[] = !markdownActions
+const actions: Array<PageAction> = !markdownActions
   ? listed.filter((action) => action !== view)
   : isDoc
     ? withMarkdownCopy(docHref(`${id}.md`), listed)
@@ -96,6 +91,8 @@ const outside = site.audience !== undefined;
   client:load
   kind={kind}
   kindLabel={kindLabel}
+  crumbs={header?.crumbs}
+  title={entry.data.title}
   catalogKey={outside ? undefined : (resource?.key ?? (isDoc ? `document:${id}` : undefined))}
   primary={header?.primary}
   summary={summary}

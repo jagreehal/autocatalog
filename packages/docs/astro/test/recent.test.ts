@@ -1,5 +1,6 @@
 import { expect, it } from 'vitest';
-import { AUTOCATALOG_GRAPH_SPEC, type CatalogResource, type LoadedEvent } from 'autocatalog-core';
+import { AUTOCATALOG_GRAPH_SPEC } from 'autocatalog-core';
+import type { CatalogResource, LoadedEvent } from 'autocatalog-core';
 import type { Entity } from 'autocatalog-docs-core';
 import { recentChanges } from '../src/recent';
 

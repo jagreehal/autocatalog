@@ -32,12 +32,16 @@ const isWikiKind = (kind: string): kind is WikiKind => KIND_SET.has(kind);
 export function parseWikiRef(raw: string): WikiRef | null {
   const match = /^\[\[([a-z]+)\|([^\]]+)\]\]$/i.exec(raw.trim());
 
-  if (!match) return null;
+  if (!match) {
+    return null;
+  }
 
   const kind = match[1]!.toLowerCase();
   const id = match[2]!.trim();
 
-  if (!isWikiKind(kind) || !id) return null;
+  if (!isWikiKind(kind) || !id) {
+    return null;
+  }
 
   return { kind, id };
 }
@@ -100,7 +104,7 @@ interface LinkNode {
   type: 'link';
   url: string;
   title: string | null;
-  children: TextNode[];
+  children: Array<TextNode>;
   data?: { hProperties?: Record<string, string> };
 }
 
@@ -120,10 +124,12 @@ export function splitText(node: TextNode, base: string): Array<TextNode | LinkNo
   let last = 0;
 
   for (const match of node.value.matchAll(REF)) {
-    const raw = match[0]!;
+    const raw = match[0];
     const index = match.index ?? 0;
 
-    if (index > last) out.push({ type: 'text', value: node.value.slice(last, index) });
+    if (index > last) {
+      out.push({ type: 'text', value: node.value.slice(last, index) });
+    }
 
     const ref = parseWikiRef(raw);
 
@@ -148,15 +154,21 @@ export function splitText(node: TextNode, base: string): Array<TextNode | LinkNo
     last = index + raw.length;
   }
 
-  if (last === 0) return [node];
+  if (last === 0) {
+    return [node];
+  }
 
-  if (last < node.value.length) out.push({ type: 'text', value: node.value.slice(last) });
+  if (last < node.value.length) {
+    out.push({ type: 'text', value: node.value.slice(last) });
+  }
 
   return out;
 }
 
 function walk(node: ParentNode, base: string): void {
-  if (!node.children) return;
+  if (!node.children) {
+    return;
+  }
 
   const next: ParentNode['children'] = [];
 
@@ -166,7 +178,7 @@ function walk(node: ParentNode, base: string): void {
       next.push(...splitText(child as TextNode, base));
     } else if (child.type !== 'link' && child.type !== 'linkReference' && 'children' in child) {
       // SAFETY: an mdast node with `children` is a parent.
-      walk(child as ParentNode, base);
+      walk(child, base);
       next.push(child);
     } else {
       next.push(child);

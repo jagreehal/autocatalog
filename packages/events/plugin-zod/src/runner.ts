@@ -12,7 +12,7 @@ export interface RunAdapterOptions {
 
 export interface RunAdapterResult {
   eventsWritten: number;
-  errors: string[];
+  errors: Array<string>;
 }
 
 export async function runAdapter(opts: RunAdapterOptions): Promise<RunAdapterResult> {
@@ -31,7 +31,7 @@ export async function runAdapter(opts: RunAdapterOptions): Promise<RunAdapterRes
 
   const items = parsed.data[opts.exportName] ?? [];
 
-  const errors: string[] = [];
+  const errors: Array<string> = [];
   let written = 0;
 
   for (const item of items) {
@@ -43,8 +43,8 @@ export async function runAdapter(opts: RunAdapterOptions): Promise<RunAdapterRes
       const event = toAdapterEvent(item);
       await writeEventFolder({ outRoot: opts.out, event });
       written++;
-    } catch (err) {
-      errors.push(err instanceof Error ? err.message : String(err));
+    } catch (error) {
+      errors.push(error instanceof Error ? error.message : String(error));
     }
   }
 

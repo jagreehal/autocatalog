@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { loadEventFolder } from '../src/load';
 
-const here = path.dirname(fileURLToPath(import.meta.url));
+const here = import.meta.dirname;
 
 const folder = path.join(here, 'fixtures/basic-catalog/events/payments/PaymentCompleted');
 

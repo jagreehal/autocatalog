@@ -11,7 +11,7 @@ import { describe, expect, it } from 'vitest';
 // surfaces as a confidently wrong catalog. These tests hold every command and
 // flag in every skill against the CLI that is actually shipped.
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../../skills');
+const root = path.resolve(import.meta.dirname, '../../../../skills');
 
 const skills = fs
   .readdirSync(root, { withFileTypes: true })
@@ -28,14 +28,16 @@ function skillFile(name: string): string {
  * Scanning prose would treat "ac docs check and the site" as a three-word
  * command.
  */
-function invocations(markdown: string): string[] {
-  const lines: string[] = [];
+function invocations(markdown: string): Array<string> {
+  const lines: Array<string> = [];
 
   for (const [, block] of markdown.matchAll(/```[a-z]*\n([\s\S]*?)```/g)) {
     lines.push(...block!.split('\n'));
   }
 
-  for (const [, span] of markdown.matchAll(/`([^`\n]+)`/g)) lines.push(span!);
+  for (const [, span] of markdown.matchAll(/`([^`\n]+)`/g)) {
+    lines.push(span!);
+  }
 
   return lines.flatMap((line) => {
     const trimmed = line.trim();
@@ -45,7 +47,7 @@ function invocations(markdown: string): string[] {
 }
 
 /** Walk a command path (`docs check`) down the real program. */
-function resolveCommand(program: Command, tokens: string[]) {
+function resolveCommand(program: Command, tokens: Array<string>) {
   let current: Command | undefined;
   let used = 0;
 
@@ -54,7 +56,9 @@ function resolveCommand(program: Command, tokens: string[]) {
       (candidate) => candidate.name() === token,
     );
 
-    if (!next) break;
+    if (!next) {
+      break;
+    }
     current = next;
     used += 1;
   }
@@ -67,7 +71,9 @@ function optionFlags(command: Command): Set<string> {
 
   for (const option of command.options) {
     for (const flag of option.flags.split(/[ ,|]+/)) {
-      if (flag.startsWith('-')) flags.add(flag);
+      if (flag.startsWith('-')) {
+        flags.add(flag);
+      }
     }
   }
 

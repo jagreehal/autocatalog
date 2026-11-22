@@ -3,9 +3,8 @@ import {
   AUTOCATALOG_GRAPH_SPEC,
   composeResourceGraphs,
   ResourceGraphConflictError,
-  type AgentSystemCatalogResource,
-  type ResourceGraph,
 } from '../src/resource-graph';
+import type { AgentSystemCatalogResource, ResourceGraph } from '../src/resource-graph';
 
 const server = (
   owner: string,

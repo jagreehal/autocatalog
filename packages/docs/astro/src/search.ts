@@ -1,4 +1,5 @@
-import { type ChatFound, queryWords, rankPages } from 'autocatalog-chatbot';
+import { queryWords, rankPages } from 'autocatalog-chatbot';
+import type { ChatFound } from 'autocatalog-chatbot';
 import { docsCatalog } from './catalog';
 import { chatPages } from './chat';
 
@@ -7,9 +8,9 @@ const QUERY_LIMIT = 200;
 
 export interface SiteSearch {
   /** The query's words, as results mark them. */
-  words: string[];
+  words: Array<string>;
   /** Every page that matched, best first. */
-  results: ChatFound[];
+  results: Array<ChatFound>;
 }
 
 /**
@@ -18,7 +19,7 @@ export interface SiteSearch {
  */
 export async function searchSite(
   asked: string,
-  canRead?: ((doc: { id: string }) => boolean) | undefined,
+  canRead?: (doc: { id: string }) => boolean,
 ): Promise<SiteSearch> {
   const query = asked.trim().slice(0, QUERY_LIMIT);
 

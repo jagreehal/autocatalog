@@ -31,8 +31,8 @@ const defines = (repository: string, kind: string, id: string): CatalogRelations
 });
 
 const graph = (
-  resources: CatalogResource[],
-  relationships: CatalogRelationship[] = [],
+  resources: Array<CatalogResource>,
+  relationships: Array<CatalogRelationship> = [],
 ): ResourceGraph => ({
   spec: 'autocatalog/graph-v1',
   resources,

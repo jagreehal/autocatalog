@@ -1,21 +1,25 @@
 export interface CodeownersRule {
   pattern: string;
-  owners: string[];
+  owners: Array<string>;
   /** Where the scanned root sits below the CODEOWNERS file's directory, for a package in a monorepo. */
   base?: string;
 }
 
 /** Parse a CODEOWNERS file. Later rules win, per GitHub semantics. */
-export function parseCodeowners(text: string): CodeownersRule[] {
-  const rules: CodeownersRule[] = [];
+export function parseCodeowners(text: string): Array<CodeownersRule> {
+  const rules: Array<CodeownersRule> = [];
 
   for (const raw of text.split('\n')) {
     const line = raw.trim();
 
-    if (!line || line.startsWith('#')) continue;
+    if (!line || line.startsWith('#')) {
+      continue;
+    }
     const [pattern, ...owners] = line.split(/\s+/);
 
-    if (!pattern || owners.length === 0) continue;
+    if (!pattern || owners.length === 0) {
+      continue;
+    }
     rules.push({ pattern, owners });
   }
 
@@ -26,19 +30,25 @@ function patternToRegex(pattern: string): RegExp {
   let p = pattern;
   const anchored = p.startsWith('/');
 
-  if (anchored) p = p.slice(1);
+  if (anchored) {
+    p = p.slice(1);
+  }
   const dirOnly = p.endsWith('/');
 
-  if (dirOnly) p = p.slice(0, -1);
+  if (dirOnly) {
+    p = p.slice(0, -1);
+  }
 
   let regex = p
-    .replace(/[.+^${}()|[\]\\]/g, '\\$&')
-    .replace(/\*\*/g, '§§')
-    .replace(/\*/g, '[^/]*')
-    .replace(/§§/g, '.*')
-    .replace(/\?/g, '[^/]');
+    .replaceAll(/[.+^${}()|[\]\\]/g, String.raw`\$&`)
+    .replaceAll('**', '§§')
+    .replaceAll('*', '[^/]*')
+    .replaceAll('§§', '.*')
+    .replaceAll('?', '[^/]');
 
-  if (dirOnly) regex = `${regex}(/.*)?`;
+  if (dirOnly) {
+    regex = `${regex}(/.*)?`;
+  }
 
   return anchored ? new RegExp(`^${regex}$`) : new RegExp(`(^|/)${regex}$`);
 }
@@ -47,12 +57,13 @@ function patternToRegex(pattern: string): RegExp {
  * Resolve the owning team for a repo-relative path. Returns the last matching
  * rule's first owner (GitHub's precedence), without the leading @.
  */
-export function ownerForPath(rules: CodeownersRule[], relPath: string): string | undefined {
+export function ownerForPath(rules: Array<CodeownersRule>, relPath: string): string | undefined {
   let match: CodeownersRule | undefined;
 
   for (const rule of rules) {
-    if (patternToRegex(rule.pattern).test(rule.base ? `${rule.base}/${relPath}` : relPath))
+    if (patternToRegex(rule.pattern).test(rule.base ? `${rule.base}/${relPath}` : relPath)) {
       match = rule;
+    }
   }
 
   return match?.owners[0]?.replace(/^@/, '');

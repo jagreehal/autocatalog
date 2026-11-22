@@ -11,52 +11,33 @@ steps:
       id: cancel_order_command
       label: Cancel order
   - id: cancel_order_command
-    title: Cancel Order
-    custom:
-      title: Cancel Order
-      summary: 'Command: Cancel Order'
+    title: Order cancellation requested
+    command: { ref: ordering/cancel-order }
     next_step:
       id: order_service
       label: Handle cancellation
   - id: order_service
     title: Order Service
     service: Order Service
+    systems: [Order Database]
+    decidedBy: Order
+    rules:
+      - An order can only be cancelled before it is completed. Completed orders must go through returns instead.
     next_steps:
-      - id: eligibility_check
-        label: Check eligibility
+      - id: order_cancelled
+        label: Not yet completed, so mark cancelled
       - id: not_cancellable
         label: Already completed
-  - id: eligibility_check
-    title: Cancellation policy check
-    custom:
-      title: Cancellation policy
-      summary: An order can only be cancelled before it is completed. Completed orders must go through returns instead.
-    next_step:
-      id: order_database
-      label: Mark cancelled
-  - id: order_database
-    title: Order Database
-    custom:
-      title: Order Database
-    next_step:
-      id: order_cancelled
-      label: Persist + publish
   - id: order_cancelled
     title: Order Cancelled
     event: ordering/order-cancelled
-    next_step:
-      id: downstream_unwind
-      label: Unwind downstream
-  - id: downstream_unwind
-    title: Downstream unwind
-    custom:
-      title: Release and refund
-      summary: Consumers of OrderCancelled release reserved inventory, void or refund the payment, and stop fulfilment.
+    policy: Whenever an order is cancelled, release reserved inventory, void or refund the payment, and stop fulfilment
   - id: not_cancellable
     title: Cannot cancel
     custom:
       title: Cannot cancel
       summary: The order has already been completed and cannot be cancelled. The customer is directed to the returns process.
+    policy: Whenever a completed order can't be cancelled, direct the customer to returns
 ---
 
 ## Overview

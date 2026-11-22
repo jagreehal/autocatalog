@@ -1,5 +1,7 @@
-import { ENTITY_KINDS, ownersOf, type Entity, type EntityKind } from './schemas.js';
-import { refKey, type Catalog } from './loader.js';
+import { ENTITY_KINDS, ownersOf } from './schemas.js';
+import type { Entity, EntityKind } from './schemas.js';
+import { refKey } from './loader.js';
+import type { Catalog } from './loader.js';
 import { filterForAudience } from './visibility.js';
 
 const KIND_HEADINGS: Record<EntityKind, string> = {
@@ -18,24 +20,36 @@ const KIND_HEADINGS: Record<EntityKind, string> = {
 const formatTag = (k: string, v: string): string => `[${k}: ${v}]`;
 
 const entityTags = (e: Entity): string => {
-  const parts: string[] = [];
+  const parts: Array<string> = [];
 
-  if (e.kind === 'agent' || e.kind === 'tool') parts.push(formatTag('risk', e.risk));
+  if (e.kind === 'agent' || e.kind === 'tool') {
+    parts.push(formatTag('risk', e.risk));
+  }
 
   if (e.kind === 'tool') {
     parts.push(formatTag('effects', e.side_effects));
 
-    if (e.protocol) parts.push(formatTag('protocol', e.protocol));
+    if (e.protocol) {
+      parts.push(formatTag('protocol', e.protocol));
+    }
   }
 
-  if (e.status !== 'active') parts.push(formatTag('status', e.status));
+  if (e.status !== 'active') {
+    parts.push(formatTag('status', e.status));
+  }
 
-  if (e.version !== undefined) parts.push(formatTag('version', e.version));
+  if (e.version !== undefined) {
+    parts.push(formatTag('version', e.version));
+  }
   const allOwners = ownersOf(e);
 
-  if (allOwners.length > 0) parts.push(formatTag('owners', allOwners.join(', ')));
+  if (allOwners.length > 0) {
+    parts.push(formatTag('owners', allOwners.join(', ')));
+  }
 
-  if (e.kind === 'agent' && e.repository?.url) parts.push(formatTag('repo', e.repository.url));
+  if (e.kind === 'agent' && e.repository?.url) {
+    parts.push(formatTag('repo', e.repository.url));
+  }
 
   return parts.length > 0 ? ' ' + parts.join(' ') : '';
 };
@@ -59,18 +73,17 @@ export const buildLlmsTxt = (cat: Catalog, opts: LlmsTxtOptions = {}): string =>
     includeBodies = true,
   } = opts;
 
-  const lines: string[] = [];
-  lines.push(`# ${title}`);
-  lines.push('');
-  lines.push(`> ${description}`);
-  lines.push('');
+  const lines: Array<string> = [];
+  lines.push(`# ${title}`, '');
+  lines.push(`> ${description}`, '');
 
   for (const kind of ENTITY_KINDS) {
     const bucket = cat.entities.get(kind);
 
-    if (!bucket || bucket.size === 0) continue;
-    lines.push(`## ${KIND_HEADINGS[kind]}`);
-    lines.push('');
+    if (!bucket || bucket.size === 0) {
+      continue;
+    }
+    lines.push(`## ${KIND_HEADINGS[kind]}`, '');
     const sorted = [...bucket.values()].sort((a, b) => a.id.localeCompare(b.id));
 
     for (const e of sorted) {
@@ -83,31 +96,35 @@ export const buildLlmsTxt = (cat: Catalog, opts: LlmsTxtOptions = {}): string =>
     lines.push('');
   }
 
-  if (!includeBodies) return lines.join('\n');
+  if (!includeBodies) {
+    return lines.join('\n');
+  }
 
-  lines.push('---');
-  lines.push('');
-  lines.push('## Entity details');
-  lines.push('');
+  lines.push('---', '');
+  lines.push('## Entity details', '');
 
   for (const kind of ENTITY_KINDS) {
     const bucket = cat.entities.get(kind);
 
-    if (!bucket || bucket.size === 0) continue;
+    if (!bucket || bucket.size === 0) {
+      continue;
+    }
     const sorted = [...bucket.values()].sort((a, b) => a.id.localeCompare(b.id));
 
     for (const e of sorted) {
       const ref = refKey(kind, e.id);
       const m = cat.meta.get(ref);
 
-      if (!m?.body) continue;
+      if (!m?.body) {
+        continue;
+      }
       const agentBody = filterForAudience(m.body, 'agent').trim();
 
-      if (!agentBody) continue;
-      lines.push(`### ${kind}/${e.id} — ${e.name}`);
-      lines.push('');
-      lines.push(agentBody);
-      lines.push('');
+      if (!agentBody) {
+        continue;
+      }
+      lines.push(`### ${kind}/${e.id} — ${e.name}`, '');
+      lines.push(agentBody, '');
     }
   }
 

@@ -1,4 +1,5 @@
-import { isMap, isScalar, isSeq, LineCounter, parseDocument, type ParsedNode } from 'yaml';
+import { isMap, isScalar, isSeq, LineCounter, parseDocument } from 'yaml';
+import type { ParsedNode } from 'yaml';
 import { z } from 'zod';
 
 /**
@@ -7,21 +8,30 @@ import { z } from 'zod';
  * mapping does not model (a union branch, a keyword) ends it there, so a
  * finding lands on the field that holds the change rather than nowhere.
  */
-export function schemaPointer(diffPath: string): string[] {
-  const steps: string[] = [];
+export function schemaPointer(diffPath: string): Array<string> {
+  const steps: Array<string> = [];
 
   for (const segment of diffPath.replace(/^\(root\)/, '').split('.')) {
-    if (!segment) continue;
+    if (!segment) {
+      continue;
+    }
     const [, name = '', rest = ''] = /^([^[|]*)(.*)$/.exec(segment) ?? [];
 
-    if (name === '*') steps.push('additionalProperties');
-    else if (name) steps.push('properties', name);
+    if (name === '*') {
+      steps.push('additionalProperties');
+    } else if (name) {
+      steps.push('properties', name);
+    }
 
     const arrays = /^(?:\[\])*/.exec(rest)?.[0] ?? '';
 
-    for (let i = 0; i < arrays.length / 2; i++) steps.push('items');
+    for (let i = 0; i < arrays.length / 2; i++) {
+      steps.push('items');
+    }
 
-    if (rest.length > arrays.length) break;
+    if (rest.length > arrays.length) {
+      break;
+    }
   }
 
   return steps;
@@ -42,7 +52,7 @@ const localRef = z
       .slice(1)
       .split('/')
       .filter(Boolean)
-      .map((part) => decodeURIComponent(part).replace(/~1/g, '/').replace(/~0/g, '~')),
+      .map((part) => decodeURIComponent(part).replaceAll('~1', '/').replaceAll('~0', '~')),
   );
 
 /** One step down: a mapping key or a sequence index, with where it is written. */
@@ -65,14 +75,16 @@ function child(node: ParsedNode | null, step: string): Found | undefined {
  * answers with the line of the deepest node it reached, so a field that was
  * removed lands on the object that held it.
  */
-export function sourceLines(text: string): (steps: string[]) => number | undefined {
+export function sourceLines(text: string): (steps: Array<string>) => number | undefined {
   const lineCounter = new LineCounter();
   const doc = parseDocument(text, { lineCounter, uniqueKeys: false });
   const root = doc.contents;
 
-  if (doc.errors.length > 0 || !root) return () => undefined;
+  if (doc.errors.length > 0 || !root) {
+    return () => undefined;
+  }
 
-  const walk = (steps: string[], depth: number): Found => {
+  const walk = (steps: Array<string>, depth: number): Found => {
     let found: Found = { node: root, at: root.range[0] };
 
     for (const step of steps) {
@@ -86,7 +98,9 @@ export function sourceLines(text: string): (steps: string[]) => number | undefin
 
       const next = child(found.node, step);
 
-      if (!next) break;
+      if (!next) {
+        break;
+      }
       found = next;
     }
 

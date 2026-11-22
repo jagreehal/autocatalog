@@ -69,7 +69,9 @@ function isDocsFolder(dir: string, directory: string): boolean {
       .readdirSync(at, { withFileTypes: true })
       .some((entry) => entry.name === segment && entry.isDirectory());
 
-    if (!found) return false;
+    if (!found) {
+      return false;
+    }
 
     at = path.join(at, segment);
   }
@@ -86,12 +88,16 @@ function isDocsFolder(dir: string, directory: string): boolean {
 export function readRepositoryMeta(dir: string): RepositoryMetaRead {
   const file = path.join(dir, REPOSITORY_META);
 
-  if (!fs.existsSync(file)) return { meta: {} };
+  if (!fs.existsSync(file)) {
+    return { meta: {} };
+  }
 
   try {
     const parsed = repositoryMetaSchema.safeParse(JSON.parse(fs.readFileSync(file, 'utf8')));
 
-    if (!parsed.success) return { meta: {}, problem: z.prettifyError(parsed.error) };
+    if (!parsed.success) {
+      return { meta: {}, problem: z.prettifyError(parsed.error) };
+    }
 
     const strays = (parsed.data.sidebar ?? []).filter(
       ({ directory }) => !isDocsFolder(dir, directory),

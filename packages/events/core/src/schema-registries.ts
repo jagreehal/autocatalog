@@ -1,17 +1,12 @@
 import { z } from 'zod';
 import { common, parse as parseProto, Root } from 'protobufjs';
-import {
-  jsonObjectSchema,
-  jsonValueSchema,
-  isJsonObject,
-  type JsonObject,
-  type JsonValue,
-} from './json';
+import { jsonObjectSchema, jsonValueSchema, isJsonObject } from './json';
+import type { JsonObject, JsonValue } from './json';
 import { avroSchemaToJsonSchema } from './scan-avro';
 import { eventsFromProtoRoot } from './scan-protobuf';
 import { emptyResourceGraph } from './architecture';
 import { getCatalogJson } from './ownership-sources';
-import { type EventCatalogResource, type ResourceGraph } from './resource-graph';
+import type { EventCatalogResource, ResourceGraph } from './resource-graph';
 
 const reference = z.object({
   name: z.string(),
@@ -38,7 +33,7 @@ export interface ConfluentRegistryClient {
 export interface RegistryImportOptions {
   id: string;
   url?: string;
-  subjects?: string[];
+  subjects?: Array<string>;
   /**
    * Told about a subject version whose schema does not translate, which is then
    * left out. Without it the first such version stops the import.
@@ -63,14 +58,18 @@ function protoRoot(): Root {
   for (const file of WELL_KNOWN_PROTOS) {
     const definition = common.get(file);
 
-    if (definition) root.addJSON(definition.nested ?? {});
+    if (definition) {
+      root.addJSON(definition.nested ?? {});
+    }
   }
 
   return root;
 }
 
 export function registryJsonSchema(nativeSchema: string, format: string): JsonObject {
-  if (format === 'JSON') return jsonObjectSchema.parse(JSON.parse(nativeSchema));
+  if (format === 'JSON') {
+    return jsonObjectSchema.parse(JSON.parse(nativeSchema));
+  }
 
   if (format === 'AVRO') {
     return avroSchemaToJsonSchema(jsonValueSchema.parse(JSON.parse(nativeSchema)));
@@ -84,7 +83,9 @@ export function registryJsonSchema(nativeSchema: string, format: string): JsonOb
       (entry) => entry.event.schema,
     );
 
-    if (!schemas.length) throw new Error('Registry Protobuf schema contains no payload messages');
+    if (!schemas.length) {
+      throw new Error('Registry Protobuf schema contains no payload messages');
+    }
 
     return schemas.length === 1 ? schemas[0]! : { oneOf: schemas };
   }
@@ -129,22 +130,26 @@ function confluentPayloadSchema(
   schema: ConfluentVersion,
   dependencies: Map<string, ConfluentVersion>,
 ): JsonObject {
-  if (schema.schemaType === 'JSON' && dependencies.size)
+  if (schema.schemaType === 'JSON' && dependencies.size) {
     return bundleRegistryJsonSchema(schema, dependencies);
+  }
 
-  if (schema.schemaType === 'AVRO')
+  if (schema.schemaType === 'AVRO') {
     return avroSchemaToJsonSchema(
       jsonValueSchema.parse(JSON.parse(schema.schema)),
       [...dependencies.values()].map((child) => jsonValueSchema.parse(JSON.parse(child.schema))),
     );
+  }
 
-  if (schema.schemaType !== 'PROTOBUF' || !dependencies.size)
+  if (schema.schemaType !== 'PROTOBUF' || !dependencies.size) {
     return registryJsonSchema(schema.schema, schema.schemaType);
+  }
 
   const root = protoRoot();
 
-  for (const dependency of dependencies.values())
+  for (const dependency of dependencies.values()) {
     parseProto(dependency.schema, root, { keepCase: true });
+  }
 
   const parsed = parseProto(schema.schema, root, { keepCase: true });
 
@@ -172,17 +177,22 @@ export async function importConfluentRegistry(
     for (const version of [...new Set(versions)].sort((a, b) => a - b)) {
       const schema = confluentVersion.parse(await client.getVersion(subject, version));
 
-      if (schema.subject !== subject || schema.version !== version)
+      if (schema.subject !== subject || schema.version !== version) {
         throw new Error(`Registry version identity mismatch: ${subject}@${version}`);
+      }
       const dependencies = new Map<string, z.infer<typeof confluentVersion>>();
 
       const fetchReferences = async (parent: z.infer<typeof confluentVersion>) => {
         for (const reference of parent.references) {
           const key = `${reference.subject}/v${reference.version}`;
 
-          if (dependencies.has(key)) continue;
+          if (dependencies.has(key)) {
+            continue;
+          }
 
-          if (dependencies.size >= 1000) throw new Error('Registry reference limit exceeded');
+          if (dependencies.size >= 1000) {
+            throw new Error('Registry reference limit exceeded');
+          }
 
           const child = confluentVersion.parse(
             await client.getVersion(reference.subject, reference.version),
@@ -192,8 +202,9 @@ export async function importConfluentRegistry(
             child.subject !== reference.subject ||
             child.version !== reference.version ||
             child.schemaType !== schema.schemaType
-          )
+          ) {
             throw new Error(`Registry reference identity or format mismatch: ${key}`);
+          }
           dependencies.set(key, child);
           await fetchReferences(child);
         }
@@ -208,7 +219,9 @@ export async function importConfluentRegistry(
         const reason = error instanceof Error ? error.message : String(error);
         const message = `${subject}@${version}: ${reason}`;
 
-        if (!options.onSubjectError) throw new Error(message, { cause: error });
+        if (!options.onSubjectError) {
+          throw new Error(message, { cause: error });
+        }
         options.onSubjectError(message);
         continue;
       }
@@ -255,27 +268,38 @@ function bundleRegistryJsonSchema(
     owner: z.infer<typeof confluentVersion>,
     prefix: string,
   ): JsonValue => {
-    if (Array.isArray(value)) return value.map((entry) => rewrite(entry, owner, prefix));
+    if (Array.isArray(value)) {
+      return value.map((entry) => rewrite(entry, owner, prefix));
+    }
 
-    if (!isJsonObject(value)) return value;
+    if (!isJsonObject(value)) {
+      return value;
+    }
     const output: JsonObject = {};
 
     for (const [key, child] of Object.entries(value)) {
-      if (key === '$id') continue;
+      if (key === '$id') {
+        continue;
+      }
 
       if (key === '$ref') {
         const ref = z.string().parse(child);
 
-        if (ref.startsWith('#')) output[key] = `${prefix}${ref.slice(1)}`;
-        else {
+        if (ref.startsWith('#')) {
+          output[key] = `${prefix}${ref.slice(1)}`;
+        } else {
           const [name, fragment] = ref.split('#');
           const reference = owner.references.find((entry) => entry.name === name);
 
-          if (!reference) throw new Error(`Unresolved registry JSON reference: ${ref}`);
+          if (!reference) {
+            throw new Error(`Unresolved registry JSON reference: ${ref}`);
+          }
           output[key] =
             `#/$defs/${pointer(`${reference.subject}/v${reference.version}`)}${fragment ?? ''}`;
         }
-      } else output[key] = rewrite(child, owner, prefix);
+      } else {
+        output[key] = rewrite(child, owner, prefix);
+      }
     }
 
     return output;
@@ -287,12 +311,13 @@ function bundleRegistryJsonSchema(
 
   const definitions = isJsonObject(bundled.$defs) ? bundled.$defs : {};
 
-  for (const [key, dependency] of dependencies)
+  for (const [key, dependency] of dependencies) {
     definitions[key] = rewrite(
       jsonObjectSchema.parse(JSON.parse(dependency.schema)),
       dependency,
       `#/$defs/${pointer(key)}`,
     );
+  }
   bundled.$defs = definitions;
 
   return bundled;
@@ -330,7 +355,7 @@ export interface GlueRegistryClient {
 export interface GlueImportOptions {
   id: string;
   registry: string;
-  subjects?: string[];
+  subjects?: Array<string>;
 }
 
 const glueSchemaPage = z.object({
@@ -365,22 +390,26 @@ export async function importGlueRegistry(
   let token: string | undefined;
   const seen = new Set<string>();
 
-  for (let page = 0; page < 10000; page++) {
+  for (let page = 0; page < 10_000; page++) {
     const schemas = glueSchemaPage.parse(await client.listSchemas(token));
 
     for (const schema of schemas.Schemas) {
-      if (options.subjects && !options.subjects.includes(schema.SchemaName)) continue;
+      if (options.subjects && !options.subjects.includes(schema.SchemaName)) {
+        continue;
+      }
       const definition = glueSchema.parse(await client.getSchema(schema.SchemaArn));
       let versionToken: string | undefined;
       const versionTokens = new Set<string>();
 
-      for (let versionPage = 0; versionPage < 10000; versionPage++) {
+      for (let versionPage = 0; versionPage < 10_000; versionPage++) {
         const versions = glueVersionPage.parse(
           await client.listVersions(schema.SchemaArn, versionToken),
         );
 
         for (const version of versions.Schemas) {
-          if (version.Status !== 'AVAILABLE') continue;
+          if (version.Status !== 'AVAILABLE') {
+            continue;
+          }
 
           const payload = glueVersion.parse(
             await client.getVersion(schema.SchemaArn, version.VersionNumber),
@@ -389,10 +418,11 @@ export async function importGlueRegistry(
           if (
             payload.VersionNumber !== version.VersionNumber ||
             payload.DataFormat !== definition.DataFormat
-          )
+          ) {
             throw new Error(
               `Glue version identity mismatch: ${schema.SchemaName}@${version.VersionNumber}`,
             );
+          }
           graph.resources.push(
             registryResource(
               options.id,
@@ -416,20 +446,30 @@ export async function importGlueRegistry(
 
         versionToken = versions.NextToken;
 
-        if (!versionToken) break;
+        if (!versionToken) {
+          break;
+        }
 
-        if (versionTokens.has(versionToken)) throw new Error('Repeated Glue version token');
+        if (versionTokens.has(versionToken)) {
+          throw new Error('Repeated Glue version token');
+        }
         versionTokens.add(versionToken);
 
-        if (versionPage === 9999) throw new Error('Glue version page limit exceeded');
+        if (versionPage === 9999) {
+          throw new Error('Glue version page limit exceeded');
+        }
       }
     }
 
     token = schemas.NextToken;
 
-    if (!token) return graph;
+    if (!token) {
+      return graph;
+    }
 
-    if (seen.has(token)) throw new Error('Repeated Glue schema token');
+    if (seen.has(token)) {
+      throw new Error('Repeated Glue schema token');
+    }
     seen.add(token);
   }
 

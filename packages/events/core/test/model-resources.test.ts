@@ -3,14 +3,12 @@ import os from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
-import {
-  scanModelResources,
-  exportMongooseModels,
-  type ModelScanOptions,
-} from '../src/model-resources';
+import { scanModelResources, exportMongooseModels } from '../src/model-resources';
+import type { ModelScanOptions } from '../src/model-resources';
 import { datastoreOwnership } from '../src/architecture';
 import type { JsonValue } from '../src/json';
-import { isArchitectureCatalogResource, type ResourceGraph } from '../src/resource-graph';
+import { isArchitectureCatalogResource } from '../src/resource-graph';
+import type { ResourceGraph } from '../src/resource-graph';
 
 describe('model resources', () => {
   it('keeps exclusion projections conservative instead of claiming only excluded fields are read', async () => {
@@ -317,7 +315,13 @@ describe('model resources', () => {
   });
 });
 
-type Edge = [type: string, id: string, provenance: string, needsReview: boolean, fields?: string[]];
+type Edge = [
+  type: string,
+  id: string,
+  provenance: string,
+  needsReview: boolean,
+  fields?: Array<string>,
+];
 
 /** Write a throwaway repository, scan it, and remove it. */
 async function scanFiles(
@@ -339,7 +343,7 @@ async function scanFiles(
   }
 }
 
-function edges(graph: ResourceGraph): Edge[] {
+function edges(graph: ResourceGraph): Array<Edge> {
   return graph.relationships
     .map((edge): Edge => {
       const fields = z.array(z.string()).optional().parse(edge.attributes?.fields);
@@ -759,7 +763,9 @@ describe('scan robustness', () => {
   it('stops at the file limit with a warning rather than failing', async () => {
     const files: Record<string, string> = {};
 
-    for (let index = 0; index < 4; index++) files[`m${index}.ts`] = 'export {};';
+    for (let index = 0; index < 4; index++) {
+      files[`m${index}.ts`] = 'export {};';
+    }
 
     const result = await scanFiles(files, { maxFiles: 2 });
 

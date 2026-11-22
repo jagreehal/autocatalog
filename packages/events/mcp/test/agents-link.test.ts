@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { assessImpact, checkChange, describeEvent, loadCatalog } from '../src/tools.js';
 
-const here = path.dirname(fileURLToPath(import.meta.url));
+const here = import.meta.dirname;
 
 const starter = path.resolve(here, '../../../../starters/agent-default');
 

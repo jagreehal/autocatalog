@@ -1,18 +1,17 @@
 import {
   conventionSourcesSchema,
   CONVENTIONS_PATH,
-  type JsonObject,
-  type JsonValue,
   isJsonObject,
   jsonObjectSchema,
 } from 'autocatalog-core';
+import type { JsonObject, JsonValue } from 'autocatalog-core';
 import { z } from 'zod';
 import {
   declaredFrontmatterFields,
-  type FrontmatterIssue,
   frontmatterValidator,
   resolvePublishedFile,
 } from './frontmatter';
+import type { FrontmatterIssue } from './frontmatter';
 import type { Doc } from './read-docs';
 
 /**
@@ -36,7 +35,7 @@ export interface DocKind {
   /** JSON Schema for this kind's own frontmatter, checked with the base contract. */
   schema?: JsonObject;
   /** Frontmatter fields shown as columns on the kind's index page. */
-  columns: string[];
+  columns: Array<string>;
   /** The field holding the document's state, shown as a badge and filtered on. */
   statusField?: string;
   /** The field holding the document's date, which orders the index newest first. */
@@ -197,7 +196,7 @@ export type DocsConventions = z.input<typeof docsConventionsSchema>;
 
 /** The kinds in force, and the file they came from (null for the defaults). */
 export interface ResolvedDocKinds {
-  kinds: DocKind[];
+  kinds: Array<DocKind>;
   file: string | null;
 }
 
@@ -205,8 +204,8 @@ export interface ResolvedDocKinds {
 const slug = (label: string) =>
   label
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '');
+    .replaceAll(/[^a-z0-9]+/g, '-')
+    .replaceAll(/^-|-$/g, '');
 
 /**
  * Merge an organisation's conventions over the built-in kinds.
@@ -214,7 +213,7 @@ const slug = (label: string) =>
  * A field the organisation sets replaces the built-in one whole, including
  * `schema`, so what a kind enforces is always readable in one place.
  */
-export function docKinds(conventions: JsonValue, file = 'conventions'): DocKind[] {
+export function docKinds(conventions: JsonValue, file = 'conventions'): Array<DocKind> {
   const parsed = docsConventionsSchema.safeParse(conventions);
 
   if (!parsed.success) {
@@ -224,12 +223,15 @@ export function docKinds(conventions: JsonValue, file = 'conventions'): DocKind[
   const merged = new Map<string, Partial<Omit<DocKind, 'id'>>>(Object.entries(DEFAULT_DOC_KINDS));
 
   for (const [id, override] of Object.entries(parsed.data.kinds)) {
-    if (override === false) merged.delete(id);
-    else merged.set(id, { ...merged.get(id), ...override });
+    if (override === false) {
+      merged.delete(id);
+    } else {
+      merged.set(id, { ...merged.get(id), ...override });
+    }
   }
 
-  const kinds: DocKind[] = [];
-  const problems: string[] = [];
+  const kinds: Array<DocKind> = [];
+  const problems: Array<string> = [];
 
   for (const [id, fields] of merged) {
     const complete = kindFields.safeParse(fields);
@@ -252,7 +254,9 @@ export function docKinds(conventions: JsonValue, file = 'conventions'): DocKind[
     for (const kind of kinds) {
       const other = seen.get(kind[key]);
 
-      if (other) problems.push(`kinds.${kind.id}: ${key} '${kind[key]}' is also ${other}'s`);
+      if (other) {
+        problems.push(`kinds.${kind.id}: ${key} '${kind[key]}' is also ${other}'s`);
+      }
       seen.set(kind[key], kind.id);
     }
   }
@@ -296,7 +300,7 @@ export type DocKindResolution = { kind: DocKind | null } | { failure: string };
  */
 export function docKind(
   doc: Pick<Doc, 'id' | 'repo' | 'data'>,
-  kinds: DocKind[],
+  kinds: Array<DocKind>,
 ): DocKindResolution {
   const declared = doc.data.kind;
 
@@ -312,14 +316,18 @@ export function docKind(
 
   const relative = doc.id.slice(doc.repo.length + 1);
 
-  if (INTRODUCTIONS.has(relative.split('/').at(-1)!.toLowerCase())) return { kind: null };
+  if (INTRODUCTIONS.has(relative.split('/').at(-1)!.toLowerCase())) {
+    return { kind: null };
+  }
 
   let match: DocKind | null = null;
 
   for (const kind of kinds) {
     const inside = relative.startsWith(`${kind.folder}/`);
 
-    if (inside && kind.folder.length > (match?.folder.length ?? -1)) match = kind;
+    if (inside && kind.folder.length > (match?.folder.length ?? -1)) {
+      match = kind;
+    }
   }
 
   return { kind: match };
@@ -333,7 +341,9 @@ export function docKind(
  * with `additionalProperties: false` still lets an ADR carry `status`.
  */
 export function kindContract(base: JsonObject, kind: DocKind): JsonObject {
-  if (!kind.schema) return base;
+  if (!kind.schema) {
+    return base;
+  }
 
   const { $schema, $id: _id, ...rest } = base;
   const { $schema: _kindSchema, $id: _kindId, ...own } = kind.schema;
@@ -352,14 +362,14 @@ export function kindContract(base: JsonObject, kind: DocKind): JsonObject {
 /** One document checked against its kind's contract. */
 export interface KindCheck {
   kind: DocKind | null;
-  issues: FrontmatterIssue[];
+  issues: Array<FrontmatterIssue>;
 }
 
 /**
  * Check documents against the contract their kind calls for. Compiled once per
  * kind, because one check reads every document a company publishes.
  */
-export function kindValidator(base: JsonObject, kinds: DocKind[]): (doc: Doc) => KindCheck {
+export function kindValidator(base: JsonObject, kinds: Array<DocKind>): (doc: Doc) => KindCheck {
   const plain = frontmatterValidator(base);
 
   const byKind = new Map(
@@ -400,8 +410,8 @@ const documentIdList = z.array(z.string()).catch([]);
 
 /** The documents one replaces, and the ones that replaced it, by id. */
 export interface Supersession {
-  supersedes: string[];
-  supersededBy: string[];
+  supersedes: Array<string>;
+  supersededBy: Array<string>;
 }
 
 /** The ids a document says it supersedes and is superseded by; none when it says neither. */

@@ -120,3 +120,31 @@ export const emptyExplorerModel: ExplorerModel = {
   review: 0,
   rows: [],
 };
+
+const sample = explorerModel.rows[0]!;
+
+/** Sixty events across three owners, enough to need three pages. */
+export const largeExplorerModel: ExplorerModel = {
+  kinds: ['event'],
+  countByKind: { event: 60 },
+  relationships: 0,
+  review: 0,
+  rows: Array.from({ length: 60 }, (_, index) => {
+    const id = `order.step-${String(index + 1).padStart(2, '0')}`;
+
+    return {
+      ...sample,
+      key: `event:orders/${id}`,
+      anchor: `resource-event%3Aorders%2F${id}`,
+      title: `Order step ${index + 1}`,
+      href: `/events/orders/${id}/`,
+      owner: ['fulfilment', 'orders', 'payments'][index % 3]!,
+      provenance: 'extracted',
+      at: `events/orders/${id}/schema.json`,
+      needsReview: false,
+      notableFields: [],
+      connections: [],
+      searchText: `event orders ${id} order step ${index + 1}`,
+    };
+  }),
+};

@@ -34,7 +34,9 @@ const walk = (d) =>
   fs.readdirSync(d, { withFileTypes: true }).flatMap((e) => {
     const p = path.join(d, e.name);
 
-    if (e.name === 'node_modules' || e.name === 'versioned') return [];
+    if (e.name === 'node_modules' || e.name === 'versioned') {
+      return [];
+    }
 
     return e.isDirectory() ? walk(p) : [p];
   });
@@ -50,10 +52,10 @@ const front = (data, body) =>
 
 const slug = (s) =>
   s
-    .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
+    .replaceAll(/([a-z0-9])([A-Z])/g, '$1-$2')
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '');
+    .replaceAll(/[^a-z0-9]+/g, '-')
+    .replaceAll(/^-|-$/g, '');
 
 const lc = (s) => String(s).toLowerCase();
 
@@ -80,11 +82,15 @@ const KINDS = {
 const resources = [];
 
 for (const file of walk(EC)) {
-  if (!/\/index\.mdx?$/.test(file)) continue;
+  if (!/\/index\.mdx?$/.test(file)) {
+    continue;
+  }
   const dir = path.dirname(file);
   const parentKind = KINDS[path.basename(path.dirname(dir))];
 
-  if (!parentKind) continue;
+  if (!parentKind) {
+    continue;
+  }
   const { data, body } = matter(read(file));
   const rel = path.relative(EC, dir);
   const segs = rel.split('/');
@@ -101,7 +107,9 @@ const find = (k, id) => resources.find((r) => r.kind === k && r.id === id);
 // ownership: own owners, else nearest ancestor with owners
 const ownerOf = (r) => {
   // An owner is written as its id, or as { id }.
-  if (r.data.owners?.length) return r.data.owners[0].id ?? r.data.owners[0];
+  if (r.data.owners?.length) {
+    return r.data.owners[0].id ?? r.data.owners[0];
+  }
 
   const anc = resources
     .filter((a) => a.data.owners?.length && r.rel.startsWith(a.rel + '/'))
@@ -128,7 +136,9 @@ const messages = []; // { kind, id, domain, dir, manifest }
 for (const domain of fs.readdirSync(path.join(IMP, 'events'))) {
   const d = path.join(IMP, 'events', domain);
 
-  if (!fs.statSync(d).isDirectory()) continue;
+  if (!fs.statSync(d).isDirectory()) {
+    continue;
+  }
 
   for (const name of fs.readdirSync(d)) {
     const dir = path.join(d, name);
@@ -153,7 +163,9 @@ const teamOfMessage = (m) =>
   serviceTeam.get(m.manifest.handler ?? m.manifest.producers?.[0]) ??
   'handbook';
 
-for (const m of messages) m.team = teamOfMessage(m);
+for (const m of messages) {
+  m.team = teamOfMessage(m);
+}
 
 const messageById = new Map(messages.map((m) => [m.manifest.id, m]));
 
@@ -168,7 +180,9 @@ for (const m of messages) {
 
   const sub = source && subdomains.find((d) => source.rel.startsWith(`${d.rel}/`));
 
-  if (sub) m.manifest.domain = lc(sub.id);
+  if (sub) {
+    m.manifest.domain = lc(sub.id);
+  }
 }
 
 const parentOf = (d) => {
@@ -202,7 +216,9 @@ function linkFor(kind, id) {
     case 'message': {
       const m = messageById.get(id);
 
-      if (!m) return `\`${id}\``;
+      if (!m) {
+        return `\`${id}\``;
+      }
 
       // commands have no page of their own; a two-part id opens the Catalog on them
       return m.kind === 'event'
@@ -267,41 +283,46 @@ const DIAGRAMS = [
 
 function convertBody(body, { map } = {}) {
   let s = body;
-  s = s.replace(/^import .*$/gm, '');
+  s = s.replaceAll(/^import .*$/gm, '');
 
   // block components to drop entirely, with children
   for (const c of DROP_BLOCK) {
-    s = s.replace(new RegExp(`<${c}\\b[^>]*/>`, 'g'), '');
-    s = s.replace(new RegExp(`<${c}\\b[\\s\\S]*?</${c}>`, 'g'), '');
+    s = s.replaceAll(new RegExp(`<${c}\\b[^>]*/>`, 'g'), '');
+    s = s.replaceAll(new RegExp(`<${c}\\b[\\s\\S]*?</${c}>`, 'g'), '');
   }
 
   for (const c of ['Footer', 'SchemaViewer', 'Schema', 'ResourceLink', 'CustomProperty']) {
-    s = s.replace(new RegExp(`<${c}\\b[^>]*/>`, 'g'), '');
-    s = s.replace(new RegExp(`<${c}\\b[^>]*>([\\s\\S]*?)</${c}>`, 'g'), '$1');
+    s = s.replaceAll(new RegExp(`<${c}\\b[^>]*/>`, 'g'), '');
+    s = s.replaceAll(new RegExp(`<${c}\\b[^>]*>([\\s\\S]*?)</${c}>`, 'g'), '$1');
   }
 
-  for (const c of DIAGRAMS) s = s.replace(new RegExp(`<${c}\\b[^>]*/>`, 'g'), map ? map : '');
+  for (const c of DIAGRAMS) {
+    s = s.replace(new RegExp(`<${c}\\b[^>]*/>`, 'g'), map ? map : '');
+  }
   // headings for titled wrappers
-  s = s.replace(/<(Accordion|Step)\b[^>]*title=["{]`?([^"}`]*)`?["}][^>]*>/g, '\n#### $2\n');
-  s = s.replace(/<\/?(Columns|Column|CodeGroup|AccordionGroup|Accordion|Steps|Step)\b[^>]*>/g, '');
-  s = s.replace(/<Admonition\b[^>]*>([\s\S]*?)<\/Admonition>/g, (_, inner) =>
+  s = s.replaceAll(/<(Accordion|Step)\b[^>]*title=["{]`?([^"}`]*)`?["}][^>]*>/g, '\n#### $2\n');
+  s = s.replaceAll(
+    /<\/?(Columns|Column|CodeGroup|AccordionGroup|Accordion|Steps|Step)\b[^>]*>/g,
+    '',
+  );
+  s = s.replaceAll(/<Admonition\b[^>]*>([\s\S]*?)<\/Admonition>/g, (_, inner) =>
     inner
       .trim()
       .split('\n')
       .map((l) => `> ${l.trim()}`)
       .join('\n'),
   );
-  s = s.replace(/\[\[([a-z]+)(\\?\|)([^\]]+)\]\]/g, (_, kind, pipe, id) => {
+  s = s.replaceAll(/\[\[([a-z]+)(\\?\|)([^\]]+)\]\]/g, (_, kind, pipe, id) => {
     PIPE = pipe;
 
     return linkFor(kind, id.trim());
   });
   // Headings that only introduced a dropped component
-  s = s.replace(/^#{1,6} [^\n]*\n\s*(?=#{1,6} |$(?![\s\S]))/gm, '');
+  s = s.replaceAll(/^#{1,6} [^\n]*\n\s*(?=#{1,6} |$(?![\s\S]))/gm, '');
   // indentation left by unwrapped JSX would read as code blocks
-  s = s.replace(/^[ \t]+(?=\S)/gm, (ws, off, all) => (inFence(all, off) ? ws : ''));
+  s = s.replaceAll(/^[ \t]+(?=\S)/gm, (ws, off, all) => (inFence(all, off) ? ws : ''));
 
-  return s.replace(/\n{3,}/g, '\n\n').trim();
+  return s.replaceAll(/\n{3,}/g, '\n\n').trim();
 }
 
 function inFence(all, offset) {
@@ -314,16 +335,22 @@ function inFence(all, offset) {
 const consumes = new Map(); // team → { receives: [], sends: [] }
 
 const pushConsume = (team, key, entry) => {
-  if (!consumes.has(team)) consumes.set(team, { receives: [], sends: [] });
+  if (!consumes.has(team)) {
+    consumes.set(team, { receives: [], sends: [] });
+  }
   const list = consumes.get(team)[key];
 
-  if (!list.some((e) => e.service === entry.service && e.id === entry.id)) list.push(entry);
+  if (!list.some((e) => e.service === entry.service && e.id === entry.id)) {
+    list.push(entry);
+  }
 };
 
 const examplesOf = (dir) => {
   const d = path.join(dir, 'examples');
 
-  if (!fs.existsSync(d)) return [];
+  if (!fs.existsSync(d)) {
+    return [];
+  }
 
   return walk(d)
     .filter((f) => f.endsWith('.json'))
@@ -362,13 +389,16 @@ for (const m of messages) {
     x.producers = mf.producers ?? [];
     const own = (mf.consumers ?? []).filter(sameTeam);
 
-    if (own.length) x.consumers = own;
+    if (own.length) {
+      x.consumers = own;
+    }
 
-    for (const c of (mf.consumers ?? []).filter((c) => !sameTeam(c)))
+    for (const c of (mf.consumers ?? []).filter((c) => !sameTeam(c))) {
       pushConsume(serviceTeam.get(c) ?? HANDBOOK, 'receives', {
         service: c,
         id: `${mf.domain}/${mf.id}`,
       });
+    }
 
     // a producer in another team sends it
     for (const p of x.producers.filter((p) => !sameTeam(p))) {
@@ -377,9 +407,13 @@ for (const m of messages) {
 
     x.producers = x.producers.filter(sameTeam);
 
-    if (mf.transport?.length) x.transport = mf.transport;
+    if (mf.transport?.length) {
+      x.transport = mf.transport;
+    }
 
-    if (mf.delivery) x.delivery = mf.delivery;
+    if (mf.delivery) {
+      x.delivery = mf.delivery;
+    }
     const examples = examplesOf(m.dir);
 
     const contract = {
@@ -413,11 +447,12 @@ for (const m of messages) {
       }),
     };
 
-    for (const sdr of (mf.senders ?? []).filter((s) => !sameTeam(s)))
+    for (const sdr of (mf.senders ?? []).filter((s) => !sameTeam(s))) {
       pushConsume(serviceTeam.get(sdr) ?? HANDBOOK, 'sends', {
         service: sdr,
         id: `${mf.domain}/${mf.id}`,
       });
+    }
     const dir = path.join(repoDir(team), 'commands', mf.id);
     writeJson(path.join(dir, 'autocatalog.json'), manifest);
     writeJson(path.join(dir, 'schema.json'), schema);
@@ -427,9 +462,13 @@ for (const m of messages) {
 for (const [team, c] of consumes) {
   const out = {};
 
-  if (c.receives.length) out.receives = c.receives;
+  if (c.receives.length) {
+    out.receives = c.receives;
+  }
 
-  if (c.sends.length) out.sends = c.sends;
+  if (c.sends.length) {
+    out.sends = c.sends;
+  }
   writeJson(path.join(repoDir(team), 'autocatalog.consumes.json'), out);
 }
 
@@ -441,7 +480,9 @@ for (const team of teams) {
   const tableIds = new Set(rels.map((r) => r.to.id));
   const tables = graph.resources.filter((r) => r.ref.kind !== 'service' && tableIds.has(r.ref.id));
 
-  if (!svcs.length && !tables.length) continue;
+  if (!svcs.length && !tables.length) {
+    continue;
+  }
   const ns = team;
   const retable = (ref) => (ref.kind === 'service' ? ref : { ...ref, namespace: ns });
 
@@ -464,10 +505,14 @@ for (const team of teams) {
 
 // ---------- 3. specs (OpenAPI, AsyncAPI, carrier SLAs)
 for (const file of walk(EC)) {
-  if (!/\.(ya?ml)$/.test(file) || file.includes('/_data/')) continue;
+  if (!/\.(ya?ml)$/.test(file) || file.includes('/_data/')) {
+    continue;
+  }
   const rel = path.relative(EC, file);
 
-  if (!rel.startsWith('domains/')) continue;
+  if (!rel.startsWith('domains/')) {
+    continue;
+  }
 
   const owner = ownerOf(
     resources
@@ -558,10 +603,14 @@ for (const s of byKind('service')) {
 for (const r of [...byKind('event'), ...byKind('command'), ...byKind('query')]) {
   const m = messageById.get(r.id);
 
-  if (!m) continue;
+  if (!m) {
+    continue;
+  }
   const body = convertBody(r.body);
 
-  if (body.replace(/^#+ .*$/gm, '').trim().length < 40) continue;
+  if (body.replaceAll(/^#+ .*$/gm, '').trim().length < 40) {
+    continue;
+  }
   plan(
     m.team,
     `docs/messages/${m.manifest.id}.mdx`,
@@ -602,7 +651,9 @@ for (const file of walk(EC)) {
   const rel = path.relative(EC, file);
   const m = /^domains\/([^/]+)\/docs\/(.+)\.mdx?$/.exec(rel);
 
-  if (!m) continue;
+  if (!m) {
+    continue;
+  }
   const { data, body } = matter(read(file));
 
   const dom =
@@ -633,7 +684,9 @@ for (const file of walk(EC)) {
     body,
   );
 
-  if (data.id) repoOfDoc.set(`doc:${data.id}`, p);
+  if (data.id) {
+    repoOfDoc.set(`doc:${data.id}`, p);
+  }
 }
 
 // top-level docs → handbook
@@ -641,7 +694,7 @@ for (const file of walk(path.join(EC, 'docs'))) {
   const rel = path.relative(path.join(EC, 'docs'), file);
   const { data, body } = matter(read(file));
 
-  const docPath = `docs/${rel.replace(/^(\d+-)?/, '').replace(/\/\d+-/g, '/')}`.replace(
+  const docPath = `docs/${rel.replace(/^(\d+-)?/, '').replaceAll(/\/\d+-/g, '/')}`.replace(
     /\.md$/,
     '.mdx',
   );
@@ -658,14 +711,18 @@ for (const file of walk(path.join(EC, 'docs'))) {
     { map: '<Map />' },
   );
 
-  if (data.id) repoOfDoc.set(`doc:${data.id}`, p);
+  if (data.id) {
+    repoOfDoc.set(`doc:${data.id}`, p);
+  }
   repoOfDoc.set(`doc:${rel.replace(/\.mdx?$/, '')}`, p);
 }
 
 for (const p of plans) {
   const data = defined(p.data);
 
-  if (!data.title) data.title = path.basename(p.docPath).replace(/\.mdx?$/, '');
+  if (!data.title) {
+    data.title = path.basename(p.docPath).replace(/\.mdx?$/, '');
+  }
   write(path.join(repoDir(p.team), p.docPath), front(data, convertBody(p.body, { map: p.map })));
 }
 
@@ -702,16 +759,22 @@ for (const e of byKind('entity')) {
     ENTITY_KEYS.flatMap((k) => (e.data[k] === undefined ? [] : [[k, e.data[k]]])),
   );
 
-  if (data.summary) data.summary = String(data.summary).trim();
+  if (data.summary) {
+    data.summary = String(data.summary).trim();
+  }
   data.properties = cleanProps(data.properties);
 
-  if (e.domain) data.domains = [e.domain];
+  if (e.domain) {
+    data.domains = [e.domain];
+  }
 
   const holders = byKind('service')
     .filter((s) => (s.data.entities ?? []).some((x) => x.id === e.id))
     .map((s) => s.data.name);
 
-  if (holders.length) data.services = holders;
+  if (holders.length) {
+    data.services = holders;
+  }
   write(path.join(repoDir(team), 'entities', `${e.id}.md`), front(data, convertBody(e.body)));
 }
 
@@ -719,19 +782,27 @@ for (const e of byKind('entity')) {
 const stepOut = (s) => {
   const out = { id: String(s.id) };
 
-  if (s.title) out.title = s.title;
+  if (s.title) {
+    out.title = s.title;
+  }
 
-  if (s.summary) out.summary = String(s.summary).trim();
+  if (s.summary) {
+    out.summary = String(s.summary).trim();
+  }
 
   if (s.message) {
     const m = messageById.get(s.message.id);
 
-    if (m?.kind === 'event') out.event = `${m.manifest.domain}/${m.manifest.id}`;
+    if (m?.kind === 'event') {
+      out.event = `${m.manifest.domain}/${m.manifest.id}`;
+    }
     // `command:` would make this an EventStorming board, where branches read as failures;
     // the demo's flows are maps whose branches run side by side
-    else if (m)
+    else if (m) {
       out.custom = { title: s.title ?? m.manifest.name, summary: `Command: ${m.manifest.name}` };
-    else out.custom = { title: s.title ?? s.message.id };
+    } else {
+      out.custom = { title: s.title ?? s.message.id };
+    }
   } else if (s.service) {
     out.service = ecServiceName.get(s.service.id) ?? s.service.id;
   } else if (s.actor) {
@@ -763,9 +834,13 @@ const stepOut = (s) => {
   const hop = (n) =>
     n?.id === undefined ? String(n) : n.label ? { id: String(n.id), label: n.label } : String(n.id);
 
-  if (s.next_step) out.next_step = hop(s.next_step);
+  if (s.next_step) {
+    out.next_step = hop(s.next_step);
+  }
 
-  if (s.next_steps) out.next_steps = s.next_steps.map(hop);
+  if (s.next_steps) {
+    out.next_steps = s.next_steps.map(hop);
+  }
 
   return out;
 };

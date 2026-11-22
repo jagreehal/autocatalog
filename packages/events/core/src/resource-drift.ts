@@ -3,18 +3,16 @@ import {
   assessEventChange,
   compareSemverish,
   compatibilityViolations,
-  type DriftSeverity,
-  type DriftFinding,
 } from './drift';
-import { jsonObjectSchema, type JsonObject } from './json';
-import {
-  resourceKey,
-  relationshipKey,
-  isArchitectureCatalogResource,
-  type CatalogRelationship,
-  type CatalogResource,
-  type ResourceGraph,
-  type ResourceRef,
+import type { DriftSeverity, DriftFinding } from './drift';
+import { jsonObjectSchema } from './json';
+import type { JsonObject } from './json';
+import { resourceKey, relationshipKey, isArchitectureCatalogResource } from './resource-graph';
+import type {
+  CatalogRelationship,
+  CatalogResource,
+  ResourceGraph,
+  ResourceRef,
 } from './resource-graph';
 import { validateCommands } from './command-resources';
 import { readsAsPastTense } from './naming';
@@ -27,7 +25,7 @@ export interface ResourceDriftFinding {
   code: DriftFinding['kind'];
   severity: DriftSeverity;
   message: string;
-  affectedServices: string[];
+  affectedServices: Array<string>;
   /** The registry strategies the change violates, decided as for an event. */
   compatibility: Array<'backward' | 'forward'>;
   /** A breaking change the resource's own major version bump owns up to. */
@@ -56,7 +54,7 @@ function change(
   ref: ResourceRef,
   kind: DriftFinding['kind'],
   message: string,
-  consumers: string[],
+  consumers: Array<string>,
   severity: DriftSeverity = 'breaking',
 ): DriftFinding {
   return { domain: ref.namespace ?? '', eventId: ref.id, severity, kind, message, consumers };
@@ -68,10 +66,10 @@ function change(
  * An unversioned resource has no version to bump, so its advice says only what to keep.
  */
 function resourceFindings(
-  changes: DriftFinding[],
+  changes: Array<DriftFinding>,
   resource: ResourceRef,
   version: { from?: string; to?: string },
-): ResourceDriftFinding[] {
+): Array<ResourceDriftFinding> {
   const advised = adviseBreaking(changes, {
     from: version.from ?? '',
     to: version.from === undefined ? undefined : version.to,
@@ -90,7 +88,9 @@ function resourceFindings(
 }
 
 export function resourceSchema(resource: CatalogResource): JsonObject | undefined {
-  if (!('schema' in resource.attributes)) return undefined;
+  if (!('schema' in resource.attributes)) {
+    return undefined;
+  }
 
   const parsed = jsonObjectSchema.safeParse(
     'payloadSchema' in resource.attributes
@@ -110,8 +110,12 @@ function latestResources(graph: ResourceGraph): Map<string, CatalogResource> {
     const key = logicalKey(resource.ref);
     const existing = resources.get(key);
 
-    if (!existing || compareSemverish(resource.ref.version ?? '0', existing.ref.version ?? '0') > 0)
+    if (
+      !existing ||
+      compareSemverish(resource.ref.version ?? '0', existing.ref.version ?? '0') > 0
+    ) {
       resources.set(key, resource);
+    }
   }
 
   return resources;
@@ -121,25 +125,29 @@ function latestResources(graph: ResourceGraph): Map<string, CatalogResource> {
 function schemaChanges(
   previous: CatalogResource,
   schemas: { from: JsonObject; to: JsonObject },
-  accesses: CatalogRelationship[],
-  readers: string[],
-): DriftFinding[] {
+  accesses: Array<CatalogRelationship>,
+  readers: Array<string>,
+): Array<DriftFinding> {
   // Keyed by service id, so a Map: a service named `constructor` is not Object.
-  const consumerFields = new Map<string, string[]>();
+  const consumerFields = new Map<string, Array<string>>();
   const unknown = new Set<string>();
 
   for (const edge of accesses) {
     const fields = edge.attributes?.fields;
     const parsedFields = z.array(z.string()).safeParse(fields);
 
-    if (parsedFields.success && parsedFields.data.length)
+    if (parsedFields.success && parsedFields.data.length) {
       consumerFields.set(edge.from.id, [
         ...new Set([...(consumerFields.get(edge.from.id) ?? []), ...parsedFields.data]),
       ]);
-    else unknown.add(edge.from.id);
+    } else {
+      unknown.add(edge.from.id);
+    }
   }
 
-  for (const service of unknown) consumerFields.delete(service);
+  for (const service of unknown) {
+    consumerFields.delete(service);
+  }
 
   return assessEventChange({
     domain: previous.ref.namespace ?? '',
@@ -154,8 +162,8 @@ function schemaChanges(
 export function driftResources(
   baseline: ResourceGraph,
   current: ResourceGraph,
-): ResourceDriftFinding[] {
-  const findings: ResourceDriftFinding[] = [];
+): Array<ResourceDriftFinding> {
+  const findings: Array<ResourceDriftFinding> = [];
   const before = latestResources(baseline);
   const after = latestResources(current);
 
@@ -169,7 +177,7 @@ export function driftResources(
     const readers = [...new Set(accesses.map((edge) => edge.from.id))].sort();
 
     if (!proposed) {
-      if (['collection', 'table', 'command'].includes(previous.ref.kind))
+      if (['collection', 'table', 'command'].includes(previous.ref.kind)) {
         findings.push(
           ...resourceFindings(
             [change(previous.ref, 'resource_removed', `${key} was removed`, readers)],
@@ -177,10 +185,11 @@ export function driftResources(
             { from: previous.ref.version },
           ),
         );
+      }
       continue;
     }
 
-    const changes: DriftFinding[] = [];
+    const changes: Array<DriftFinding> = [];
 
     if (
       isArchitectureCatalogResource(previous) &&
@@ -197,7 +206,7 @@ export function driftResources(
 
       if (
         JSON.stringify(previous.attributes.outcome) !== JSON.stringify(proposed.attributes.outcome)
-      )
+      ) {
         changes.push(
           change(
             proposed.ref,
@@ -206,11 +215,12 @@ export function driftResources(
             senders,
           ),
         );
+      }
 
       const oldOutcome = jsonObjectSchema.safeParse(previous.attributes.outcomeSchema);
       const newOutcome = jsonObjectSchema.safeParse(proposed.attributes.outcomeSchema);
 
-      if (oldOutcome.success && newOutcome.success)
+      if (oldOutcome.success && newOutcome.success) {
         for (const finding of assessEventChange({
           domain: previous.ref.namespace ?? '',
           eventId: previous.ref.id,
@@ -219,6 +229,7 @@ export function driftResources(
           proposed: newOutcome.data,
         }))
           changes.push({ ...finding, message: `Command outcome: ${finding.message}` });
+      }
 
       const handlers = (graph: ResourceGraph) =>
         [
@@ -229,7 +240,7 @@ export function driftResources(
           ),
         ].sort();
 
-      if (JSON.stringify(handlers(baseline)) !== JSON.stringify(handlers(current)))
+      if (JSON.stringify(handlers(baseline)) !== JSON.stringify(handlers(current))) {
         changes.push(
           change(
             proposed.ref,
@@ -239,15 +250,17 @@ export function driftResources(
             'suspicious',
           ),
         );
+      }
     }
 
     const oldSchema = resourceSchema(previous);
     const newSchema = resourceSchema(proposed);
 
-    if (oldSchema && newSchema)
+    if (oldSchema && newSchema) {
       changes.push(
         ...schemaChanges(previous, { from: oldSchema, to: newSchema }, accesses, readers),
       );
+    }
 
     findings.push(
       ...resourceFindings(changes, proposed.ref, {
@@ -257,7 +270,7 @@ export function driftResources(
     );
   }
 
-  for (const finding of validateCommands(current))
+  for (const finding of validateCommands(current)) {
     findings.push({
       resource: finding.resource,
       code: finding.code,
@@ -266,11 +279,14 @@ export function driftResources(
       affectedServices: [],
       compatibility: [],
     });
+  }
 
   for (const [key, command] of after) {
-    if (command.ref.kind !== 'command' || before.has(key)) continue;
+    if (command.ref.kind !== 'command' || before.has(key)) {
+      continue;
+    }
 
-    if (readsAsPastTense(command.ref.id, command.title))
+    if (readsAsPastTense(command.ref.id, command.title)) {
       findings.push({
         resource: command.ref,
         code: 'command_named_as_event',
@@ -279,6 +295,7 @@ export function driftResources(
         affectedServices: [],
         compatibility: [],
       });
+    }
   }
 
   const previousEdges = new Set(baseline.relationships.map(relationshipKey));
@@ -288,7 +305,7 @@ export function driftResources(
       edge.type === 'writes' &&
       edge.provenance === 'observed' &&
       !previousEdges.has(relationshipKey(edge))
-    )
+    ) {
       findings.push({
         resource: edge.to,
         code: 'writer_undocumented',
@@ -297,6 +314,7 @@ export function driftResources(
         affectedServices: [edge.from.id],
         compatibility: [],
       });
+    }
   }
 
   findings.push(...crossOwnerAccess(current, previousEdges));
@@ -312,7 +330,7 @@ export function driftResources(
 function crossOwnerAccess(
   graph: ResourceGraph,
   previousEdges: Set<string>,
-): ResourceDriftFinding[] {
+): Array<ResourceDriftFinding> {
   const owners = new Map(
     graph.resources.map((resource) => [resourceKey(resource.ref), resource.owner?.team]),
   );
@@ -321,12 +339,16 @@ function crossOwnerAccess(
     const access =
       ['reads', 'writes'].includes(edge.type) && ['collection', 'table'].includes(edge.to.kind);
 
-    if (!access || previousEdges.has(relationshipKey(edge))) return [];
+    if (!access || previousEdges.has(relationshipKey(edge))) {
+      return [];
+    }
 
     const team = owners.get(resourceKey(edge.from));
     const owner = owners.get(resourceKey(edge.to));
 
-    if (!team || !owner || team === owner) return [];
+    if (!team || !owner || team === owner) {
+      return [];
+    }
 
     return [
       {
@@ -359,7 +381,7 @@ export type DocumentObservation = z.infer<typeof documentObservations>[number];
 
 export function validateResourceDocuments(
   graph: ResourceGraph,
-  observations: DocumentObservation[],
+  observations: Array<DocumentObservation>,
 ) {
   let checked = 0;
   let skipped = 0;
@@ -398,9 +420,11 @@ export function validateResourceDocuments(
     const validate = ajv.compile(schema);
     checked++;
 
-    if (validate(observation.value)) continue;
+    if (validate(observation.value)) {
+      continue;
+    }
 
-    for (const error of validate.errors ?? [])
+    for (const error of validate.errors ?? []) {
       findings.push({
         resource: observation.resource,
         code: 'document_schema_mismatch',
@@ -410,6 +434,7 @@ export function validateResourceDocuments(
         affectedServices: [],
         compatibility: [],
       });
+    }
   }
 
   return { checked, skipped, findings };

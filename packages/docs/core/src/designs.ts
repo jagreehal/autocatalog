@@ -5,10 +5,8 @@ import {
   isServiceCatalogResource,
   parseFrontmatter,
   resourceKey,
-  type CatalogRelationship,
-  type CatalogResource,
-  type ResourceRef,
 } from 'autocatalog-core';
+import type { CatalogRelationship, CatalogResource, ResourceRef } from 'autocatalog-core';
 import { z } from 'zod';
 import { aboutReference, resolveAbout } from './about';
 import type { Diagram, DiagramEdgeType, DiagramNode, DiagramNodeType } from './diagram';
@@ -85,11 +83,11 @@ export interface Design {
   summary?: string | undefined;
   status: DesignStatus;
   body: string;
-  resources: DesignResource[];
-  relations: DesignRelation[];
-  notes: DesignNote[];
+  resources: Array<DesignResource>;
+  relations: Array<DesignRelation>;
+  notes: Array<DesignNote>;
   /** What a reader should know first: risks, single points of failure, open questions. */
-  hotspots: DesignHotspot[];
+  hotspots: Array<DesignHotspot>;
   /** Where the canvas put each resource, by level; absent until the design is edited on one. */
   layout?: DesignLayout | undefined;
 }
@@ -214,7 +212,7 @@ const TYPES = new Map<string, DesignResource['type']>([
  */
 export function resolveDesign(
   authored: DesignInput,
-  catalog: { resources: CatalogResource[]; relationships: CatalogRelationship[] },
+  catalog: { resources: Array<CatalogResource>; relationships: Array<CatalogRelationship> },
   where: { repository: string; id: string; file: string; body?: string },
   /** Leave a `ref` naming nothing in `catalog` to the composed site, as flows do. */
   options: { deferMissing?: boolean } = {},
@@ -243,7 +241,9 @@ export function resolveDesign(
         };
       }
 
-      if ('failure' in resolution) throw new Error(resolution.failure);
+      if ('failure' in resolution) {
+        throw new Error(resolution.failure);
+      }
 
       const found = byKey.get(resourceKey(resolution.ref));
 
@@ -297,7 +297,9 @@ export function resolveDesign(
   const ids = new Map<string, DesignResource>();
 
   for (const resource of resources) {
-    if (ids.has(resource.id)) throw new Error(`resource '${resource.id}' appears twice`);
+    if (ids.has(resource.id)) {
+      throw new Error(`resource '${resource.id}' appears twice`);
+    }
     ids.set(resource.id, resource);
   }
 
@@ -371,15 +373,15 @@ export function resolveDesign(
 }
 
 export interface ReadDesignsResult {
-  designs: Design[];
+  designs: Array<Design>;
   /** One line per design left out, naming its file and what is wrong. */
-  failures: string[];
+  failures: Array<string>;
 }
 
 /** The designs each repository keeps under `designs/`, resolved against the composed catalog. */
 export function readDesigns(
   repositories: Array<{ repository: string; dir: string }>,
-  catalog: { resources: CatalogResource[]; relationships: CatalogRelationship[] },
+  catalog: { resources: Array<CatalogResource>; relationships: Array<CatalogRelationship> },
   options: { deferMissing?: boolean } = {},
 ): ReadDesignsResult {
   const result: ReadDesignsResult = { designs: [], failures: [] };
@@ -388,10 +390,14 @@ export function readDesigns(
     const folder = path.join(dir, DESIGNS_DIR);
 
     // A real directory only: a symlink could point anywhere on the build machine.
-    if (!fs.lstatSync(folder, { throwIfNoEntry: false })?.isDirectory()) continue;
+    if (!fs.lstatSync(folder, { throwIfNoEntry: false })?.isDirectory()) {
+      continue;
+    }
 
     for (const entry of fs.readdirSync(folder, { withFileTypes: true })) {
-      if (!entry.isFile() || !entry.name.endsWith('.md')) continue;
+      if (!entry.isFile() || !entry.name.endsWith('.md')) {
+        continue;
+      }
 
       const file = `${DESIGNS_DIR}/${entry.name}`;
       const id = path.posix.basename(file, '.md');
@@ -410,7 +416,7 @@ export function readDesigns(
         const parsed = designSchema.safeParse(data);
 
         if (!parsed.success) {
-          throw new Error(z.prettifyError(parsed.error).replace(/\n+/g, '; '));
+          throw new Error(z.prettifyError(parsed.error).replaceAll(/\n+/g, '; '));
         }
 
         result.designs.push(
@@ -441,7 +447,9 @@ export function designChanges(design: Design): string {
   const counts = new Map<string, number>();
 
   for (const resource of design.resources) {
-    if (resource.state === 'new') counts.set(resource.type, (counts.get(resource.type) ?? 0) + 1);
+    if (resource.state === 'new') {
+      counts.set(resource.type, (counts.get(resource.type) ?? 0) + 1);
+    }
   }
 
   const relations = design.relations.filter((relation) => relation.state === 'new').length;
@@ -451,7 +459,9 @@ export function designChanges(design: Design): string {
     ...(relations > 0 ? [`${relations} new relation${relations === 1 ? '' : 's'}`] : []),
   ];
 
-  if (parts.length === 0) return 'Nothing new: the catalog already has all of it';
+  if (parts.length === 0) {
+    return 'Nothing new: the catalog already has all of it';
+  }
 
   return parts.length === 1 ? parts[0]! : `${parts.slice(0, -1).join(', ')} and ${parts.at(-1)}`;
 }
@@ -492,7 +502,7 @@ const MESSAGES = new Set<DiagramNodeType>(['event', 'command', 'query', 'channel
  */
 export function designDiagram(design: Design): Diagram & {
   /** Resource ids the design proposes, drawn as proposed. */
-  proposed: string[];
+  proposed: Array<string>;
   levels: { 1?: Pick<Diagram, 'nodes' | 'edges'>; 2: Pick<Diagram, 'nodes' | 'edges'> };
 } {
   const groups = new Set(['domain', 'system']);
@@ -540,7 +550,7 @@ export function designDiagram(design: Design): Diagram & {
   // Level 2: a message between two parts becomes one edge from sender to receiver, named for it.
   const kept = nodes.filter((n) => !MESSAGES.has(n.type));
 
-  const bridged = new Map<string, { source: string; target: string; labels: string[] }>();
+  const bridged = new Map<string, { source: string; target: string; labels: Array<string> }>();
 
   for (const via of nodes.filter((n) => MESSAGES.has(n.type))) {
     const into = edges.filter(
@@ -592,12 +602,16 @@ export function designDiagram(design: Design): Diagram & {
     const source = groupOf(edge.source) ?? edge.source;
     const target = groupOf(edge.target) ?? edge.target;
 
-    if (source === target) continue;
+    if (source === target) {
+      continue;
+    }
 
     const key = `${source}->${target}`;
     const entry = level1Edges.get(key) ?? { source, target, labels: new Set<string>() };
 
-    if (edge.label) entry.labels.add(edge.label);
+    if (edge.label) {
+      entry.labels.add(edge.label);
+    }
     level1Edges.set(key, entry);
   }
 

@@ -6,7 +6,8 @@ import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import type { JsonObject } from 'autocatalog-core';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { z } from 'zod';
-import { buildSiteCatalog, type DocsCatalog } from '../src/catalog';
+import { buildSiteCatalog } from '../src/catalog';
+import type { DocsCatalog } from '../src/catalog';
 import { docsSiteConfig } from '../src/config';
 import { docsMcpServer, getOperation, listOperations, pageOf } from '../src/mcp';
 

@@ -1,7 +1,8 @@
 /** @jsxImportSource react */
 import { useFieldValue } from '#ui/lib/field.ts';
 import { SearchIcon } from 'lucide-react';
-import { type ReactNode, useState } from 'react';
+import { useState } from 'react';
+import type { ReactNode } from 'react';
 import { Badge } from '#ui/components/ui/badge.tsx';
 import { Button } from '#ui/components/ui/button.tsx';
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from '#ui/components/ui/card.tsx';
@@ -40,8 +41,8 @@ export interface FieldRow {
   path: string;
   /** Present when events disagree on the field's type or whether it is required. */
   conflict: string | null;
-  types: string[];
-  carriers: FieldCarrier[];
+  types: Array<string>;
+  carriers: Array<FieldCarrier>;
   /** Services a change to the field would reach. */
   consumers: Array<{ name: string; href: string }>;
   /** Lower-cased text the filter matches: the path, its events, its services. */
@@ -49,7 +50,7 @@ export interface FieldRow {
 }
 
 export interface FieldsPageProps {
-  fields: FieldRow[];
+  fields: Array<FieldRow>;
   eventCount: number;
   /** How many fields disagree between events. */
   conflicts: number;

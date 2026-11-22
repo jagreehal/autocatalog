@@ -24,7 +24,7 @@ const write = async (file: string, content: string) => {
   await fs.writeFile(path.join(root, file), content);
 };
 
-const event = (id: string, producers: string[], consumers: string[], extra = {}) =>
+const event = (id: string, producers: Array<string>, consumers: Array<string>, extra = {}) =>
   write(
     `events/payments/${id}/autocatalog.json`,
     JSON.stringify({

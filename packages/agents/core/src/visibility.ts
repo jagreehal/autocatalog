@@ -20,13 +20,15 @@ export const filterForAudience = (body: string, audience: Audience): string => {
   return body.replace(reset(FOR_HUMAN_RE), '').replace(reset(FOR_AGENT_RE), '$1');
 };
 
-const extractAll = (body: string, re: RegExp): string[] => {
-  const matches: string[] = [];
+const extractAll = (body: string, re: RegExp): Array<string> => {
+  const matches: Array<string> = [];
   let m: RegExpExecArray | null;
   reset(re);
 
   while ((m = re.exec(body)) !== null) {
-    if (m[1]) matches.push(m[1].trim());
+    if (m[1]) {
+      matches.push(m[1].trim());
+    }
   }
 
   return matches;
@@ -38,4 +40,4 @@ export const extractForAudience = (body: string, audience: Audience): string => 
   return extractAll(body, re).join('\n\n');
 };
 
-export const extractPrompts = (body: string): string[] => extractAll(body, PROMPT_RE);
+export const extractPrompts = (body: string): Array<string> => extractAll(body, PROMPT_RE);

@@ -1,13 +1,6 @@
 import fs from 'node:fs';
-import {
-  CHAT_ICON_NAMES,
-  type ChatOptions,
-  type ChatPage,
-  type ChatSource,
-  type ChatTurn,
-  type ChatText,
-  DEFAULT_CHAT_TEXT,
-} from 'autocatalog-chatbot';
+import { CHAT_ICON_NAMES, DEFAULT_CHAT_TEXT } from 'autocatalog-chatbot';
+import type { ChatOptions, ChatPage, ChatSource, ChatTurn, ChatText } from 'autocatalog-chatbot';
 import { z } from 'zod';
 import { apiDescription, apiOperations, apiPath, apiTitle } from './apis';
 import type { DocsCatalog } from './catalog';
@@ -25,7 +18,7 @@ export interface SiteChatRequest {
   /** What the site's middleware set, such as who is signed in. */
   locals: App.Locals;
   /** Every page the build published, each with its frontmatter as `data`. */
-  pages: ChatPage[];
+  pages: Array<ChatPage>;
 }
 
 /**
@@ -48,7 +41,7 @@ export interface SiteChatOptions extends Omit<ChatOptions, 'onAsked' | 'onAnswer
  * its address. Built from the catalog the site was built from, so a site for an
  * audience answers only from what that audience can open.
  */
-export function chatPages(catalog: DocsCatalog, base: string): ChatPage[] {
+export function chatPages(catalog: DocsCatalog, base: string): Array<ChatPage> {
   const at = (page: string) => `${base}${page.replace(/^\/+/, '').replace(/\/?$/, '/')}`;
 
   const docs = catalog.docs.map((doc) => ({
@@ -108,9 +101,11 @@ export function chatText(text: Record<string, string> | undefined): Partial<Chat
 
 /** The panel's icons a site set, each file read now so the page carries it. */
 export function chatIcons(icons: Record<string, string> | undefined) {
-  if (!icons) return undefined;
+  if (!icons) {
+    return undefined;
+  }
 
-  const names: readonly string[] = CHAT_ICON_NAMES;
+  const names: ReadonlyArray<string> = CHAT_ICON_NAMES;
   const unknown = Object.keys(icons).filter((name) => !names.includes(name));
 
   if (unknown.length > 0) {

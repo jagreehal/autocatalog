@@ -1,14 +1,13 @@
 import { z } from 'zod';
 import { architectureService } from './architecture';
-import { CONSUMES_FILE, type CatalogReference } from './consumes';
-import {
-  AUTOCATALOG_GRAPH_SPEC,
-  relationshipKey,
-  resourceKey,
-  type CatalogRelationship,
-  type CatalogResource,
-  type ResourceGraph,
-  type ResourceRef,
+import { CONSUMES_FILE } from './consumes';
+import type { CatalogReference } from './consumes';
+import { AUTOCATALOG_GRAPH_SPEC, relationshipKey, resourceKey } from './resource-graph';
+import type {
+  CatalogRelationship,
+  CatalogResource,
+  ResourceGraph,
+  ResourceRef,
 } from './resource-graph';
 
 /**
@@ -21,8 +20,8 @@ import {
 /** One repository's references, as its declarations file says them. */
 export interface RepositoryReferences {
   repository: string;
-  receives: CatalogReference[];
-  sends: CatalogReference[];
+  receives: Array<CatalogReference>;
+  sends: Array<CatalogReference>;
 }
 
 /** A service receiving an earlier release than the newest its publisher has. */
@@ -39,8 +38,8 @@ export interface BehindReference {
 export interface ResolvedReferences {
   graph: ResourceGraph;
   /** References that name nothing, more than one thing, or no matching version: said, never guessed. */
-  unresolved: string[];
-  behind: BehindReference[];
+  unresolved: Array<string>;
+  behind: Array<BehindReference>;
 }
 
 // ---------------------------------------------------------------------------
@@ -63,7 +62,9 @@ function parseVersion(text: string): Version | undefined {
       text.trim(),
     );
 
-  if (!match) return undefined;
+  if (!match) {
+    return undefined;
+  }
 
   const raw = [match[1], match[2], match[3]];
   const open = raw.findIndex((part) => part === undefined || /^[x*]$/i.test(part));
@@ -76,11 +77,17 @@ function parseVersion(text: string): Version | undefined {
 
 /** Prerelease order, as semver has it: identifiers left to right, numbers numerically, before letters. */
 function comparePre(a: string | undefined, b: string | undefined): number {
-  if (a === b) return 0;
+  if (a === b) {
+    return 0;
+  }
 
-  if (a === undefined) return 1;
+  if (a === undefined) {
+    return 1;
+  }
 
-  if (b === undefined) return -1;
+  if (b === undefined) {
+    return -1;
+  }
 
   const left = a.split('.');
   const right = b.split('.');
@@ -89,18 +96,28 @@ function comparePre(a: string | undefined, b: string | undefined): number {
     const x = left[i];
     const y = right[i];
 
-    if (x === undefined) return -1;
+    if (x === undefined) {
+      return -1;
+    }
 
-    if (y === undefined) return 1;
+    if (y === undefined) {
+      return 1;
+    }
 
     const nx = /^\d+$/.test(x);
     const ny = /^\d+$/.test(y);
 
-    if (nx && ny && Number(x) !== Number(y)) return Number(x) - Number(y);
+    if (nx && ny && Number(x) !== Number(y)) {
+      return Number(x) - Number(y);
+    }
 
-    if (nx !== ny) return nx ? -1 : 1;
+    if (nx !== ny) {
+      return nx ? -1 : 1;
+    }
 
-    if (x !== y) return x < y ? -1 : 1;
+    if (x !== y) {
+      return x < y ? -1 : 1;
+    }
   }
 
   return 0;
@@ -112,12 +129,16 @@ const compare = (a: Triple, b: Triple) => a[0] - b[0] || a[1] - b[1] || a[2] - b
 function satisfiesComparator(version: Version, comparator: string): boolean | undefined {
   const op = /^(\^|~|>=|<=|>|<|=)?\s*(.+)$/.exec(comparator.trim());
 
-  if (!op) return undefined;
+  if (!op) {
+    return undefined;
+  }
 
   const [, operator = '', rest = ''] = op;
   const bound = parseVersion(rest);
 
-  if (!bound) return undefined;
+  if (!bound) {
+    return undefined;
+  }
 
   const { parts, open } = bound;
   const at = (v: Triple, pre?: string) => compare(version.parts, v) || comparePre(version.pre, pre);
@@ -161,19 +182,25 @@ function satisfiesComparator(version: Version, comparator: string): boolean | un
  * between alternatives and spaces between comparators that must all hold.
  */
 export function versionSatisfies(version: string, wanted: string | undefined): boolean {
-  if (wanted === undefined || ['', '*', 'latest', 'x'].includes(wanted.trim())) return true;
+  if (wanted === undefined || ['', '*', 'latest', 'x'].includes(wanted.trim())) {
+    return true;
+  }
 
   // A version is always itself, semver or not.
-  if (version === wanted.trim()) return true;
+  if (version === wanted.trim()) {
+    return true;
+  }
 
   const parsed = parseVersion(version);
 
-  if (!parsed || parsed.open !== 3) return false;
+  if (!parsed || parsed.open !== 3) {
+    return false;
+  }
 
   return wanted.split('||').some((alternative) => {
     const comparators = alternative
       .trim()
-      .replace(/(\^|~|>=|<=|>|<|=)\s+/g, '$1')
+      .replaceAll(/(\^|~|>=|<=|>|<|=)\s+/g, '$1')
       .split(/\s+/);
 
     // As semver has it: a prerelease satisfies a range only when the range
@@ -185,8 +212,9 @@ export function versionSatisfies(version: string, wanted: string | undefined): b
 
         return bound?.pre !== undefined && compare(bound.parts, parsed.parts) === 0;
       })
-    )
+    ) {
       return false;
+    }
 
     return comparators.every((comparator) => satisfiesComparator(parsed, comparator) === true);
   });
@@ -215,9 +243,10 @@ const domainOf = (resource: CatalogResource): string => {
 function publishers(graph: ResourceGraph): Map<string, string> {
   const byEvent = new Map<string, string>();
 
-  for (const edge of graph.relationships)
+  for (const edge of graph.relationships) {
     if (edge.type === 'defines' && edge.from.kind === 'repository')
       byEvent.set(resourceKey(edge.to), edge.from.id);
+  }
 
   return byEvent;
 }
@@ -231,7 +260,7 @@ function publishers(graph: ResourceGraph): Map<string, string> {
  */
 export function resolveReferences(
   composed: ResourceGraph,
-  repositories: RepositoryReferences[],
+  repositories: Array<RepositoryReferences>,
   /**
    * Earlier versions of what `composed` holds, from each repository's history,
    * so a range can pick a release behind the current one. Only a version a
@@ -249,8 +278,10 @@ export function resolveReferences(
 
   const byKey = new Map(all.map((resource) => [resourceKey(resource.ref), resource]));
 
-  const candidates: Candidate[] = all.flatMap((resource) => {
-    if (resource.ref.kind !== 'event' && resource.ref.kind !== 'command') return [];
+  const candidates: Array<Candidate> = all.flatMap((resource) => {
+    if (resource.ref.kind !== 'event' && resource.ref.kind !== 'command') {
+      return [];
+    }
 
     const repository = owners.get(resourceKey(resource.ref));
 
@@ -267,8 +298,8 @@ export function resolveReferences(
   const services = new Map<string, CatalogResource>();
   const added = new Map<string, CatalogResource>();
   const relationships = new Map<string, CatalogRelationship>();
-  const unresolved: string[] = [];
-  const behind: BehindReference[] = [];
+  const unresolved: Array<string> = [];
+  const behind: Array<BehindReference> = [];
 
   for (const { repository, receives, sends } of repositories) {
     for (const [direction, list] of [
@@ -427,7 +458,9 @@ function compareVersions(a: string, b: string): number {
   const pa = parseVersion(a);
   const pb = parseVersion(b);
 
-  if (!pa || !pb) return pa ? 1 : pb ? -1 : a.localeCompare(b);
+  if (!pa || !pb) {
+    return pa ? 1 : pb ? -1 : a.localeCompare(b);
+  }
 
   return compare(pa.parts, pb.parts) || comparePre(pa.pre, pb.pre);
 }

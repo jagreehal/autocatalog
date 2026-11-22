@@ -114,10 +114,14 @@ export function DesignPage({
   useEffect(() => {
     const hot = import.meta.hot;
 
-    if (!hot || !watchFile) return;
+    if (!hot || !watchFile) {
+      return;
+    }
 
     const onChanged = ({ file }: { file: string }) => {
-      if (file === watchFile) window.location.reload();
+      if (file === watchFile) {
+        window.location.reload();
+      }
     };
 
     hot.on(DESIGN_CHANGED, onChanged);

@@ -11,7 +11,7 @@ import { Experimental_StdioMCPTransport as StdioTransport } from '@ai-sdk/mcp/mc
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
 import { generateText, stepCountIs } from 'ai';
 
-const here = path.dirname(fileURLToPath(import.meta.url));
+const here = import.meta.dirname;
 
 const repos = path.resolve(here, '../../examples/docs-demo/repos');
 
@@ -60,9 +60,13 @@ async function retrieval(client, tools, question) {
 
   const { answered, results } = JSON.parse(textOf(output));
 
-  if (question.abstain) return { outcome: answered ? 'made-up' : 'correct' };
+  if (question.abstain) {
+    return { outcome: answered ? 'made-up' : 'correct' };
+  }
 
-  if (!answered) return { outcome: 'missed' };
+  if (!answered) {
+    return { outcome: 'missed' };
+  }
 
   return {
     outcome: results.some((result) => result.source.includes(question.source))
@@ -84,17 +88,25 @@ function score(question, text) {
   const notFound = /not found/i.test(text.trim().split('\n').at(-1) ?? '');
   const source = /source:\s*(.+)\s*$/i.exec(text.trim())?.[1] ?? '';
 
-  if (!text.trim()) return 'no-answer';
+  if (!text.trim()) {
+    return 'no-answer';
+  }
 
-  if (question.abstain) return notFound ? 'correct' : 'made-up';
+  if (question.abstain) {
+    return notFound ? 'correct' : 'made-up';
+  }
 
-  if (notFound) return 'missed';
+  if (notFound) {
+    return 'missed';
+  }
 
   const right = question.answer.some((answer) => lower.includes(answer.toLowerCase()));
   const cited = source.includes(question.source);
   const flagged = !question.mustFlag || question.mustFlag.some((word) => lower.includes(word));
 
-  if (right && cited && flagged) return 'correct';
+  if (right && cited && flagged) {
+    return 'correct';
+  }
 
   return right && flagged ? 'uncited' : right ? 'unflagged' : 'wrong';
 }
@@ -152,7 +164,9 @@ async function patiently(work, tries = 12) {
   try {
     return await work();
   } catch (error) {
-    if (tries === 0 || !/rate limit/i.test(String(error))) throw error;
+    if (tries === 0 || !/rate limit/i.test(String(error))) {
+      throw error;
+    }
 
     await pause(150_000);
 

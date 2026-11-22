@@ -9,13 +9,15 @@ import {
   refKey,
   rollupCost,
   totalMonthlyCost,
-  type Catalog,
-  type Entity,
-  type EntityKind,
-  type EntityRef,
-  type ImpactReport,
-  type RollupKey,
-  type Severity,
+} from 'autocatalog-agents-core';
+import type {
+  Catalog,
+  Entity,
+  EntityKind,
+  EntityRef,
+  ImpactReport,
+  RollupKey,
+  Severity,
 } from 'autocatalog-agents-core';
 import { computeDrift, loadObservations } from 'autocatalog-agents-adapter-autotel';
 
@@ -54,7 +56,9 @@ const summarise = (kind: EntityKind, e: Entity): EntitySummary => {
     owner: e.owner,
   };
 
-  if (e.description) summary.description = e.description;
+  if (e.description) {
+    summary.description = e.description;
+  }
 
   return summary;
 };
@@ -62,7 +66,9 @@ const summarise = (kind: EntityKind, e: Entity): EntitySummary => {
 export const listEntities = (cat: Catalog, kind: EntityKind) => {
   const bucket = cat.entities.get(kind);
 
-  if (!bucket) return [];
+  if (!bucket) {
+    return [];
+  }
 
   return [...bucket.values()].map((e) => summarise(kind, e));
 };
@@ -71,7 +77,9 @@ export const describeEntity = (cat: Catalog, refStr: string) => {
   const ref = parseRef(refStr);
   const entity = cat.entities.get(ref.kind)?.get(ref.id);
 
-  if (!entity) throw new Error(`not found: ${refStr}`);
+  if (!entity) {
+    throw new Error(`not found: ${refStr}`);
+  }
   const meta = cat.meta.get(refKey(ref.kind, ref.id));
   const body = meta?.body ? filterForAudience(meta.body, 'agent').trim() : '';
 
@@ -81,8 +89,8 @@ export const describeEntity = (cat: Catalog, refStr: string) => {
 /** An impact report with refs flattened to `kind/id`, for a client reading JSON. */
 type ImpactResult = {
   subject: string;
-  dependsOn: string[];
-  dependedOnBy: string[];
+  dependsOn: Array<string>;
+  dependedOnBy: Array<string>;
   events?: ImpactReport['events'];
 };
 
@@ -101,7 +109,9 @@ export const impactEntity = (cat: Catalog, refStr: string) => {
     dependedOnBy: report.dependents.map((d) => `${d.kind}/${d.id}`),
   };
 
-  if (report.events) result.events = report.events;
+  if (report.events) {
+    result.events = report.events;
+  }
 
   return result;
 };
@@ -118,7 +128,9 @@ export const searchEntities = (cat: Catalog, query: string) => {
 
   for (const kind of ENTITY_KINDS) {
     for (const e of cat.entities.get(kind)?.values() ?? []) {
-      if (matchesQuery(query, e)) results.push(summarise(kind, e));
+      if (matchesQuery(query, e)) {
+        results.push(summarise(kind, e));
+      }
     }
   }
 
@@ -128,9 +140,13 @@ export const searchEntities = (cat: Catalog, query: string) => {
 const attrMatches = (entity: Entity, attribute: string, value: string): boolean => {
   const raw = Object.entries(entity).find(([key]) => key === attribute)?.[1];
 
-  if (raw === undefined || raw === null) return false;
+  if (raw === undefined || raw === null) {
+    return false;
+  }
 
-  if (Array.isArray(raw)) return raw.some((v) => String(v) === value);
+  if (Array.isArray(raw)) {
+    return raw.some((v) => String(v) === value);
+  }
 
   return String(raw) === value;
 };
@@ -140,7 +156,9 @@ export const findBy = (cat: Catalog, attribute: string, value: string) => {
 
   for (const kind of ENTITY_KINDS) {
     for (const e of cat.entities.get(kind)?.values() ?? []) {
-      if (attrMatches(e, attribute, value)) results.push(summarise(kind, e));
+      if (attrMatches(e, attribute, value)) {
+        results.push(summarise(kind, e));
+      }
     }
   }
 

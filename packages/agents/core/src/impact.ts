@@ -1,4 +1,5 @@
-import { entitiesOf, type Catalog } from './loader.js';
+import { entitiesOf } from './loader.js';
+import type { Catalog } from './loader.js';
 import type { EventDirection, EventLink } from './events.js';
 import type { EntityKind } from './schemas.js';
 
@@ -6,32 +7,46 @@ export type EntityRef = { kind: EntityKind; id: string };
 
 export type ImpactReport = {
   subject: EntityRef;
-  dependencies: EntityRef[];
-  dependents: EntityRef[];
+  dependencies: Array<EntityRef>;
+  dependents: Array<EntityRef>;
   /** Event references an Agent or Tool declares, as written. */
-  events?: { produces: string[]; consumes: string[] };
+  events?: { produces: Array<string>; consumes: Array<string> };
 };
 
-const depsOf = (cat: Catalog, ref: EntityRef): EntityRef[] => {
-  const deps: EntityRef[] = [];
+const depsOf = (cat: Catalog, ref: EntityRef): Array<EntityRef> => {
+  const deps: Array<EntityRef> = [];
   const entity = cat.entities.get(ref.kind)?.get(ref.id);
 
-  if (!entity) return deps;
+  if (!entity) {
+    return deps;
+  }
 
   if (entity.kind === 'agent') {
     deps.push({ kind: 'model', id: entity.model });
 
-    for (const t of entity.tools) deps.push({ kind: 'tool', id: t });
+    for (const t of entity.tools) {
+      deps.push({ kind: 'tool', id: t });
+    }
 
-    for (const id of entity.servers) deps.push({ kind: 'mcp-server', id });
+    for (const id of entity.servers) {
+      deps.push({ kind: 'mcp-server', id });
+    }
 
-    for (const p of entity.policies) deps.push({ kind: 'policy', id: p });
+    for (const p of entity.policies) {
+      deps.push({ kind: 'policy', id: p });
+    }
 
-    if (entity.domain) deps.push({ kind: 'domain', id: entity.domain });
+    if (entity.domain) {
+      deps.push({ kind: 'domain', id: entity.domain });
+    }
   } else if (entity.kind === 'tool') {
-    if (entity.server) deps.push({ kind: 'mcp-server', id: entity.server });
+    if (entity.server) {
+      deps.push({ kind: 'mcp-server', id: entity.server });
+    }
   } else if (entity.kind === 'workflow') {
-    for (const id of entity.agents) deps.push({ kind: 'agent', id });
+    for (const id of entity.agents) {
+      deps.push({ kind: 'agent', id });
+    }
   } else if (entity.kind === 'eval') {
     deps.push({ kind: 'agent', id: entity.target });
   }
@@ -39,8 +54,8 @@ const depsOf = (cat: Catalog, ref: EntityRef): EntityRef[] => {
   return deps;
 };
 
-const dependentsOf = (cat: Catalog, ref: EntityRef): EntityRef[] => {
-  const out: EntityRef[] = [];
+const dependentsOf = (cat: Catalog, ref: EntityRef): Array<EntityRef> => {
+  const out: Array<EntityRef> = [];
 
   // A server reaches agents through its tools, so changing it reaches them too.
   const servedTools =
@@ -48,7 +63,9 @@ const dependentsOf = (cat: Catalog, ref: EntityRef): EntityRef[] => {
       ? entitiesOf(cat, 'tool').filter((tool) => tool.server === ref.id)
       : [];
 
-  for (const tool of servedTools) out.push({ kind: 'tool', id: tool.id });
+  for (const tool of servedTools) {
+    out.push({ kind: 'tool', id: tool.id });
+  }
 
   for (const a of entitiesOf(cat, 'agent')) {
     const refsMe =
@@ -59,7 +76,9 @@ const dependentsOf = (cat: Catalog, ref: EntityRef): EntityRef[] => {
       (ref.kind === 'policy' && a.policies.includes(ref.id)) ||
       (ref.kind === 'domain' && a.domain === ref.id);
 
-    if (refsMe) out.push({ kind: 'agent', id: a.id });
+    if (refsMe) {
+      out.push({ kind: 'agent', id: a.id });
+    }
   }
 
   for (const w of entitiesOf(cat, 'workflow')) {
@@ -80,9 +99,13 @@ const dependentsOf = (cat: Catalog, ref: EntityRef): EntityRef[] => {
 const eventsOf = (cat: Catalog, ref: EntityRef): ImpactReport['events'] => {
   const entity = cat.entities.get(ref.kind)?.get(ref.id);
 
-  if (entity?.kind !== 'agent' && entity?.kind !== 'tool') return undefined;
+  if (entity?.kind !== 'agent' && entity?.kind !== 'tool') {
+    return undefined;
+  }
 
-  if (!entity.produces?.length && !entity.consumes?.length) return undefined;
+  if (!entity.produces?.length && !entity.consumes?.length) {
+    return undefined;
+  }
 
   return {
     produces: [...new Set(entity.produces ?? [])].sort(),
@@ -99,7 +122,9 @@ export const computeImpact = (cat: Catalog, ref: EntityRef): ImpactReport => {
 
   const events = eventsOf(cat, ref);
 
-  if (events) report.events = events;
+  if (events) {
+    report.events = events;
+  }
 
   return report;
 };
@@ -107,8 +132,8 @@ export const computeImpact = (cat: Catalog, ref: EntityRef): ImpactReport => {
 export type EventImpactReport = {
   /** `domain/id`. */
   event: string;
-  producers: EntityRef[];
-  consumers: EntityRef[];
+  producers: Array<EntityRef>;
+  consumers: Array<EntityRef>;
   /** Agents that never name the event but call a Tool that does. */
   viaTools: Array<{ agent: EntityRef; tool: EntityRef; direction: EventDirection }>;
 };
@@ -116,7 +141,7 @@ export type EventImpactReport = {
 /** Which Agents and Tools a change to one event reaches, from resolved links. */
 export const computeEventImpact = (
   cat: Catalog,
-  links: EventLink[],
+  links: Array<EventLink>,
   event: string,
 ): EventImpactReport => {
   const mine = links.filter((link) => link.event === event);

@@ -2,7 +2,8 @@ import { scanDeliveryResources } from './delivery';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { z } from 'zod';
-import { scanModelResources, type ModelScanOptions } from './model-resources';
+import { scanModelResources } from './model-resources';
+import type { ModelScanOptions } from './model-resources';
 import { scanCommandResources } from './command-resources';
 import {
   combineEvidence,
@@ -11,14 +12,10 @@ import {
   architectureConflicts,
   mergeArchitectureGraphs,
   promoteRelationship,
-  type OtlpArchitectureInput,
 } from './architecture';
-import {
-  importBackstageYaml,
-  resolveResourceOwnership,
-  type OwnershipImport,
-  type OwnershipOptions,
-} from './ownership-sources';
+import type { OtlpArchitectureInput } from './architecture';
+import { importBackstageYaml, resolveResourceOwnership } from './ownership-sources';
+import type { OwnershipImport, OwnershipOptions } from './ownership-sources';
 import { readResourceGraph, writeResourceGraph, parseResourceGraph } from './resource-store';
 import {
   readOptionalResourceJson,
@@ -28,14 +25,8 @@ import {
   resourceFiles,
 } from './resource-files';
 import { jsonValueSchema } from './json';
-import {
-  isArchitectureCatalogResource,
-  relationshipKey,
-  resourceKey,
-  type CatalogRelationship,
-  type CatalogResource,
-  type ResourceGraph,
-} from './resource-graph';
+import { isArchitectureCatalogResource, relationshipKey, resourceKey } from './resource-graph';
+import type { CatalogRelationship, CatalogResource, ResourceGraph } from './resource-graph';
 import { loadCodeowners } from './enrich-event';
 
 export const architectureConfig = z.object({
@@ -104,8 +95,9 @@ export async function saveResourceImport(
   id: string,
   imported: OwnershipImport,
 ): Promise<void> {
-  if (!/^[a-zA-Z0-9._-]+$/.test(id) || id === '.' || id === '..')
+  if (!/^[a-zA-Z0-9._-]+$/.test(id) || id === '.' || id === '..') {
     throw new Error('Import identity must be a filename-safe identifier');
+  }
   const content = JSON.stringify(imported, null, 2);
   const parsed = importRecord.parse(JSON.parse(content));
   parseResourceGraph(parsed.graph);
@@ -136,13 +128,15 @@ function carryForward(previous: ResourceGraph, current: ResourceGraph): Resource
 
   const currentEdges = new Set(current.relationships.map(relationshipKey));
 
-  const relationships: CatalogRelationship[] = current.relationships.map((edge) => ({
+  const relationships: Array<CatalogRelationship> = current.relationships.map((edge) => ({
     ...edge,
     evidence: combineEvidence(previousEdges.get(relationshipKey(edge))?.evidence, edge.evidence),
   }));
 
   for (const edge of previous.relationships) {
-    if (currentEdges.has(relationshipKey(edge)) || !(edge.evidence || reviewed(edge))) continue;
+    if (currentEdges.has(relationshipKey(edge)) || !(edge.evidence || reviewed(edge))) {
+      continue;
+    }
     const { source: _source, attributes, ...rest } = edge;
 
     relationships.push(
@@ -162,7 +156,7 @@ function carryForward(previous: ResourceGraph, current: ResourceGraph): Resource
 
   const currentKeys = new Set(current.resources.map((resource) => resourceKey(resource.ref)));
 
-  const resources: CatalogResource[] = current.resources.map((resource) => ({
+  const resources: Array<CatalogResource> = current.resources.map((resource) => ({
     ...resource,
     evidence: combineEvidence(
       previousResources.get(resourceKey(resource.ref))?.evidence,
@@ -171,7 +165,9 @@ function carryForward(previous: ResourceGraph, current: ResourceGraph): Resource
   }));
 
   for (const [key, resource] of previousResources) {
-    if (currentKeys.has(key) || !(resource.evidence || endpoints.has(key))) continue;
+    if (currentKeys.has(key) || !(resource.evidence || endpoints.has(key))) {
+      continue;
+    }
 
     if (!isArchitectureCatalogResource(resource)) {
       resources.push(resource);
@@ -199,16 +195,17 @@ function carryForward(previous: ResourceGraph, current: ResourceGraph): Resource
 
   let graph = mergeArchitectureGraphs({ spec: current.spec, resources, relationships });
 
-  for (const edge of previous.relationships.filter(reviewed))
+  for (const edge of previous.relationships.filter(reviewed)) {
     graph = promoteRelationship(graph, edge);
+  }
 
   return graph;
 }
 
 /** A single scan pipeline for brownfield resources; no event contract is required. */
 export async function scanArchitecture(options: ArchitectureScanOptions) {
-  const errors: string[] = [];
-  const skipped: string[] = [];
+  const errors: Array<string> = [];
+  const skipped: Array<string> = [];
   const conflicts: ReturnType<typeof resolveResourceOwnership>['conflicts'] = [];
   let graph = emptyResourceGraph();
 
@@ -233,8 +230,10 @@ export async function scanArchitecture(options: ArchitectureScanOptions) {
     errors.push(...models.errors, ...commands.errors, ...delivery.errors);
     skipped.push(...models.skipped, ...commands.skipped, ...delivery.skipped);
 
-    if (errors.length) return { graph, errors, skipped, conflicts };
-    const imports: OwnershipImport[] = [];
+    if (errors.length) {
+      return { graph, errors, skipped, conflicts };
+    }
+    const imports: Array<OwnershipImport> = [];
 
     const ownershipFiles = await resourceFiles(effective, {
       include: (file) => /catalog-info\.ya?ml$/.test(file),
@@ -251,16 +250,20 @@ export async function scanArchitecture(options: ArchitectureScanOptions) {
     }
 
     const directory = path.join(options.root, '.autocatalog', 'imports');
-    let importedFiles: string[] = [];
+    let importedFiles: Array<string> = [];
 
     try {
       importedFiles = await fs.readdir(directory);
     } catch (error) {
-      if (!(error instanceof Error && 'code' in error && error.code === 'ENOENT')) throw error;
+      if (!(error instanceof Error && 'code' in error && error.code === 'ENOENT')) {
+        throw error;
+      }
     }
 
     for (const file of importedFiles.sort()) {
-      if (!file.endsWith('.json')) continue;
+      if (!file.endsWith('.json')) {
+        continue;
+      }
 
       imports.push(await readImportRecord(path.join(directory, file), options.root));
     }
@@ -277,7 +280,9 @@ export async function scanArchitecture(options: ArchitectureScanOptions) {
     graph = mergeArchitectureGraphs(...sources);
     const previous = await readResourceGraph(options.root);
 
-    if (previous) graph = carryForward(previous, graph);
+    if (previous) {
+      graph = carryForward(previous, graph);
+    }
 
     const resolved = resolveResourceOwnership(graph, {
       ...config.ownership,
@@ -289,7 +294,9 @@ export async function scanArchitecture(options: ArchitectureScanOptions) {
     graph = resolved.graph;
     conflicts.push(...resolved.conflicts);
 
-    if (options.publish !== false) await writeResourceGraph(options.root, graph);
+    if (options.publish !== false) {
+      await writeResourceGraph(options.root, graph);
+    }
   } catch (error) {
     errors.push(error instanceof Error ? error.message : String(error));
   }

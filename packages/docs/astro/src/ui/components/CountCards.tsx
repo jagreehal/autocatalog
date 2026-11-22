@@ -11,7 +11,7 @@ import { Icon } from './Icon';
 import type { Stat } from './Stats';
 
 export interface CountCardsProps {
-  items: Stat[];
+  items: Array<Stat>;
   /** What a screen reader calls the row. */
   label?: string;
 }
@@ -35,7 +35,9 @@ const sentenceCase = (text: string) => text.charAt(0).toUpperCase() + text.slice
 export function CountCards({ items, label = 'What the catalog holds' }: CountCardsProps) {
   const shown = items.filter(({ value }) => value > 0);
 
-  if (shown.length === 0) return null;
+  if (shown.length === 0) {
+    return null;
+  }
 
   return (
     <div className="not-content @container">

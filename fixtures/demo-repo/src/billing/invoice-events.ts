@@ -18,7 +18,7 @@ export const InvoiceRaised = defineEvent(
       replacedBy: { id: 'payment.completed', version: '2.0.0' },
       notes: 'Invoice settlement moved into the payments pipeline.',
     },
-    example: { invoiceId: 'inv_9', amountMinor: 120000, raisedAt: '2026-04-30T09:00:00Z' },
+    example: { invoiceId: 'inv_9', amountMinor: 120_000, raisedAt: '2026-04-30T09:00:00Z' },
   },
   z.object({
     invoiceId: z.string(),

@@ -11,8 +11,6 @@ import {
   builtInDiscoveryAdapters,
   loadCatalogSnapshot,
   scanCatalog,
-  type DiscoveryAdapter,
-  type ArtifactRepository,
   RESOURCE_GRAPH_FILE,
   relationshipKey,
   resourceKey,
@@ -20,6 +18,7 @@ import {
   CONSUMES_FILE,
   readConsumerDeclarations,
 } from 'autocatalog-core';
+import type { DiscoveryAdapter, ArtifactRepository } from 'autocatalog-core';
 import { discoverDiscoveryAdapters } from '../adapters';
 import {
   ARTIFACT_RESOURCES_FILE,
@@ -27,8 +26,8 @@ import {
   publishResources,
   REMOVED_RESOURCES_ADVICE,
   scanResources,
-  type ResourceScanFlags,
 } from './resources';
+import type { ResourceScanFlags } from './resources';
 
 const execFileAsync = promisify(execFile);
 
@@ -36,7 +35,7 @@ export interface RunScanOptions extends ResourceScanFlags {
   root: string;
   out: string;
   quiet?: boolean;
-  adapters?: DiscoveryAdapter[];
+  adapters?: Array<DiscoveryAdapter>;
   allowCodeExecution?: boolean;
   /** Path to a runtime architecture snapshot. */
   snapshot?: string;
@@ -79,7 +78,9 @@ async function repositoryMetadata(root: string): Promise<ArtifactRepository> {
       .update(diff);
 
     for (const item of status.split('\0')) {
-      if (!item.startsWith('?? ')) continue;
+      if (!item.startsWith('?? ')) {
+        continue;
+      }
       const file = path.join(gitRoot, item.slice(3));
       treeHash
         .update(item.slice(3))
@@ -100,7 +101,9 @@ async function repositoryMetadata(root: string): Promise<ArtifactRepository> {
       dirty: Boolean(status),
     };
 
-    if (url) repository.url = url;
+    if (url) {
+      repository.url = url;
+    }
 
     return repository;
   } catch {
@@ -189,16 +192,18 @@ export async function runScan(opts: RunScanOptions): Promise<number> {
 
   const resources = published === 'written';
 
-  if (resources)
+  if (resources) {
     await fs.writeFile(
       path.join(out, ARTIFACT_RESOURCES_FILE),
       `${JSON.stringify(architecture.graph, null, 2)}\n`,
     );
-  else if (result.publication)
+  } else if (result.publication) {
     await fs.rm(path.join(out, ARTIFACT_RESOURCES_FILE), { force: true });
+  }
 
-  if (snapshot)
+  if (snapshot) {
     await fs.writeFile(path.join(out, 'llms.txt'), catalogSnapshotToLlmText(snapshot.events));
+  }
 
   if (!opts.quiet) {
     for (const f of result.findings) {
@@ -217,16 +222,23 @@ export async function runScan(opts: RunScanOptions): Promise<number> {
       );
     }
 
-    for (const note of result.skipped) console.warn(kleur.dim(`  - skipped ${note}`));
+    for (const note of result.skipped) {
+      console.warn(kleur.dim(`  - skipped ${note}`));
+    }
 
-    for (const note of architecture.skipped) console.warn(kleur.dim(`  - ${note}`));
+    for (const note of architecture.skipped) {
+      console.warn(kleur.dim(`  - ${note}`));
+    }
 
-    for (const conflict of architecture.conflicts)
+    for (const conflict of architecture.conflicts) {
       console.warn(
         `Ownership conflict: ${conflict.resource.id}; selected ${conflict.selected}; alternatives ${conflict.alternatives.join(', ')}`,
       );
+    }
 
-    for (const err of result.errors) console.error(kleur.red(`  ! ${err}`));
+    for (const err of result.errors) {
+      console.error(kleur.red(`  ! ${err}`));
+    }
     const written = result.publication?.eventsWritten ?? 0;
 
     if (result.publication) {
@@ -255,7 +267,7 @@ export async function runScan(opts: RunScanOptions): Promise<number> {
       const elapsed = performance.now() - startedAt;
 
       const duration =
-        elapsed < 1_000 ? `${Math.round(elapsed)}ms` : `${(elapsed / 1_000).toFixed(1)}s`;
+        elapsed < 1000 ? `${Math.round(elapsed)}ms` : `${(elapsed / 1000).toFixed(1)}s`;
 
       const kinds = Object.entries(summary.resourcesByKind)
         .map(([kind, count]) => `${count} ${kind}${count === 1 ? '' : 's'}`)
@@ -309,9 +321,13 @@ export async function runScan(opts: RunScanOptions): Promise<number> {
         console.log(kleur.dim(`  ${COMMIT_RESOURCES_ADVICE}`));
       }
 
-      if (published === 'removed') console.log(`  ${REMOVED_RESOURCES_ADVICE}`);
+      if (published === 'removed') {
+        console.log(`  ${REMOVED_RESOURCES_ADVICE}`);
+      }
 
-      if (architecture.saved) console.log(`  ${architecture.saved}`);
+      if (architecture.saved) {
+        console.log(`  ${architecture.saved}`);
+      }
 
       // Two findings a static catalog cannot produce. A contract nobody has
       // sent is maintenance being paid for nothing; an event nobody wrote down

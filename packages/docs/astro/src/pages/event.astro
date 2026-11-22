@@ -3,10 +3,12 @@ import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
 import type { InferGetStaticPropsType } from 'astro';
 import { docsCatalog, eventChangedAt, eventParticipants } from '../catalog';
 import { docsSiteConfig } from '../config';
+import { domainHref } from '../domains';
 import { eventPageProps } from '../page-models';
 import { eventPath } from '../event-path';
 import { statusPills } from '../resource-status';
 import { setLastChanged, setResourceContext, withMarkdownCopy } from '../shell';
+import { domainTitle } from '../sidebar';
 import { twinPath } from '../twins';
 import { EventPage } from '../ui/pages/EventPage';
 
@@ -44,6 +46,10 @@ setResourceContext(Astro.locals, {
   kind: 'event',
   name: fm.name,
   key: `event:${fm.domain}/${fm.id}`,
+  crumbs: [
+    { label: 'Home', href: base },
+    { label: domainTitle(catalog.overviews, fm.domain), href: domainHref(base, fm.domain) },
+  ],
   actions: withMarkdownCopy(markdownHref, [
     { label: 'Copy schema', href: page.schemaHref, icon: 'copy', copy: true },
     { label: 'View schema.json', href: page.schemaHref, icon: 'braces' },
@@ -66,6 +72,7 @@ setLastChanged(Astro.locals, eventChangedAt(catalog, Astro.props));
 
 // The page's sections, for Starlight's "On this page".
 const headings = [
+  { depth: 2, slug: 'impact', text: 'Impact' },
   ...(page.deliveryPath ? [{ depth: 2, slug: 'delivery-path', text: 'Delivery path' }] : []),
   { depth: 2, slug: 'schema', text: 'Schema' },
   { depth: 2, slug: 'runtime', text: 'Runtime evidence' },

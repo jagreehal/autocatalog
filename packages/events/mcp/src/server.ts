@@ -9,7 +9,6 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { jsonObjectSchema } from 'autocatalog-core';
 import { z } from 'zod';
 import {
-  type CatalogSnapshot,
   listEvents,
   describeEvent,
   getSchema,
@@ -24,8 +23,8 @@ import {
   checkChange,
   investigationBundle,
   taskContextFor,
-  type CompanySite,
 } from './tools.js';
+import type { CatalogSnapshot, CompanySite } from './tools.js';
 import { designSchema } from 'autocatalog-docs-core';
 import { flowContext } from './flows.js';
 import {
@@ -78,7 +77,7 @@ export interface ServerOptions {
   /** Let an agent save draft findings. Off unless asked for: everything else only reads. */
   allowWrites?: boolean | undefined;
   /** Who this server answers for: the groups whose restricted documents it may read. */
-  audience?: readonly string[] | undefined;
+  audience?: ReadonlyArray<string> | undefined;
   /** The one group that reads saved drafts. Required when `audience` names several. */
   writeAudience?: string | undefined;
 }
@@ -114,8 +113,8 @@ export function createServer(
     async ({ task, limit }) => {
       try {
         return asText(await taskContextFor(catalog, task, site, limit ? { limit } : {}));
-      } catch (e) {
-        return asError(e);
+      } catch (error) {
+        return asError(error);
       }
     },
   );
@@ -130,8 +129,8 @@ export function createServer(
     async ({ domain }) => {
       try {
         return asText(listEvents(catalog, domain));
-      } catch (e) {
-        return asError(e);
+      } catch (error) {
+        return asError(error);
       }
     },
   );
@@ -147,8 +146,8 @@ export function createServer(
     async ({ ref }) => {
       try {
         return asText(describeEvent(catalog, ref));
-      } catch (e) {
-        return asError(e);
+      } catch (error) {
+        return asError(error);
       }
     },
   );
@@ -168,8 +167,8 @@ export function createServer(
             ? await searchCompany(catalog, query, { company, audience })
             : searchEvents(catalog, query),
         );
-      } catch (e) {
-        return asError(e);
+      } catch (error) {
+        return asError(error);
       }
     },
   );
@@ -188,8 +187,8 @@ export function createServer(
     async ({ attribute, value }) => {
       try {
         return asText(findEventsBy(catalog, attribute, value));
-      } catch (e) {
-        return asError(e);
+      } catch (error) {
+        return asError(error);
       }
     },
   );
@@ -204,8 +203,8 @@ export function createServer(
     async ({ ref }) => {
       try {
         return asText(getSchema(catalog, ref));
-      } catch (e) {
-        return asError(e);
+      } catch (error) {
+        return asError(error);
       }
     },
   );
@@ -223,8 +222,8 @@ export function createServer(
     async ({ ref, name }) => {
       try {
         return asText(getExamples(catalog, ref, name));
-      } catch (e) {
-        return asError(e);
+      } catch (error) {
+        return asError(error);
       }
     },
   );
@@ -240,8 +239,8 @@ export function createServer(
     async ({ ref }) => {
       try {
         return asText(getLlmText(catalog, ref));
-      } catch (e) {
-        return asError(e);
+      } catch (error) {
+        return asError(error);
       }
     },
   );
@@ -257,8 +256,8 @@ export function createServer(
     async ({ query }) => {
       try {
         return asText(askArchitecture(catalog, query));
-      } catch (e) {
-        return asError(e);
+      } catch (error) {
+        return asError(error);
       }
     },
   );
@@ -277,8 +276,8 @@ export function createServer(
     async ({ query, conflictsOnly }) => {
       try {
         return asText(searchFieldsInCatalog(catalog, query, conflictsOnly));
-      } catch (e) {
-        return asError(e);
+      } catch (error) {
+        return asError(error);
       }
     },
   );
@@ -302,8 +301,8 @@ export function createServer(
             ? await endpointImpact(catalog, ref, field, company)
             : assessImpact(catalog, ref, field),
         );
-      } catch (e) {
-        return asError(e);
+      } catch (error) {
+        return asError(error);
       }
     },
   );
@@ -322,8 +321,8 @@ export function createServer(
     async ({ ref, schema }) => {
       try {
         return asText(checkChange(catalog, ref, schema));
-      } catch (e) {
-        return asError(e);
+      } catch (error) {
+        return asError(error);
       }
     },
   );
@@ -339,8 +338,8 @@ export function createServer(
     async () => {
       try {
         return asText(catalogStatus(catalog));
-      } catch (e) {
-        return asError(e);
+      } catch (error) {
+        return asError(error);
       }
     },
   );
@@ -366,8 +365,8 @@ export function createServer(
     async ({ ref, field, schema }) => {
       try {
         return asText(investigationBundle(catalog, ref, field, schema));
-      } catch (e) {
-        return asError(e);
+      } catch (error) {
+        return asError(error);
       }
     },
   );
@@ -387,8 +386,8 @@ export function createServer(
     async ({ question, limit }) => {
       try {
         return asText(await ask(catalog, question, { company, audience }, limit));
-      } catch (e) {
-        return asError(e);
+      } catch (error) {
+        return asError(error);
       }
     },
   );
@@ -423,8 +422,8 @@ export function createServer(
         return asText(
           await listDocuments(catalog, { company, audience }, under, { limit, cursor }),
         );
-      } catch (e) {
-        return asError(e);
+      } catch (error) {
+        return asError(error);
       }
     },
   );
@@ -441,8 +440,8 @@ export function createServer(
     async ({ repository, source }) => {
       try {
         return asText(await readDocument(catalog, repository, source, { company, audience }));
-      } catch (e) {
-        return asError(e);
+      } catch (error) {
+        return asError(error);
       }
     },
   );
@@ -478,8 +477,8 @@ export function createServer(
       async (input) => {
         try {
           return asText(proposeFinding(catalog, input, { company, audience, writeAudience }));
-        } catch (e) {
-          return asError(e);
+        } catch (error) {
+          return asError(error);
         }
       },
     );
@@ -499,8 +498,8 @@ export function createServer(
         return asText(
           flowContext(catalog, id, company, audience, await answerGraph(catalog, company)),
         );
-      } catch (e) {
-        return asError(e);
+      } catch (error) {
+        return asError(error);
       }
     },
   );
@@ -517,8 +516,8 @@ export function createServer(
     async ({ id }) => {
       try {
         return asText(dataContract(catalog, id, company));
-      } catch (e) {
-        return asError(e);
+      } catch (error) {
+        return asError(error);
       }
     },
   );
@@ -535,8 +534,8 @@ export function createServer(
     async ({ query }) => {
       try {
         return asText(define(catalog, query, company));
-      } catch (e) {
-        return asError(e);
+      } catch (error) {
+        return asError(error);
       }
     },
   );
@@ -578,8 +577,10 @@ export function createServer(
           content: [{ type: 'text' as const, text: describeMap(map) + save + missing }],
           structuredContent: { ...map },
         };
-      } catch (e) {
-        return asError(new Error(`${e instanceof Error ? e.message : String(e)}${missing}`));
+      } catch (error) {
+        return asError(
+          new Error(`${error instanceof Error ? error.message : String(error)}${missing}`),
+        );
       }
     },
   );

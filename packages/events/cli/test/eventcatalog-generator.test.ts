@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import utils from '@eventcatalog/sdk';
 import autocatalogGenerator from '../src/eventcatalog';
 
-const here = path.dirname(fileURLToPath(import.meta.url));
+const here = import.meta.dirname;
 
 const jsonSchemaRepo = path.resolve(here, '../../../../fixtures/json-schema-repo');
 

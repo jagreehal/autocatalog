@@ -46,7 +46,7 @@ export interface ListRepositoriesOptions {
  */
 export async function listRepositories(
   opts: ListRepositoriesOptions,
-): Promise<EnrolledRepository[]> {
+): Promise<Array<EnrolledRepository>> {
   const get = opts.fetch ?? fetch;
 
   const headers = {
@@ -70,10 +70,12 @@ export async function listRepositories(
     response = await page(kind, 1);
   }
 
-  const repositories: EnrolledRepository[] = [];
+  const repositories: Array<EnrolledRepository> = [];
 
   for (let n = 1; ; n += 1) {
-    if (n > 1) response = await page(kind, n);
+    if (n > 1) {
+      response = await page(kind, n);
+    }
 
     if (!response.ok) {
       throw new Error(`GitHub returned ${response.status} listing ${opts.owner}'s repositories`);
@@ -89,7 +91,9 @@ export async function listRepositories(
       }
     }
 
-    if (batch.length < 100) break;
+    if (batch.length < 100) {
+      break;
+    }
   }
 
   return repositories.sort((a, b) => a.name.localeCompare(b.name));
@@ -119,8 +123,8 @@ export interface CloneFailure {
 export interface ClonedRepositories {
   root: string;
   /** The repositories now checked out under `root`, by name. */
-  cloned: string[];
-  failed: CloneFailure[];
+  cloned: Array<string>;
+  failed: Array<CloneFailure>;
 }
 
 /**
@@ -129,8 +133,10 @@ export interface ClonedRepositories {
  * error. Only over HTTPS to GitHub, or the host in GITHUB_SERVER_URL, so a URL
  * a lock or `--repo` names elsewhere never receives it.
  */
-export function tokenHeader(url: string, token: string | undefined): string[] {
-  if (!token) return [];
+export function tokenHeader(url: string, token: string | undefined): Array<string> {
+  if (!token) {
+    return [];
+  }
 
   const host = (value: string | undefined) => {
     try {
@@ -143,7 +149,9 @@ export function tokenHeader(url: string, token: string | undefined): string[] {
   const target = host(url);
   const github = new Set(['github.com', host(process.env.GITHUB_SERVER_URL)?.host]);
 
-  if (target?.protocol !== 'https:' || !github.has(target.host.toLowerCase())) return [];
+  if (target?.protocol !== 'https:' || !github.has(target.host.toLowerCase())) {
+    return [];
+  }
 
   return [
     '-c',
@@ -161,7 +169,7 @@ export function tokenHeader(url: string, token: string | undefined): string[] {
  * reset would suit hundreds.
  */
 export async function cloneRepositories(
-  repositories: EnrolledRepository[],
+  repositories: Array<EnrolledRepository>,
   opts: CloneOptions,
 ): Promise<ClonedRepositories> {
   const distinct = distinctRepositories(repositories);
@@ -192,13 +200,15 @@ export async function cloneRepositories(
     );
   }
 
-  const cloned: string[] = [];
-  const failed: CloneFailure[] = [];
+  const cloned: Array<string> = [];
+  const failed: Array<CloneFailure> = [];
 
   for (const [i, result] of results.entries()) {
     const repo = distinct[i];
 
-    if (!repo) continue;
+    if (!repo) {
+      continue;
+    }
 
     if (result.status === 'fulfilled') {
       cloned.push(repo.name);
@@ -240,7 +250,7 @@ const canonicalUrl = (url: string) =>
  * topic and by --repo, is cloned once; two different repositories that share a
  * folder name, compared as a case-insensitive filesystem would, are refused.
  */
-function distinctRepositories(repositories: EnrolledRepository[]): EnrolledRepository[] {
+function distinctRepositories(repositories: Array<EnrolledRepository>): Array<EnrolledRepository> {
   const byFolder = new Map<string, EnrolledRepository>();
 
   for (const repo of repositories) {

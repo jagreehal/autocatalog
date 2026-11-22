@@ -8,7 +8,7 @@ export interface ChannelRow {
   href: string;
   system?: string | undefined;
   /** Services or events bound to it. */
-  bindings: string[];
+  bindings: Array<string>;
   source: 'observed' | 'design';
   designHref?: string | undefined;
 }
@@ -33,13 +33,15 @@ function queueKey(ref: { namespace?: string | undefined; id: string }): string {
  */
 export function buildChannels(
   graph: ResourceGraph,
-  designs: DesignChannelSource[],
+  designs: Array<DesignChannelSource>,
   base: string,
-): ChannelRow[] {
+): Array<ChannelRow> {
   const byId = new Map<string, ChannelRow>();
 
   for (const resource of graph.resources) {
-    if (resource.ref.kind !== 'queue') continue;
+    if (resource.ref.kind !== 'queue') {
+      continue;
+    }
 
     const key = queueKey(resource.ref);
 
@@ -66,7 +68,9 @@ export function buildChannels(
 
   for (const design of designs) {
     for (const resource of design.resources) {
-      if (resource.type !== 'channel') continue;
+      if (resource.type !== 'channel') {
+        continue;
+      }
 
       // A design names a channel without its system: it joins the one
       // observed queue of that name, and stays its own row when several share it.
@@ -103,8 +107,9 @@ export function buildChannels(
 export function channelPath(id: string): string | undefined {
   const segments = id.split('/');
 
-  if (id.includes('\\') || segments.some((segment) => ['', '.', '..'].includes(segment)))
+  if (id.includes('\\') || segments.some((segment) => ['', '.', '..'].includes(segment))) {
     return undefined;
+  }
 
   return segments.map(encodeURIComponent).join('/');
 }
@@ -112,6 +117,6 @@ export function channelPath(id: string): string | undefined {
 /** A channel page's path below `channels/`, or the list itself when it has none. */
 const pagePath = (segment: string | undefined) => (segment ? `${segment}/` : '');
 
-export function channelById(channels: ChannelRow[], id: string): ChannelRow | undefined {
+export function channelById(channels: Array<ChannelRow>, id: string): ChannelRow | undefined {
   return channels.find((channel) => channel.id === id);
 }

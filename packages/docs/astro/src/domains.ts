@@ -1,4 +1,5 @@
-import { isServiceCatalogResource, type ResourceGraph } from 'autocatalog-core';
+import { isServiceCatalogResource } from 'autocatalog-core';
+import type { ResourceGraph } from 'autocatalog-core';
 import type { CatalogEvent } from './catalog';
 import { ownerKey } from './owners';
 
@@ -6,14 +7,14 @@ import { ownerKey } from './owners';
 export interface Domain {
   name: string;
   /** Its events in name order. */
-  events: CatalogEvent[];
+  events: Array<CatalogEvent>;
   /**
    * Every service that produces or consumes one of its events, or that the
    * resource graph places in it, in name order.
    */
-  services: string[];
+  services: Array<string>;
   /** Owner teams its events and services declare, in name order. */
-  owners: string[];
+  owners: Array<string>;
 }
 
 /**
@@ -22,10 +23,10 @@ export interface Domain {
  * whose services publish no events still has its domain's page, sidebar entry
  * and overview, as `about:` and `overviews/` already accept it.
  */
-export function buildDomains(events: CatalogEvent[], graph?: ResourceGraph): Domain[] {
+export function buildDomains(events: Array<CatalogEvent>, graph?: ResourceGraph): Array<Domain> {
   const byName = new Map<
     string,
-    { events: CatalogEvent[]; services: string[]; owners: string[] }
+    { events: Array<CatalogEvent>; services: Array<string>; owners: Array<string> }
   >();
 
   const entry = (name: string) => {
@@ -43,20 +44,28 @@ export function buildDomains(events: CatalogEvent[], graph?: ResourceGraph): Dom
     domainEntry.events.push(event);
     domainEntry.services.push(...producers, ...consumers);
 
-    if (owner) domainEntry.owners.push(owner.team);
+    if (owner) {
+      domainEntry.owners.push(owner.team);
+    }
   }
 
   for (const resource of graph?.resources ?? []) {
-    if (resource.ref.kind === 'domain') entry(resource.ref.id);
+    if (resource.ref.kind === 'domain') {
+      entry(resource.ref.id);
+    }
 
-    if (!isServiceCatalogResource(resource)) continue;
+    if (!isServiceCatalogResource(resource)) {
+      continue;
+    }
 
     for (const name of resource.attributes.domains) {
       const domainEntry = entry(name);
 
       domainEntry.services.push(resource.ref.id);
 
-      if (resource.owner?.team) domainEntry.owners.push(resource.owner.team);
+      if (resource.owner?.team) {
+        domainEntry.owners.push(resource.owner.team);
+      }
     }
   }
 

@@ -1,10 +1,10 @@
-import {
-  AUTOCATALOG_GRAPH_SPEC,
-  type AgentSystemResourceKind,
-  type CatalogRelationship,
-  type CatalogResource,
-  type JsonObject,
-  type ResourceRef,
+import { AUTOCATALOG_GRAPH_SPEC } from 'autocatalog-core';
+import type {
+  AgentSystemResourceKind,
+  CatalogRelationship,
+  CatalogResource,
+  JsonObject,
+  ResourceRef,
 } from 'autocatalog-core';
 import { describe, expect, it } from 'vitest';
 import { buildMcpServers, mcpServerPath } from '../src/mcp-servers';

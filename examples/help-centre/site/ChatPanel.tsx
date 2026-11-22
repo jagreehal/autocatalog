@@ -8,11 +8,11 @@ import {
   ChatHeader,
   ChatLauncher,
   ChatMessages,
-  type ChatPanelProps,
   ChatRoot,
   ChatSupport,
   ChatWindow,
 } from 'autocatalog-docs-astro/chat';
+import type { ChatPanelProps } from 'autocatalog-docs-astro/chat';
 
 const search = `${import.meta.env.BASE_URL.replace(/\/?$/, '/')}search`;
 

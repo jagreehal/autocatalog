@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { jsonValueSchema, type JsonObject, type JsonValue } from './json';
+import { jsonValueSchema } from './json';
+import type { JsonObject, JsonValue } from './json';
 import { pascalCase } from './utils';
 
 export interface SnippetInput {
@@ -51,22 +52,38 @@ function zodEnumValue(v: JsonValue): string {
 }
 
 function zodForField(s: Field): string {
-  if (s.enum) return `z.enum([${s.enum.map(zodEnumValue).join(', ')}])`;
+  if (s.enum) {
+    return `z.enum([${s.enum.map(zodEnumValue).join(', ')}])`;
+  }
   const t = jsonType(s);
 
-  if (t === 'string' && s.format === 'date-time') return 'z.string().datetime()';
+  if (t === 'string' && s.format === 'date-time') {
+    return 'z.string().datetime()';
+  }
 
-  if (t === 'string') return 'z.string()';
+  if (t === 'string') {
+    return 'z.string()';
+  }
 
-  if (t === 'integer') return 'z.number().int()';
+  if (t === 'integer') {
+    return 'z.number().int()';
+  }
 
-  if (t === 'number') return 'z.number()';
+  if (t === 'number') {
+    return 'z.number()';
+  }
 
-  if (t === 'boolean') return 'z.boolean()';
+  if (t === 'boolean') {
+    return 'z.boolean()';
+  }
 
-  if (t === 'object') return 'z.object({}).passthrough()';
+  if (t === 'object') {
+    return 'z.object({}).passthrough()';
+  }
 
-  if (t === 'array') return 'z.array(z.unknown())';
+  if (t === 'array') {
+    return 'z.array(z.unknown())';
+  }
 
   return 'z.unknown()';
 }
@@ -80,17 +97,29 @@ function pyForField(s: Field): string {
 
   const t = jsonType(s);
 
-  if (t === 'string') return 'str';
+  if (t === 'string') {
+    return 'str';
+  }
 
-  if (t === 'integer') return 'int';
+  if (t === 'integer') {
+    return 'int';
+  }
 
-  if (t === 'number') return 'float';
+  if (t === 'number') {
+    return 'float';
+  }
 
-  if (t === 'boolean') return 'bool';
+  if (t === 'boolean') {
+    return 'bool';
+  }
 
-  if (t === 'object') return 'dict';
+  if (t === 'object') {
+    return 'dict';
+  }
 
-  if (t === 'array') return 'list';
+  if (t === 'array') {
+    return 'list';
+  }
 
   return 'Any';
 }

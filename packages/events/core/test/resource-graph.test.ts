@@ -9,16 +9,16 @@ import {
   ResourceGraphConflictError,
   resourceKey,
   summarizeResourceGraph,
-  type ResourceGraph,
 } from '../src/resource-graph';
+import type { ResourceGraph } from '../src/resource-graph';
 import { eventFrontmatter } from '../src/schema';
 
 function loaded(
   id: string,
   domain: string,
   options: {
-    producers?: string[];
-    consumers?: string[];
+    producers?: Array<string>;
+    consumers?: Array<string>;
     version?: string;
     summary?: string;
     isVersioned?: boolean;

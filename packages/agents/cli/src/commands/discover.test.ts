@@ -22,7 +22,7 @@ afterEach(async () => {
   await fs.rm(root, { recursive: true, force: true });
 });
 
-const discover = async (...extra: string[]) => {
+const discover = async (...extra: Array<string>) => {
   let out = '';
 
   vi.spyOn(process.stdout, 'write').mockImplementation((chunk: string | Uint8Array) => {
@@ -188,7 +188,7 @@ describe('ac agents discover --from mcp', () => {
 });
 
 describe('ac agents discover --from skills', () => {
-  const run = async (...extra: string[]) => {
+  const run = async (...extra: Array<string>) => {
     let out = '';
 
     vi.spyOn(process.stdout, 'write').mockImplementation((chunk: string | Uint8Array) => {

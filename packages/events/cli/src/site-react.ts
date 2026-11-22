@@ -17,7 +17,7 @@ const resolveOwn = from ? createRequire(from).resolve : undefined;
 // resolveOwn passes through this hook too; inside it, the default resolver runs.
 let resolving = false;
 
-if (resolveOwn)
+if (resolveOwn) {
   registerHooks({
     resolve: (specifier, context, next) => {
       if (resolving || !ownReact.test(specifier)) return next(specifier, context);
@@ -30,3 +30,4 @@ if (resolveOwn)
       }
     },
   });
+}

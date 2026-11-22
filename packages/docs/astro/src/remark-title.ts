@@ -5,7 +5,7 @@ interface MdastNode {
   type: string;
   depth?: number;
   value?: string;
-  children?: MdastNode[];
+  children?: Array<MdastNode>;
 }
 
 interface MarkdownFile {
@@ -30,7 +30,9 @@ export function dropRepeatedTitle(tree: MdastNode, title: string | undefined): v
     (_, index, all) => !opensDocument(all.slice(0, index + 1)),
   );
 
-  if (title === undefined || first === undefined || first < 0) return;
+  if (title === undefined || first === undefined || first < 0) {
+    return;
+  }
 
   const heading = tree.children![first]!;
 

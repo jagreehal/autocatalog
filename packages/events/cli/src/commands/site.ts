@@ -9,9 +9,9 @@ import {
   defaultHomeLayout,
   readSiteConfig,
   SITE_THEMES,
-  type SiteConfig,
   siteConfigSchema,
 } from 'autocatalog-docs-core';
+import type { SiteConfig } from 'autocatalog-docs-core';
 import kleur from 'kleur';
 import { z } from 'zod';
 import {
@@ -20,26 +20,21 @@ import {
   listRepositories,
   repositoryName,
   tokenHeader,
-  type EnrolledRepository,
 } from '../enrol';
+import type { EnrolledRepository } from '../enrol';
 import { readCompanyIndex } from '../company-index';
 import {
   clonePinned,
   enrolled,
   enrolledSinceLock,
-  type EnrolmentFlags,
   catalogReleases,
   importEventCatalogSources,
   LOCK_FILE,
-  type LockEntry,
   readLockFile,
 } from '../federation';
-import {
-  buildEventCatalog,
-  EVENTCATALOG_DIR,
-  missingEmbeds,
-  type BuiltEventCatalog,
-} from './site-eventcatalog';
+import type { EnrolmentFlags, LockEntry } from '../federation';
+import { buildEventCatalog, EVENTCATALOG_DIR, missingEmbeds } from './site-eventcatalog';
+import type { BuiltEventCatalog } from './site-eventcatalog';
 
 /** The files of a brand folder that `ac site` reads, each one optional. */
 export interface Brand {
@@ -87,7 +82,7 @@ export async function readBrand(dir: string): Promise<Brand> {
  * this with the last one it deployed and skips a site with nothing new.
  */
 async function siteFingerprint(
-  pins: LockEntry[] | undefined,
+  pins: Array<LockEntry> | undefined,
   flags: EnrolmentFlags,
   token: string | undefined,
 ): Promise<string> {
@@ -129,7 +124,7 @@ export interface RunSiteOptions {
   topic?: string;
   owner?: string;
   /** Clone these repositories. */
-  repos?: string[];
+  repos?: Array<string>;
   /** Where clones go. */
   cache: string;
   out: string;
@@ -169,7 +164,7 @@ export interface RunSiteOptions {
   /** Build enrolled repositories at their latest commits, ignoring the lock. */
   unlocked?: boolean;
   /** Other sites' `/catalog.json`, joined into the graph without pages. */
-  indexes?: string[];
+  indexes?: Array<string>;
   /** Refuse to publish a site that left out any source, keeping the last good one. */
   strict?: boolean;
 }
@@ -303,7 +298,7 @@ export async function runSite(input: RunSiteOptions): Promise<number> {
       return 1;
     }
 
-    const repositories: EnrolledRepository[] = [
+    const repositories: Array<EnrolledRepository> = [
       ...(opts.topic && opts.owner
         ? await listRepositories({ owner: opts.owner, topic: opts.topic, token })
         : []),
@@ -376,15 +371,16 @@ export async function runSite(input: RunSiteOptions): Promise<number> {
     leftOut.push(failure);
   }
 
-  if (imported.sources.length > 0)
+  if (imported.sources.length > 0) {
     console.log(
       kleur.dim(
         `Federating ${imported.sources.length} EventCatalog project${imported.sources.length === 1 ? '' : 's'}: ${imported.sources.map((dir) => path.basename(dir)).join(', ')}`,
       ),
     );
+  }
 
   // Other sites' graphs, fetched once and joined without pages.
-  const indexFiles: string[] = [];
+  const indexFiles: Array<string> = [];
 
   if (opts.indexes?.length) {
     const dir = path.join(path.dirname(path.resolve(opts.cache)), 'indexes');
@@ -585,7 +581,9 @@ export async function runSite(input: RunSiteOptions): Promise<number> {
   if (publicDir) {
     await fs.cp(path.join(siteProject, 'public'), publicDir, { recursive: true });
 
-    if (brand.public) await fs.cp(brand.public, publicDir, { recursive: true });
+    if (brand.public) {
+      await fs.cp(brand.public, publicDir, { recursive: true });
+    }
 
     if (brand.favicon && faviconName) {
       await fs.copyFile(brand.favicon, path.join(publicDir, faviconName));
@@ -699,10 +697,14 @@ export async function runSite(input: RunSiteOptions): Promise<number> {
     });
   });
 
-  if (opts.dev) return code;
+  if (opts.dev) {
+    return code;
+  }
 
   try {
-    if (code !== 0) return code;
+    if (code !== 0) {
+      return code;
+    }
 
     if (opts.strict) {
       const missing = await incomplete(path.join(run, 'dist'));
@@ -740,12 +742,14 @@ const metaSchema = z.object({
  * Why a built site is incomplete, from the catalog.meta.json it wrote: each
  * source left out, or why the record itself is missing. Empty when complete.
  */
-export async function incomplete(dist: string): Promise<string[]> {
+export async function incomplete(dist: string): Promise<Array<string>> {
   // A server site keeps what it built ahead under client/.
   for (const file of ['catalog.meta.json', 'client/catalog.meta.json']) {
     const text = await fs.readFile(path.join(dist, file), 'utf8').catch(() => null);
 
-    if (text === null) continue;
+    if (text === null) {
+      continue;
+    }
 
     let value: unknown;
 
@@ -757,9 +761,13 @@ export async function incomplete(dist: string): Promise<string[]> {
 
     const meta = metaSchema.safeParse(value);
 
-    if (!meta.success) return [`${file} is not a catalog record`];
+    if (!meta.success) {
+      return [`${file} is not a catalog record`];
+    }
 
-    if (meta.data.failures === 0) return [];
+    if (meta.data.failures === 0) {
+      return [];
+    }
 
     return meta.data.problems.length > 0
       ? meta.data.problems.map(
@@ -775,10 +783,12 @@ export async function incomplete(dist: string): Promise<string[]> {
  * autocatalog-docs-astro and each package it depends on. The server bundle
  * imports their dependencies by name, which only resolve from beside them.
  */
-async function siteDependencyDirs(): Promise<string[]> {
+async function siteDependencyDirs(): Promise<Array<string>> {
   const manifest = findPackageJSON(import.meta.resolve('autocatalog-docs-astro'));
 
-  if (!manifest) return [];
+  if (!manifest) {
+    return [];
+  }
 
   const pkg = dependenciesSchema.parse(JSON.parse(await fs.readFile(manifest, 'utf8')));
 
@@ -809,7 +819,7 @@ const SITE_RESOLVE = new URL('./site-resolve.js', import.meta.url).href;
  * `node <out>/server.mjs` starts a server site. It resolves autocatalog's
  * packages from this install, so build where it runs, as with any Node server.
  */
-async function writeServerStart(out: string, resolveFrom: string[]): Promise<void> {
+async function writeServerStart(out: string, resolveFrom: Array<string>): Promise<void> {
   await fs.writeFile(
     path.join(out, 'server.mjs'),
     [
@@ -841,14 +851,18 @@ export function sharesAFolder(a: string, b: string): boolean {
  */
 export async function resolveExtension(entry: string, cwd = process.cwd()): Promise<string> {
   if (path.isAbsolute(entry)) {
-    if (!(await fs.stat(entry).catch(() => null))?.isFile()) throw new Error(`no file at ${entry}`);
+    if (!(await fs.stat(entry).catch(() => null))?.isFile()) {
+      throw new Error(`no file at ${entry}`);
+    }
 
     return entry;
   }
 
   const manifest = findPackageJSON(entry, pathToFileURL(path.join(cwd, 'package.json')));
 
-  if (!manifest) throw new Error(`no package ${entry} installed in ${cwd}`);
+  if (!manifest) {
+    throw new Error(`no package ${entry} installed in ${cwd}`);
+  }
 
   const pkg = siteEntrySchema.parse(JSON.parse(await fs.readFile(manifest, 'utf8')));
 

@@ -1,6 +1,7 @@
 import { expect, it } from 'vitest';
 import { createEndpointGraph } from '../src/api-resources';
-import { linkGateway, publicPath, writeGatewayFile, type GatewayRoute } from '../src/gateways';
+import { linkGateway, publicPath, writeGatewayFile } from '../src/gateways';
+import type { GatewayRoute } from '../src/gateways';
 import { compileRoutePattern, matchesRoutePattern } from '../src/route-pattern';
 
 const route = (fields: Partial<GatewayRoute>): GatewayRoute => ({
@@ -15,7 +16,7 @@ it.each([
   [route({ paths: ['/api'], stripPath: true }), '/users/{id}', '/api/users/{id}'],
   [route({ paths: ['/users'], upstreamPath: '/v1' }), '/v1/users', '/users'],
   [route({ patterns: ['/users/[^/]+$'] }), '/users/{id}', '/users/{id}'],
-  [route({ patterns: ['/users/\\d+$'] }), '/users/{id}', '/users/{id}'],
+  [route({ patterns: [String.raw`/users/\d+$`] }), '/users/{id}', '/users/{id}'],
   [route({ patterns: ['/users$'] }), '/users/{id}', undefined],
   [route({ paths: ['/orders'] }), '/users', undefined],
 ])('reaches an operation through a route', (gatewayRoute, servedAt, expected) => {
@@ -39,7 +40,7 @@ const users = createEndpointGraph({
 });
 
 it('exposes what a route reaches, and says where the gateway and the contract disagree', () => {
-  const findings: string[] = [];
+  const findings: Array<string> = [];
 
   const graph = linkGateway(
     users,
@@ -74,7 +75,7 @@ it('exposes what a route reaches, and says where the gateway and the contract di
 });
 
 it('matches a pattern in time proportional to the path, and refuses what it cannot match', () => {
-  const findings: string[] = [];
+  const findings: Array<string> = [];
 
   linkGateway(
     users,
@@ -82,7 +83,9 @@ it('matches a pattern in time proportional to the path, and refuses what it cann
       repository: 'gateway',
       file: {
         gateway: 'kong',
-        routes: [route({ name: 'slow', patterns: ['/(a+)+$', '/(x)\\1', '/a|b'], auth: ['jwt'] })],
+        routes: [
+          route({ name: 'slow', patterns: ['/(a+)+$', String.raw`/(x)\1`, '/a|b'], auth: ['jwt'] }),
+        ],
       },
     },
     (message) => findings.push(message),
@@ -103,12 +106,12 @@ it.each([
   ['/users', '/users/1', true],
   ['/users/[^/]+$', '/users/1', true],
   ['/users/[^/]+$', '/users/1/x', false],
-  ['/v\\d+/items', '/v12/items', true],
+  [String.raw`/v\d+/items`, '/v12/items', true],
   ['/files/.*', '/files/a/b', true],
   ['/colou?r$', '/color', true],
   ['/[a-c]x$', '/bx', true],
-  ['/a\\sb$', '/a b', undefined],
-  ['/[\\S]x$', '/ax', undefined],
+  [String.raw`/a\sb$`, '/a b', undefined],
+  [String.raw`/[\S]x$`, '/ax', undefined],
 ])('matches %s against %s as a gateway would', (pattern, path, expected) => {
   const compiledPattern = compileRoutePattern(pattern);
 
@@ -116,7 +119,7 @@ it.each([
 });
 
 it('takes a route that does not say what authenticates it as unknown, never safe', () => {
-  const findings: string[] = [];
+  const findings: Array<string> = [];
 
   linkGateway(
     users,
@@ -146,7 +149,7 @@ it('reaches an operation the service serves below its base path', () => {
     },
   });
 
-  const findings: string[] = [];
+  const findings: Array<string> = [];
 
   const graph = linkGateway(
     versioned,
@@ -191,7 +194,7 @@ it('does not reach an operation the spec serves only below a base path from the 
 });
 
 it('takes a pattern that may reach a secured operation as reaching it, for the auth check', () => {
-  const findings: string[] = [];
+  const findings: Array<string> = [];
 
   linkGateway(
     users,

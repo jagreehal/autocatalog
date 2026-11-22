@@ -7,12 +7,14 @@ import {
   modelFields,
   modelIndexes,
   resourceKey,
-  type ArchitectureCatalogResource,
-  type JsonObject,
-  type JsonValue,
-  type ModelField,
-  type ResourceGraph,
-  type ResourceRef,
+} from 'autocatalog-core';
+import type {
+  ArchitectureCatalogResource,
+  JsonObject,
+  JsonValue,
+  ModelField,
+  ResourceGraph,
+  ResourceRef,
 } from 'autocatalog-core';
 import { sourceUrl } from 'autocatalog-docs-core';
 import { z } from 'zod';
@@ -35,8 +37,8 @@ export interface CatalogModel {
 const slug = (value: string) =>
   value
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
+    .replaceAll(/[^a-z0-9]+/g, '-')
+    .replaceAll(/^-+|-+$/g, '');
 
 /**
  * The `datastore/database` a model lives in, when the code names one. Prisma
@@ -60,7 +62,7 @@ export const modelTitle = (resource: ArchitectureCatalogResource) =>
 export function catalogModels(
   graph: ResourceGraph,
   repositories: Map<string, { repository: string; repositoryRoot: string }>,
-): CatalogModel[] {
+): Array<CatalogModel> {
   const taken = new Set<string>();
 
   return graph.resources
@@ -68,8 +70,9 @@ export function catalogModels(
     .flatMap((resource) => {
       const found = repositories.get(resourceKey(resource.ref));
 
-      if (!found || (resource.ref.kind !== 'table' && resource.ref.kind !== 'collection'))
+      if (!found || (resource.ref.kind !== 'table' && resource.ref.kind !== 'collection')) {
         return [];
+      }
 
       return [{ ...found, resource }];
     })
@@ -85,8 +88,9 @@ export function catalogModels(
       const own = slug(modelTitle(model.resource)) || 'model';
       let name = own;
 
-      for (let n = 2; taken.has(`${model.repository}/${name}`); n += 1)
+      for (let n = 2; taken.has(`${model.repository}/${name}`); n += 1) {
         name = `${slug(model.resource.ref.id)}-${n}`;
+      }
       taken.add(`${model.repository}/${name}`);
 
       return { ...model, name };
@@ -98,10 +102,12 @@ export const modelPath = (model: Pick<CatalogModel, 'repository' | 'name'>) =>
   `data/${model.repository}/${model.name}/`;
 
 /** The fields the scan described, else the columns its JSON Schema lists. */
-export function fieldsOf(resource: ArchitectureCatalogResource): ModelField[] {
+export function fieldsOf(resource: ArchitectureCatalogResource): Array<ModelField> {
   const described = modelFields.safeParse(resource.attributes.fields);
 
-  if (described.success) return described.data;
+  if (described.success) {
+    return described.data;
+  }
 
   const schema = isJsonObject(resource.attributes.schema) ? resource.attributes.schema : {};
   const properties = isJsonObject(schema.properties) ? schema.properties : {};
@@ -118,7 +124,9 @@ export function fieldsOf(resource: ArchitectureCatalogResource): ModelField[] {
 
 /** A JSON Schema's type as one word: `string`, `integer[]`. */
 function typeOf(value: JsonValue | undefined): string {
-  if (!isJsonObject(value)) return 'unknown';
+  if (!isJsonObject(value)) {
+    return 'unknown';
+  }
 
   if (Array.isArray(value.anyOf)) {
     const [first] = value.anyOf.filter(
@@ -128,7 +136,9 @@ function typeOf(value: JsonValue | undefined): string {
     return typeOf(first);
   }
 
-  if (value.type === 'array') return `${typeOf(value.items)}[]`;
+  if (value.type === 'array') {
+    return `${typeOf(value.items)}[]`;
+  }
 
   return text(value.format) ?? text(value.type) ?? 'json';
 }
@@ -158,7 +168,7 @@ const isModel = (ref: ResourceRef, resource: ArchitectureCatalogResource) =>
  * Who reads and writes each model, and the page of each service that does:
  * its own page when an event names it, else its row in the Catalog.
  */
-export function serviceLinks(events: CatalogEvent[], base: string) {
+export function serviceLinks(events: Array<CatalogEvent>, base: string) {
   const pages = new Set(buildServices(events.map(({ event }) => event)).keys());
 
   return (name: string) => ({
@@ -181,8 +191,8 @@ const library = (value: JsonValue | undefined) => {
 
 export function dataModelsPageProps(
   graph: ResourceGraph,
-  models: CatalogModel[],
-  events: CatalogEvent[],
+  models: Array<CatalogModel>,
+  events: Array<CatalogEvent>,
   base: string,
 ): DataModelsPageProps {
   const access = new Map(datastoreOwnership(graph).map((row) => [resourceKey(row.ref), row]));
@@ -213,8 +223,8 @@ export function dataModelsPageProps(
 export function dataModelPageProps(
   graph: ResourceGraph,
   model: CatalogModel,
-  models: CatalogModel[],
-  events: CatalogEvent[],
+  models: Array<CatalogModel>,
+  events: Array<CatalogEvent>,
   context: { base: string; root: string },
 ): DataModelPageProps {
   const { base, root } = context;
@@ -236,7 +246,7 @@ export function dataModelPageProps(
     ),
   );
 
-  const rows = (list: ModelField[], prefix = ''): DataModelPageProps['fields'] =>
+  const rows = (list: Array<ModelField>, prefix = ''): DataModelPageProps['fields'] =>
     list.flatMap((field) => [
       {
         name: `${prefix}${field.name}`,
@@ -305,14 +315,14 @@ export function dataModelPageProps(
 }
 
 /** An entity's name, quoted so Mermaid's keywords (`One`, `to`, `u`) and leading digits read as names. */
-const entity = (name: string) => `"${name.replace(/[^A-Za-z0-9_]/g, '_')}"`;
+const entity = (name: string) => `"${name.replaceAll(/[^A-Za-z0-9_]/g, '_')}"`;
 
 /**
  * A word Mermaid accepts as an attribute's type or name, which cannot be
  * quoted: it starts with a letter or `_` and is not a key mark (`pk`, `fk`, `uk`).
  */
 const word = (value: string) => {
-  const safe = value.replace(/[^A-Za-z0-9_]/g, '_') || 'unknown';
+  const safe = value.replaceAll(/[^A-Za-z0-9_]/g, '_') || 'unknown';
   const lead = /^[0-9]/.test(safe) ? `_${safe}` : safe;
 
   return /^[pfu]k$/i.test(lead) ? `${lead}_` : lead;
@@ -332,14 +342,17 @@ interface Relation {
  * diagram. The model lists every column; each neighbour lists only its keys,
  * so a model with thirty relations still reads.
  */
-export function entityDiagram(model: CatalogModel, models: CatalogModel[]): string | undefined {
+export function entityDiagram(
+  model: CatalogModel,
+  models: Array<CatalogModel>,
+): string | undefined {
   const key = resourceKey(model.resource.ref);
   const byKey = new Map(models.map((other) => [resourceKey(other.resource.ref), other]));
   const own = fieldsOf(model.resource);
 
   // Each relation once, from the side that holds the key: this model's own,
   // and every other model's that points here.
-  const relations: Relation[] = [
+  const relations: Array<Relation> = [
     ...own.map((field) => ({ owner: model, ownerName: modelTitle(model.resource), field })),
     ...models
       .filter((other) => other !== model)
@@ -350,7 +363,9 @@ export function entityDiagram(model: CatalogModel, models: CatalogModel[]): stri
       ),
   ].filter(({ field }) => field.relation);
 
-  if (relations.length === 0) return undefined;
+  if (relations.length === 0) {
+    return undefined;
+  }
 
   const opposite = ({ owner, field }: Relation) => {
     const target = field.relation!.to && byKey.get(resourceKey(field.relation!.to));
@@ -380,7 +395,7 @@ export function entityDiagram(model: CatalogModel, models: CatalogModel[]): stri
     const targetName = target ? modelTitle(target.resource) : field.relation!.model;
     const back = opposite(relation);
     // A label is quoted text, so a quote inside it reads as a single quote.
-    const label = `"${field.name.replace(/"/g, "'")}"`;
+    const label = `"${field.name.replaceAll('"', "'")}"`;
 
     let line: string | undefined;
 
@@ -390,14 +405,16 @@ export function entityDiagram(model: CatalogModel, models: CatalogModel[]): stri
       const many = back && !back.relation!.many ? 'o|' : 'o{';
 
       line = `${entity(targetName)} ${one}--${many} ${entity(ownerName)} : ${label}`;
-    } else if (field.relation!.many && back?.relation!.many && !back.relation!.fields) {
+    } else if (field.relation!.many && back?.relation!.many && !back.relation.fields) {
       line = `${entity(ownerName)} }o--o{ ${entity(targetName)} : ${label}`;
     } else if (!back) {
       // A side without a key whose other side the scan did not see.
       line = `${entity(ownerName)} ||--${field.relation!.many ? 'o{' : 'o|'} ${entity(targetName)} : ${label}`;
     }
 
-    if (!line) continue;
+    if (!line) {
+      continue;
+    }
     const pair = [ownerName, targetName].sort().join(' ');
     const name = field.relation!.name ?? field.name;
 
@@ -406,8 +423,9 @@ export function entityDiagram(model: CatalogModel, models: CatalogModel[]): stri
     for (const [name, other] of [
       [ownerName, relation.owner],
       [targetName, target],
-    ] as const)
+    ] as const) {
       if (name !== modelTitle(model.resource)) neighbours.set(name, other);
+    }
   }
 
   const keyColumns = (other: CatalogModel | undefined) => {
@@ -463,7 +481,7 @@ export function modelTwin(
   page: DataModelPageProps,
   meta: { title: string; summary?: string | undefined; url?: string | undefined },
 ): string {
-  const cell = (value: string) => value.replace(/\|/g, '\\|').replace(/\n/g, ' ');
+  const cell = (value: string) => value.replaceAll('|', String.raw`\|`).replaceAll('\n', ' ');
 
   const notes = (field: DataModelPageProps['fields'][number]) =>
     [

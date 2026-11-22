@@ -8,7 +8,8 @@ import { loadCatalog } from './loader.js';
 import { discoverMcpServers, isPinned, mcpServerDraft, refreshMcpServer } from './mcp-config.js';
 import { mcpSnapshotPath } from './mcp-snapshot.js';
 import { createAgentsResourceGraph } from './resource-graph.js';
-import { McpServerSchema, type McpPackage } from './schemas.js';
+import { McpServerSchema } from './schemas.js';
+import type { McpPackage } from './schemas.js';
 
 let root: string;
 
@@ -149,7 +150,9 @@ describe('discoverMcpServers', () => {
 
     expect(servers.length).toBeGreaterThan(4);
 
-    for (const secret of secrets) expect(written).not.toContain(secret);
+    for (const secret of secrets) {
+      expect(written).not.toContain(secret);
+    }
 
     expect(servers.find(({ url }) => url?.startsWith('https://hooks'))?.url).toBe(
       'https://hooks.acme.dev/api/{redacted}/mcp',
@@ -350,7 +353,7 @@ describe('isPinned on hostile input', () => {
 describe('a package spec in a client config', () => {
   const digest = `sha256:${'b'.repeat(64)}`;
 
-  const discovered = async (args: string[]) => {
+  const discovered = async (args: Array<string>) => {
     await write('.mcp.json', { mcpServers: { it: { command: args[0], args: args.slice(1) } } });
 
     const { servers } = await discoverMcpServers(root);

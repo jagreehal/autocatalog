@@ -11,10 +11,8 @@ steps:
       id: checkout_cart_command
       label: Check out cart
   - id: checkout_cart_command
-    title: Checkout Cart
-    custom:
-      title: Checkout Cart
-      summary: 'Command: Checkout Cart'
+    title: Checkout requested
+    command: { ref: shopping/checkout-cart }
     next_step:
       id: cart_api
       label: Price and finalise cart
@@ -45,28 +43,22 @@ steps:
       - id: authorize_payment
         label: Authorize payment
   - id: reserve_inventory
-    title: Reserve Inventory
-    custom:
-      title: Reserve Inventory
-      summary: 'Command: Reserve Inventory'
+    title: Inventory reserved
+    command: { ref: ordering/reserve-inventory }
     next_step:
       id: authorize_payment
       label: Inventory held
   - id: authorize_payment
-    title: Authorize Payment
-    custom:
-      title: Authorize Payment
-      summary: 'Command: Authorize Payment'
+    title: Payment authorized
+    command: { ref: ordering/authorize-payment }
     next_steps:
       - id: create_order
         label: Payment authorized
       - id: checkout_failed
         label: Authorization declined
   - id: create_order
-    title: Create Order
-    custom:
-      title: Create Order
-      summary: 'Command: Create Order'
+    title: Order creation requested
+    command: { ref: ordering/create-order }
     next_step:
       id: order_service
       label: Persist order
@@ -98,6 +90,7 @@ steps:
   - id: order_cancelled
     title: Order Cancelled
     event: ordering/order-cancelled
+    policy: Whenever an order is cancelled, release the held stock and void the payment
 ---
 
 ## Overview

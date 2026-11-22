@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { isJsonObject, type JsonObject, type JsonValue } from './json';
+import { isJsonObject } from './json';
+import type { JsonObject, JsonValue } from './json';
 
 /**
  * The matchers delivery routing evaluates. Each answers true, false, or
@@ -31,15 +32,23 @@ const MAX_NAME = 255;
  * untrusted pull request must not stall the scan.
  */
 export function safePattern(pattern: string): RegExp | undefined {
-  if (pattern.length > MAX_NAME || !/^[\w\-.*^$|()\\/:@]*$/.test(pattern)) return undefined;
+  if (pattern.length > MAX_NAME || !/^[\w\-.*^$|()\\/:@]*$/.test(pattern)) {
+    return undefined;
+  }
 
-  if (/\)[*]/.test(pattern) || /\*\*/.test(pattern)) return undefined;
+  if (/\)[*]/.test(pattern) || pattern.includes('**')) {
+    return undefined;
+  }
 
   // RabbitMQ reads patterns as PCRE: only escapes that mean the same in
   // JavaScript are evaluated (`\A` and `\Z` are anchors there, letters here).
-  if (/\\[^.\-/\\dws$^|()*]/.test(pattern.replace(/\\\\/g, ''))) return undefined;
+  if (/\\[^.\-/\\dws$^|()*]/.test(pattern.replaceAll('\\\\', ''))) {
+    return undefined;
+  }
 
-  if ((pattern.match(/\*/g) ?? []).length > 2) return undefined;
+  if ((pattern.match(/\*/g) ?? []).length > 2) {
+    return undefined;
+  }
 
   try {
     return new RegExp(pattern);
@@ -50,9 +59,13 @@ export function safePattern(pattern: string): RegExp | undefined {
 
 /** A RabbitMQ permission or policy pattern against a name. `''` grants nothing, as in RabbitMQ. */
 export function rabbitPatternMatches(pattern: string, name: string): boolean | undefined {
-  if (pattern === '') return false;
+  if (pattern === '') {
+    return false;
+  }
 
-  if (name.length > MAX_NAME) return undefined;
+  if (name.length > MAX_NAME) {
+    return undefined;
+  }
 
   return safePattern(pattern)?.test(name);
 }
@@ -69,7 +82,9 @@ export function topicMatches(pattern: string, key: string): boolean {
     const key = p * (words.length + 1) + w;
     const known = seen.get(key);
 
-    if (known !== undefined) return known;
+    if (known !== undefined) {
+      return known;
+    }
 
     const result =
       p === parts.length
@@ -100,7 +115,9 @@ const numericRule = z.array(z.union([z.string(), z.number()]));
 function numericMatches(rule: JsonValue, value: JsonValue | undefined): boolean | undefined {
   const parsed = numericRule.safeParse(rule);
 
-  if (!parsed.success || !isNumber(value)) return parsed.success ? false : undefined;
+  if (!parsed.success || !isNumber(value)) {
+    return parsed.success ? false : undefined;
+  }
 
   const parts = parsed.data;
   const checks: Array<boolean | undefined> = [];
@@ -109,7 +126,9 @@ function numericMatches(rule: JsonValue, value: JsonValue | undefined): boolean 
     const op = parts[i];
     const bound = parts[i + 1];
 
-    if (!isNumber(bound)) return undefined;
+    if (!isNumber(bound)) {
+      return undefined;
+    }
 
     checks.push(
       op === '='
@@ -132,14 +151,18 @@ function numericMatches(rule: JsonValue, value: JsonValue | undefined): boolean 
 /** One entry of a filter's value list against one field value. */
 function conditionMatches(condition: JsonValue, value: JsonValue | undefined): boolean | undefined {
   if (!isJsonObject(condition)) {
-    if (value === undefined) return false;
+    if (value === undefined) {
+      return false;
+    }
 
     return condition === value;
   }
 
   const [operator, ...rest] = Object.keys(condition);
 
-  if (!operator || rest.length > 0) return undefined;
+  if (!operator || rest.length > 0) {
+    return undefined;
+  }
 
   const operand = condition[operator]!;
   const text = isText(value) ? value : undefined;
@@ -148,7 +171,9 @@ function conditionMatches(condition: JsonValue, value: JsonValue | undefined): b
     case 'exists':
       return isFlag(operand) ? (value !== undefined) === operand : undefined;
     case 'prefix':
-      if (isJsonObject(operand)) return undefined;
+      if (isJsonObject(operand)) {
+        return undefined;
+      }
 
       return value === undefined ? false : text !== undefined && text.startsWith(String(operand));
     case 'suffix':
@@ -162,9 +187,13 @@ function conditionMatches(condition: JsonValue, value: JsonValue | undefined): b
     case 'numeric':
       return value === undefined ? false : numericMatches(operand, value);
     case 'anything-but': {
-      if (value === undefined) return false;
+      if (value === undefined) {
+        return false;
+      }
 
-      if (Array.isArray(operand)) return !operand.includes(value);
+      if (Array.isArray(operand)) {
+        return !operand.includes(value);
+      }
 
       if (isJsonObject(operand)) {
         const inner = conditionMatches(operand, value);
@@ -230,8 +259,8 @@ export function contentMatches(
 
 type Token = { kind: 'word' | 'string' | 'number' | 'op' | 'paren' | 'comma'; text: string };
 
-function tokenize(sql: string): Token[] | undefined {
-  const tokens: Token[] = [];
+function tokenize(sql: string): Array<Token> | undefined {
+  const tokens: Array<Token> = [];
   let i = 0;
 
   while (i < sql.length) {
@@ -248,13 +277,21 @@ function tokenize(sql: string): Token[] | undefined {
     const word = /^[A-Za-z_$][\w.$]*/.exec(rest);
     const op = /^(<>|!=|<=|>=|=|<|>)/.exec(rest);
 
-    if (string) tokens.push({ kind: 'string', text: string[1]!.replaceAll("''", "'") });
-    else if (number) tokens.push({ kind: 'number', text: number[0] });
-    else if (word) tokens.push({ kind: 'word', text: word[0] });
-    else if (op) tokens.push({ kind: 'op', text: op[0] });
-    else if (rest[0] === '(' || rest[0] === ')') tokens.push({ kind: 'paren', text: rest[0] });
-    else if (rest[0] === ',') tokens.push({ kind: 'comma', text: ',' });
-    else return undefined;
+    if (string) {
+      tokens.push({ kind: 'string', text: string[1]!.replaceAll("''", "'") });
+    } else if (number) {
+      tokens.push({ kind: 'number', text: number[0] });
+    } else if (word) {
+      tokens.push({ kind: 'word', text: word[0] });
+    } else if (op) {
+      tokens.push({ kind: 'op', text: op[0] });
+    } else if (rest.startsWith('(') || rest.startsWith(')')) {
+      tokens.push({ kind: 'paren', text: rest.charAt(0) });
+    } else if (rest.startsWith(',')) {
+      tokens.push({ kind: 'comma', text: ',' });
+    } else {
+      return undefined;
+    }
 
     i += (string ?? number ?? word ?? op)?.[0].length ?? 1;
   }
@@ -277,7 +314,9 @@ export function sqlFilterMatches(
 ): boolean | undefined {
   const tokens = tokenize(sql);
 
-  if (!tokens) return undefined;
+  if (!tokens) {
+    return undefined;
+  }
 
   let at = 0;
   const peek = () => tokens[at];
@@ -287,20 +326,32 @@ export function sqlFilterMatches(
   const value = (): HeaderValue | null | typeof fail => {
     const token = tokens[at++];
 
-    if (!token) return fail;
+    if (!token) {
+      return fail;
+    }
 
-    if (token.kind === 'string') return token.text;
+    if (token.kind === 'string') {
+      return token.text;
+    }
 
-    if (token.kind === 'number') return Number(token.text);
+    if (token.kind === 'number') {
+      return Number(token.text);
+    }
 
     if (token.kind === 'word') {
       const upper = token.text.toUpperCase();
 
-      if (upper === 'TRUE') return true;
+      if (upper === 'TRUE') {
+        return true;
+      }
 
-      if (upper === 'FALSE') return false;
+      if (upper === 'FALSE') {
+        return false;
+      }
 
-      if (upper === 'NULL') return null;
+      if (upper === 'NULL') {
+        return null;
+      }
 
       return property(token.text, properties);
     }
@@ -313,7 +364,9 @@ export function sqlFilterMatches(
       at++;
       const inner = or();
 
-      if (tokens[at++]?.text !== ')') return fail;
+      if (tokens[at++]?.text !== ')') {
+        return fail;
+      }
 
       return inner;
     }
@@ -327,15 +380,21 @@ export function sqlFilterMatches(
 
     const left = value();
 
-    if (left === fail) return fail;
+    if (left === fail) {
+      return fail;
+    }
 
     if (keyword('IS')) {
       at++;
       const negate = keyword('NOT');
 
-      if (negate) at++;
+      if (negate) {
+        at++;
+      }
 
-      if (!keyword('NULL')) return fail;
+      if (!keyword('NULL')) {
+        return fail;
+      }
       at++;
 
       return negate ? left !== null : left === null;
@@ -343,47 +402,67 @@ export function sqlFilterMatches(
 
     const negated = keyword('NOT');
 
-    if (negated) at++;
+    if (negated) {
+      at++;
+    }
 
     if (keyword('IN')) {
       at++;
 
-      if (tokens[at++]?.text !== '(') return fail;
+      if (tokens[at++]?.text !== '(') {
+        return fail;
+      }
       const options: Array<HeaderValue | null> = [];
 
       for (;;) {
         const option = value();
 
-        if (option === fail) return fail;
+        if (option === fail) {
+          return fail;
+        }
         options.push(option);
         const next = tokens[at++];
 
-        if (next?.text === ')') break;
+        if (next?.text === ')') {
+          break;
+        }
 
-        if (next?.kind !== 'comma') return fail;
+        if (next?.kind !== 'comma') {
+          return fail;
+        }
       }
 
       // A missing property is SQL's unknown: neither IN nor NOT IN holds for it.
-      if (left === null) return null;
+      if (left === null) {
+        return null;
+      }
 
       const found = options.includes(left);
 
       return negated ? !found : found;
     }
 
-    if (negated) return fail;
+    if (negated) {
+      return fail;
+    }
 
     const op = tokens[at];
 
     // A bare TRUE or `1=1` style literal comparison.
-    if (op?.kind !== 'op') return isFlag(left) ? left : fail;
+    if (op?.kind !== 'op') {
+      return isFlag(left) ? left : fail;
+    }
     at++;
     const right = value();
 
-    if (right === fail) return fail;
+    if (right === fail) {
+      return fail;
+    }
 
     // SQL's unknown: a missing property compares as neither true nor false, and fails the filter.
-    if (left === null || right === null) return null;
+    if (left === null || right === null) {
+      return null;
+    }
 
     switch (op.text) {
       case '=':
@@ -411,7 +490,9 @@ export function sqlFilterMatches(
       at++;
       const next = comparison();
 
-      if (result === fail || next === fail) return fail;
+      if (result === fail || next === fail) {
+        return fail;
+      }
 
       result =
         result === false || next === false ? false : result === null || next === null ? null : true;
@@ -427,7 +508,9 @@ export function sqlFilterMatches(
       at++;
       const next = and();
 
-      if (result === fail || next === fail) return fail;
+      if (result === fail || next === fail) {
+        return fail;
+      }
 
       result =
         result === true || next === true ? true : result === null || next === null ? null : false;
@@ -438,7 +521,9 @@ export function sqlFilterMatches(
 
   const result = or();
 
-  if (result === fail || at !== tokens.length) return undefined;
+  if (result === fail || at !== tokens.length) {
+    return undefined;
+  }
 
   return result === true;
 }

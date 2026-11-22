@@ -44,7 +44,7 @@ async function publish(repository: string, id: string, domain: string, producer:
   await write(`${folder}/schema.json`, JSON.stringify({ type: 'object' }));
 }
 
-const pages: SidebarLink[] = [
+const pages: Array<SidebarLink> = [
   { label: 'Knowledge graph', link: '/catalog', icon: 'catalog' },
   { label: 'Domains', link: '/domains', icon: 'domain' },
   { label: 'Schemas', link: '/schemas', icon: 'braces' },
@@ -53,7 +53,7 @@ const pages: SidebarLink[] = [
 ];
 
 /** A sidebar as labels, groups as `label: [children]`, for reading at a glance. */
-const labelTree = (items: Array<SidebarLink | SidebarGroup>): unknown[] =>
+const labelTree = (items: Array<SidebarLink | SidebarGroup>): Array<unknown> =>
   items.map((item) => ('items' in item ? { [item.label]: labelTree(item.items) } : item.label));
 
 it('opens with Domains, subdomains inside their parent, then a link to each catalog page', async () => {
@@ -101,7 +101,7 @@ it('opens with Domains, subdomains inside their parent, then a link to each cata
 it("lists a domain's commands and queries, which open the Catalog on them", async () => {
   await publish('payments-service', 'payment.captured', 'payments', 'Payment Worker');
 
-  const command = (id: string, title: string, tags: string[]) => ({
+  const command = (id: string, title: string, tags: Array<string>) => ({
     ref: { kind: 'command', namespace: 'payments', id, version: '1.0.0' },
     title,
     tags,
@@ -208,19 +208,21 @@ it('links every page the catalog has, so no feature drops out of the sidebar', a
 
   const catalog = await buildDocsCatalog(root, { includeDates: false });
 
-  const every: SidebarLink[] = [
+  const every: Array<SidebarLink> = [
     ...pages,
     { label: 'MCP servers', link: '/mcp-servers', icon: 'mcp-server' },
     { label: 'Glossary', link: '/glossary', icon: 'glossary' },
     { label: 'APIs', link: '/apis', icon: 'api' },
   ];
 
-  const hrefs = (items: Array<SidebarLink | SidebarGroup>): string[] =>
+  const hrefs = (items: Array<SidebarLink | SidebarGroup>): Array<string> =>
     items.flatMap((item) => ('items' in item ? hrefs(item.items) : [item.link]));
 
   const linked = hrefs(domainSidebar(catalog, every));
 
-  for (const page of every) expect(linked).toContain(page.link);
+  for (const page of every) {
+    expect(linked).toContain(page.link);
+  }
 });
 
 it('gives Starlight links with their icons drawn, not named', async () => {

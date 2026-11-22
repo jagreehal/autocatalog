@@ -9,14 +9,15 @@ import {
   publishesCatalogContent,
   readComponentsFile,
   writeComponents,
-  type JsonValue,
 } from '../src';
+import type { JsonValue } from '../src';
 
 const repository = async (content?: JsonValue) => {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'ac-components-'));
 
-  if (content !== undefined)
+  if (content !== undefined) {
     await fs.writeFile(path.join(root, COMPONENTS_FILE), JSON.stringify(content));
+  }
 
   return root;
 };

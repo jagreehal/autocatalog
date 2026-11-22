@@ -33,7 +33,7 @@ const span = (traceId: string, service: string, operation: string) => ({
   ],
 });
 
-const exportOf = (...resourceSpans: ReturnType<typeof span>[]) => ({ resourceSpans });
+const exportOf = (...resourceSpans: Array<ReturnType<typeof span>>) => ({ resourceSpans });
 
 const edge = (graph: ResourceGraph | undefined, type: string, from: string) =>
   graph?.relationships.find((item) => item.type === type && item.from.id === from);

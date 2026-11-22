@@ -27,7 +27,9 @@ const TOKENS = [
 
 /** The framing page's document, when there is one this page may read. */
 function framingDocument(): Document | undefined {
-  if (window.parent === window) return undefined;
+  if (window.parent === window) {
+    return undefined;
+  }
 
   try {
     return window.parent.document;
@@ -39,7 +41,7 @@ function framingDocument(): Document | undefined {
 
 /** The framing page's `@font-face` rules, so a brand's own font draws here too. */
 function fontFaces(outer: Document): string {
-  const rules: string[] = [];
+  const rules: Array<string> = [];
 
   for (const sheet of outer.styleSheets) {
     let list: CSSRuleList;
@@ -51,7 +53,9 @@ function fontFaces(outer: Document): string {
       continue;
     }
 
-    for (const rule of list) if (rule.cssText.startsWith('@font-face')) rules.push(rule.cssText);
+    for (const rule of list) {
+      if (rule.cssText.startsWith('@font-face')) rules.push(rule.cssText);
+    }
   }
 
   return rules.join('\n');
@@ -60,7 +64,9 @@ function fontFaces(outer: Document): string {
 export function followFramingPage(): void {
   const outer = framingDocument();
 
-  if (!outer) return;
+  if (!outer) {
+    return;
+  }
 
   const root = document.documentElement;
 
@@ -73,7 +79,9 @@ export function followFramingPage(): void {
     for (const token of TOKENS) {
       const value = styles.getPropertyValue(token).trim();
 
-      if (value) root.style.setProperty(token, value);
+      if (value) {
+        root.style.setProperty(token, value);
+      }
     }
   };
 
@@ -91,7 +99,9 @@ export function followFramingPage(): void {
   const report = () => {
     const url = new URL(window.parent.location.href);
 
-    if (url.hash === location.hash) return;
+    if (url.hash === location.hash) {
+      return;
+    }
 
     url.hash = location.hash;
     window.parent.history.replaceState(window.parent.history.state, '', url);

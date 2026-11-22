@@ -1,7 +1,8 @@
 import fs from 'node:fs';
 import { parse } from 'devalue';
 import { z } from 'zod';
-import { type AccessDoc, readableCatalog } from './access';
+import { readableCatalog } from './access';
+import type { AccessDoc } from './access';
 import { withCodeowners } from './codeowned';
 import { readerView } from './reader-view';
 import { docPage } from './ui/lib/docs';
@@ -10,8 +11,8 @@ import {
   createAgentsResourceGraph,
   publishesAgentCatalog,
   loadCatalog as loadAgentsCatalog,
-  type GraphEvent,
 } from 'autocatalog-agents-core';
+import type { GraphEvent } from 'autocatalog-agents-core';
 import {
   AUTOCATALOG_GRAPH_SPEC,
   assertPathSegment,
@@ -25,13 +26,7 @@ import {
   loadRepositoryEvents,
   findCatalogRoots,
   resourceKey,
-  type LoadedEvent,
   summarizeResourceGraph,
-  type CatalogResource,
-  type RepositoryCalls,
-  type ResourceGraph,
-  type ResourceGraphSummary,
-  type ResourceRef,
   readResourceGraph,
   mergeArchitectureGraphs,
   earlierVersions,
@@ -52,13 +47,9 @@ import {
   createComponentResourceGraph,
   resolveReferences,
   parseResourceGraph,
-  type RepositoryReferences,
   analyzeDelivery,
   deliveryEvents,
   scanDeliveryResources,
-  type BehindReference,
-  type ConsumerDeclaration,
-  type DeliveryReport,
   RESOURCE_GRAPH_FILE,
   architectureConfig,
   loadCodeowners,
@@ -66,8 +57,20 @@ import {
   resolveResourceOwnership,
   scanCommandResources,
   scanModelResources,
-  type CatalogRelationship,
-  type JsonValue,
+} from 'autocatalog-core';
+import type {
+  LoadedEvent,
+  CatalogResource,
+  RepositoryCalls,
+  ResourceGraph,
+  ResourceGraphSummary,
+  ResourceRef,
+  RepositoryReferences,
+  BehindReference,
+  ConsumerDeclaration,
+  DeliveryReport,
+  CatalogRelationship,
+  JsonValue,
 } from 'autocatalog-core';
 import {
   buildDocsManifest,
@@ -79,36 +82,42 @@ import {
   lastChanged,
   readDocs,
   resolveDocKinds,
-  type BuildDocsManifestOptions,
-  type Doc,
-  type DocKind,
-  type DocsManifest,
-  type Design,
-  type DomainModel,
-  type Flow,
   readDesigns,
   glossaryGraph,
   readDomainModel,
   readOverviews,
   overviewTargets,
-  type Overview,
   flowWorkflow,
   checkLifecycles,
-  type FlowEvidence,
-  type FlowNote,
   flowNotes,
   readFlowEvidence,
   readFlows,
-  type WorkflowRuns,
 } from 'autocatalog-docs-core';
-import { apiPath, repositoryApis, servicesForApi, type CatalogApi } from './apis';
+import type {
+  BuildDocsManifestOptions,
+  Doc,
+  DocKind,
+  DocsManifest,
+  Design,
+  DomainModel,
+  Flow,
+  Overview,
+  FlowEvidence,
+  FlowNote,
+  WorkflowRuns,
+} from 'autocatalog-docs-core';
+import { apiPath, repositoryApis, servicesForApi } from './apis';
+import type { CatalogApi } from './apis';
 import { designsChangedAt } from './dev-signals';
-import { repositorySpecifications, type CatalogSpecification } from './specifications';
+import { repositorySpecifications } from './specifications';
+import type { CatalogSpecification } from './specifications';
 import { publishedKinds, RESERVED_SEGMENTS } from './kinds';
-import { catalogModels, modelPath, type CatalogModel } from './data-models';
+import { catalogModels, modelPath } from './data-models';
+import type { CatalogModel } from './data-models';
 import { termAnchor } from './model';
 import { audienceReader, catalogForAudience } from './audience';
-import { docsSiteConfig, type DocsSiteConfig } from './config';
+import { docsSiteConfig } from './config';
+import type { DocsSiteConfig } from './config';
 import type { ShellLink } from './shell';
 import { catalogHref } from './view';
 
@@ -127,48 +136,48 @@ export interface CatalogEvent {
 }
 
 export interface DocsCatalog {
-  docs: Doc[];
+  docs: Array<Doc>;
   /** Current events from every repository whose catalog compiled, for their pages. */
-  events: CatalogEvent[];
+  events: Array<CatalogEvent>;
   /**
    * Earlier versions, for their history pages: a committed catalog's
    * `versioned/` folders, or the declared versions in the history of
    * discovered contracts.
    */
-  history: CatalogEvent[];
+  history: Array<CatalogEvent>;
   /** The OpenAPI documents each repository commits, each with a reference page. */
-  apis: CatalogApi[];
+  apis: Array<CatalogApi>;
   /** Every other specification each repository commits (WSDL, XML Schema, AsyncAPI…), each with a page. */
-  specifications: CatalogSpecification[];
+  specifications: Array<CatalogSpecification>;
   /** The tables and collections each repository defines, each with a page. */
-  models: CatalogModel[];
+  models: Array<CatalogModel>;
   /** The business processes each repository declares under flows/, each with a page. */
-  flows: Flow[];
+  flows: Array<Flow>;
   /** Documents attached to a flow or one of its steps, whatever their kind. */
-  flowNotes: FlowNote[];
+  flowNotes: Array<FlowNote>;
   /** Each repository's committed comparison of its flows with code and runtime. */
   flowEvidence: Map<string, FlowEvidence>;
   /** The architecture each repository proposes under designs/, each with a page. */
-  designs: Design[];
+  designs: Array<Design>;
   /** Where each repository in the graph is on disk, by name: where `ac site` dev saves a design. */
   repositoryRoots: Record<string, string>;
   /** Each domain's glossary, and the entities, data products, teams and users repositories describe. */
   model: DomainModel;
   /** The text at the top of domain, service and system pages, from each repository's `overviews/`. */
-  overviews: Overview[];
+  overviews: Array<Overview>;
   manifest: DocsManifest;
   /** The document kinds with at least one document, each with an index page. */
-  kinds: DocKind[];
+  kinds: Array<DocKind>;
   graph: ResourceGraph;
   summary: ResourceGraphSummary;
   /** Repositories quarantined from the graph, shown rather than swallowed. */
-  failures: RepositoryFailure[];
+  failures: Array<RepositoryFailure>;
   /** Services that declare they read an earlier release than the newest. */
-  behind: BehindReference[];
+  behind: Array<BehindReference>;
   /** Repositories whose runtime snapshot was read, whatever it matched. */
-  snapshots: string[];
+  snapshots: Array<string>;
   /** The workflow runs each repository's runtime snapshot recorded. */
-  workflows: WorkflowRuns[];
+  workflows: Array<WorkflowRuns>;
   /**
    * Delivery routes across every repository: one team's broker configuration,
    * another's events and a third's consumer declarations make one route.
@@ -180,7 +189,7 @@ export interface DocsCatalog {
    * catalog more than once (configuration, then prerender), and a warning
    * repeated reads as two problems.
    */
-  warnings: string[];
+  warnings: Array<string>;
 }
 
 export type BuildDocsCatalogOptions = BuildDocsManifestOptions;
@@ -202,7 +211,7 @@ export async function buildDocsCatalog(
   const docs = readDocs(root, withoutInvalid);
   const manifest = documentsManifest(root, withoutInvalid);
   // Left out of a repository without quarantining it, such as an unreadable snapshot.
-  const notes: string[] = [];
+  const notes: Array<string> = [];
 
   const roots = findCatalogRoots(root, {
     name: options.repo,
@@ -227,7 +236,7 @@ export async function buildDocsCatalog(
   const declarations = new Map<string, Set<string>>();
   claim(declarations, 'docs/', docsGraph);
 
-  const failures: RepositoryFailure[] = [...invalidDocs].map(([repository, messages]) => ({
+  const failures: Array<RepositoryFailure> = [...invalidDocs].map(([repository, messages]) => ({
     repository,
     source: 'docs',
     message: messages.join('; '),
@@ -239,10 +248,10 @@ export async function buildDocsCatalog(
     graph: ResourceGraph;
   }> = [];
 
-  const events: CatalogEvent[] = [];
-  const history: CatalogEvent[] = [];
-  const apis: CatalogApi[] = [];
-  const specifications: CatalogSpecification[] = [];
+  const events: Array<CatalogEvent> = [];
+  const history: Array<CatalogEvent> = [];
+  const apis: Array<CatalogApi> = [];
+  const specifications: Array<CatalogSpecification> = [];
 
   // Compiled per repository, and a repository that will not compile is
   // quarantined rather than allowed to fail everyone's build. The refusal to
@@ -284,8 +293,9 @@ export async function buildDocsCatalog(
     // own pages publishes beside it rather than being left out.
     const name = RESERVED_SEGMENTS.has(folder) ? `${folder}-eventcatalog` : folder;
 
-    if (name !== folder)
+    if (name !== folder) {
       notes.push(`${folder} publishes as ${name}: /${folder}/ is one of the site's own pages`);
+    }
 
     const duplicateOf = taken.has(name) ? '' : undefined;
 
@@ -319,19 +329,21 @@ export async function buildDocsCatalog(
   for (const candidate of found) {
     const { name, path: where, duplicateOf } = candidate;
 
-    if (RESERVED_SEGMENTS.has(name))
+    if (RESERVED_SEGMENTS.has(name)) {
       failures.push({
         repository: name,
         source: 'name',
         message: `/${name}/ is one of the site's own pages; rename the repository's folder to publish it`,
       });
-    else if (duplicateOf !== undefined)
+    } else if (duplicateOf !== undefined) {
       failures.push({
         repository: name,
         source: 'name',
         message: `${where} and ${duplicateOf || 'the root'} both publish as ${name}; rename one folder to publish both`,
       });
-    else repositories.push(candidate);
+    } else {
+      repositories.push(candidate);
+    }
   }
 
   const kinds = publishedKinds(
@@ -342,13 +354,13 @@ export async function buildDocsCatalog(
 
   // Every repository's events first, so an agent in one repository can name an
   // event another publishes and the edge lands on that exact Event resource.
-  const graphEvents: GraphEvent[] = [];
+  const graphEvents: Array<GraphEvent> = [];
   // Earlier versions, for a reference whose range picks one.
-  const earlier: ResourceGraph[] = [];
-  const snapshots: string[] = [];
-  const workflows: WorkflowRuns[] = [];
-  const brokerGraphs: ResourceGraph[] = [];
-  const deliveryConsumers: ConsumerDeclaration[] = [];
+  const earlier: Array<ResourceGraph> = [];
+  const snapshots: Array<string> = [];
+  const workflows: Array<WorkflowRuns> = [];
+  const brokerGraphs: Array<ResourceGraph> = [];
+  const deliveryConsumers: Array<ConsumerDeclaration> = [];
 
   for (const { name, repositoryRoot, nested } of repositories) {
     let resourceGraph: ResourceGraph | undefined;
@@ -358,8 +370,9 @@ export async function buildDocsCatalog(
         (await readResourceGraph(repositoryRoot)) ??
         (await scannedModels(repositoryRoot, name, notes, root, nested));
 
-      if (resourceGraph)
+      if (resourceGraph) {
         resourceFragments.push({ repository: name, repositoryRoot, graph: resourceGraph });
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
 
@@ -372,7 +385,7 @@ export async function buildDocsCatalog(
     }
 
     const eventsRoot = path.join(repositoryRoot, 'events');
-    let loaded: LoadedEvent[] = [];
+    let loaded: Array<LoadedEvent> = [];
 
     const graph = await quarantine(name, 'events', async () => {
       loaded = await loadRepositoryEvents(repositoryRoot, {
@@ -397,7 +410,9 @@ export async function buildDocsCatalog(
 
     // Kept only once the repository composed, so a quarantined catalog has no
     // pages either.
-    if (!graph) continue;
+    if (!graph) {
+      continue;
+    }
 
     for (const event of loaded) {
       (event.folder.isVersioned ? history : events).push({ repository: name, event });
@@ -405,7 +420,9 @@ export async function buildDocsCatalog(
 
     earlier.push(earlierVersions(loaded, name));
 
-    if (resourceGraph) brokerGraphs.push(resourceGraph);
+    if (resourceGraph) {
+      brokerGraphs.push(resourceGraph);
+    }
 
     // A malformed consumes file is reported where consumers are joined, below.
     deliveryConsumers.push(...(await readConsumerDeclarations(repositoryRoot).catch(() => [])));
@@ -480,10 +497,12 @@ export async function buildDocsCatalog(
   // so a producer elsewhere learns who it would break. Merged rather than
   // composed: a service or edge the producer's events already name is the same
   // one, and the declaration adds only what is missing.
-  const consumerFragments: ResourceGraph[] = [];
+  const consumerFragments: Array<ResourceGraph> = [];
 
   for (const { name, repositoryRoot } of repositories) {
-    if (!fs.existsSync(path.join(repositoryRoot, CONSUMES_FILE))) continue;
+    if (!fs.existsSync(path.join(repositoryRoot, CONSUMES_FILE))) {
+      continue;
+    }
 
     try {
       consumerFragments.push(
@@ -517,14 +536,18 @@ export async function buildDocsCatalog(
       // is right inside one repository's scan and wrong across repositories.
       const contested = architectureConflicts(composed, guarded);
 
-      if (contested.length) throw new Error(`${RESOURCE_GRAPH_FILE}: ${contested.join('; ')}`);
+      if (contested.length) {
+        throw new Error(`${RESOURCE_GRAPH_FILE}: ${contested.join('; ')}`);
+      }
       composed = mergeArchitectureGraphs(composed, guarded);
       claim(declarations, fragment.repository, fragment.graph, { declaredOnly: true });
 
       for (const resource of fragment.graph.resources) {
         const key = resourceKey(resource.ref);
 
-        if (!modelRepositories.has(key)) modelRepositories.set(key, fragment);
+        if (!modelRepositories.has(key)) {
+          modelRepositories.set(key, fragment);
+        }
       }
     } catch (error) {
       failures.push({
@@ -546,7 +569,9 @@ export async function buildDocsCatalog(
     try {
       const problem = apiServiceProblem(api.document);
 
-      if (problem) failed(problem);
+      if (problem) {
+        failed(problem);
+      }
 
       const declared = declaredApiService(api.document);
 
@@ -555,10 +580,11 @@ export async function buildDocsCatalog(
         declared && serviceOwners && serviceOwners.get(declared) !== api.repository,
       );
 
-      if (unpinned)
+      if (unpinned) {
         failed(
           `x-autocatalog.service names ${declared}, which the lock does not pin to ${api.repository}, so no service exposes its operations`,
         );
+      }
 
       // A service guessed from the title or webhooks is held to the lock the same way.
       const services = unpinned
@@ -568,7 +594,9 @@ export async function buildDocsCatalog(
           );
 
       // A service a spec names gets a page, so its name is a path too.
-      for (const service of services) assertPathSegment(api.file, 'service', service);
+      for (const service of services) {
+        assertPathSegment(api.file, 'service', service);
+      }
 
       // Pages show what the graph holds, the lock applied.
       api.services = services;
@@ -610,18 +638,23 @@ export async function buildDocsCatalog(
   // References by id to what another repository owns (EventCatalog's `sends`
   // and `receives`), resolved once against everything composed, the indexes
   // included. One that names nothing, or more than one thing, is said and left out.
-  const references: RepositoryReferences[] = [];
-  const calls: RepositoryCalls[] = [];
+  const references: Array<RepositoryReferences> = [];
+  const calls: Array<RepositoryCalls> = [];
 
   for (const { name, repositoryRoot } of repositories) {
-    if (quarantined.has(name)) continue;
+    if (quarantined.has(name)) {
+      continue;
+    }
 
     const declared = await readDeclarationsFile(repositoryRoot).catch(() => undefined);
 
-    if (declared && declared.receives.length + declared.sends.length > 0)
+    if (declared && declared.receives.length + declared.sends.length > 0) {
       references.push({ repository: name, receives: declared.receives, sends: declared.sends });
+    }
 
-    if (declared?.calls.length) calls.push({ repository: name, calls: declared.calls });
+    if (declared?.calls.length) {
+      calls.push({ repository: name, calls: declared.calls });
+    }
   }
 
   const resolved = resolveReferences(composed, references, mergeArchitectureGraphs(...earlier));
@@ -772,7 +805,9 @@ export async function buildDocsCatalog(
       const commit = resource.ref.kind === 'repository' ? commits.get(resource.ref.id) : null;
       const model = modelPages.get(resourceKey(resource.ref));
 
-      if (model) return { ...resource, url: modelPath(model) };
+      if (model) {
+        return { ...resource, url: modelPath(model) };
+      }
 
       return commit ? { ...resource, source: { repo: resource.ref.id, ref: commit } } : resource;
     }),
@@ -827,13 +862,15 @@ export async function buildDocsCatalog(
 async function scannedModels(
   repositoryRoot: string,
   repository: string,
-  notes: string[],
+  notes: Array<string>,
   ownersWithin: string,
-  nested: string[],
+  nested: Array<string>,
 ): Promise<ResourceGraph | undefined> {
   const { graph, errors } = await modelScan(path.resolve(repositoryRoot), ownersWithin, nested);
 
-  for (const error of errors) notes.push(`${repository}: ${error}`);
+  for (const error of errors) {
+    notes.push(`${repository}: ${error}`);
+  }
 
   return graph.resources.some(
     ({ ref }) =>
@@ -845,7 +882,7 @@ async function scannedModels(
     : undefined;
 }
 
-type ModelScan = Promise<{ graph: ResourceGraph; errors: string[] }>;
+type ModelScan = Promise<{ graph: ResourceGraph; errors: Array<string> }>;
 
 declare global {
   // Configuring the site and rendering its pages each build the catalog, from
@@ -856,11 +893,13 @@ declare global {
 const modelScans = (globalThis.autocatalogModelScans ??= new Map());
 
 /** One scan per repository checkout per process. */
-function modelScan(root: string, ownersWithin: string, nested: string[]): ModelScan {
+function modelScan(root: string, ownersWithin: string, nested: Array<string>): ModelScan {
   const key = JSON.stringify([root, nested]);
   const known = modelScans.get(key);
 
-  if (known) return known;
+  if (known) {
+    return known;
+  }
 
   const scan = (async () => {
     const config = architectureConfig.parse(
@@ -964,7 +1003,9 @@ function claim(
   ];
 
   for (const [key, entry] of entries) {
-    if (options.declaredOnly && !declares(entry)) continue;
+    if (options.declaredOnly && !declares(entry)) {
+      continue;
+    }
     declarations.set(key, (declarations.get(key) ?? new Set()).add(repository));
   }
 }
@@ -997,12 +1038,15 @@ function guardFragment(
   ): T {
     const owners = declarations.get(key);
 
-    if (!existing || !owners || owners.has(fragment.repository)) return incoming;
+    if (!existing || !owners || owners.has(fragment.repository)) {
+      return incoming;
+    }
 
-    if (declares(incoming) && withoutEvidence(incoming) !== withoutEvidence(existing))
+    if (declares(incoming) && withoutEvidence(incoming) !== withoutEvidence(existing)) {
       throw new Error(
         `${RESOURCE_GRAPH_FILE} redefines ${key}, which ${[...owners].sort().join(', ')} declares`,
       );
+    }
 
     return { ...existing, evidence: incoming.evidence };
   }
@@ -1031,7 +1075,9 @@ function documentsManifest(root: string, options: BuildDocsCatalogOptions): Docs
   try {
     return buildDocsManifest(root, options);
   } catch (error) {
-    if (!(error instanceof DocsManifestError)) throw error;
+    if (!(error instanceof DocsManifestError)) {
+      throw error;
+    }
     throw new Error(`${error.message}:\n  ${error.failures.join('\n  ')}`, { cause: error });
   }
 }
@@ -1065,7 +1111,9 @@ export async function buildSiteCatalog(
  * name on a site that publishes it at the root (`atRoot`).
  */
 function withPageUrls(catalog: DocsCatalog): DocsCatalog {
-  if (!process.env.AUTOCATALOG_DOCS_ROOT_REPO) return catalog;
+  if (!process.env.AUTOCATALOG_DOCS_ROOT_REPO) {
+    return catalog;
+  }
 
   const resources = catalog.graph.resources.map((resource) =>
     resource.ref.kind === 'document' && resource.url
@@ -1103,7 +1151,9 @@ export async function docsCatalog(): Promise<DocsCatalog> {
  * access rule. A site with `access` whose build could not try it has none.
  */
 function openToEveryone(): ((doc: AccessDoc) => boolean) | undefined {
-  if (!process.env.AUTOCATALOG_SITE_ACCESS) return undefined;
+  if (!process.env.AUTOCATALOG_SITE_ACCESS) {
+    return undefined;
+  }
 
   const open = new Set(
     z
@@ -1128,7 +1178,9 @@ export function fullCatalog(): Promise<DocsCatalog> {
   }
 
   // `ac site` dev: a design changed on disk since this catalog was read.
-  if (designsChangedAt() > cachedAt) cached = undefined;
+  if (designsChangedAt() > cachedAt) {
+    cached = undefined;
+  }
 
   if (!cached) {
     cachedAt = Date.now();
@@ -1140,7 +1192,9 @@ export function fullCatalog(): Promise<DocsCatalog> {
     // A build that fails is not kept, so the next request tries again. Callers
     // still get the rejection from `building` itself.
     building.catch(() => {
-      if (cached === building) cached = undefined;
+      if (cached === building) {
+        cached = undefined;
+      }
     });
   }
 
@@ -1153,7 +1207,9 @@ export function fullCatalog(): Promise<DocsCatalog> {
  * catalog does.
  */
 export function changedAt(absolute: string): string | null {
-  if (changes.has(absolute)) return changes.get(absolute) ?? null;
+  if (changes.has(absolute)) {
+    return changes.get(absolute) ?? null;
+  }
 
   const { root } = docsSiteConfig();
   const file = path.relative(root, absolute).split(path.sep).join('/');
@@ -1187,7 +1243,9 @@ export function eventChangedAt(
 ): string | null {
   const committed = changed(event.folder.path);
 
-  if (committed) return committed;
+  if (committed) {
+    return committed;
+  }
 
   const { domain, id } = event.frontmatter;
 
@@ -1201,12 +1259,12 @@ export function eventChangedAt(
 
 // Every document page asks this question, so the answer is grouped once per
 // build rather than scanning the whole graph per render.
-const definedByRepository = new WeakMap<DocsCatalog, Map<string, CatalogResource[]>>();
+const definedByRepository = new WeakMap<DocsCatalog, Map<string, Array<CatalogResource>>>();
 
 export function resourcesDefinedByRepository(
   catalog: DocsCatalog,
   repository: string,
-): CatalogResource[] {
+): Array<CatalogResource> {
   let index = definedByRepository.get(catalog);
 
   if (!index) {
@@ -1217,14 +1275,21 @@ export function resourcesDefinedByRepository(
     index = new Map();
 
     for (const relationship of catalog.graph.relationships) {
-      if (relationship.type !== 'defines' || relationship.from.kind !== 'repository') continue;
+      if (relationship.type !== 'defines' || relationship.from.kind !== 'repository') {
+        continue;
+      }
       const resource = byKey.get(resourceKey(relationship.to));
 
-      if (!resource) continue;
+      if (!resource) {
+        continue;
+      }
       const bucket = index.get(relationship.from.id);
 
-      if (bucket) bucket.push(resource);
-      else index.set(relationship.from.id, [resource]);
+      if (bucket) {
+        bucket.push(resource);
+      } else {
+        index.set(relationship.from.id, [resource]);
+      }
     }
 
     definedByRepository.set(catalog, index);
@@ -1234,8 +1299,8 @@ export function resourcesDefinedByRepository(
 }
 
 export interface EventParticipants {
-  producers: ShellLink[];
-  consumers: ShellLink[];
+  producers: Array<ShellLink>;
+  consumers: Array<ShellLink>;
 }
 
 /**

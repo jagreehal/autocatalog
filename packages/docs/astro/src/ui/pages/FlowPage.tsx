@@ -20,14 +20,16 @@ import { Graph } from '../components/Graph';
 import { IconTile } from '../components/IconTile';
 import {
   StormBoard,
-  type StormColumnView,
-  type StormEndingView,
   StormEndings,
-  type StormHotspotView,
   StormHotspots,
   StormLegend,
-  type StormScenarioView,
   StormScenarios,
+} from '../components/Storm';
+import type {
+  StormColumnView,
+  StormEndingView,
+  StormHotspotView,
+  StormScenarioView,
 } from '../components/Storm';
 import type { VisualiserGraph } from '../lib/visualiser';
 
@@ -47,10 +49,10 @@ export interface FlowPageStep {
   runtime?: string | undefined;
   /** The state change it records. A step that fails may make none. */
   transition?: { field: string; change: string; via?: string | undefined } | undefined;
-  rules?: string[] | undefined;
+  rules?: Array<string> | undefined;
   stuck?: { signs: string; recovery?: string | undefined } | undefined;
-  notes?: FlowPageNote[] | undefined;
-  evidence?: FlowPageEvidence[] | undefined;
+  notes?: Array<FlowPageNote> | undefined;
+  evidence?: Array<FlowPageEvidence> | undefined;
 }
 
 /** A document attached here. Its nature and status stay beside it, so a draft reads as one. */
@@ -75,7 +77,7 @@ export interface FlowPageEvidenceSummary {
   source?: string | undefined;
   stale: boolean;
   /** Recorded at runtime, and in no flow. */
-  undeclared: string[];
+  undeclared: Array<string>;
 }
 
 /** The workflow that carries out the flow, as a runtime snapshot recorded it. */
@@ -85,18 +87,18 @@ export interface FlowRuntime {
   /** "Ran 12 times: 10 completed, 2 compensated." */
   summary: string;
   /** Steps the workflow ran that no flow step names. */
-  unnamed: string[];
-  sampleTraceIds: string[];
+  unnamed: Array<string>;
+  sampleTraceIds: Array<string>;
 }
 
 /** The flow as an EventStorming board, and what the board raises. */
 export interface FlowStormView {
   /** Written for a board: it names stages, commands or policies. Others show the map first. */
   stormed: boolean;
-  columns: StormColumnView[];
-  hotspots: StormHotspotView[];
-  endings: StormEndingView[];
-  scenarios: StormScenarioView[];
+  columns: Array<StormColumnView>;
+  hotspots: Array<StormHotspotView>;
+  endings: Array<StormEndingView>;
+  scenarios: Array<StormScenarioView>;
 }
 
 export interface FlowPageProps {
@@ -105,9 +107,9 @@ export interface FlowPageProps {
   file: string;
   visualiser: VisualiserGraph;
   storm?: FlowStormView | undefined;
-  steps: FlowPageStep[];
+  steps: Array<FlowPageStep>;
   runtime?: FlowRuntime | undefined;
-  notes?: FlowPageNote[] | undefined;
+  notes?: Array<FlowPageNote> | undefined;
   evidence?: FlowPageEvidenceSummary | undefined;
   /** The Markdown below the frontmatter, rendered to HTML. */
   narrativeHtml?: string | null | undefined;
@@ -122,7 +124,7 @@ const ICONS: Record<FlowPageStep['kind'], IconName> = {
   custom: 'flow',
 };
 
-function Notes({ notes }: { notes: FlowPageNote[] }) {
+function Notes({ notes }: { notes: Array<FlowPageNote> }) {
   return (
     <ul className="m-0 flex list-none flex-col gap-1 p-0" aria-label="Notes">
       {notes.map((note) => (
@@ -142,7 +144,9 @@ function Notes({ notes }: { notes: FlowPageNote[] }) {
 function StepFacts({ step }: { step: FlowPageStep }) {
   const { transition, rules = [], stuck, notes = [], evidence = [] } = step;
 
-  if (!transition && rules.length + notes.length === 0 && !stuck) return null;
+  if (!transition && rules.length + notes.length === 0 && !stuck) {
+    return null;
+  }
 
   return (
     <div className="flex flex-col gap-2 pt-1 text-sm">
@@ -217,7 +221,7 @@ function EvidenceCard({ evidence }: { evidence: FlowPageEvidenceSummary }) {
   );
 }
 
-function StepList({ steps }: { steps: FlowPageStep[] }) {
+function StepList({ steps }: { steps: Array<FlowPageStep> }) {
   return (
     <ol className="m-0 flex list-none flex-col gap-1 p-0" aria-label="Steps">
       {steps.map((step, i) => (

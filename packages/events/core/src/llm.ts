@@ -6,50 +6,46 @@ export interface LlmEventInput {
   name: string;
   summary: string;
   domain: string;
-  producers: string[];
-  consumers: string[];
+  producers: Array<string>;
+  consumers: Array<string>;
   schema: JsonObject;
   body?: string; // long-form description (MDX body)
   examples: Array<{ name: string; data: JsonValue }>;
 }
 
 export function eventToLlmText(event: LlmEventInput): string {
-  const sections: string[] = [];
-  sections.push(`# ${event.name}`);
-  sections.push('');
-  sections.push(`id: ${event.id}`);
-  sections.push(`version: ${event.version}`);
-  sections.push(`domain: ${event.domain}`);
-  sections.push(`summary: ${event.summary}`);
+  const sections: Array<string> = [];
+  sections.push(`# ${event.name}`, '');
+  sections.push(`id: ${event.id}`, `version: ${event.version}`);
+  sections.push(`domain: ${event.domain}`, `summary: ${event.summary}`);
 
-  if (event.producers.length > 0) sections.push(`Produced by: ${event.producers.join(', ')}`);
+  if (event.producers.length > 0) {
+    sections.push(`Produced by: ${event.producers.join(', ')}`);
+  }
 
-  if (event.consumers.length > 0) sections.push(`Consumed by: ${event.consumers.join(', ')}`);
+  if (event.consumers.length > 0) {
+    sections.push(`Consumed by: ${event.consumers.join(', ')}`);
+  }
 
   if (event.body && event.body.trim().length > 0) {
-    sections.push('');
-    sections.push('## Description');
+    sections.push('', '## Description');
     sections.push(event.body.trim());
   }
 
-  sections.push('');
-  sections.push('## Schema');
-  sections.push('```json');
-  sections.push(JSON.stringify(event.schema, null, 2));
+  sections.push('', '## Schema');
+  sections.push('```json', JSON.stringify(event.schema, null, 2));
   sections.push('```');
 
   for (const ex of event.examples) {
-    sections.push('');
-    sections.push(`## Example: ${ex.name}`);
-    sections.push('```json');
-    sections.push(JSON.stringify(ex.data, null, 2));
+    sections.push('', `## Example: ${ex.name}`);
+    sections.push('```json', JSON.stringify(ex.data, null, 2));
     sections.push('```');
   }
 
   return sections.join('\n');
 }
 
-export function catalogToLlmText(events: LlmEventInput[]): string {
+export function catalogToLlmText(events: Array<LlmEventInput>): string {
   const sorted = [...events].sort((a, b) => {
     const d = a.domain.localeCompare(b.domain);
 

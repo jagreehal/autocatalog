@@ -53,7 +53,7 @@ const page = outside
           if (window.parent !== window) {
             const place = window.parent.location.hash;
 
-            if (place && !location.hash) history.replaceState(history.state, '', place);
+            if (place && !location.hash) {history.replaceState(history.state, '', place);}
             theme = window.parent.document.documentElement.dataset.theme;
           }
         } catch {}

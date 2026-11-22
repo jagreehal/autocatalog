@@ -34,7 +34,10 @@ export const COPY_MARKDOWN_LABEL = 'Copy page as Markdown';
  * Appends `Copy page as Markdown` beside `View as Markdown` after the page's
  * other actions, so the two Markdown entry points stay next to each other.
  */
-export function withMarkdownCopy(markdownHref: string, actions: PageAction[] = []): PageAction[] {
+export function withMarkdownCopy(
+  markdownHref: string,
+  actions: Array<PageAction> = [],
+): Array<PageAction> {
   const rest = actions.filter(
     (action) => action.label !== COPY_MARKDOWN_LABEL && action.label !== 'View as Markdown',
   );
@@ -48,9 +51,11 @@ export function withMarkdownCopy(markdownHref: string, actions: PageAction[] = [
 
 /** What the title block shows above and below the page's title. */
 export interface PageHeader {
-  actions?: PageAction[];
+  actions?: Array<PageAction>;
   /** A call to action level with the title, such as "Explore catalog". */
   primary?: { label: string; href: string };
+  /** The pages above this one, outermost first; the title block adds the page itself. */
+  crumbs?: Array<{ label: string; href: string }>;
 }
 
 /** `warn` for a state a reader must act on; `quiet` for one worth knowing, such as a draft. */
@@ -93,7 +98,9 @@ const changes = new WeakMap<App.Locals, string>();
 
 /** When the file a resource page is built from last changed, for its footer. */
 export function setLastChanged(locals: App.Locals, iso: string | null): void {
-  if (iso) changes.set(locals, iso);
+  if (iso) {
+    changes.set(locals, iso);
+  }
 }
 
 export function lastChangedOf(locals: App.Locals): string | undefined {

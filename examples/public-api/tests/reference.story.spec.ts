@@ -1,4 +1,5 @@
-import { expect, type Page, test } from '@playwright/test';
+import { expect, test } from '@playwright/test';
+import type { Page } from '@playwright/test';
 import { given, story, then, when } from 'executable-stories-playwright';
 
 const REFERENCE = '/apis/public-api/openapi/';
@@ -14,7 +15,9 @@ const LOADED = { timeout: 20_000 };
 
 const frameHash = (page: Page) =>
   page.locator('iframe[title="Payments API reference"]').evaluate((frame) => {
-    if (!(frame instanceof HTMLIFrameElement)) return '';
+    if (!(frame instanceof HTMLIFrameElement)) {
+      return '';
+    }
 
     return frame.contentWindow?.location.hash ?? '';
   });

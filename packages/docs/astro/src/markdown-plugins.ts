@@ -45,8 +45,8 @@ export function registerMarkdownPlugins(
 
 // Sätteri's plugin lists, which the processor reads when it renders, so a push here lands.
 const satteriOptions = z.object({
-  mdastPlugins: z.custom<SatteriPlugin[]>(Array.isArray),
-  hastPlugins: z.custom<SatteriPlugin[]>(Array.isArray),
+  mdastPlugins: z.custom<Array<SatteriPlugin>>(Array.isArray),
+  hastPlugins: z.custom<Array<SatteriPlugin>>(Array.isArray),
 });
 
 /** A Sätteri plugin: a visitor object, or a factory that makes one per document. */
@@ -63,10 +63,10 @@ interface MdastNode {
 
 interface MdastContext {
   textContent(node: MdastNode): string;
-  parent(node: MdastNode): (MdastNode & { children: MdastNode[] }) | undefined;
+  parent(node: MdastNode): (MdastNode & { children: Array<MdastNode> }) | undefined;
   indexOf(node: MdastNode): number | undefined;
   removeNode(node: MdastNode): void;
-  replaceNode(node: MdastNode, replacement: MdastNode | MdastNode[]): void;
+  replaceNode(node: MdastNode, replacement: MdastNode | Array<MdastNode>): void;
 }
 
 interface FactoryContext {
@@ -83,7 +83,9 @@ function satteriMdast(base: string) {
       code(node: MdastNode, ctx: MdastContext) {
         const diagram = mermaidNode(node, sourceFormat === 'mdx');
 
-        if (diagram) ctx.replaceNode(node, diagram);
+        if (diagram) {
+          ctx.replaceNode(node, diagram);
+        }
       },
       heading(node: MdastNode, ctx: MdastContext) {
         const parent = ctx.parent(node);
@@ -98,12 +100,16 @@ function satteriMdast(base: string) {
       text(node: MdastNode, ctx: MdastContext) {
         // Text anywhere inside a link stays as written: a link cannot hold another.
         for (let parent = ctx.parent(node); parent; parent = ctx.parent(parent)) {
-          if (parent.type === 'link' || parent.type === 'linkReference') return;
+          if (parent.type === 'link' || parent.type === 'linkReference') {
+            return;
+          }
         }
 
         const parts = splitText({ type: 'text', value: node.value ?? '' }, base);
 
-        if (parts.length > 1 || parts[0]?.type === 'link') ctx.replaceNode(node, parts);
+        if (parts.length > 1 || parts[0]?.type === 'link') {
+          ctx.replaceNode(node, parts);
+        }
       },
     };
   };

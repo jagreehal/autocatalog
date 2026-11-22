@@ -27,7 +27,7 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
 
 const page = channelPageProps(catalog, id, base);
 
-if (!page) throw new Error(`channel not found: ${id}`);
+if (!page) {throw new Error(`channel not found: ${id}`);}
 
 setResourceContext(Astro.locals, {
   kind: 'service',

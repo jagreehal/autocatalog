@@ -16,33 +16,35 @@ import {
   readSnapshot,
   scanCatalog,
   summariseDrift,
-  type CompatibilityMode,
-  type DiscoveryAdapter,
   scanArchitecture,
   driftResources,
   asDriftFinding,
   parseResourceGraph,
   readOptionalResourceJson,
-  type ArchitectureSnapshot,
-  type DriftFinding,
-  type DriftReport,
-  type ResourceGraph,
   consumersFromGraph,
   shownName,
   UNSAFE_CONSUMER,
-  type EventConsumers,
   composeResourceGraphs,
   createEventResourceGraph,
   loadCatalog,
   RULES_DIRECTORY,
   isEventCatalogResource,
-  type LoadedEvent,
   analyzeDelivery,
   companyDeliveryInputs,
   deliveryEvents,
   driftDelivery,
   overlayDelivery,
   readConsumerDeclarations,
+} from 'autocatalog-core';
+import type {
+  CompatibilityMode,
+  DiscoveryAdapter,
+  ArchitectureSnapshot,
+  DriftFinding,
+  DriftReport,
+  ResourceGraph,
+  EventConsumers,
+  LoadedEvent,
 } from 'autocatalog-core';
 import { linkAgentsToEvents } from 'autocatalog-agents-core';
 import { discoverDiscoveryAdapters } from '../adapters';
@@ -64,7 +66,7 @@ export interface RunDriftOptions {
   /** When set, replaces the severity gate with a Schema Registry strategy. */
   compatibility?: CompatibilityMode;
   quiet?: boolean;
-  adapters?: DiscoveryAdapter[];
+  adapters?: Array<DiscoveryAdapter>;
   allowCodeExecution?: boolean;
   /** A shared conventions file, read in place of the repository's own. */
   conventions?: string;
@@ -95,7 +97,7 @@ export interface RunDriftOptions {
   onReport?: (report: DriftReport) => void;
 }
 
-async function gitOutput(cwd: string, args: string[]): Promise<string> {
+async function gitOutput(cwd: string, args: Array<string>): Promise<string> {
   return (await execFileAsync('git', args, { cwd })).stdout.trim();
 }
 
@@ -136,7 +138,9 @@ async function catalogsForGitRef(opts: RunDriftOptions & { baseRef: string }): P
   const gitRoot = await fs.realpath(await gitOutput(currentRoot, ['rev-parse', '--show-toplevel']));
   const relativeRoot = path.relative(gitRoot, currentRoot);
 
-  if (relativeRoot.startsWith('..')) throw new Error(`${currentRoot} is outside ${gitRoot}`);
+  if (relativeRoot.startsWith('..')) {
+    throw new Error(`${currentRoot} is outside ${gitRoot}`);
+  }
 
   const temp = await fs.mkdtemp(path.join(os.tmpdir(), 'autocatalog-drift-'));
   const worktree = path.join(temp, 'baseline');
@@ -186,7 +190,9 @@ async function catalogsForGitRef(opts: RunDriftOptions & { baseRef: string }): P
 
       await linkDependencies(gitRoot, worktree);
 
-      if (relativeRoot) await linkDependencies(currentRoot, path.join(worktree, relativeRoot));
+      if (relativeRoot) {
+        await linkDependencies(currentRoot, path.join(worktree, relativeRoot));
+      }
     }
 
     const currentRevision = await gitOutput(gitRoot, ['rev-parse', 'HEAD']);
@@ -221,11 +227,15 @@ async function catalogsForGitRef(opts: RunDriftOptions & { baseRef: string }): P
       );
     }
 
-    if (opts.onlyPublished) await fs.mkdir(baseEvents, { recursive: true });
+    if (opts.onlyPublished) {
+      await fs.mkdir(baseEvents, { recursive: true });
+    }
 
     const errors = [...(opts.onlyPublished ? [] : baseline.errors), ...current.errors];
 
-    if (errors.length > 0) throw new Error(`Could not build drift snapshots: ${errors.join('; ')}`);
+    if (errors.length > 0) {
+      throw new Error(`Could not build drift snapshots: ${errors.join('; ')}`);
+    }
 
     return {
       base: baseEvents,
@@ -253,7 +263,7 @@ async function catalogsForGitRef(opts: RunDriftOptions & { baseRef: string }): P
 }
 
 /** The graph with each event's payload schema, so a rule can read its fields. */
-function withPayloads(graph: ResourceGraph, events: LoadedEvent[]): ResourceGraph {
+function withPayloads(graph: ResourceGraph, events: Array<LoadedEvent>): ResourceGraph {
   const schemas = new Map(
     events.map((e) => [`${e.frontmatter.domain}/${e.frontmatter.id}`, e.schema]),
   );
@@ -314,31 +324,41 @@ async function companyConsumers(
   try {
     const { graph, publishedAt } = await readCompanyIndex(source, { tokenEnv: options.tokenEnv });
 
-    if (!options.quiet) console.warn(`  ${publishedLine('consumers', source, publishedAt)}`);
+    if (!options.quiet) {
+      console.warn(`  ${publishedLine('consumers', source, publishedAt)}`);
+    }
 
     const stale = staleness(publishedAt, options.maxAgeHours);
 
-    if (stale && options.require) throw new ConsumersRequired(`consumers from ${source} ${stale}`);
+    if (stale && options.require) {
+      throw new ConsumersRequired(`consumers from ${source} ${stale}`);
+    }
 
-    if (stale && !options.quiet) console.warn(`! consumers from ${source} ${stale}`);
+    if (stale && !options.quiet) {
+      console.warn(`! consumers from ${source} ${stale}`);
+    }
 
     const { consumers, endpoints, ambiguous, rejected } = consumersFromGraph(graph, {
       repository: options.repository,
     });
 
-    if (rejected.length && !options.quiet)
+    if (rejected.length && !options.quiet) {
       console.warn(
         `! consumers whose names are not safe to print, counted as "${UNSAFE_CONSUMER}": ${rejected.join(', ')}`,
       );
+    }
 
-    if (ambiguous.length && !options.quiet)
+    if (ambiguous.length && !options.quiet) {
       console.warn(
         `! ${ambiguous.join(', ')}: more than one repository publishes it, so the consumers of every copy count. Pass --repository with this repository's name on the company site to count only its own.`,
       );
+    }
 
     return { consumers, endpoints, graph };
   } catch (error) {
-    if (error instanceof ConsumersRequired) throw error;
+    if (error instanceof ConsumersRequired) {
+      throw error;
+    }
 
     const reason = shownName(error instanceof Error ? error.message : String(error));
 
@@ -348,8 +368,9 @@ async function companyConsumers(
       );
     }
 
-    if (!options.quiet)
+    if (!options.quiet) {
       console.warn(`! could not read consumers from ${source} (${reason}); checking without them`);
+    }
 
     return undefined;
   }
@@ -362,10 +383,13 @@ class ConsumersRequired extends Error {
 
 /** Why an index is too old to trust, or nothing when it is fresh enough or no limit is set. */
 export function staleness(publishedAt: Date | undefined, maxAgeHours?: number): string | undefined {
-  if (maxAgeHours === undefined) return undefined;
+  if (maxAgeHours === undefined) {
+    return undefined;
+  }
 
-  if (!publishedAt)
+  if (!publishedAt) {
     return `say no publish time, so their age against --max-consumers-age is unknown`;
+  }
 
   const hours = (Date.now() - publishedAt.getTime()) / 3_600_000;
 
@@ -387,20 +411,26 @@ async function baselineSnapshot(
     return { snapshot: await readSnapshot(opts.baseSnapshot), label: opts.baseSnapshot };
   }
 
-  if (!repositories || !opts.snapshot || !opts.baseRef) return undefined;
+  if (!repositories || !opts.snapshot || !opts.baseRef) {
+    return undefined;
+  }
 
   const [baseRoot, currentRoot] = repositories;
   const snapshotFile = await fs.realpath(path.resolve(opts.snapshot));
   const relative = path.relative(currentRoot, snapshotFile);
 
   // A snapshot from outside the repository has no committed counterpart.
-  if (relative.startsWith('..') || path.isAbsolute(relative)) return undefined;
+  if (relative.startsWith('..') || path.isAbsolute(relative)) {
+    return undefined;
+  }
 
   const file = path.join(baseRoot, relative);
   const stat = await fs.lstat(file).catch(() => undefined);
 
   // Only a regular file the base committed, never a symlink out of the worktree.
-  if (!stat?.isFile()) return undefined;
+  if (!stat?.isFile()) {
+    return undefined;
+  }
 
   return { snapshot: await readSnapshot(file), label: opts.baseRef };
 }
@@ -489,8 +519,9 @@ export async function runDrift(opts: RunDriftOptions): Promise<number> {
           generated.sources.map(async (root) => {
             const scanned = await scanArchitecture({ root, publish: false });
 
-            if (scanned.errors.length)
+            if (scanned.errors.length) {
               throw new Error(`Resource drift scan failed: ${scanned.errors.join('; ')}`);
+            }
 
             return scanned.graph;
           }),
@@ -502,12 +533,13 @@ export async function runDrift(opts: RunDriftOptions): Promise<number> {
     const [before, after] = resourceGraphs;
     const missing = before && !after ? current : !before && after ? base : undefined;
 
-    if (missing && !opts.quiet)
+    if (missing && !opts.quiet) {
       console.warn(
         `${path.join(missing, ARTIFACT_RESOURCES_FILE)} is missing, so datastore and command resources were not compared. Regenerate both artifacts with ac scan.`,
       );
+    }
 
-    const resourceFindings: DriftFinding[] =
+    const resourceFindings: Array<DriftFinding> =
       before && after ? driftResources(before, after).map(asDriftFinding) : [];
 
     // Delivery: the broker configuration on each side, routed with that side's
@@ -547,17 +579,18 @@ export async function runDrift(opts: RunDriftOptions): Promise<number> {
 
       resourceFindings.push(...driftDelivery(baseline, proposed));
 
-      if (!proposed.complete && !opts.quiet)
+      if (!proposed.complete && !opts.quiet) {
         console.warn(
           '! delivery was not fully evaluated, so routes are not claimed to work; run ac delivery to see what was left out',
         );
+      }
     }
 
     // The repository's own rules, as the base has them: a change cannot loosen
     // the policy it is checked against. Only --base-ref has a base tree to trust,
     // and the rules read nothing else, not even installed packages the change
     // could have altered.
-    let rules: DriftFinding[] = [];
+    let rules: Array<DriftFinding> = [];
 
     if (generated) {
       rules = await runRules({
@@ -604,12 +637,16 @@ export async function runDrift(opts: RunDriftOptions): Promise<number> {
       if (opts.format === 'json') {
         console.log(JSON.stringify(report, null, 2));
       } else if (opts.format === 'github') {
-        if (report.findings.length > 0) console.log(renderDriftGitHub(report));
+        if (report.findings.length > 0) {
+          console.log(renderDriftGitHub(report));
+        }
         // The step summary is the report anyone reads after the annotations
         // point them at the diff. Absent outside Actions, so this is a no-op locally.
         const summary = process.env.GITHUB_STEP_SUMMARY;
 
-        if (summary) await fs.appendFile(summary, `${renderDriftMarkdown(report)}\n`);
+        if (summary) {
+          await fs.appendFile(summary, `${renderDriftMarkdown(report)}\n`);
+        }
       } else if (opts.format === 'markdown') {
         console.log(renderDriftMarkdown(report));
       } else {
@@ -656,17 +693,25 @@ export async function runDrift(opts: RunDriftOptions): Promise<number> {
 
     // A compatibility strategy is a different question from severity, so it
     // replaces the severity gate rather than stacking with it.
-    if (incompatible) return incompatible.length > 0 ? 1 : 0;
+    if (incompatible) {
+      return incompatible.length > 0 ? 1 : 0;
+    }
 
     const failOn = opts.failOn ?? 'breaking';
 
-    if (failOn === 'never') return 0;
+    if (failOn === 'never') {
+      return 0;
+    }
 
     // A major version bump acknowledges a breaking change: still reported,
     // with who to tell, but not a failure.
-    if (report.hasBreaking) return 1;
+    if (report.hasBreaking) {
+      return 1;
+    }
 
-    if (failOn === 'suspicious' && report.suspicious > 0) return 1;
+    if (failOn === 'suspicious' && report.suspicious > 0) {
+      return 1;
+    }
 
     return 0;
   } finally {

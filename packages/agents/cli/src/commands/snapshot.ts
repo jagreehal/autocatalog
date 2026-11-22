@@ -23,11 +23,13 @@ import {
   renderMcpChangesGitHub,
   serialiseMcpSnapshot,
   toId,
-  type Catalog,
-  type McpChange,
-  type McpServer,
-  type McpSnapshot,
-  type McpToolSnapshot,
+} from 'autocatalog-agents-core';
+import type {
+  Catalog,
+  McpChange,
+  McpServer,
+  McpSnapshot,
+  McpToolSnapshot,
 } from 'autocatalog-agents-core';
 import { z } from 'zod';
 
@@ -35,7 +37,7 @@ type Format = 'text' | 'github' | 'json';
 
 type SnapshotArgs = {
   root: string;
-  servers: string[];
+  servers: Array<string>;
   check: boolean;
   failOn: 'review' | 'breaking';
   format: Format;
@@ -47,7 +49,7 @@ const USAGE =
   'usage: ac agents snapshot [<server>...] [--root <catalog>] [--check] [--fail-on review|breaking]\n' +
   '                          [--format text|github|json] [--executor <url>] [--allow-stdio]\n';
 
-const parseArgs = (args: string[]): SnapshotArgs | null => {
+const parseArgs = (args: Array<string>): SnapshotArgs | null => {
   const parsed: SnapshotArgs = {
     root: '.',
     servers: [],
@@ -61,24 +63,35 @@ const parseArgs = (args: string[]): SnapshotArgs | null => {
   for (let i = 0; i < args.length; i++) {
     const arg = args[i]!;
 
-    if (arg === '--root') parsed.root = args[++i] ?? '.';
-    else if (arg === '--check') parsed.check = true;
-    else if (arg === '--allow-stdio') parsed.allowStdio = true;
-    else if (arg === '--executor') parsed.executor = args[++i];
-    else if (arg === '--fail-on') {
+    if (arg === '--root') {
+      parsed.root = args[++i] ?? '.';
+    } else if (arg === '--check') {
+      parsed.check = true;
+    } else if (arg === '--allow-stdio') {
+      parsed.allowStdio = true;
+    } else if (arg === '--executor') {
+      parsed.executor = args[++i];
+    } else if (arg === '--fail-on') {
       const value = args[++i];
 
-      if (value !== 'review' && value !== 'breaking') return null;
+      if (value !== 'review' && value !== 'breaking') {
+        return null;
+      }
 
       parsed.failOn = value;
     } else if (arg === '--format') {
       const value = args[++i];
 
-      if (value !== 'text' && value !== 'github' && value !== 'json') return null;
+      if (value !== 'text' && value !== 'github' && value !== 'json') {
+        return null;
+      }
 
       parsed.format = value;
-    } else if (arg.startsWith('-')) return null;
-    else parsed.servers.push(arg);
+    } else if (arg.startsWith('-')) {
+      return null;
+    } else {
+      parsed.servers.push(arg);
+    }
   }
 
   return parsed.executor === undefined && args.includes('--executor') ? null : parsed;
@@ -99,10 +112,12 @@ const fromEnvironment = (values: Record<string, string> = {}): Record<string, st
 
   const filled = Object.entries(values).map(([key, value]) => [
     key,
-    value.replace(/\$\{(\w+)\}/g, (_match, name: string) => {
+    value.replaceAll(/\$\{(\w+)\}/g, (_match, name: string) => {
       const found = process.env[name];
 
-      if (found === undefined) missing.add(name);
+      if (found === undefined) {
+        missing.add(name);
+      }
 
       return found ?? '';
     }),
@@ -116,7 +131,7 @@ const fromEnvironment = (values: Record<string, string> = {}): Record<string, st
 };
 
 type Listed = Pick<McpSnapshot, 'protocol' | 'server_version' | 'scope'> & {
-  tools: McpToolSnapshot[];
+  tools: Array<McpToolSnapshot>;
 };
 
 const ListedPage = z.looseObject({
@@ -130,7 +145,7 @@ const ListedPage = z.looseObject({
  * page, and a partial list reads as tools removed and replaces the baseline.
  */
 const listTools = async (client: Client): Promise<Listed> => {
-  const tools: McpToolSnapshot[] = [];
+  const tools: Array<McpToolSnapshot> = [];
   const seen = new Set<string>();
   let cursor: string | undefined;
   let scope: Listed['scope'];
@@ -147,11 +162,17 @@ const listTools = async (client: Client): Promise<Listed> => {
     tools.push(...result.tools);
     cursor = result.nextCursor;
 
-    if (!cursor) break;
+    if (!cursor) {
+      break;
+    }
 
-    if (seen.has(cursor)) throw new Error('repeated a page of its tools, so the list is partial');
+    if (seen.has(cursor)) {
+      throw new Error('repeated a page of its tools, so the list is partial');
+    }
 
-    if (seen.size + 1 === MAX_PAGES) throw new Error(`had more tools after ${MAX_PAGES} pages`);
+    if (seen.size + 1 === MAX_PAGES) {
+      throw new Error(`had more tools after ${MAX_PAGES} pages`);
+    }
 
     seen.add(cursor);
   }
@@ -190,7 +211,7 @@ const overHttp = (url: string, headers: Record<string, string>): Promise<Listed>
   );
 
 /** What a pinned package starts as. Unpinned is refused: it would run whatever is newest. */
-export const packageCommand = (server: McpServer): string[] => {
+export const packageCommand = (server: McpServer): Array<string> => {
   const pkg = server.package;
 
   if (!pkg || !isPinned(pkg)) {
@@ -199,9 +220,13 @@ export const packageCommand = (server: McpServer): string[] => {
     );
   }
 
-  if (pkg.registry === 'npm') return ['npx', '-y', `${pkg.name}@${pkg.version}`];
+  if (pkg.registry === 'npm') {
+    return ['npx', '-y', `${pkg.name}@${pkg.version}`];
+  }
 
-  if (pkg.registry === 'pypi') return ['uvx', `${pkg.name}==${pkg.version}`];
+  if (pkg.registry === 'pypi') {
+    return ['uvx', `${pkg.name}==${pkg.version}`];
+  }
 
   return ['docker', 'run', '--rm', '-i', '--network', 'none', `${pkg.name}@${pkg.version}`];
 };
@@ -225,7 +250,9 @@ const overStdio = async (server: McpServer, root: string): Promise<Listed> => {
       }),
     );
   } finally {
-    if (scratch) await rm(scratch, { recursive: true, force: true });
+    if (scratch) {
+      await rm(scratch, { recursive: true, force: true });
+    }
   }
 };
 
@@ -233,7 +260,9 @@ const captureLive = async (server: McpServer, opts: SnapshotArgs): Promise<McpSn
   let listed: Listed;
 
   if (server.transport === 'http') {
-    if (!server.url) throw new SnapshotSkipped('has no address to connect to');
+    if (!server.url) {
+      throw new SnapshotSkipped('has no address to connect to');
+    }
 
     listed = await overHttp(server.url, fromEnvironment(server.snapshot?.headers));
   } else {
@@ -309,7 +338,10 @@ const executorTool = async (base: string, tool: ExecutorTool): Promise<McpToolSn
   });
 };
 
-const serverForIntegration = (servers: McpServer[], integration: string): McpServer | undefined => {
+const serverForIntegration = (
+  servers: Array<McpServer>,
+  integration: string,
+): McpServer | undefined => {
   const wanted = toId(integration);
 
   return servers.find(
@@ -323,10 +355,10 @@ const serverForIntegration = (servers: McpServer[], integration: string): McpSer
 type ExecutorTool = z.infer<typeof ExecutorTool>;
 
 type ExecutorConnection = Pick<ExecutorTool, 'integration' | 'owner' | 'connection'> & {
-  tools: ExecutorTool[];
+  tools: Array<ExecutorTool>;
 };
 
-type ExecutorCapture = { snapshots: McpSnapshot[]; unknown: string[] };
+type ExecutorCapture = { snapshots: Array<McpSnapshot>; unknown: Array<string> };
 
 /**
  * Read what Executor already holds, one snapshot per connection. It has the
@@ -335,7 +367,7 @@ type ExecutorCapture = { snapshots: McpSnapshot[]; unknown: string[] };
  */
 const captureExecutor = async (
   base: string,
-  servers: McpServer[],
+  servers: Array<McpServer>,
   cat: Catalog,
 ): Promise<ExecutorCapture> => {
   const listed = await executorGet(base, '/api/tools', ExecutorToolList);
@@ -350,7 +382,7 @@ const captureExecutor = async (
     groups.set(key, group);
   }
 
-  const snapshots: McpSnapshot[] = [];
+  const snapshots: Array<McpSnapshot> = [];
   const unknown = new Set<string>();
 
   for (const { integration, owner, connection, tools } of groups.values()) {
@@ -361,7 +393,7 @@ const captureExecutor = async (
       continue;
     }
 
-    const described: McpToolSnapshot[] = [];
+    const described: Array<McpToolSnapshot> = [];
 
     for (let i = 0; i < tools.length; i += SCHEMA_REQUESTS_AT_ONCE) {
       const batch = tools.slice(i, i + SCHEMA_REQUESTS_AT_ONCE);
@@ -414,10 +446,10 @@ const failureOf = (cause: unknown): string => {
 };
 
 type Outcome = {
-  changes: McpChange[];
+  changes: Array<McpChange>;
   skipped: Array<{ server: string; reason: string }>;
   failed: Array<{ server: string; reason: string }>;
-  unknownServers: string[];
+  unknownServers: Array<string>;
 };
 
 const record = async (
@@ -425,7 +457,7 @@ const record = async (
   opts: SnapshotArgs,
   snapshot: McpSnapshot,
   log: (line: string) => void,
-): Promise<McpChange[]> => {
+): Promise<Array<McpChange>> => {
   const root = resolve(opts.root);
   const path = mcpSnapshotPath(root, snapshot.server, snapshot.connection);
   const previous = await readPrevious(path);
@@ -475,7 +507,9 @@ const capture = async (
   const all = entitiesOf(cat, 'mcp-server');
   const named = opts.servers.filter((id) => !all.some((server) => server.id === id));
 
-  if (named.length > 0) throw new Error(`no MCP server named ${named.join(', ')} in the catalog`);
+  if (named.length > 0) {
+    throw new Error(`no MCP server named ${named.join(', ')} in the catalog`);
+  }
 
   const servers = opts.servers.length
     ? all.filter(({ id }) => opts.servers.includes(id))
@@ -498,11 +532,11 @@ const capture = async (
   for (const server of servers) {
     try {
       outcome.changes.push(...(await record(cat, opts, await captureLive(server, opts), log)));
-    } catch (cause) {
-      if (cause instanceof SnapshotSkipped) {
-        outcome.skipped.push({ server: server.id, reason: cause.message });
+    } catch (error) {
+      if (error instanceof SnapshotSkipped) {
+        outcome.skipped.push({ server: server.id, reason: error.message });
       } else {
-        outcome.failed.push({ server: server.id, reason: failureOf(cause) });
+        outcome.failed.push({ server: server.id, reason: failureOf(error) });
       }
     }
   }
@@ -520,9 +554,13 @@ const report = (outcome: Outcome, format: Format, log: (line: string) => void): 
   if (format === 'github') {
     const annotations = renderMcpChangesGitHub(outcome.changes);
 
-    if (annotations) process.stdout.write(`${annotations}\n`);
+    if (annotations) {
+      process.stdout.write(`${annotations}\n`);
+    }
   } else {
-    for (const change of outcome.changes) log(`  ${renderMcpChange(change)}`);
+    for (const change of outcome.changes) {
+      log(`  ${renderMcpChange(change)}`);
+    }
   }
 
   for (const { server, reason } of outcome.skipped) {
@@ -541,20 +579,26 @@ const report = (outcome: Outcome, format: Format, log: (line: string) => void): 
 
   const counts = { breaking: 0, review: 0, info: 0 };
 
-  for (const { severity } of outcome.changes) counts[severity] += 1;
+  for (const { severity } of outcome.changes) {
+    counts[severity] += 1;
+  }
 
   log(`\n${counts.breaking} breaking · ${counts.review} to review · ${counts.info} info`);
 };
 
 const exitCode = (outcome: Outcome, opts: SnapshotArgs): number => {
-  if (!opts.check) return outcome.failed.length > 0 ? 2 : 0;
+  if (!opts.check) {
+    return outcome.failed.length > 0 ? 2 : 0;
+  }
 
   const failing = outcome.changes.some(
     ({ severity }) =>
       severity === 'breaking' || (severity === 'review' && opts.failOn === 'review'),
   );
 
-  if (failing || outcome.unknownServers.length > 0) return 1;
+  if (failing || outcome.unknownServers.length > 0) {
+    return 1;
+  }
 
   return outcome.failed.length > 0 ? 2 : 0;
 };
@@ -564,7 +608,7 @@ const exitCode = (outcome: Outcome, opts: SnapshotArgs): number => {
  * `--check` reports without saving, for a scheduled job: a vendor's change
  * never opens a pull request, so a schedule is the only thing that sees it.
  */
-export const runSnapshot = async (args: string[]): Promise<number> => {
+export const runSnapshot = async (args: Array<string>): Promise<number> => {
   const opts = parseArgs(args);
 
   if (!opts) {

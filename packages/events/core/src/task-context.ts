@@ -1,11 +1,10 @@
 import { z } from 'zod';
-import {
-  isDocumentCatalogResource,
-  resourceKey,
-  type CatalogRelationship,
-  type CatalogResource,
-  type ResourceGraph,
-  type ResourceRef,
+import { isDocumentCatalogResource, resourceKey } from './resource-graph';
+import type {
+  CatalogRelationship,
+  CatalogResource,
+  ResourceGraph,
+  ResourceRef,
 } from './resource-graph';
 import type { JsonObject } from './json';
 
@@ -27,7 +26,7 @@ export interface ContextItem {
   /** Set when the catalog guessed this resource exists rather than anyone declaring it. */
   inferred?: true;
   /** A glossary term's other names. */
-  aliases?: string[];
+  aliases?: Array<string>;
 }
 
 /**
@@ -43,7 +42,7 @@ export interface ContextRelationship {
   from: string;
   type: string;
   to: string;
-  evidence: ContextEvidence[];
+  evidence: Array<ContextEvidence>;
   /** What the edge records beyond its ends, such as the fields a consumer reads or its dead-letter queue. */
   details?: JsonObject;
 }
@@ -52,25 +51,25 @@ export interface ContextRelationship {
 export interface TaskContext {
   task: string;
   /** The words the task was matched on, after dropping filler. */
-  terms: string[];
+  terms: Array<string>;
   /** Resources the task's words name directly, best first, by key; each is listed in full below. */
-  matches: Array<{ key: string; matched: string[] }>;
+  matches: Array<{ key: string; matched: Array<string> }>;
   /** Glossary terms the task used, by their name or an alias, and what they mean. */
-  vocabulary: ContextItem[];
-  services: ContextItem[];
+  vocabulary: Array<ContextItem>;
+  services: Array<ContextItem>;
   /** Events, commands, endpoints, queues and datastores: what a change could break. */
-  contracts: ContextItem[];
+  contracts: Array<ContextItem>;
   /** Decision records about the matches. A superseded one is listed with its status. */
-  decisions: ContextItem[];
+  decisions: Array<ContextItem>;
   /** Runbooks and incidents about the matches. */
-  operations: ContextItem[];
+  operations: Array<ContextItem>;
   /** Other documents about the matches. */
-  documents: ContextItem[];
+  documents: Array<ContextItem>;
   /** Who to ask, with what of the bundle they own. */
-  owners: Array<{ team: string; owns: string[] }>;
-  relationships: ContextRelationship[];
+  owners: Array<{ team: string; owns: Array<string> }>;
+  relationships: Array<ContextRelationship>;
   /** What the catalog could not establish. An answer should say these out loud. */
-  gaps: string[];
+  gaps: Array<string>;
   /**
    * How many of each list were left out by the limit. Present only when
    * something was: call again with a higher `limit` for the rest.
@@ -93,7 +92,7 @@ const STOP = new Set(
 );
 
 /** `Partial refunds` → `partial`, `refunds`; `payment.completed` → `payment`, `completed`. */
-function words(text: string): string[] {
+function words(text: string): Array<string> {
   return text
     .toLocaleLowerCase()
     .split(/[^a-z0-9]+/)
@@ -145,7 +144,7 @@ const reportedOnly = (edge: CatalogRelationship): boolean =>
   ['reported', 'unknown'].includes(String(edge.attributes?.['attribution']));
 
 /** A declared edge that traces also carried is known both ways. */
-const evidenceOf = (edge: CatalogRelationship): ContextEvidence[] =>
+const evidenceOf = (edge: CatalogRelationship): Array<ContextEvidence> =>
   reportedOnly(edge)
     ? ['reported']
     : edge.evidence && edge.provenance !== 'observed'
@@ -170,7 +169,7 @@ const resourceText = z.object({
 });
 
 /** A glossary term's `aliases`, as the site's graph carries them. */
-const aliasesOf = (resource: CatalogResource): string[] =>
+const aliasesOf = (resource: CatalogResource): Array<string> =>
   resourceText.parse(resource.attributes ?? {}).aliases ?? [];
 
 function item(resource: CatalogResource): ContextItem {
@@ -238,8 +237,10 @@ export function taskContext(
   const limit = Math.max(1, options.limit ?? DEFAULT_LIMIT);
   const omitted: Partial<Record<OmittedList, number>> = {};
 
-  const capped = <T>(name: OmittedList, items: T[], max = limit): T[] => {
-    if (items.length > max) omitted[name] = items.length - max;
+  const capped = <T>(name: OmittedList, items: Array<T>, max = limit): Array<T> => {
+    if (items.length > max) {
+      omitted[name] = items.length - max;
+    }
 
     return items.slice(0, max);
   };
@@ -298,7 +299,7 @@ export function taskContext(
   const resources = [...included].flatMap((key) => byKey.get(key) ?? []);
   const docs = resources.filter(isDocumentCatalogResource);
   const kindOf = (kind: string) => docs.filter((doc) => doc.attributes.kind === kind);
-  const list = (name: OmittedList, items: CatalogResource[]) => capped(name, items).map(item);
+  const list = (name: OmittedList, items: Array<CatalogResource>) => capped(name, items).map(item);
 
   const decisions = kindOf('adr');
   const operations = [...kindOf('runbook'), ...kindOf('incident')];
@@ -310,10 +311,12 @@ export function taskContext(
   const services = resources.filter((resource) => resource.ref.kind === 'service');
   const contracts = resources.filter((resource) => CONTRACT_KINDS.has(resource.ref.kind));
 
-  const owners = new Map<string, string[]>();
+  const owners = new Map<string, Array<string>>();
 
   for (const resource of resources) {
-    if (!resource.owner?.team || isDocumentCatalogResource(resource)) continue;
+    if (!resource.owner?.team || isDocumentCatalogResource(resource)) {
+      continue;
+    }
     owners.set(resource.owner.team, [...(owners.get(resource.owner.team) ?? []), resource.title]);
   }
 
@@ -340,7 +343,7 @@ export function taskContext(
       ? `${nameOf(edge.to)} consumes ${nameOf(edge.from)}`
       : `${nameOf(edge.from)} ${edge.type} ${nameOf(edge.to)}`;
 
-  const gaps: string[] = [];
+  const gaps: Array<string> = [];
 
   if (ranked.length === 0) {
     gaps.push(
@@ -367,8 +370,9 @@ export function taskContext(
 
   const unowned = matchedSystems.filter((resource) => !resource.owner?.team);
 
-  if (unowned.length > 0)
+  if (unowned.length > 0) {
     gaps.push(`No owner recorded for ${unowned.map((r) => r.title).join(', ')}.`);
+  }
 
   if (matchedSystems.length > 0 && decisions.length === 0) {
     gaps.push(

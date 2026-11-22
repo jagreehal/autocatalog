@@ -1,11 +1,5 @@
-import {
-  relationshipKey,
-  resourceKey,
-  resourceSchema,
-  type CatalogRelationship,
-  type CatalogResource,
-  type ResourceGraph,
-} from 'autocatalog-core';
+import { relationshipKey, resourceKey, resourceSchema } from 'autocatalog-core';
+import type { CatalogRelationship, CatalogResource, ResourceGraph } from 'autocatalog-core';
 import { catalogAnchor, skillHref } from '../../view';
 
 // Built where autocatalog-core can run: the explorer is hydrated in the
@@ -41,13 +35,13 @@ export interface ExplorerRow {
   /** Only the fields that disagree with the resource's own default. */
   notableFields: Array<[string, string]>;
   schemaJson: string | null;
-  connections: Connection[];
+  connections: Array<Connection>;
   searchText: string;
 }
 
 export interface ExplorerModel {
-  rows: ExplorerRow[];
-  kinds: string[];
+  rows: Array<ExplorerRow>;
+  kinds: Array<string>;
   /** How many resources of each kind the graph holds. */
   countByKind: Record<string, number>;
   relationships: number;
@@ -57,13 +51,17 @@ export interface ExplorerModel {
 const baseUrl = () => import.meta.env.BASE_URL.replace(/\/?$/, '/');
 
 function hrefOf(resource: CatalogResource): string {
-  if (resource.ref.kind === 'mcp-server') return `${baseUrl()}mcp-servers/${resource.ref.id}/`;
+  if (resource.ref.kind === 'mcp-server') {
+    return `${baseUrl()}mcp-servers/${resource.ref.id}/`;
+  }
 
   if (resource.ref.kind === 'skill' || resource.ref.kind === 'agent-plugin') {
     return skillHref(baseUrl(), resource);
   }
 
-  if (!resource.url) return `#${catalogAnchor(resource.ref)}`;
+  if (!resource.url) {
+    return `#${catalogAnchor(resource.ref)}`;
+  }
 
   return `${baseUrl()}${resource.url.replace(/^\//, '')}`;
 }
@@ -86,7 +84,9 @@ function searchText(resource: CatalogResource): string {
 }
 
 function locationOf(resource: CatalogResource): string | null {
-  if (!resource.source?.file) return null;
+  if (!resource.source?.file) {
+    return null;
+  }
 
   return `${resource.source.file}${resource.source.line ? `:${resource.source.line}` : ''}`;
 }
@@ -107,18 +107,21 @@ export function explorerModel(graph: ResourceGraph): ExplorerModel {
 
   // Filtering the relationship list per resource is resources × relationships
   // string comparisons: fine for a demo and minutes for a company-sized graph.
-  const adjacency = new Map<string, CatalogRelationship[]>();
+  const adjacency = new Map<string, Array<CatalogRelationship>>();
 
   for (const relationship of graph.relationships) {
     for (const key of new Set([resourceKey(relationship.from), resourceKey(relationship.to)])) {
       const bucket = adjacency.get(key);
 
-      if (bucket) bucket.push(relationship);
-      else adjacency.set(key, [relationship]);
+      if (bucket) {
+        bucket.push(relationship);
+      } else {
+        adjacency.set(key, [relationship]);
+      }
     }
   }
 
-  const connectionsOf = (resource: CatalogResource): Connection[] => {
+  const connectionsOf = (resource: CatalogResource): Array<Connection> => {
     const current = resourceKey(resource.ref);
 
     return (adjacency.get(current) ?? []).map((relationship): Connection => {

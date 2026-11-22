@@ -1,4 +1,5 @@
-import { resourceKey, type CatalogResource, type ResourceGraph } from 'autocatalog-core';
+import { resourceKey } from 'autocatalog-core';
+import type { CatalogResource, ResourceGraph } from 'autocatalog-core';
 import { z } from 'zod';
 import { catalogAnchor, skillHref } from './view';
 
@@ -17,12 +18,12 @@ export interface SkillRow {
   summary?: string | undefined;
   format: 'skill' | 'command' | 'cursor-rule';
   /** Tools it may use without asking. */
-  allowedTools: string[];
+  allowedTools: Array<string>;
   /** The plugin that ships it, when one does. */
   plugin?: SkillLink | undefined;
   /** The repository it is in, when it is not a plugin's. */
   repository?: string | undefined;
-  owners: string[];
+  owners: Array<string>;
   needsReview: boolean;
 }
 
@@ -35,16 +36,16 @@ export interface PluginRow {
   marketplace?: string | undefined;
   /** Where a marketplace fetches it from, when it lives elsewhere. */
   source?: string | undefined;
-  skills: SkillLink[];
-  agents: string[];
-  commands: string[];
-  hooks: string[];
-  servers: SkillLink[];
+  skills: Array<SkillLink>;
+  agents: Array<string>;
+  commands: Array<string>;
+  hooks: Array<string>;
+  servers: Array<SkillLink>;
   /** Repositories that build it. */
-  builtIn: string[];
+  builtIn: Array<string>;
   /** Repositories whose settings turn it on. */
-  usedBy: string[];
-  owners: string[];
+  usedBy: Array<string>;
+  owners: Array<string>;
   needsReview: boolean;
 }
 
@@ -71,17 +72,17 @@ const pluginAttributes = z.object({
 /** A discovered entry's owner until a person names one. */
 const UNREVIEWED_OWNER = 'review-needed';
 
-const sorted = (values: Iterable<string>): string[] => [...new Set(values)].sort();
+const sorted = (values: Iterable<string>): Array<string> => [...new Set(values)].sort();
 
-const ownersOf = (resource: CatalogResource, owners: string[]) =>
+const ownersOf = (resource: CatalogResource, owners: Array<string>) =>
   sorted([...(resource.owner ? [resource.owner.team] : []), ...owners]).filter(
     (owner) => owner !== UNREVIEWED_OWNER,
   );
 
 /** The skills page: plugins, then skills, commands and rules. */
 export interface SkillsView {
-  plugins: PluginRow[];
-  skills: SkillRow[];
+  plugins: Array<PluginRow>;
+  skills: Array<SkillRow>;
 }
 
 /** Every skill and coding-agent plugin on the graph, each by title. */
@@ -90,7 +91,9 @@ export function buildSkills(graph: ResourceGraph, base: string): SkillsView {
 
   const edges = (type: string, side: 'from' | 'to', resource: CatalogResource) =>
     graph.relationships.flatMap((edge) => {
-      if (edge.type !== type) return [];
+      if (edge.type !== type) {
+        return [];
+      }
 
       const [here, there] = side === 'to' ? [edge.to, edge.from] : [edge.from, edge.to];
 

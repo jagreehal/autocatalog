@@ -99,8 +99,10 @@ Before publishing packages:
 pnpm release:check
 ```
 
-The gate checks formatting, then runs oxlint with the vendored anti-slop rules
-and oxlint's correctness rules as errors. It type-checks every package with
+The gate checks formatting, then runs oxlint with the `auto-anti-slop` preset
+(`oxlint.config.mts`). Findings from before the preset sit in
+`oxlint-suppressions.json`, which only shrinks: a new finding fails, and so does
+a fixed one until you run `pnpm exec oxlint --prune-suppressions`. It type-checks every package with
 TypeScript 7, then runs the tests, the package builds and the default starter
 Catalog. TypeScript 6 stays installed beside 7, because the static Zod scanner,
 tsup's declaration build and `astro check` call the compiler API, which

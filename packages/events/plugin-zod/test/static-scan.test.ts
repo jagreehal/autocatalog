@@ -2,7 +2,8 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { jsonObjectSchema, type JsonObject } from 'autocatalog-core/plugin';
+import { jsonObjectSchema } from 'autocatalog-core/plugin';
+import type { JsonObject } from 'autocatalog-core/plugin';
 import { z } from 'zod';
 import { discoverZodEvents } from '../src/scanner';
 import { staticExports } from '../src/static-scan';
@@ -37,7 +38,7 @@ function scanned(expression: string): JsonObject {
 
 // Zod's own toJSONSchema is the oracle: reading source must say what running
 // it would have said about every bound and format.
-const CASES: [string, z.ZodType][] = [
+const CASES: Array<[string, z.ZodType]> = [
   ['z.string().min(3).max(64)', z.string().min(3).max(64)],
   ['z.string().length(8)', z.string().length(8)],
   ['z.string().email()', z.string().email()],

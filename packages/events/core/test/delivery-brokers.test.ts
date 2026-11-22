@@ -15,10 +15,8 @@ import {
   rabbitMqGraph,
   readConsumerDeclarations,
   scanArchitecture,
-  type ConsumerDeclaration,
-  type DeliveryEvent,
-  type ResourceGraph,
 } from '../src';
+import type { ConsumerDeclaration, DeliveryEvent, ResourceGraph } from '../src';
 import { cloudFormationGraph, parseCloudFormation } from '../src/delivery-aws';
 import { strimziGraph } from '../src/delivery-kafka';
 import { contentMatches, safePattern, sqlFilterMatches } from '../src/delivery-match';
@@ -26,13 +24,13 @@ import { serviceBusGraph } from '../src/delivery-servicebus';
 import { loadRepositoryEvents } from '../src/repository-events';
 import { parseAllDocuments } from 'yaml';
 
-const here = path.dirname(fileURLToPath(import.meta.url));
+const here = import.meta.dirname;
 
 const fixture = (name: string) => path.resolve(here, '../../../../fixtures', name);
 
 interface Repo {
-  events: DeliveryEvent[];
-  consumers: ConsumerDeclaration[];
+  events: Array<DeliveryEvent>;
+  consumers: Array<ConsumerDeclaration>;
 }
 
 async function repo(name: string): Promise<Repo> {
@@ -60,7 +58,7 @@ describe('AWS: SNS, SQS and EventBridge from CloudFormation', () => {
     );
   });
 
-  const analyse = (change: (t: any, c: ConsumerDeclaration[]) => void = () => {}) => {
+  const analyse = (change: (t: any, c: Array<ConsumerDeclaration>) => void = () => {}) => {
     const t = structuredClone(template);
     const consumers = structuredClone(inputs.consumers);
     change(t, consumers);
@@ -204,7 +202,9 @@ describe('Kafka from Strimzi', () => {
     }
   });
 
-  const analyse = (change: (docs: any[], c: ConsumerDeclaration[]) => void = () => {}) => {
+  const analyse = (
+    change: (docs: Array<any>, c: Array<ConsumerDeclaration>) => void = () => {},
+  ) => {
     const docs = structuredClone(documents);
     const consumers = structuredClone(inputs.consumers);
     change(
@@ -215,7 +215,7 @@ describe('Kafka from Strimzi', () => {
     return analyzeDelivery({ graph: strimziGraph(docs, {}), events: inputs.events, consumers });
   };
 
-  const user = (docs: any[], name: string) =>
+  const user = (docs: Array<any>, name: string) =>
     docs.find((d) => d.kind === 'KafkaUser' && d.metadata.name === name);
 
   it('reads the topic as the store its consumers read, with retention and the group', () => {
@@ -267,7 +267,7 @@ describe('Kafka from Strimzi', () => {
 
     expect(unset.findings).toContainEqual(finding('not_evaluated', 'unknown'));
 
-    const short = analyse((docs) => (docs[0].spec.config['retention.ms'] = 86400000));
+    const short = analyse((docs) => (docs[0].spec.config['retention.ms'] = 86_400_000));
 
     expect(short.findings).toContainEqual(finding('retention_short', 'policy'));
   });
@@ -289,7 +289,7 @@ describe('Azure Service Bus from ARM', () => {
 
   const subscription = (t: any) => t.resources[0].resources[0].resources[0];
 
-  const analyse = (change: (t: any, c: ConsumerDeclaration[]) => void = () => {}) => {
+  const analyse = (change: (t: any, c: Array<ConsumerDeclaration>) => void = () => {}) => {
     const t = structuredClone(template);
     const consumers = structuredClone(inputs.consumers);
     change(t, consumers);
@@ -353,7 +353,7 @@ describe('RabbitMQ: groups, retention, retries and permissions', () => {
     );
   });
 
-  const analyse = (change: (d: any, c: ConsumerDeclaration[]) => void = () => {}) => {
+  const analyse = (change: (d: any, c: Array<ConsumerDeclaration>) => void = () => {}) => {
     const d = structuredClone(definitions);
     const consumers = structuredClone(inputs.consumers);
     change(d, consumers);
@@ -369,7 +369,7 @@ describe('RabbitMQ: groups, retention, retries and permissions', () => {
     d.users = [{ name: 'payments' }, { name: 'ledger' }];
     d.permissions = [
       { user: 'payments', vhost: '/', configure: '', write, read: '' },
-      { user: 'ledger', vhost: '/', configure: '', write: '', read: '^ledger\\..*' },
+      { user: 'ledger', vhost: '/', configure: '', write: '', read: String.raw`^ledger\..*` },
     ];
   };
 
@@ -409,8 +409,8 @@ describe('RabbitMQ: groups, retention, retries and permissions', () => {
 
   it('a message TTL or idle expiry shorter than the recovery window breaks it', () => {
     const report = analyse((d, c) => {
-      d.queues[0].arguments['x-message-ttl'] = 60000;
-      d.queues[0].arguments['x-expires'] = 120000;
+      d.queues[0].arguments['x-message-ttl'] = 60_000;
+      d.queues[0].arguments['x-expires'] = 120_000;
       c[0]!.recovery = 'PT1H';
     });
 
@@ -514,7 +514,7 @@ describe('matchers', () => {
   });
 
   it('runs only regular expressions that cannot backtrack badly', () => {
-    expect(safePattern('^ledger\\..*')).toBeInstanceOf(RegExp);
+    expect(safePattern(String.raw`^ledger\..*`)).toBeInstanceOf(RegExp);
     expect(safePattern('^(a|b)$')).toBeInstanceOf(RegExp);
     expect(safePattern('^(a+)+$')).toBeUndefined();
     expect(safePattern('^(a.*)*$')).toBeUndefined();
@@ -748,20 +748,20 @@ describe('review fixes', () => {
     const policy = (ttl: number) => ({
       name: 'p',
       vhost: '/',
-      pattern: '^ledger\\.payments$',
+      pattern: String.raw`^ledger\.payments$`,
       'apply-to': 'queues',
       definition: { 'message-ttl': ttl },
     });
 
     const argumentWins = report((d) => {
-      d.queues[0].arguments['x-message-ttl'] = 60000;
+      d.queues[0].arguments['x-message-ttl'] = 60_000;
       d.policies = [policy(1000)];
     });
 
     expect(argumentWins.routes[0]!.facts).toContain('keeps unread messages for 1 minute');
 
     const operatorCaps = report((d) => {
-      d.queues[0].arguments['x-message-ttl'] = 60000;
+      d.queues[0].arguments['x-message-ttl'] = 60_000;
       d.operator_policies = [policy(1000)];
     });
 
@@ -771,7 +771,9 @@ describe('review fixes', () => {
   it('carries the vhost on the route, whatever the first example does', () => {
     const d = structuredClone(definitions);
 
-    for (const entry of [...d.exchanges, ...d.queues, ...d.bindings]) entry.vhost = 'payments';
+    for (const entry of [...d.exchanges, ...d.queues, ...d.bindings]) {
+      entry.vhost = 'payments';
+    }
 
     // The first example is the one the bindings exclude.
     const events = rabbit.events.map((e) => ({ ...e, examples: [...e.examples].reverse() }));

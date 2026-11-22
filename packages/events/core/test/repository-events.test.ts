@@ -86,7 +86,7 @@ it('reads a package with only approved message contracts as one repository, not 
   expect(isSingleRepository(repo)).toBe(false);
 });
 
-const writeGraph = async (dir: string, resources: object[]) => {
+const writeGraph = async (dir: string, resources: Array<object>) => {
   await fs.mkdir(path.join(dir, '.autocatalog'), { recursive: true });
   await fs.writeFile(
     path.join(dir, '.autocatalog/resources.json'),
@@ -369,13 +369,13 @@ describe('a monorepo', () => {
 
 // Each test commits several times; spawning git takes seconds on Windows.
 describe("a contracts-only repository's git history", { timeout: 30_000 }, () => {
-  const git = (...args: string[]) =>
+  const git = (...args: Array<string>) =>
     execFileSync('git', ['-c', 'user.name=Test', '-c', 'user.email=test@example.com', ...args], {
       cwd: repo,
       stdio: 'ignore',
     });
 
-  const contract = (version: string | undefined, fields: string[]) =>
+  const contract = (version: string | undefined, fields: Array<string>) =>
     JSON.stringify({
       title: 'OrderPlaced',
       type: 'object',
@@ -383,7 +383,7 @@ describe("a contracts-only repository's git history", { timeout: 30_000 }, () =>
       'x-autocatalog': { id: 'order.placed', domain: 'orders', ...(version && { version }) },
     });
 
-  const commit = async (version: string | undefined, fields: string[]) => {
+  const commit = async (version: string | undefined, fields: Array<string>) => {
     await fs.mkdir(path.join(repo, 'contracts'), { recursive: true });
     await fs.writeFile(path.join(repo, 'contracts/order-placed.json'), contract(version, fields));
     git('add', '-A');
@@ -438,7 +438,7 @@ describe("a contracts-only repository's git history", { timeout: 30_000 }, () =>
       ],
     };
 
-    const schemas = async (...versions: number[]) => {
+    const schemas = async (...versions: Array<number>) => {
       await fs.mkdir(path.join(repo, 'sdk'), { recursive: true });
       await fs.writeFile(
         path.join(repo, 'sdk/events.json'),
@@ -506,7 +506,7 @@ describe("a contracts-only repository's git history", { timeout: 30_000 }, () =>
       `[log]\n\tshowSignature = true\n[gpg]\n\tprogram = ${program.replaceAll('\\', '/')}\n`,
     );
 
-    const run = (args: string[], input?: string) =>
+    const run = (args: Array<string>, input?: string) =>
       execFileSync('git', args, { cwd: bare, input, encoding: 'utf8' }).trim();
 
     await fs.mkdir(path.join(bare, 'contracts'));
@@ -651,7 +651,7 @@ describe("runtime evidence from the repository's .autotel/snapshot.json", () => 
 
   it('when malformed, is a warning: the events still load, without evidence', async () => {
     await fs.writeFile(path.join(repo, '.autotel/snapshot.json'), '{"spec":"nope"}');
-    const warnings: string[] = [];
+    const warnings: Array<string> = [];
 
     const [event] = await loadRepositoryEvents(repo, { onWarning: (w) => warnings.push(w) });
 

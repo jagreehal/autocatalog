@@ -4,14 +4,12 @@ import { fileURLToPath } from 'node:url';
 import Ajv2020 from 'ajv/dist/2020.js';
 import { describe, expect, it } from 'vitest';
 import { jsonObjectSchema } from '../src/json';
-import { AUTOCATALOG_GRAPH_SPEC, type ResourceGraph } from '../src/resource-graph';
+import { AUTOCATALOG_GRAPH_SPEC } from '../src/resource-graph';
+import type { ResourceGraph } from '../src/resource-graph';
 
 // The committed contract, not a restatement of it: the same file the package
 // publishes, so a Python or Go adapter is held to exactly what this checks.
-const schemaFile = path.join(
-  path.dirname(fileURLToPath(import.meta.url)),
-  '../contracts/graph-v1.schema.json',
-);
+const schemaFile = path.join(import.meta.dirname, '../contracts/graph-v1.schema.json');
 
 const schema = jsonObjectSchema.parse(JSON.parse(fs.readFileSync(schemaFile, 'utf8')));
 

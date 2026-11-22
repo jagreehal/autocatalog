@@ -1,17 +1,16 @@
 import { createHash } from 'node:crypto';
 import { z } from 'zod';
-import {
-  AUTOCATALOG_GRAPH_SPEC,
-  relationshipKey,
-  resourceKey,
-  type CatalogResource,
-  type ServiceCatalogResource,
-  type CatalogRelationship,
-  type ResourceGraph,
-  type ResourceRef,
-  type RuntimeResourceEvidence,
+import { AUTOCATALOG_GRAPH_SPEC, relationshipKey, resourceKey } from './resource-graph';
+import type {
+  CatalogResource,
+  ServiceCatalogResource,
+  CatalogRelationship,
+  ResourceGraph,
+  ResourceRef,
+  RuntimeResourceEvidence,
 } from './resource-graph';
-import { jsonObjectSchema, isJsonObject, type JsonObject, type JsonValue } from './json';
+import { jsonObjectSchema, isJsonObject } from './json';
+import type { JsonObject, JsonValue } from './json';
 import { provenanceRank } from './adapter-event';
 
 const attribute = z.object({
@@ -82,9 +81,13 @@ export function emptyResourceGraph(): ResourceGraph {
 
 /** Reconcile extracted contracts with observations, refusing competing contracts. */
 function canonicalJson(value: JsonValue): JsonValue {
-  if (Array.isArray(value)) return value.map(canonicalJson);
+  if (Array.isArray(value)) {
+    return value.map(canonicalJson);
+  }
 
-  if (!isJsonObject(value)) return value;
+  if (!isJsonObject(value)) {
+    return value;
+  }
 
   return Object.fromEntries(
     Object.keys(value)
@@ -99,12 +102,12 @@ function canonicalJson(value: JsonValue): JsonValue {
  * one, and either way the resource is marked for review.
  * {@link architectureConflicts} says what was contested.
  */
-export function mergeArchitectureGraphs(...graphs: ResourceGraph[]): ResourceGraph {
+export function mergeArchitectureGraphs(...graphs: Array<ResourceGraph>): ResourceGraph {
   return mergeReporting(graphs, () => {});
 }
 
 /** What the sources behind {@link mergeArchitectureGraphs} disagree on, one line per fact. */
-export function architectureConflicts(...graphs: ResourceGraph[]): string[] {
+export function architectureConflicts(...graphs: Array<ResourceGraph>): Array<string> {
   const messages = new Set<string>();
 
   mergeReporting(graphs, (message) => messages.add(message));
@@ -112,7 +115,10 @@ export function architectureConflicts(...graphs: ResourceGraph[]): string[] {
   return [...messages];
 }
 
-function mergeReporting(graphs: ResourceGraph[], report: (message: string) => void): ResourceGraph {
+function mergeReporting(
+  graphs: Array<ResourceGraph>,
+  report: (message: string) => void,
+): ResourceGraph {
   const resources = new Map<string, CatalogResource>();
   const relationships = new Map<string, CatalogRelationship>();
 
@@ -221,9 +227,11 @@ function mergeReporting(graphs: ResourceGraph[], report: (message: string) => vo
         const left = z.array(z.string()).safeParse(previous.attributes?.fields);
         const right = z.array(z.string()).safeParse(edge.attributes?.fields);
 
-        if (left.success && right.success)
+        if (left.success && right.success) {
           attributes.fields = [...new Set([...left.data, ...right.data])].sort();
-        else delete attributes.fields;
+        } else {
+          delete attributes.fields;
+        }
       }
 
       relationships.set(key, {
@@ -289,18 +297,26 @@ const writeOperations = new Set([
 export function databaseAccess(operation: string): 'reads' | 'writes' | undefined {
   const normalized = operation.toLowerCase().replaceAll(/[^a-z]/g, '');
 
-  if (readOperations.has(normalized)) return 'reads';
+  if (readOperations.has(normalized)) {
+    return 'reads';
+  }
 
-  if (writeOperations.has(normalized)) return 'writes';
+  if (writeOperations.has(normalized)) {
+    return 'writes';
+  }
 
   return undefined;
 }
 
 function timestamp(nanos: string | undefined): string | undefined {
-  if (!nanos || !/^\d+$/.test(nanos)) return undefined;
+  if (!nanos || !/^\d+$/.test(nanos)) {
+    return undefined;
+  }
   const milliseconds = Number(BigInt(nanos) / 1_000_000n);
 
-  if (milliseconds > 8.64e15) return undefined;
+  if (milliseconds > 8.64e15) {
+    return undefined;
+  }
 
   return new Date(milliseconds).toISOString();
 }
@@ -316,14 +332,19 @@ export function combineEvidence(
   a: RuntimeResourceEvidence | undefined,
   b: RuntimeResourceEvidence | undefined,
 ): RuntimeResourceEvidence | undefined {
-  if (!a) return b;
+  if (!a) {
+    return b;
+  }
 
-  if (!b) return a;
+  if (!b) {
+    return a;
+  }
   const exports = new Map<string, number>();
 
   // One entry per distinct export per fact.
-  for (const entry of [...(a.exports ?? []), ...(b.exports ?? [])])
+  for (const entry of [...(a.exports ?? []), ...(b.exports ?? [])]) {
     exports.set(entry.id, Math.max(exports.get(entry.id) ?? 0, entry.count));
+  }
 
   const deduplicated = [...exports.values()].reduce((sum, count) => sum + count, 0);
   const first = [a.firstSeen, b.firstSeen].flatMap((value) => (value ? [value] : [])).sort();
@@ -376,7 +397,7 @@ export function discoverTraceResources(
     );
   };
 
-  const attributesOf = (attributes: z.infer<typeof attribute>[]) =>
+  const attributesOf = (attributes: Array<z.infer<typeof attribute>>) =>
     new Map(
       attributes.map(({ key, value }) => [key, value.stringValue ?? String(value.intValue ?? '')]),
     );
@@ -387,10 +408,12 @@ export function discoverTraceResources(
     const resourceAttributes = attributesOf(resourceSpans.resource.attributes);
     const service = resourceAttributes.get('service.name');
 
-    if (!service) continue;
+    if (!service) {
+      continue;
+    }
     addResource(architectureService(service));
 
-    for (const scope of resourceSpans.scopeSpans)
+    for (const scope of resourceSpans.scopeSpans) {
       for (const item of scope.spans) {
         if (item.traceId && item.spanId)
           spansById.set(`${item.traceId}/${item.spanId}`, { service, item });
@@ -469,6 +492,7 @@ export function discoverTraceResources(
           }
         }
       }
+    }
   }
 
   for (const { service, item } of spansById.values()) {
@@ -476,10 +500,14 @@ export function discoverTraceResources(
       ? spansById.get(`${item.traceId}/${item.parentSpanId}`)
       : undefined;
 
-    if (!parent || parent.service === service) continue;
+    if (!parent || parent.service === service) {
+      continue;
+    }
 
     // Cross-service parentage establishes a call only for a server span.
-    if (item.kind !== 2 && item.kind !== 'SPAN_KIND_SERVER') continue;
+    if (item.kind !== 2 && item.kind !== 'SPAN_KIND_SERVER') {
+      continue;
+    }
 
     const attrs = attributesOf(item.attributes);
     const method = attrs.get('http.request.method') ?? attrs.get('http.method');
@@ -530,8 +558,9 @@ export function promoteRelationship(
 ): ResourceGraph {
   const key = relationshipKey({ ...target, provenance: 'declared', needsReview: false });
 
-  if (!graph.relationships.some((edge) => relationshipKey(edge) === key))
+  if (!graph.relationships.some((edge) => relationshipKey(edge) === key)) {
     throw new Error(`Unknown relationship: ${key}`);
+  }
 
   return {
     ...graph,
@@ -551,7 +580,9 @@ export function promoteRelationship(
 export function datastoreOwnership(graph: ResourceGraph) {
   return graph.resources
     .flatMap((resource) => {
-      if (resource.ref.kind !== 'collection' && resource.ref.kind !== 'table') return [];
+      if (resource.ref.kind !== 'collection' && resource.ref.kind !== 'table') {
+        return [];
+      }
 
       const accesses = graph.relationships.filter(
         (edge) => resourceKey(edge.to) === resourceKey(resource.ref),

@@ -1,7 +1,9 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { closestMatch, loadCatalog as loadEventCatalog, type LoadedEvent } from 'autocatalog-core';
-import { entitiesOf, loadCatalog, type Catalog } from './loader.js';
+import { closestMatch, loadCatalog as loadEventCatalog } from 'autocatalog-core';
+import type { LoadedEvent } from 'autocatalog-core';
+import { entitiesOf, loadCatalog } from './loader.js';
+import type { Catalog } from './loader.js';
 import { DIR_BY_KIND } from './schemas.js';
 
 export type EventDirection = 'produces' | 'consumes';
@@ -20,7 +22,7 @@ export type EventLink = {
   /** `domain/id`, once resolved against an event catalog. */
   event?: string;
   /** Payload paths a consumer declares it reads; absent when it did not say. */
-  fields?: string[];
+  fields?: Array<string>;
 };
 
 export type EventLinkIssue = {
@@ -30,21 +32,21 @@ export type EventLinkIssue = {
   message: string;
 };
 
-export type EventLinks = { links: EventLink[]; issues: EventLinkIssue[] };
+export type EventLinks = { links: Array<EventLink>; issues: Array<EventLinkIssue> };
 
 /** Who publishes and who reacts to one event, as `agent/<id>` and `tool/<id>` labels. */
 export type EventParticipants = {
-  producers: string[];
-  consumers: string[];
+  producers: Array<string>;
+  consumers: Array<string>;
   /** Payload paths each consumer declares it reads, by label. */
-  consumerFields?: Record<string, string[]>;
+  consumerFields?: Record<string, Array<string>>;
 };
 
 const LABEL = { agent: 'Agent', tool: 'Tool' } as const;
 
 /** Every event reference an Agent or Tool declares, unresolved. */
-export const declaredEventLinks = (cat: Catalog): EventLink[] => {
-  const links: EventLink[] = [];
+export const declaredEventLinks = (cat: Catalog): Array<EventLink> => {
+  const links: Array<EventLink> = [];
 
   for (const entity of [...entitiesOf(cat, 'agent'), ...entitiesOf(cat, 'tool')]) {
     const declared = {
@@ -53,7 +55,7 @@ export const declaredEventLinks = (cat: Catalog): EventLink[] => {
     };
 
     for (const direction of ['produces', 'consumes'] as const) {
-      const fieldsByRef = new Map<string, string[] | undefined>(
+      const fieldsByRef = new Map<string, Array<string> | undefined>(
         declared[direction].map(({ event, fields }) => [event, fields]),
       );
 
@@ -74,14 +76,14 @@ export const declaredEventLinks = (cat: Catalog): EventLink[] => {
 export type EventResolution =
   | { event: string }
   | { reason: 'unknown'; hint?: string }
-  | { reason: 'ambiguous'; matches: string[] };
+  | { reason: 'ambiguous'; matches: Array<string> };
 
 /**
  * Resolve one reference, `domain/id` or a bare id, against an event catalog. A
  * bare id resolves only when exactly one domain has it, so adding a second
  * `payment.completed` elsewhere turns a silent guess into an error naming both.
  */
-export const resolveEventRef = (ref: string, events: EventKey[]): EventResolution => {
+export const resolveEventRef = (ref: string, events: Array<EventKey>): EventResolution => {
   const keys = [...new Set(events.map((e) => `${e.domain}/${e.id}`))].sort();
 
   if (ref.includes('/')) {
@@ -92,9 +94,13 @@ export const resolveEventRef = (ref: string, events: EventKey[]): EventResolutio
 
   const matches = keys.filter((key) => key.slice(key.indexOf('/') + 1) === ref);
 
-  if (matches.length === 1) return { event: matches[0]! };
+  if (matches.length === 1) {
+    return { event: matches[0]! };
+  }
 
-  if (matches.length > 1) return { reason: 'ambiguous', matches };
+  if (matches.length > 1) {
+    return { reason: 'ambiguous', matches };
+  }
 
   const ids = [...new Set(keys.map((key) => key.slice(key.indexOf('/') + 1)))];
 
@@ -111,9 +117,9 @@ export const describeUnresolved = (
     : `unknown event "${ref}"${resolution.hint ? ` — did you mean "${resolution.hint}"?` : ''}`;
 
 /** Resolve every declared event reference against an event catalog. */
-export const linkEvents = (cat: Catalog, events: EventKey[]): EventLinks => {
-  const links: EventLink[] = [];
-  const issues: EventLinkIssue[] = [];
+export const linkEvents = (cat: Catalog, events: Array<EventKey>): EventLinks => {
+  const links: Array<EventLink> = [];
+  const issues: Array<EventLinkIssue> = [];
 
   for (const link of declaredEventLinks(cat)) {
     const resolution = resolveEventRef(link.ref, events);
@@ -132,16 +138,20 @@ export const linkEvents = (cat: Catalog, events: EventKey[]): EventLinks => {
 };
 
 /** Resolved links grouped by event, keyed `domain/id`. */
-export const eventParticipants = (links: EventLink[]): Map<string, EventParticipants> => {
+export const eventParticipants = (links: Array<EventLink>): Map<string, EventParticipants> => {
   const out = new Map<string, EventParticipants>();
 
   for (const link of links) {
-    if (!link.event) continue;
+    if (!link.event) {
+      continue;
+    }
     const entry = out.get(link.event) ?? { producers: [], consumers: [] };
     const label = `${link.from.kind}/${link.from.id}`;
     const list = link.direction === 'produces' ? entry.producers : entry.consumers;
 
-    if (!list.includes(label)) list.push(label);
+    if (!list.includes(label)) {
+      list.push(label);
+    }
 
     if (link.direction === 'consumes' && link.fields) {
       entry.consumerFields = { ...entry.consumerFields, [label]: link.fields };
@@ -164,15 +174,17 @@ export const eventParticipants = (links: EventLink[]): Map<string, EventParticip
  * (drift, impact, check_change, search) names them without knowing agents exist.
  */
 export const withEventParticipants = (
-  events: LoadedEvent[],
+  events: Array<LoadedEvent>,
   participants: Map<string, EventParticipants>,
-): LoadedEvent[] =>
+): Array<LoadedEvent> =>
   events.map((event) => {
     const extra = participants.get(`${event.frontmatter.domain}/${event.frontmatter.id}`);
 
-    if (!extra) return event;
+    if (!extra) {
+      return event;
+    }
 
-    const merge = (own: string[], added: string[]) => [...new Set([...own, ...added])];
+    const merge = (own: Array<string>, added: Array<string>) => [...new Set([...own, ...added])];
 
     return {
       ...event,
@@ -197,7 +209,7 @@ export const withEventParticipants = (
   });
 
 /** The current events in an event catalog, as `{ domain, id }`. */
-export const loadEventKeys = async (eventsRoot: string): Promise<EventKey[]> =>
+export const loadEventKeys = async (eventsRoot: string): Promise<Array<EventKey>> =>
   (await loadEventCatalog(eventsRoot, { skipVersioned: true })).map((e) => ({
     domain: e.frontmatter.domain,
     id: e.frontmatter.id,
@@ -214,9 +226,11 @@ export const hasAgentCatalog = (root: string): boolean =>
  * for a directory check and nothing else.
  */
 export const linkAgentsToEvents = async (
-  opts: { agentsRoot: string } & ({ eventsRoot: string } | { events: EventKey[] }),
+  opts: { agentsRoot: string } & ({ eventsRoot: string } | { events: Array<EventKey> }),
 ): Promise<(EventLinks & { participants: Map<string, EventParticipants> }) | undefined> => {
-  if (!hasAgentCatalog(opts.agentsRoot)) return undefined;
+  if (!hasAgentCatalog(opts.agentsRoot)) {
+    return undefined;
+  }
 
   const [cat, events] = await Promise.all([
     loadCatalog(opts.agentsRoot),

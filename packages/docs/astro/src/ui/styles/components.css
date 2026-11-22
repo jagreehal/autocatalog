@@ -269,3 +269,13 @@
   left: 3rem !important;
   bottom: 3.5rem !important;
 }
+/* In a narrow map the toolbar along the bottom reaches the corners, so the
+   legend and the zoom buttons stand above it rather than over its buttons. */
+[data-graph-portal] {
+  container-type: inline-size;
+}
+@container (width < 44rem) {
+  .eventcatalog-visualizer :is(.react-flow__panel.bottom.right, .react-flow__controls) {
+    bottom: 3.5rem !important;
+  }
+}

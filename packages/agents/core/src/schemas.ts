@@ -42,7 +42,7 @@ const Base = z.object({
 });
 
 /** The full owner list for an entity: primary owner first, co-owners after, de-duplicated. */
-export const ownersOf = (e: { owner: string; owners?: string[] }): string[] => [
+export const ownersOf = (e: { owner: string; owners?: Array<string> }): Array<string> => [
   ...new Set([e.owner, ...(e.owners ?? [])]),
 ];
 
@@ -294,7 +294,7 @@ export type EntityKind = z.infer<typeof EntityKindSchema>;
 export type Entity =
   Agent | Tool | McpServer | Model | Workflow | Domain | Eval | Policy | Skill | AgentPlugin;
 
-export const ENTITY_KINDS: readonly EntityKind[] = EntityKindSchema.options;
+export const ENTITY_KINDS: ReadonlyArray<EntityKind> = EntityKindSchema.options;
 
 export const SCHEMA_BY_KIND = {
   agent: AgentSchema,

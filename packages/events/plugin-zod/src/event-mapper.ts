@@ -1,15 +1,14 @@
-import {
-  jsonObjectSchema,
-  jsonValueSchema,
-  pascalCase,
-  type JsonObject,
-  type JsonValue,
-  type AdapterEvent,
-  type ProvenanceValue,
-  type SourceLocation,
+import { jsonObjectSchema, jsonValueSchema, pascalCase } from 'autocatalog-core/plugin';
+import type {
+  JsonObject,
+  JsonValue,
+  AdapterEvent,
+  ProvenanceValue,
+  SourceLocation,
 } from 'autocatalog-core/plugin';
 import { z } from 'zod';
-import { getEventMetadata, mergeMetadata, type SchemaInput } from './define-event';
+import { getEventMetadata, mergeMetadata } from './define-event';
+import type { SchemaInput } from './define-event';
 
 export type { AdapterEvent, ProvenanceValue, SourceLocation, SchemaInput };
 
@@ -59,7 +58,7 @@ export interface CompactItem {
 const VERSION_RE = /^(v\d+)\.(.+)$/;
 
 function titleCase(pascal: string): string {
-  return pascal.replace(/([a-z])([A-Z])/g, '$1 $2');
+  return pascal.replaceAll(/([a-z])([A-Z])/g, '$1 $2');
 }
 
 export function parseCompactName(compactName: string): ParsedCompactName {
@@ -111,9 +110,9 @@ export interface ExplicitEvent extends Omit<
   folderName?: string;
   domain?: string;
   team?: string;
-  producers?: string[];
-  consumers?: string[];
-  tags?: string[];
+  producers?: Array<string>;
+  consumers?: Array<string>;
+  tags?: Array<string>;
 }
 
 export function isCompactItem<T>(item: T): item is T & CompactItem {

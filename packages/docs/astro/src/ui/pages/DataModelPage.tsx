@@ -16,9 +16,11 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from '#ui/components/ui/empty.tsx';
-import { Evidence, type EvidenceView } from '../components/Evidence';
+import { Evidence } from '../components/Evidence';
+import type { EvidenceView } from '../components/Evidence';
 import { Icon } from '../components/Icon';
-import { ServiceList, type ServiceLink } from './DataModelsPage';
+import { ServiceList } from './DataModelsPage';
+import type { ServiceLink } from './DataModelsPage';
 
 export interface DataModelField {
   /** Dotted for a field of an embedded type: `address.city`. */
@@ -32,7 +34,7 @@ export interface DataModelField {
   unique?: boolean;
   default?: string;
   updatedAt?: boolean;
-  values?: string[];
+  values?: Array<string>;
   doc?: string;
   /** The model whose key this column holds. */
   references?: string;
@@ -59,10 +61,10 @@ export interface DataModelPageProps {
   /** The definition on the repository's host, at its line. */
   sourceHref?: string;
   owner?: { team: string; href?: string | undefined };
-  fields: DataModelField[];
-  indexes: Array<{ fields: string[]; unique: boolean; primary?: boolean; name?: string }>;
-  readers: ServiceLink[];
-  writers: ServiceLink[];
+  fields: Array<DataModelField>;
+  indexes: Array<{ fields: Array<string>; unique: boolean; primary?: boolean; name?: string }>;
+  readers: Array<ServiceLink>;
+  writers: Array<ServiceLink>;
   /** Mermaid `erDiagram` source: the model and the models one relation away. */
   diagram?: string | undefined;
 }

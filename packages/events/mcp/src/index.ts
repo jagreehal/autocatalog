@@ -8,7 +8,7 @@ import { createServer } from './server.js';
 
 export { createServer, type ServerOptions } from './server.js';
 
-function parseArgs(argv: string[]) {
+function parseArgs(argv: Array<string>) {
   let root = '.';
   let eventsDir = 'events';
   // The company site's /catalog.json, and the variable holding its token when it is private.
@@ -17,31 +17,47 @@ function parseArgs(argv: string[]) {
   // A folder of checked-out repositories, for a server that answers for the company.
   let company: string | undefined;
   let allowWrites = false;
-  let audience: string[] = [];
+  let audience: Array<string> = [];
   let writeAudience: string | undefined;
 
   for (let i = 0; i < argv.length; i++) {
-    if (argv[i] === '--root') root = argv[++i] ?? '.';
+    if (argv[i] === '--root') {
+      root = argv[++i] ?? '.';
+    }
 
-    if (argv[i] === '--events-dir') eventsDir = argv[++i] ?? 'events';
+    if (argv[i] === '--events-dir') {
+      eventsDir = argv[++i] ?? 'events';
+    }
 
-    if (argv[i] === '--site') site = argv[++i];
+    if (argv[i] === '--site') {
+      site = argv[++i];
+    }
 
-    if (argv[i] === '--site-token-env') siteTokenEnv = argv[++i];
+    if (argv[i] === '--site-token-env') {
+      siteTokenEnv = argv[++i];
+    }
 
-    if (argv[i] === '--company') company = argv[++i];
+    if (argv[i] === '--company') {
+      company = argv[++i];
+    }
 
-    if (argv[i] === '--allow-writes') allowWrites = true;
+    if (argv[i] === '--allow-writes') {
+      allowWrites = true;
+    }
 
-    if (argv[i] === '--audience') audience = (argv[++i] ?? '').split(',').filter(Boolean);
+    if (argv[i] === '--audience') {
+      audience = (argv[++i] ?? '').split(',').filter(Boolean);
+    }
 
-    if (argv[i] === '--write-audience') writeAudience = argv[++i];
+    if (argv[i] === '--write-audience') {
+      writeAudience = argv[++i];
+    }
   }
 
   return { root, eventsDir, site, siteTokenEnv, company, allowWrites, audience, writeAudience };
 }
 
-export async function startMcpServer(argv: string[] = process.argv.slice(2)): Promise<void> {
+export async function startMcpServer(argv: Array<string> = process.argv.slice(2)): Promise<void> {
   const { root, eventsDir, site, siteTokenEnv, company, allowWrites, audience, writeAudience } =
     parseArgs(argv);
 
@@ -80,12 +96,12 @@ export async function startMcpServer(argv: string[] = process.argv.slice(2)): Pr
 
 // npm starts a bin through a symlink, so compare the real file.
 const isEntry =
-  (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) ||
+  (process.argv[1] && realpathSync(process.argv[1]) === import.meta.filename) ||
   process.argv[1]?.endsWith('mcp/src/index.ts');
 
 if (isEntry) {
-  startMcpServer().catch((err) => {
-    process.stderr.write(`fatal: ${err instanceof Error ? err.message : String(err)}\n`);
+  startMcpServer().catch((error) => {
+    process.stderr.write(`fatal: ${error instanceof Error ? error.message : String(error)}\n`);
     process.exit(1);
   });
 }

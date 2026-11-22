@@ -15,7 +15,8 @@ import { dataProductPageProps, termAnchor } from './model';
 import { graphOwners, ownerFor, ownerHref } from './owners';
 import { eventPages, servicePages } from './page-models';
 import type { VisualiserGraph } from './ui/lib/visualiser';
-import { schemaTree, type PropNode } from './ui/lib/schema-tree';
+import { schemaTree } from './ui/lib/schema-tree';
+import type { PropNode } from './ui/lib/schema-tree';
 import { catalogGraph } from './visualiser';
 
 /** The components every `.mdx` document can use without importing them. */
@@ -34,7 +35,9 @@ export function mdxComponents(): Plugin {
     name: 'autocatalog-docs-mdx-components',
     enforce: 'pre',
     transform(code, id) {
-      if (!id.split('?')[0]!.endsWith('.mdx')) return undefined;
+      if (!id.split('?')[0]!.endsWith('.mdx')) {
+        return undefined;
+      }
 
       return withComponentImports(code);
     },
@@ -50,7 +53,9 @@ export function withComponentImports(code: string): string | undefined {
     (name) => new RegExp(`<${name}[\\s/>]`).test(prose) && !bound.has(name),
   );
 
-  if (used.length === 0) return undefined;
+  if (used.length === 0) {
+    return undefined;
+  }
 
   const line = `import { ${used.join(', ')} } from ${JSON.stringify(MDX_MODULE)};\n`;
   const frontmatter = /^---\r?\n[\s\S]*?\r?\n---\r?\n/.exec(code);
@@ -66,8 +71,8 @@ export function withComponentImports(code: string): string | undefined {
  */
 function withoutCode(code: string): string {
   return code
-    .replace(/^ {0,3}(`{3,}|~{3,})[^\n]*\n[\s\S]*?(?:^ {0,3}\1[`~]*[ \t]*$|(?![\s\S]))/gm, '')
-    .replace(/(`+)[\s\S]*?\1/g, '');
+    .replaceAll(/^ {0,3}(`{3,}|~{3,})[^\n]*\n[\s\S]*?(?:^ {0,3}\1[`~]*[ \t]*$|(?![\s\S]))/gm, '')
+    .replaceAll(/(`+)[\s\S]*?\1/g, '');
 }
 
 /** The local names a file's imports bind: `Map` in `import { Map }`, but not in `import { Map as Own }`. */
@@ -85,7 +90,9 @@ function importedNames(code: string): Set<string> {
         .at(-1)
         ?.replace(/^(type|\*)\s*/, '');
 
-      if (name) names.add(name);
+      if (name) {
+        names.add(name);
+      }
     }
   }
 
@@ -106,7 +113,9 @@ export async function mdxMap(
 ): Promise<VisualiserGraph | undefined> {
   const pages = { servicePages: servicePages(catalog), eventPages: eventPages(catalog) };
 
-  if (!focus) return catalogGraph(catalog.graph, base, pages);
+  if (!focus) {
+    return catalogGraph(catalog.graph, base, pages);
+  }
 
   const [kind, ...rest] = focus.split('/');
   const id = rest.join('/');
@@ -114,7 +123,7 @@ export async function mdxMap(
   if (kind === 'flow') {
     const flow = catalog.flows.find((candidate) => candidate.id === id);
 
-    if (!flow)
+    if (!flow) {
       throw new Error(
         missing(
           'flow',
@@ -122,6 +131,7 @@ export async function mdxMap(
           catalog.flows.map((each) => each.id),
         ),
       );
+    }
 
     return flowVisualiser(flow, catalog, base, pages);
   }
@@ -145,7 +155,9 @@ export async function mdxMap(
   if (kind === 'domain') {
     const domains = buildDomains(catalog.events, catalog.graph).map(({ name }) => name);
 
-    if (!domains.includes(id)) throw new Error(missing('domain', id, domains));
+    if (!domains.includes(id)) {
+      throw new Error(missing('domain', id, domains));
+    }
 
     return catalogGraph(catalog.graph, base, {
       ...pages,
@@ -158,7 +170,9 @@ export async function mdxMap(
       resource.ref.kind === 'service' ? [resource.ref.id] : [],
     );
 
-    if (!services.includes(id)) throw new Error(missing('service', id, services));
+    if (!services.includes(id)) {
+      throw new Error(missing('service', id, services));
+    }
 
     return catalogGraph(catalog.graph, base, {
       ...pages,
@@ -168,22 +182,28 @@ export async function mdxMap(
 
   const resolution = resolveAbout(focus, catalog.graph.resources, repository);
 
-  if ('failure' in resolution) throw new Error(`<Map focus="${focus}">: ${resolution.failure}`);
+  if ('failure' in resolution) {
+    throw new Error(`<Map focus="${focus}">: ${resolution.failure}`);
+  }
 
   // One resource and everything one relationship away from it.
   const key = resourceKey(resolution.ref);
   const only = new Set([key]);
 
   for (const { from, to } of catalog.graph.relationships) {
-    if (resourceKey(from) === key) only.add(resourceKey(to));
+    if (resourceKey(from) === key) {
+      only.add(resourceKey(to));
+    }
 
-    if (resourceKey(to) === key) only.add(resourceKey(from));
+    if (resourceKey(to) === key) {
+      only.add(resourceKey(from));
+    }
   }
 
   return catalogGraph(catalog.graph, base, { ...pages, only });
 }
 
-const missing = (what: string, id: string, ids: string[]) => {
+const missing = (what: string, id: string, ids: Array<string>) => {
   const hint = closestMatch(id, ids);
 
   return `no ${what} '${id}'${hint ? ` — did you mean '${hint}'?` : ''}`;
@@ -193,7 +213,7 @@ const missing = (what: string, id: string, ids: string[]) => {
 export interface MdxSchema {
   title: string;
   href: string;
-  nodes: PropNode[];
+  nodes: Array<PropNode>;
 }
 
 /** What `<Term>` links: the term's name, its definition, and its place in the glossary. */

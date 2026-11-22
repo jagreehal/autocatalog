@@ -5,11 +5,8 @@ import {
   isJsonObject,
   isServiceCatalogResource,
   publishedApis,
-  type JsonValue,
-  type RepositoryApi,
-  type ResourceGraph,
-  type ServiceSummary,
 } from 'autocatalog-core';
+import type { JsonValue, RepositoryApi, ResourceGraph, ServiceSummary } from 'autocatalog-core';
 import { z } from 'zod';
 import type { CatalogEvent } from './catalog';
 import type { ApiPageProps, ApisPageProps } from './ui/pages';
@@ -20,7 +17,7 @@ export interface CatalogApi extends RepositoryApi {
    * The services that serve it, as the catalog settled them against the lock.
    * Pages read this once it is set, so they show what the graph holds.
    */
-  services?: string[];
+  services?: Array<string>;
 }
 
 export const repositoryApis = publishedApis;
@@ -28,8 +25,8 @@ export const repositoryApis = publishedApis;
 const slug = (value: string) =>
   value
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
+    .replaceAll(/[^a-z0-9]+/g, '-')
+    .replaceAll(/^-+|-+$/g, '');
 
 /** Where an API's page lives on the site, relative to its base. */
 export const apiPath = (api: CatalogApi) => `apis/${api.repository}/${api.name}/`;
@@ -53,16 +50,20 @@ export const apiSummary = (api: CatalogApi) =>
  * payments-service), or whose webhooks are events the service produces.
  */
 export function apisForService(
-  apis: CatalogApi[],
-  events: CatalogEvent[],
+  apis: Array<CatalogApi>,
+  events: Array<CatalogEvent>,
   service: string,
-): CatalogApi[] {
+): Array<CatalogApi> {
   return apis.filter((api) => {
-    if (api.services) return api.services.includes(service);
+    if (api.services) {
+      return api.services.includes(service);
+    }
 
     const declared = declaredApiService(api.document);
 
-    if (declared) return declared === service;
+    if (declared) {
+      return declared === service;
+    }
 
     return (
       slug(apiTitle(api)).replace(/-api$/, '') === slug(service) ||
@@ -82,8 +83,8 @@ export function catalogServices({
   apis,
   graph,
 }: {
-  events: CatalogEvent[];
-  apis: CatalogApi[];
+  events: Array<CatalogEvent>;
+  apis: Array<CatalogApi>;
   /** Services the resource graph declares: a command's handler, a datastore's reader. */
   graph?: ResourceGraph | undefined;
 }): Map<string, ServiceSummary> {
@@ -92,33 +93,39 @@ export function catalogServices({
   for (const api of apis) {
     const declared = declaredApiService(api.document);
 
-    for (const name of api.services ?? (declared ? [declared] : []))
+    for (const name of api.services ?? (declared ? [declared] : [])) {
       if (!services.has(name))
         services.set(name, { name, domains: [], produces: [], consumes: [] });
+    }
   }
 
   for (const resource of graph?.resources.filter(isServiceCatalogResource) ?? []) {
     const name = resource.ref.id;
 
-    if (!services.has(name))
+    if (!services.has(name)) {
       services.set(name, {
         name,
         domains: [...resource.attributes.domains].sort(),
         produces: [],
         consumes: [],
       });
+    }
   }
 
   return services;
 }
 
 /** The services that serve one API, by the same rule. */
-export function servicesForApi(api: CatalogApi, events: CatalogEvent[]): string[] {
-  if (api.services) return api.services;
+export function servicesForApi(api: CatalogApi, events: Array<CatalogEvent>): Array<string> {
+  if (api.services) {
+    return api.services;
+  }
 
   const declared = declaredApiService(api.document);
 
-  if (declared) return [declared];
+  if (declared) {
+    return [declared];
+  }
 
   return [...buildServices(events.map(({ event }) => event)).keys()].filter(
     (name) => apisForService([api], events, name).length > 0,
@@ -137,7 +144,7 @@ export function apiOperations(api: CatalogApi): ApiPageProps['operations'] {
 
 export function apiPageProps(
   api: CatalogApi,
-  services: string[],
+  services: Array<string>,
   base: string,
   outside = false,
 ): ApiPageProps {
@@ -152,7 +159,11 @@ export function apiPageProps(
   };
 }
 
-export function apisPageProps(apis: CatalogApi[], base: string, outside = false): ApisPageProps {
+export function apisPageProps(
+  apis: Array<CatalogApi>,
+  base: string,
+  outside = false,
+): ApisPageProps {
   return {
     outside,
     apis: apis.map((api) => ({

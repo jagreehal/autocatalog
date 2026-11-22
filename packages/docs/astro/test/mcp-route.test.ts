@@ -157,9 +157,13 @@ it('keeps readers apart when their requests arrive together', async () => {
     const answers = await Promise.all(readers.map((reader) => reader()));
 
     for (const [n, text] of answers.entries()) {
-      if (readers[n] === staff) expect(text).toContain('Refunds paid');
+      if (readers[n] === staff) {
+        expect(text).toContain('Refunds paid');
+      }
 
-      if (readers[n] === visitor) expect(text).not.toContain('Refunds paid');
+      if (readers[n] === visitor) {
+        expect(text).not.toContain('Refunds paid');
+      }
 
       if (readers[n] === visitorReads) {
         expect(text).toContain('No page at /help/paid/');
@@ -190,7 +194,7 @@ it('answers a failure with a JSON-RPC error no cache keeps', async () => {
     expect(failed.headers.get('cache-control')).toBe('private, no-store');
     expect(await failed.json()).toEqual({
       jsonrpc: '2.0',
-      error: { code: -32603, message: 'Internal server error' },
+      error: { code: -32_603, message: 'Internal server error' },
       id: null,
     });
   } finally {

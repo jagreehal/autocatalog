@@ -1,0 +1,3264 @@
+{
+  "stats": [
+    { "label": "services", "value": 33, "kind": "service", "href": "/services/" },
+    { "label": "events", "value": 46, "kind": "event", "href": "/catalog/?kind=event" },
+    { "label": "domains", "value": 11, "kind": "domain", "href": "/domains/" },
+    { "label": "documents", "value": 135, "kind": "document", "href": "/catalog/?kind=document" },
+    { "label": "commands", "value": 26, "kind": "command", "href": "/catalog/?kind=command" },
+    { "label": "endpoints", "value": 18, "kind": "endpoint", "href": "/catalog/?kind=endpoint" }
+  ],
+  "explore": [
+    {
+      "title": "Knowledge graph",
+      "text": "Every resource and relationship, with where each fact was read from.",
+      "href": "/catalog/",
+      "icon": "catalog"
+    },
+    {
+      "title": "Domains",
+      "text": "Each domain’s events, the services around them, and a map of how they connect.",
+      "href": "/domains/",
+      "icon": "domain",
+      "kind": "domain"
+    },
+    {
+      "title": "Services",
+      "text": "Every service with its owner, the APIs it serves, and what it sends and receives.",
+      "href": "/services/",
+      "icon": "service",
+      "kind": "service"
+    },
+    {
+      "title": "Fields",
+      "text": "Every field across every event, and who a change to it would reach.",
+      "href": "/fields/",
+      "icon": "fields",
+      "kind": "event"
+    },
+    {
+      "title": "Schemas",
+      "text": "Every event schema, what it was written in, and who owns it.",
+      "href": "/schemas/",
+      "icon": "braces",
+      "kind": "event"
+    },
+    {
+      "title": "APIs",
+      "text": "The OpenAPI specs repositories commit, each with its reference.",
+      "href": "/apis/",
+      "icon": "api",
+      "kind": "service"
+    },
+    {
+      "title": "Flows",
+      "text": "Business processes step by step, grouped by domain or team.",
+      "href": "/flows/",
+      "icon": "flow",
+      "kind": "service"
+    },
+    {
+      "title": "Specifications",
+      "text": "WSDL, XML Schema, GraphQL, AsyncAPI and other specifications, as written.",
+      "href": "/specs/",
+      "icon": "braces",
+      "kind": "service"
+    },
+    {
+      "title": "Decisions",
+      "text": "Architecture decision records: what was decided, why, and what it replaced.",
+      "href": "/decisions/",
+      "icon": "decision",
+      "kind": "doc"
+    },
+    {
+      "title": "Runbooks",
+      "text": "What to do when something goes wrong, written before it does.",
+      "href": "/runbooks/",
+      "icon": "runbook",
+      "kind": "doc"
+    },
+    {
+      "title": "Data models",
+      "text": "Every table and collection, its fields and relations, and who reads and writes it.",
+      "href": "/data/",
+      "icon": "data"
+    },
+    {
+      "title": "Owners",
+      "text": "The teams the catalog names, and everything each one owns.",
+      "href": "/owners/",
+      "icon": "owners",
+      "kind": "owner"
+    },
+    {
+      "title": "For agents",
+      "text": "llms.txt, a Markdown twin of every document, and the graph as JSON.",
+      "href": "/llms.txt",
+      "icon": "braces",
+      "kind": "agent"
+    }
+  ],
+  "recent": [
+    {
+      "kind": "Document",
+      "icon": "doc",
+      "title": "Integrating with Customers",
+      "href": "/customer-platform/guides/01-integrating-with-customers",
+      "repository": "customer-platform",
+      "updated": "2026-11-10T22:51:05+00:00"
+    },
+    {
+      "kind": "Document",
+      "icon": "doc",
+      "title": "Customer data model",
+      "href": "/customer-platform/guides/02-customer-data-model",
+      "repository": "customer-platform",
+      "updated": "2026-11-10T22:51:05+00:00"
+    },
+    {
+      "kind": "Document",
+      "icon": "doc",
+      "title": "Account status lifecycle",
+      "href": "/customer-platform/guides/03-account-status-lifecycle",
+      "repository": "customer-platform",
+      "updated": "2026-11-10T22:51:05+00:00"
+    },
+    {
+      "kind": "Document",
+      "icon": "doc",
+      "title": "Authenticate Customer",
+      "href": "/customer-platform/messages/authenticate-customer",
+      "repository": "customer-platform",
+      "updated": "2026-11-10T22:51:05+00:00"
+    },
+    {
+      "kind": "Document",
+      "icon": "doc",
+      "title": "Customer Authenticated",
+      "href": "/customer-platform/messages/customer-authenticated",
+      "repository": "customer-platform",
+      "updated": "2026-11-10T22:51:05+00:00"
+    },
+    {
+      "kind": "Document",
+      "icon": "doc",
+      "title": "Customer Notified",
+      "href": "/customer-platform/messages/customer-notified",
+      "repository": "customer-platform",
+      "updated": "2026-11-10T22:51:05+00:00"
+    },
+    {
+      "kind": "Document",
+      "icon": "doc",
+      "title": "Customer Registered",
+      "href": "/customer-platform/messages/customer-registered",
+      "repository": "customer-platform",
+      "updated": "2026-11-10T22:51:05+00:00"
+    },
+    {
+      "kind": "Document",
+      "icon": "doc",
+      "title": "Customer Updated",
+      "href": "/customer-platform/messages/customer-updated",
+      "repository": "customer-platform",
+      "updated": "2026-11-10T22:51:05+00:00"
+    }
+  ],
+  "attention": {
+    "needsReview": 0,
+    "needsReviewHref": "/catalog/?review=1",
+    "failures": [],
+    "orphanProducers": 0,
+    "orphanConsumers": 35,
+    "unowned": 81,
+    "ownersHref": "/owners/",
+    "catalogHref": "/catalog/"
+  },
+  "map": {
+    "graph": {
+      "nodes": [
+        {
+          "id": "command:catalog/create-product@1.0.0",
+          "type": "command",
+          "label": "Create Product",
+          "metadata": { "summary": "Command to add a new product to the catalog." }
+        },
+        {
+          "id": "command:catalog/delete-product@1.0.0",
+          "type": "command",
+          "label": "Delete Product",
+          "metadata": { "summary": "Command to remove a product from the catalog." }
+        },
+        {
+          "id": "command:catalog/get-product@1.0.0",
+          "type": "query",
+          "label": "Get Product",
+          "metadata": { "summary": "Query to fetch a single product by its identifier." }
+        },
+        {
+          "id": "command:catalog/search-products@1.0.0",
+          "type": "query",
+          "label": "Search Products",
+          "metadata": {
+            "summary": "Query to search the catalog for products matching a term, with optional filters and pagination."
+          }
+        },
+        {
+          "id": "command:catalog/update-product@1.0.0",
+          "type": "command",
+          "label": "Update Product",
+          "metadata": { "summary": "Command to update an existing product in the catalog." }
+        },
+        {
+          "id": "command:customer/authenticate-customer@1.0.0",
+          "type": "command",
+          "label": "Authenticate Customer",
+          "metadata": { "summary": "Command to authenticate a customer with their credentials." }
+        },
+        {
+          "id": "command:customer/get-customer@1.0.0",
+          "type": "query",
+          "label": "Get Customer",
+          "metadata": { "summary": "Query to fetch a single customer by their identifier." }
+        },
+        {
+          "id": "command:customer/register-customer@1.0.0",
+          "type": "command",
+          "label": "Register Customer",
+          "metadata": { "summary": "Command to register a new customer." }
+        },
+        {
+          "id": "command:customer/update-customer@1.0.0",
+          "type": "command",
+          "label": "Update Customer",
+          "metadata": { "summary": "Command to update an existing customer's profile." }
+        },
+        {
+          "id": "command:fulfilment/create-shipment@1.0.0",
+          "type": "command",
+          "label": "Create Shipment",
+          "metadata": {
+            "summary": "Command to create a shipment with a carrier for a packed order."
+          }
+        },
+        {
+          "id": "command:fulfilment/get-stock-level@1.0.0",
+          "type": "query",
+          "label": "Get Stock Level",
+          "metadata": {
+            "summary": "Query to fetch the current available stock level for a product."
+          }
+        },
+        {
+          "id": "command:fulfilment/release-inventory@1.0.0",
+          "type": "command",
+          "label": "Release Inventory",
+          "metadata": { "summary": "Command to release a previously held inventory reservation." }
+        },
+        {
+          "id": "command:ordering/authorize-payment@1.0.0",
+          "type": "command",
+          "label": "Authorize Payment",
+          "metadata": {
+            "summary": "Command to authorize payment for the total of a checked-out cart."
+          }
+        },
+        {
+          "id": "command:ordering/cancel-order@1.0.0",
+          "type": "command",
+          "label": "Cancel Order",
+          "metadata": { "summary": "Command to cancel an existing order." }
+        },
+        {
+          "id": "command:ordering/create-order@1.0.0",
+          "type": "command",
+          "label": "Create Order",
+          "metadata": { "summary": "Command to create a new order from a checked-out cart." }
+        },
+        {
+          "id": "command:ordering/get-order@1.0.0",
+          "type": "query",
+          "label": "Get Order",
+          "metadata": { "summary": "Query to fetch a single order by its identifier." }
+        },
+        {
+          "id": "command:ordering/reserve-inventory@1.0.0",
+          "type": "command",
+          "label": "Reserve Inventory",
+          "metadata": { "summary": "Command to reserve stock for the items in a checked-out cart." }
+        },
+        {
+          "id": "command:returns/request-return@1.0.0",
+          "type": "command",
+          "label": "Request Return",
+          "metadata": {
+            "summary": "Command sent by a customer to return one or more items from a delivered order."
+          }
+        },
+        {
+          "id": "command:reviews/flag-review@1.0.0",
+          "type": "command",
+          "label": "Flag Review",
+          "metadata": {
+            "summary": "Command issued by a customer or moderator to flag a published review for re-moderation."
+          }
+        },
+        {
+          "id": "command:reviews/get-product-reviews@1.0.0",
+          "type": "query",
+          "label": "Get Product Reviews",
+          "metadata": {
+            "summary": "Query to fetch the published reviews and aggregate rating for a product."
+          }
+        },
+        {
+          "id": "command:reviews/submit-review@1.0.0",
+          "type": "command",
+          "label": "Submit Review",
+          "metadata": {
+            "summary": "Command issued by a customer to submit a review and rating for a product."
+          }
+        },
+        {
+          "id": "command:reviews/vote-review-helpful@1.0.0",
+          "type": "command",
+          "label": "Vote Review Helpful",
+          "metadata": {
+            "summary": "Command issued by a customer to mark a published review as helpful (or remove their vote)."
+          }
+        },
+        {
+          "id": "command:shopping/add-item-to-cart@1.0.0",
+          "type": "command",
+          "label": "Add Item To Cart",
+          "metadata": { "summary": "Command to add an item to a shopping cart." }
+        },
+        {
+          "id": "command:shopping/calculate-discount@1.0.0",
+          "type": "command",
+          "label": "Calculate Discount",
+          "metadata": { "summary": "Command to calculate the discount that applies to a cart." }
+        },
+        {
+          "id": "command:shopping/checkout-cart@1.0.0",
+          "type": "command",
+          "label": "Checkout Cart",
+          "metadata": { "summary": "Command to check out a shopping cart." }
+        },
+        {
+          "id": "command:shopping/remove-item-from-cart@1.0.0",
+          "type": "command",
+          "label": "Remove Item From Cart",
+          "metadata": { "summary": "Command to remove an item from a shopping cart." }
+        },
+        {
+          "id": "event:customer-platform%2Fcustomer/customer-authenticated@1.0.0",
+          "type": "event",
+          "label": "Customer Authenticated",
+          "metadata": { "summary": "Published when a customer has successfully authenticated." }
+        },
+        {
+          "id": "event:customer-platform%2Fcustomer/customer-registered@1.0.0",
+          "type": "event",
+          "label": "Customer Registered",
+          "metadata": { "summary": "Published when a new customer has registered." }
+        },
+        {
+          "id": "event:customer-platform%2Fcustomer/customer-updated@1.0.0",
+          "type": "event",
+          "label": "Customer Updated",
+          "metadata": { "summary": "Published when an existing customer's profile has changed." }
+        },
+        {
+          "id": "event:customer-platform%2Floyalty/loyalty-points-earned@1.0.0",
+          "type": "event",
+          "label": "Loyalty Points Earned",
+          "metadata": {
+            "summary": "Published when a customer earns loyalty points for a completed order."
+          }
+        },
+        {
+          "id": "event:customer-platform%2Floyalty/loyalty-points-reversed@1.0.0",
+          "type": "event",
+          "label": "Loyalty Points Reversed",
+          "metadata": {
+            "summary": "Published when loyalty points are removed from a customer because the order that earned them was cancelled."
+          }
+        },
+        {
+          "id": "event:customer-platform%2Fnotifications/customer-notified@1.0.0",
+          "type": "event",
+          "label": "Customer Notified",
+          "metadata": {
+            "summary": "Published after a notification has been sent to a customer on one of their preferred channels."
+          }
+        },
+        {
+          "id": "event:fulfilment-platform%2Ffulfilment/inventory-reserved@1.0.0",
+          "type": "event",
+          "label": "Inventory Reserved",
+          "metadata": {
+            "summary": "Published when stock has been successfully reserved for an order."
+          }
+        },
+        {
+          "id": "event:fulfilment-platform%2Ffulfilment/inventory-unavailable@1.0.0",
+          "type": "event",
+          "label": "Inventory Unavailable",
+          "metadata": { "summary": "Published when stock could not be reserved for an order." }
+        },
+        {
+          "id": "event:fulfilment-platform%2Ffulfilment/order-packed@1.0.0",
+          "type": "event",
+          "label": "Order Packed",
+          "metadata": {
+            "summary": "Published when an order has been picked and packed in the warehouse."
+          }
+        },
+        {
+          "id": "event:fulfilment-platform%2Ffulfilment/order-ready-for-shipping@1.0.0",
+          "type": "event",
+          "label": "Order Ready For Shipping",
+          "metadata": {
+            "summary": "Published when a packed order is ready to be handed to a carrier for shipping."
+          }
+        },
+        {
+          "id": "event:fulfilment-platform%2Ffulfilment/shipment-created@1.0.0",
+          "type": "event",
+          "label": "Shipment Created",
+          "metadata": {
+            "summary": "Published by the carrier when a shipment has been created and dispatched."
+          }
+        },
+        {
+          "id": "event:fulfilment-platform%2Ffulfilment/shipment-delivered@1.0.0",
+          "type": "event",
+          "label": "Shipment Delivered",
+          "metadata": {
+            "summary": "Published by the carrier when a shipment has been delivered to the customer."
+          }
+        },
+        {
+          "id": "event:fulfilment-platform%2Ffulfilment/shipment-failed@1.0.0",
+          "type": "event",
+          "label": "Shipment Failed",
+          "metadata": {
+            "summary": "Published by the carrier when a shipment could not be delivered."
+          }
+        },
+        {
+          "id": "event:fulfilment-platform%2Freturns/return-approved@1.0.0",
+          "type": "event",
+          "label": "Return Approved",
+          "metadata": {
+            "summary": "Published when a return request passes the returns policy and the customer can send the items back."
+          }
+        },
+        {
+          "id": "event:fulfilment-platform%2Freturns/return-received@1.0.0",
+          "type": "event",
+          "label": "Return Received",
+          "metadata": {
+            "summary": "Published when returned items have arrived at the warehouse and been inspected."
+          }
+        },
+        {
+          "id": "event:fulfilment-platform%2Freturns/return-requested@1.0.0",
+          "type": "event",
+          "label": "Return Requested",
+          "metadata": {
+            "summary": "Published when a customer has requested to return items from an order."
+          }
+        },
+        {
+          "id": "event:ordering-platform%2Fordering/order-amended@1.0.0",
+          "type": "event",
+          "label": "Order Amended",
+          "metadata": {
+            "summary": "Published when an accepted order is changed before fulfilment begins."
+          }
+        },
+        {
+          "id": "event:ordering-platform%2Fordering/order-archived@1.0.0",
+          "type": "event",
+          "label": "Order Archived",
+          "metadata": {
+            "summary": "Published when a terminal order is moved from operational storage to the long-term archive."
+          }
+        },
+        {
+          "id": "event:ordering-platform%2Fordering/order-cancelled@1.0.0",
+          "type": "event",
+          "label": "Order Cancelled",
+          "metadata": { "summary": "Published when an order has been cancelled." }
+        },
+        {
+          "id": "event:ordering-platform%2Fordering/order-completed@1.0.0",
+          "type": "event",
+          "label": "Order Completed",
+          "metadata": { "summary": "Published when an order has been fulfilled and completed." }
+        },
+        {
+          "id": "event:ordering-platform%2Fordering/order-confirmed@1.0.0",
+          "type": "event",
+          "label": "Order Confirmed",
+          "metadata": {
+            "summary": "Published when payment, inventory, and order validation have succeeded and the order is ready for fulfilment."
+          }
+        },
+        {
+          "id": "event:ordering-platform%2Fordering/order-created@1.0.0",
+          "type": "event",
+          "label": "Order Created",
+          "metadata": { "summary": "Published when a new order has been created." }
+        },
+        {
+          "id": "event:ordering-platform%2Fordering/order-delivery-address-changed@1.0.0",
+          "type": "event",
+          "label": "Order Delivery Address Changed",
+          "metadata": {
+            "summary": "Published when the validated delivery address changes before dispatch."
+          }
+        },
+        {
+          "id": "event:ordering-platform%2Fordering/order-fulfilment-started@1.0.0",
+          "type": "event",
+          "label": "Order Fulfilment Started",
+          "metadata": {
+            "summary": "Published when an order is released to a fulfilment location for picking and packing."
+          }
+        },
+        {
+          "id": "event:ordering-platform%2Fordering/order-hold-released@1.0.0",
+          "type": "event",
+          "label": "Order Hold Released",
+          "metadata": {
+            "summary": "Published when an operational hold is resolved and the order can continue."
+          }
+        },
+        {
+          "id": "event:ordering-platform%2Fordering/order-placed-on-hold@1.0.0",
+          "type": "event",
+          "label": "Order Placed On Hold",
+          "metadata": {
+            "summary": "Published when order progression is paused for a review or dependency check."
+          }
+        },
+        {
+          "id": "event:ordering-platform%2Fordering/order-status-changed@1.0.0",
+          "type": "event",
+          "label": "Order Status Changed",
+          "metadata": {
+            "summary": "Published for every accepted transition in the order lifecycle state machine."
+          }
+        },
+        {
+          "id": "event:payments-platform%2Fpayments/fraud-check-failed@1.0.0",
+          "type": "event",
+          "label": "Fraud Check Failed",
+          "metadata": { "summary": "Published when a payment fails fraud screening." }
+        },
+        {
+          "id": "event:payments-platform%2Fpayments/fraud-check-passed@1.0.0",
+          "type": "event",
+          "label": "Fraud Check Passed",
+          "metadata": { "summary": "Published when a payment passes fraud screening." }
+        },
+        {
+          "id": "event:payments-platform%2Fpayments/payment-failed@1.0.0",
+          "type": "event",
+          "label": "Payment Failed",
+          "metadata": { "summary": "Published by Stripe when a charge fails." }
+        },
+        {
+          "id": "event:payments-platform%2Fpayments/payment-requested@1.0.0",
+          "type": "event",
+          "label": "Payment Requested",
+          "metadata": {
+            "summary": "Published when the Payment Processing System requests a charge from the payment processor."
+          }
+        },
+        {
+          "id": "event:payments-platform%2Fpayments/payment-succeeded@1.0.0",
+          "type": "event",
+          "label": "Payment Succeeded",
+          "metadata": { "summary": "Published by Stripe when a charge succeeds." }
+        },
+        {
+          "id": "event:payments-platform%2Fpayments/refund-processed@1.0.0",
+          "type": "event",
+          "label": "Refund Processed",
+          "metadata": { "summary": "Published by Stripe when a refund has been processed." }
+        },
+        {
+          "id": "event:payments-platform%2Fpayments/refund-requested@1.0.0",
+          "type": "event",
+          "label": "Refund Requested",
+          "metadata": {
+            "summary": "Published when the Payment Processing System requests a refund from the payment processor."
+          }
+        },
+        {
+          "id": "event:product-platform%2Fcatalog/product-created@1.0.0",
+          "type": "event",
+          "label": "Product Created",
+          "metadata": { "summary": "Published when a new product has been added to the catalog." }
+        },
+        {
+          "id": "event:product-platform%2Fcatalog/product-deleted@1.0.0",
+          "type": "event",
+          "label": "Product Deleted",
+          "metadata": { "summary": "Published when a product has been removed from the catalog." }
+        },
+        {
+          "id": "event:product-platform%2Fcatalog/product-updated@1.0.0",
+          "type": "event",
+          "label": "Product Updated",
+          "metadata": { "summary": "Published when an existing product's data has changed." }
+        },
+        {
+          "id": "event:reviews-platform%2Freviews/rating-updated@1.0.0",
+          "type": "event",
+          "label": "Rating Updated",
+          "metadata": {
+            "summary": "Published when a product's aggregate rating changes as a result of a newly published review."
+          }
+        },
+        {
+          "id": "event:reviews-platform%2Freviews/review-flagged@1.0.0",
+          "type": "event",
+          "label": "Review Flagged",
+          "metadata": {
+            "summary": "Published when a published review is flagged and needs to be screened again."
+          }
+        },
+        {
+          "id": "event:reviews-platform%2Freviews/review-helpful-voted@1.0.0",
+          "type": "event",
+          "label": "Review Helpful Voted",
+          "metadata": {
+            "summary": "Published when a review's helpful count changes as a result of a customer vote."
+          }
+        },
+        {
+          "id": "event:reviews-platform%2Freviews/review-published@1.0.0",
+          "type": "event",
+          "label": "Review Published",
+          "metadata": {
+            "summary": "Published when a submitted review passes moderation and becomes visible on the storefront."
+          }
+        },
+        {
+          "id": "event:reviews-platform%2Freviews/review-rejected@1.0.0",
+          "type": "event",
+          "label": "Review Rejected",
+          "metadata": {
+            "summary": "Published when a submitted review fails moderation (spam, abuse or policy violation) and will not be shown."
+          }
+        },
+        {
+          "id": "event:reviews-platform%2Freviews/review-submitted@1.0.0",
+          "type": "event",
+          "label": "Review Submitted",
+          "metadata": {
+            "summary": "Published when a customer submits a review. The review is stored but not yet visible — it awaits moderation."
+          }
+        },
+        {
+          "id": "event:shopping-platform%2Fmarketing/campaign-offer-sent@1.0.0",
+          "type": "event",
+          "label": "Campaign Offer Sent",
+          "metadata": { "summary": "Published when a campaign offer has been sent to a customer." }
+        },
+        {
+          "id": "event:shopping-platform%2Fshopping/cart-checked-out@1.0.0",
+          "type": "event",
+          "label": "Cart Checked Out",
+          "metadata": { "summary": "Published when a customer has checked out their cart." }
+        },
+        {
+          "id": "event:shopping-platform%2Fshopping/discount-calculated@1.0.0",
+          "type": "event",
+          "label": "Discount Calculated",
+          "metadata": { "summary": "Published when a discount has been calculated for a cart." }
+        },
+        {
+          "id": "service:Campaign%20Service",
+          "type": "service",
+          "label": "Campaign Service",
+          "metadata": {
+            "summary": "Runs the welcome campaign and sends customers campaign offers."
+          }
+        },
+        {
+          "id": "service:Carrier%20Adapter",
+          "type": "service",
+          "label": "Carrier Adapter",
+          "metadata": {
+            "summary": "Translates Acme Inc shipment requests into the external carrier's format and sends them to create a shipment."
+          }
+        },
+        {
+          "id": "service:Cart%20API",
+          "type": "service",
+          "label": "Cart API",
+          "metadata": {
+            "summary": "The public-facing API for shopping carts. Handles commands to add and remove items and to check out, and publishes an event when a cart is checked out."
+          }
+        },
+        {
+          "id": "service:Checkout%20API",
+          "type": "service",
+          "label": "Checkout API",
+          "metadata": {
+            "summary": "The entry point to the Checkout System. Receives the checkout command from the Shopping domain and starts the checkout flow."
+          }
+        },
+        {
+          "id": "service:Checkout%20Orchestrator",
+          "type": "service",
+          "label": "Checkout Orchestrator",
+          "metadata": {
+            "summary": "Runs the checkout saga. Reserves inventory, authorizes payment and creates the order, coordinating the steps that turn a checked-out cart into a confirmed order."
+          }
+        },
+        {
+          "id": "service:Customer%20API",
+          "type": "service",
+          "label": "Customer API",
+          "metadata": {
+            "summary": "The public-facing API for customer profiles. Handles commands to register and update customers, serves customer reads, and publishes customer change events."
+          }
+        },
+        {
+          "id": "service:Fraud%20API",
+          "type": "service",
+          "label": "Fraud API",
+          "metadata": {
+            "summary": "External fraud screening API. It consumes payment requests and returns a pass or fail verdict for each."
+          }
+        },
+        {
+          "id": "service:Inventory%20Service",
+          "type": "service",
+          "label": "Inventory Service",
+          "metadata": {
+            "summary": "The system of record for stock. Reserves and releases inventory, serves stock-level queries, and publishes events when stock is reserved or unavailable."
+          }
+        },
+        {
+          "id": "service:Ledger%20Exporter",
+          "type": "service",
+          "label": "Ledger Exporter",
+          "metadata": {
+            "summary": "Builds the month-end ledger export used for finance reporting. It runs on a schedule and doesn't send or receive any messages."
+          }
+        },
+        {
+          "id": "service:Loyalty%20Service",
+          "type": "service",
+          "label": "Loyalty Service",
+          "metadata": {
+            "summary": "Awards loyalty points when orders complete and reverses them when orders are cancelled. Owns the points ledger and customer balances."
+          }
+        },
+        {
+          "id": "service:Notification%20Service",
+          "type": "service",
+          "label": "Notification Service",
+          "metadata": {
+            "summary": "Sends customers email, SMS and push notifications in response to events from across Acme Inc, honouring each customer's channel preferences."
+          }
+        },
+        {
+          "id": "service:OAuth%20API",
+          "type": "service",
+          "label": "OAuth API",
+          "metadata": {
+            "summary": "OAuth-style authentication API for the Identity Provider. Verifies customer credentials and publishes an event when a customer successfully authenticates."
+          }
+        },
+        {
+          "id": "service:Offer%20Service",
+          "type": "service",
+          "label": "Offer Service",
+          "metadata": {
+            "summary": "Builds follow-up offers for customers after they order, priced with the Shopping domain's promotions."
+          }
+        },
+        {
+          "id": "service:Order%20Service",
+          "type": "service",
+          "label": "Order Service",
+          "metadata": {
+            "summary": "The system of record for orders. Creates and cancels orders, serves order lookups, and publishes events as orders move through their lifecycle."
+          }
+        },
+        {
+          "id": "service:Payment%20API",
+          "type": "service",
+          "label": "Payment API",
+          "metadata": {
+            "summary": "Receives payment authorization requests from the Ordering domain and records the payment intent, kicking off the charge against the payment processor."
+          }
+        },
+        {
+          "id": "service:Payment%20Worker",
+          "type": "service",
+          "label": "Payment Worker",
+          "metadata": {
+            "summary": "Drives charges and refunds against the external payment processor and records the outcomes. It requests payments and refunds, and consumes the success/failure events Stripe returns."
+          }
+        },
+        {
+          "id": "service:Payments%20API",
+          "type": "service",
+          "label": "Payments API",
+          "metadata": {
+            "summary": "Stripe's API for charging cards and issuing refunds. Acme Inc's Payment Processing System calls it to request payments and refunds."
+          }
+        },
+        {
+          "id": "service:Picking%20Worker",
+          "type": "service",
+          "label": "Picking Worker",
+          "metadata": {
+            "summary": "Works through picking jobs on the warehouse floor and signals when an order has been picked and packed."
+          }
+        },
+        {
+          "id": "service:Product%20API",
+          "type": "service",
+          "label": "Product API",
+          "metadata": {
+            "summary": "The public-facing API for the product catalog. Handles commands to create, update and delete products, serves product reads, and is the entry point into the Product Catalog System."
+          }
+        },
+        {
+          "id": "service:Product%20Search%20Publisher",
+          "type": "service",
+          "label": "Product Search Publisher",
+          "metadata": {
+            "summary": "Reads product changes from the product database (outbox) and reliably publishes product-created, product-updated and product-deleted events for the Search System to consume."
+          }
+        },
+        {
+          "id": "service:Product%20Worker",
+          "type": "service",
+          "label": "Product Worker",
+          "metadata": {
+            "summary": "Background worker that handles long-running and asynchronous catalog work off the request path, such as enrichment, image processing and bulk imports."
+          }
+        },
+        {
+          "id": "service:Promotion%20Service",
+          "type": "service",
+          "label": "Promotion Service",
+          "metadata": {
+            "summary": "Evaluates promotion rules and calculates the discount that applies to a cart. Receives discount requests and publishes the calculated result."
+          }
+        },
+        {
+          "id": "service:Rating%20Aggregator",
+          "type": "service",
+          "label": "Rating Aggregator",
+          "metadata": {
+            "summary": "Keeps each product's aggregate star rating up to date as reviews are published, and serves it fast from a cache."
+          }
+        },
+        {
+          "id": "service:Returns%20API",
+          "type": "service",
+          "label": "Returns API",
+          "metadata": {
+            "summary": "Public API customers use to start a return. Validates the request against the original order and records it."
+          }
+        },
+        {
+          "id": "service:Returns%20Processor",
+          "type": "service",
+          "label": "Returns Processor",
+          "metadata": {
+            "summary": "Applies the returns policy to new requests and tracks returned parcels until they arrive back at the warehouse."
+          }
+        },
+        {
+          "id": "service:Review%20API",
+          "type": "service",
+          "label": "Review API",
+          "metadata": {
+            "summary": "The public-facing API for product reviews. Accepts review submissions, serves published reviews, and is the entry point into the Reviews & Ratings domain."
+          }
+        },
+        {
+          "id": "service:Review%20Moderation%20Worker",
+          "type": "service",
+          "label": "Review Moderation Worker",
+          "metadata": {
+            "summary": "Asynchronous worker that screens submitted reviews for spam, abuse and policy violations, then publishes or rejects them."
+          }
+        },
+        {
+          "id": "service:Search%20API",
+          "type": "service",
+          "label": "Search API",
+          "metadata": {
+            "summary": "Public-facing API that serves fast, relevant product search to the rest of the business, reading from the search index."
+          }
+        },
+        {
+          "id": "service:Search%20Indexer",
+          "type": "service",
+          "label": "Search Indexer",
+          "metadata": {
+            "summary": "Consumes product change events from the Product Catalog System and keeps the search index up to date so products are discoverable."
+          }
+        },
+        {
+          "id": "service:Shipping%20API",
+          "type": "service",
+          "label": "Shipping API",
+          "metadata": {
+            "summary": "The carrier's API for creating shipments. Acme Inc's Shipping System calls it to dispatch packed orders."
+          }
+        },
+        {
+          "id": "service:Tracking%20API",
+          "type": "service",
+          "label": "Tracking API",
+          "metadata": {
+            "summary": "The carrier's API for reporting delivery progress. It notifies Acme Inc when a shipment is created, delivered, or fails."
+          }
+        },
+        {
+          "id": "service:Warehouse%20Service",
+          "type": "service",
+          "label": "Warehouse Service",
+          "metadata": {
+            "summary": "Orchestrates picking and packing in the warehouse. It reacts to completed orders, creates picking jobs, and signals when an order is ready to ship."
+          }
+        },
+        {
+          "id": "service:Webhook%20Endpoint",
+          "type": "service",
+          "label": "Webhook Endpoint",
+          "metadata": {
+            "summary": "Stripe's webhook delivery for payment and refund outcomes. It notifies Acme Inc whether a charge succeeded or failed, and when a refund is processed."
+          }
+        },
+        {
+          "id": "table:customer-platform/customer-database",
+          "type": "data",
+          "label": "Customer Database",
+          "metadata": {
+            "summary": "PostgreSQL database that is the system of record for all customer profile data."
+          }
+        },
+        {
+          "id": "table:customer-platform/loyalty-database",
+          "type": "data",
+          "label": "Loyalty Database",
+          "metadata": {
+            "summary": "PostgreSQL database that holds the loyalty points ledger and each customer's points balance."
+          }
+        },
+        {
+          "id": "table:customer-platform/notification-preferences",
+          "type": "data",
+          "label": "Notification Preferences",
+          "metadata": {
+            "summary": "PostgreSQL database holding each customer's notification channels, opt-ins and quiet hours."
+          }
+        },
+        {
+          "id": "table:customer-platform/user-directory",
+          "type": "data",
+          "label": "User Directory",
+          "metadata": {
+            "summary": "The directory of customer credentials and identities — the source of truth for authentication."
+          }
+        },
+        {
+          "id": "table:fulfilment-platform/inventory-database",
+          "type": "data",
+          "label": "Inventory Database",
+          "metadata": {
+            "summary": "PostgreSQL database that is the system of record for stock levels and reservations."
+          }
+        },
+        {
+          "id": "table:fulfilment-platform/returns-database",
+          "type": "data",
+          "label": "Returns Database",
+          "metadata": {
+            "summary": "PostgreSQL database that is the system of record for return requests and their status."
+          }
+        },
+        {
+          "id": "table:fulfilment-platform/warehouse-database",
+          "type": "data",
+          "label": "Warehouse Database",
+          "metadata": {
+            "summary": "PostgreSQL database that stores picking jobs and their status."
+          }
+        },
+        {
+          "id": "table:ordering-platform/order-database",
+          "type": "data",
+          "label": "Order Database",
+          "metadata": {
+            "summary": "PostgreSQL database that is the system of record for orders and their items."
+          }
+        },
+        {
+          "id": "table:payments-platform/payment-database",
+          "type": "data",
+          "label": "Payment Database",
+          "metadata": {
+            "summary": "PostgreSQL database that is the system of record for payments and refunds."
+          }
+        },
+        {
+          "id": "table:product-platform/product-database",
+          "type": "data",
+          "label": "Product Database",
+          "metadata": {
+            "summary": "PostgreSQL database that is the system of record for all product data."
+          }
+        },
+        {
+          "id": "table:reviews-platform/rating-cache",
+          "type": "data",
+          "label": "Rating Cache",
+          "metadata": {
+            "summary": "Redis cache that serves each product's aggregate star rating with low latency."
+          }
+        },
+        {
+          "id": "table:reviews-platform/review-database",
+          "type": "data",
+          "label": "Review Database",
+          "metadata": {
+            "summary": "PostgreSQL database that is the system of record for reviews and their moderation state."
+          }
+        },
+        {
+          "id": "table:search-platform/search-index",
+          "type": "data",
+          "label": "Search Index",
+          "metadata": {
+            "summary": "The denormalised, search-optimised index of products that powers product search."
+          }
+        },
+        {
+          "id": "table:shopping-platform/cart-database",
+          "type": "data",
+          "label": "Cart Database",
+          "metadata": {
+            "summary": "PostgreSQL database that is the system of record for shopping carts and their items."
+          }
+        },
+        {
+          "id": "table:shopping-platform/promotion-database",
+          "type": "data",
+          "label": "Promotion Database",
+          "metadata": { "summary": "PostgreSQL store of promotion and discount rules." }
+        }
+      ],
+      "edges": [
+        {
+          "id": "event:customer-platform%2Floyalty/loyalty-points-earned@1.0.0->service:Notification%20Service:consumes",
+          "source": "event:customer-platform%2Floyalty/loyalty-points-earned@1.0.0",
+          "target": "service:Notification%20Service",
+          "type": "subscribes",
+          "label": "subscribed by"
+        },
+        {
+          "id": "event:customer-platform%2Floyalty/loyalty-points-earned@1.0.0->service:Promotion%20Service:consumes",
+          "source": "event:customer-platform%2Floyalty/loyalty-points-earned@1.0.0",
+          "target": "service:Promotion%20Service",
+          "type": "subscribes",
+          "label": "subscribed by"
+        },
+        {
+          "id": "event:fulfilment-platform%2Ffulfilment/order-packed@1.0.0->service:Order%20Service:consumes",
+          "source": "event:fulfilment-platform%2Ffulfilment/order-packed@1.0.0",
+          "target": "service:Order%20Service",
+          "type": "subscribes",
+          "label": "subscribed by"
+        },
+        {
+          "id": "event:fulfilment-platform%2Ffulfilment/order-ready-for-shipping@1.0.0->service:Shipping%20API:consumes",
+          "source": "event:fulfilment-platform%2Ffulfilment/order-ready-for-shipping@1.0.0",
+          "target": "service:Shipping%20API",
+          "type": "subscribes",
+          "label": "subscribed by"
+        },
+        {
+          "id": "event:fulfilment-platform%2Ffulfilment/shipment-delivered@1.0.0->service:Notification%20Service:consumes",
+          "source": "event:fulfilment-platform%2Ffulfilment/shipment-delivered@1.0.0",
+          "target": "service:Notification%20Service",
+          "type": "subscribes",
+          "label": "subscribed by"
+        },
+        {
+          "id": "event:fulfilment-platform%2Freturns/return-approved@1.0.0->service:Notification%20Service:consumes",
+          "source": "event:fulfilment-platform%2Freturns/return-approved@1.0.0",
+          "target": "service:Notification%20Service",
+          "type": "subscribes",
+          "label": "subscribed by"
+        },
+        {
+          "id": "event:fulfilment-platform%2Freturns/return-received@1.0.0->service:Inventory%20Service:consumes",
+          "source": "event:fulfilment-platform%2Freturns/return-received@1.0.0",
+          "target": "service:Inventory%20Service",
+          "type": "subscribes",
+          "label": "subscribed by"
+        },
+        {
+          "id": "event:fulfilment-platform%2Freturns/return-received@1.0.0->service:Payment%20Worker:consumes",
+          "source": "event:fulfilment-platform%2Freturns/return-received@1.0.0",
+          "target": "service:Payment%20Worker",
+          "type": "subscribes",
+          "label": "subscribed by"
+        },
+        {
+          "id": "event:fulfilment-platform%2Freturns/return-requested@1.0.0->service:Returns%20Processor:consumes",
+          "source": "event:fulfilment-platform%2Freturns/return-requested@1.0.0",
+          "target": "service:Returns%20Processor",
+          "type": "subscribes",
+          "label": "subscribed by"
+        },
+        {
+          "id": "event:ordering-platform%2Fordering/order-cancelled@1.0.0->service:Loyalty%20Service:consumes",
+          "source": "event:ordering-platform%2Fordering/order-cancelled@1.0.0",
+          "target": "service:Loyalty%20Service",
+          "type": "subscribes",
+          "label": "subscribed by"
+        },
+        {
+          "id": "event:ordering-platform%2Fordering/order-completed@1.0.0->service:Loyalty%20Service:consumes",
+          "source": "event:ordering-platform%2Fordering/order-completed@1.0.0",
+          "target": "service:Loyalty%20Service",
+          "type": "subscribes",
+          "label": "subscribed by"
+        },
+        {
+          "id": "event:ordering-platform%2Fordering/order-completed@1.0.0->service:Warehouse%20Service:consumes",
+          "source": "event:ordering-platform%2Fordering/order-completed@1.0.0",
+          "target": "service:Warehouse%20Service",
+          "type": "subscribes",
+          "label": "subscribed by"
+        },
+        {
+          "id": "event:ordering-platform%2Fordering/order-confirmed@1.0.0->service:Notification%20Service:consumes",
+          "source": "event:ordering-platform%2Fordering/order-confirmed@1.0.0",
+          "target": "service:Notification%20Service",
+          "type": "subscribes",
+          "label": "subscribed by"
+        },
+        {
+          "id": "event:ordering-platform%2Fordering/order-confirmed@1.0.0->service:Offer%20Service:consumes",
+          "source": "event:ordering-platform%2Fordering/order-confirmed@1.0.0",
+          "target": "service:Offer%20Service",
+          "type": "subscribes",
+          "label": "subscribed by"
+        },
+        {
+          "id": "event:payments-platform%2Fpayments/payment-failed@1.0.0->service:Notification%20Service:consumes",
+          "source": "event:payments-platform%2Fpayments/payment-failed@1.0.0",
+          "target": "service:Notification%20Service",
+          "type": "subscribes",
+          "label": "subscribed by"
+        },
+        {
+          "id": "event:payments-platform%2Fpayments/payment-failed@1.0.0->service:Payment%20Worker:consumes",
+          "source": "event:payments-platform%2Fpayments/payment-failed@1.0.0",
+          "target": "service:Payment%20Worker",
+          "type": "subscribes",
+          "label": "subscribed by"
+        },
+        {
+          "id": "event:payments-platform%2Fpayments/payment-requested@1.0.0->service:Fraud%20API:consumes",
+          "source": "event:payments-platform%2Fpayments/payment-requested@1.0.0",
+          "target": "service:Fraud%20API",
+          "type": "subscribes",
+          "label": "subscribed by"
+        },
+        {
+          "id": "event:payments-platform%2Fpayments/payment-requested@1.0.0->service:Payments%20API:consumes",
+          "source": "event:payments-platform%2Fpayments/payment-requested@1.0.0",
+          "target": "service:Payments%20API",
+          "type": "subscribes",
+          "label": "subscribed by"
+        },
+        {
+          "id": "event:payments-platform%2Fpayments/payment-succeeded@1.0.0->service:Payment%20Worker:consumes",
+          "source": "event:payments-platform%2Fpayments/payment-succeeded@1.0.0",
+          "target": "service:Payment%20Worker",
+          "type": "subscribes",
+          "label": "subscribed by"
+        },
+        {
+          "id": "event:payments-platform%2Fpayments/refund-processed@1.0.0->service:Notification%20Service:consumes",
+          "source": "event:payments-platform%2Fpayments/refund-processed@1.0.0",
+          "target": "service:Notification%20Service",
+          "type": "subscribes",
+          "label": "subscribed by"
+        },
+        {
+          "id": "event:payments-platform%2Fpayments/refund-requested@1.0.0->service:Payments%20API:consumes",
+          "source": "event:payments-platform%2Fpayments/refund-requested@1.0.0",
+          "target": "service:Payments%20API",
+          "type": "subscribes",
+          "label": "subscribed by"
+        },
+        {
+          "id": "event:product-platform%2Fcatalog/product-created@1.0.0->service:Search%20Indexer:consumes",
+          "source": "event:product-platform%2Fcatalog/product-created@1.0.0",
+          "target": "service:Search%20Indexer",
+          "type": "subscribes",
+          "label": "subscribed by"
+        },
+        {
+          "id": "event:product-platform%2Fcatalog/product-deleted@1.0.0->service:Search%20Indexer:consumes",
+          "source": "event:product-platform%2Fcatalog/product-deleted@1.0.0",
+          "target": "service:Search%20Indexer",
+          "type": "subscribes",
+          "label": "subscribed by"
+        },
+        {
+          "id": "event:product-platform%2Fcatalog/product-updated@1.0.0->service:Search%20Indexer:consumes",
+          "source": "event:product-platform%2Fcatalog/product-updated@1.0.0",
+          "target": "service:Search%20Indexer",
+          "type": "subscribes",
+          "label": "subscribed by"
+        },
+        {
+          "id": "event:reviews-platform%2Freviews/review-flagged@1.0.0->service:Review%20Moderation%20Worker:consumes",
+          "source": "event:reviews-platform%2Freviews/review-flagged@1.0.0",
+          "target": "service:Review%20Moderation%20Worker",
+          "type": "subscribes",
+          "label": "subscribed by"
+        },
+        {
+          "id": "event:reviews-platform%2Freviews/review-published@1.0.0->service:Notification%20Service:consumes",
+          "source": "event:reviews-platform%2Freviews/review-published@1.0.0",
+          "target": "service:Notification%20Service",
+          "type": "subscribes",
+          "label": "subscribed by"
+        },
+        {
+          "id": "event:reviews-platform%2Freviews/review-published@1.0.0->service:Rating%20Aggregator:consumes",
+          "source": "event:reviews-platform%2Freviews/review-published@1.0.0",
+          "target": "service:Rating%20Aggregator",
+          "type": "subscribes",
+          "label": "subscribed by"
+        },
+        {
+          "id": "event:reviews-platform%2Freviews/review-submitted@1.0.0->service:Review%20Moderation%20Worker:consumes",
+          "source": "event:reviews-platform%2Freviews/review-submitted@1.0.0",
+          "target": "service:Review%20Moderation%20Worker",
+          "type": "subscribes",
+          "label": "subscribed by"
+        },
+        {
+          "id": "service:Campaign%20Service->event:shopping-platform%2Fmarketing/campaign-offer-sent@1.0.0:produces",
+          "source": "service:Campaign%20Service",
+          "target": "event:shopping-platform%2Fmarketing/campaign-offer-sent@1.0.0",
+          "type": "publishes",
+          "label": "publishes"
+        },
+        {
+          "id": "service:Carrier%20Adapter->command:fulfilment/create-shipment@1.0.0:sends",
+          "source": "service:Carrier%20Adapter",
+          "target": "command:fulfilment/create-shipment@1.0.0",
+          "type": "sends",
+          "label": "sends"
+        },
+        {
+          "id": "service:Cart%20API->command:shopping/add-item-to-cart@1.0.0:handles",
+          "source": "command:shopping/add-item-to-cart@1.0.0",
+          "target": "service:Cart%20API",
+          "type": "receives",
+          "label": "handled by"
+        },
+        {
+          "id": "service:Cart%20API->command:shopping/remove-item-from-cart@1.0.0:handles",
+          "source": "command:shopping/remove-item-from-cart@1.0.0",
+          "target": "service:Cart%20API",
+          "type": "receives",
+          "label": "handled by"
+        },
+        {
+          "id": "service:Cart%20API->event:shopping-platform%2Fshopping/cart-checked-out@1.0.0:produces",
+          "source": "service:Cart%20API",
+          "target": "event:shopping-platform%2Fshopping/cart-checked-out@1.0.0",
+          "type": "publishes",
+          "label": "publishes"
+        },
+        {
+          "id": "service:Cart%20API->table:shopping-platform/cart-database:reads",
+          "source": "service:Cart%20API",
+          "target": "table:shopping-platform/cart-database",
+          "type": "reads-from",
+          "label": "reads from"
+        },
+        {
+          "id": "service:Cart%20API->command:shopping/calculate-discount@1.0.0:sends",
+          "source": "service:Cart%20API",
+          "target": "command:shopping/calculate-discount@1.0.0",
+          "type": "sends",
+          "label": "sends"
+        },
+        {
+          "id": "service:Cart%20API->table:shopping-platform/cart-database:writes",
+          "source": "service:Cart%20API",
+          "target": "table:shopping-platform/cart-database",
+          "type": "writes-to",
+          "label": "writes to"
+        },
+        {
+          "id": "service:Checkout%20Orchestrator->command:ordering/authorize-payment@1.0.0:sends",
+          "source": "service:Checkout%20Orchestrator",
+          "target": "command:ordering/authorize-payment@1.0.0",
+          "type": "sends",
+          "label": "sends"
+        },
+        {
+          "id": "service:Checkout%20Orchestrator->command:ordering/create-order@1.0.0:sends",
+          "source": "service:Checkout%20Orchestrator",
+          "target": "command:ordering/create-order@1.0.0",
+          "type": "sends",
+          "label": "sends"
+        },
+        {
+          "id": "service:Checkout%20Orchestrator->command:ordering/reserve-inventory@1.0.0:sends",
+          "source": "service:Checkout%20Orchestrator",
+          "target": "command:ordering/reserve-inventory@1.0.0",
+          "type": "sends",
+          "label": "sends"
+        },
+        {
+          "id": "service:Customer%20API->command:customer/get-customer@1.0.0:handles",
+          "source": "command:customer/get-customer@1.0.0",
+          "target": "service:Customer%20API",
+          "type": "receives",
+          "label": "handled by"
+        },
+        {
+          "id": "service:Customer%20API->command:customer/register-customer@1.0.0:handles",
+          "source": "command:customer/register-customer@1.0.0",
+          "target": "service:Customer%20API",
+          "type": "receives",
+          "label": "handled by"
+        },
+        {
+          "id": "service:Customer%20API->command:customer/update-customer@1.0.0:handles",
+          "source": "command:customer/update-customer@1.0.0",
+          "target": "service:Customer%20API",
+          "type": "receives",
+          "label": "handled by"
+        },
+        {
+          "id": "service:Customer%20API->event:customer-platform%2Fcustomer/customer-registered@1.0.0:produces",
+          "source": "service:Customer%20API",
+          "target": "event:customer-platform%2Fcustomer/customer-registered@1.0.0",
+          "type": "publishes",
+          "label": "publishes"
+        },
+        {
+          "id": "service:Customer%20API->event:customer-platform%2Fcustomer/customer-updated@1.0.0:produces",
+          "source": "service:Customer%20API",
+          "target": "event:customer-platform%2Fcustomer/customer-updated@1.0.0",
+          "type": "publishes",
+          "label": "publishes"
+        },
+        {
+          "id": "service:Customer%20API->table:customer-platform/customer-database:reads",
+          "source": "service:Customer%20API",
+          "target": "table:customer-platform/customer-database",
+          "type": "reads-from",
+          "label": "reads from"
+        },
+        {
+          "id": "service:Customer%20API->table:customer-platform/customer-database:writes",
+          "source": "service:Customer%20API",
+          "target": "table:customer-platform/customer-database",
+          "type": "writes-to",
+          "label": "writes to"
+        },
+        {
+          "id": "service:Fraud%20API->event:payments-platform%2Fpayments/fraud-check-failed@1.0.0:produces",
+          "source": "service:Fraud%20API",
+          "target": "event:payments-platform%2Fpayments/fraud-check-failed@1.0.0",
+          "type": "publishes",
+          "label": "publishes"
+        },
+        {
+          "id": "service:Fraud%20API->event:payments-platform%2Fpayments/fraud-check-passed@1.0.0:produces",
+          "source": "service:Fraud%20API",
+          "target": "event:payments-platform%2Fpayments/fraud-check-passed@1.0.0",
+          "type": "publishes",
+          "label": "publishes"
+        },
+        {
+          "id": "service:Inventory%20Service->command:fulfilment/get-stock-level@1.0.0:handles",
+          "source": "command:fulfilment/get-stock-level@1.0.0",
+          "target": "service:Inventory%20Service",
+          "type": "receives",
+          "label": "handled by"
+        },
+        {
+          "id": "service:Inventory%20Service->command:fulfilment/release-inventory@1.0.0:handles",
+          "source": "command:fulfilment/release-inventory@1.0.0",
+          "target": "service:Inventory%20Service",
+          "type": "receives",
+          "label": "handled by"
+        },
+        {
+          "id": "service:Inventory%20Service->command:ordering/reserve-inventory@1.0.0:handles",
+          "source": "command:ordering/reserve-inventory@1.0.0",
+          "target": "service:Inventory%20Service",
+          "type": "receives",
+          "label": "handled by"
+        },
+        {
+          "id": "service:Inventory%20Service->event:fulfilment-platform%2Ffulfilment/inventory-reserved@1.0.0:produces",
+          "source": "service:Inventory%20Service",
+          "target": "event:fulfilment-platform%2Ffulfilment/inventory-reserved@1.0.0",
+          "type": "publishes",
+          "label": "publishes"
+        },
+        {
+          "id": "service:Inventory%20Service->event:fulfilment-platform%2Ffulfilment/inventory-unavailable@1.0.0:produces",
+          "source": "service:Inventory%20Service",
+          "target": "event:fulfilment-platform%2Ffulfilment/inventory-unavailable@1.0.0",
+          "type": "publishes",
+          "label": "publishes"
+        },
+        {
+          "id": "service:Inventory%20Service->table:fulfilment-platform/inventory-database:reads",
+          "source": "service:Inventory%20Service",
+          "target": "table:fulfilment-platform/inventory-database",
+          "type": "reads-from",
+          "label": "reads from"
+        },
+        {
+          "id": "service:Inventory%20Service->table:fulfilment-platform/inventory-database:writes",
+          "source": "service:Inventory%20Service",
+          "target": "table:fulfilment-platform/inventory-database",
+          "type": "writes-to",
+          "label": "writes to"
+        },
+        {
+          "id": "service:Loyalty%20Service->event:customer-platform%2Floyalty/loyalty-points-earned@1.0.0:produces",
+          "source": "service:Loyalty%20Service",
+          "target": "event:customer-platform%2Floyalty/loyalty-points-earned@1.0.0",
+          "type": "publishes",
+          "label": "publishes"
+        },
+        {
+          "id": "service:Loyalty%20Service->event:customer-platform%2Floyalty/loyalty-points-reversed@1.0.0:produces",
+          "source": "service:Loyalty%20Service",
+          "target": "event:customer-platform%2Floyalty/loyalty-points-reversed@1.0.0",
+          "type": "publishes",
+          "label": "publishes"
+        },
+        {
+          "id": "service:Loyalty%20Service->table:customer-platform/loyalty-database:reads",
+          "source": "service:Loyalty%20Service",
+          "target": "table:customer-platform/loyalty-database",
+          "type": "reads-from",
+          "label": "reads from"
+        },
+        {
+          "id": "service:Loyalty%20Service->table:customer-platform/loyalty-database:writes",
+          "source": "service:Loyalty%20Service",
+          "target": "table:customer-platform/loyalty-database",
+          "type": "writes-to",
+          "label": "writes to"
+        },
+        {
+          "id": "service:Notification%20Service->event:customer-platform%2Fnotifications/customer-notified@1.0.0:produces",
+          "source": "service:Notification%20Service",
+          "target": "event:customer-platform%2Fnotifications/customer-notified@1.0.0",
+          "type": "publishes",
+          "label": "publishes"
+        },
+        {
+          "id": "service:Notification%20Service->table:customer-platform/notification-preferences:reads",
+          "source": "service:Notification%20Service",
+          "target": "table:customer-platform/notification-preferences",
+          "type": "reads-from",
+          "label": "reads from"
+        },
+        {
+          "id": "service:OAuth%20API->command:customer/authenticate-customer@1.0.0:handles",
+          "source": "command:customer/authenticate-customer@1.0.0",
+          "target": "service:OAuth%20API",
+          "type": "receives",
+          "label": "handled by"
+        },
+        {
+          "id": "service:OAuth%20API->event:customer-platform%2Fcustomer/customer-authenticated@1.0.0:produces",
+          "source": "service:OAuth%20API",
+          "target": "event:customer-platform%2Fcustomer/customer-authenticated@1.0.0",
+          "type": "publishes",
+          "label": "publishes"
+        },
+        {
+          "id": "service:OAuth%20API->table:customer-platform/user-directory:reads",
+          "source": "service:OAuth%20API",
+          "target": "table:customer-platform/user-directory",
+          "type": "reads-from",
+          "label": "reads from"
+        },
+        {
+          "id": "service:Offer%20Service->command:shopping/calculate-discount@1.0.0:sends",
+          "source": "service:Offer%20Service",
+          "target": "command:shopping/calculate-discount@1.0.0",
+          "type": "sends",
+          "label": "sends"
+        },
+        {
+          "id": "service:Order%20Service->command:ordering/cancel-order@1.0.0:handles",
+          "source": "command:ordering/cancel-order@1.0.0",
+          "target": "service:Order%20Service",
+          "type": "receives",
+          "label": "handled by"
+        },
+        {
+          "id": "service:Order%20Service->command:ordering/create-order@1.0.0:handles",
+          "source": "command:ordering/create-order@1.0.0",
+          "target": "service:Order%20Service",
+          "type": "receives",
+          "label": "handled by"
+        },
+        {
+          "id": "service:Order%20Service->command:ordering/get-order@1.0.0:handles",
+          "source": "command:ordering/get-order@1.0.0",
+          "target": "service:Order%20Service",
+          "type": "receives",
+          "label": "handled by"
+        },
+        {
+          "id": "service:Order%20Service->event:ordering-platform%2Fordering/order-amended@1.0.0:produces",
+          "source": "service:Order%20Service",
+          "target": "event:ordering-platform%2Fordering/order-amended@1.0.0",
+          "type": "publishes",
+          "label": "publishes"
+        },
+        {
+          "id": "service:Order%20Service->event:ordering-platform%2Fordering/order-archived@1.0.0:produces",
+          "source": "service:Order%20Service",
+          "target": "event:ordering-platform%2Fordering/order-archived@1.0.0",
+          "type": "publishes",
+          "label": "publishes"
+        },
+        {
+          "id": "service:Order%20Service->event:ordering-platform%2Fordering/order-cancelled@1.0.0:produces",
+          "source": "service:Order%20Service",
+          "target": "event:ordering-platform%2Fordering/order-cancelled@1.0.0",
+          "type": "publishes",
+          "label": "publishes"
+        },
+        {
+          "id": "service:Order%20Service->event:ordering-platform%2Fordering/order-completed@1.0.0:produces",
+          "source": "service:Order%20Service",
+          "target": "event:ordering-platform%2Fordering/order-completed@1.0.0",
+          "type": "publishes",
+          "label": "publishes"
+        },
+        {
+          "id": "service:Order%20Service->event:ordering-platform%2Fordering/order-confirmed@1.0.0:produces",
+          "source": "service:Order%20Service",
+          "target": "event:ordering-platform%2Fordering/order-confirmed@1.0.0",
+          "type": "publishes",
+          "label": "publishes"
+        },
+        {
+          "id": "service:Order%20Service->event:ordering-platform%2Fordering/order-created@1.0.0:produces",
+          "source": "service:Order%20Service",
+          "target": "event:ordering-platform%2Fordering/order-created@1.0.0",
+          "type": "publishes",
+          "label": "publishes"
+        },
+        {
+          "id": "service:Order%20Service->event:ordering-platform%2Fordering/order-delivery-address-changed@1.0.0:produces",
+          "source": "service:Order%20Service",
+          "target": "event:ordering-platform%2Fordering/order-delivery-address-changed@1.0.0",
+          "type": "publishes",
+          "label": "publishes"
+        },
+        {
+          "id": "service:Order%20Service->event:ordering-platform%2Fordering/order-fulfilment-started@1.0.0:produces",
+          "source": "service:Order%20Service",
+          "target": "event:ordering-platform%2Fordering/order-fulfilment-started@1.0.0",
+          "type": "publishes",
+          "label": "publishes"
+        },
+        {
+          "id": "service:Order%20Service->event:ordering-platform%2Fordering/order-hold-released@1.0.0:produces",
+          "source": "service:Order%20Service",
+          "target": "event:ordering-platform%2Fordering/order-hold-released@1.0.0",
+          "type": "publishes",
+          "label": "publishes"
+        },
+        {
+          "id": "service:Order%20Service->event:ordering-platform%2Fordering/order-placed-on-hold@1.0.0:produces",
+          "source": "service:Order%20Service",
+          "target": "event:ordering-platform%2Fordering/order-placed-on-hold@1.0.0",
+          "type": "publishes",
+          "label": "publishes"
+        },
+        {
+          "id": "service:Order%20Service->event:ordering-platform%2Fordering/order-status-changed@1.0.0:produces",
+          "source": "service:Order%20Service",
+          "target": "event:ordering-platform%2Fordering/order-status-changed@1.0.0",
+          "type": "publishes",
+          "label": "publishes"
+        },
+        {
+          "id": "service:Order%20Service->table:ordering-platform/order-database:reads",
+          "source": "service:Order%20Service",
+          "target": "table:ordering-platform/order-database",
+          "type": "reads-from",
+          "label": "reads from"
+        },
+        {
+          "id": "service:Order%20Service->table:ordering-platform/order-database:writes",
+          "source": "service:Order%20Service",
+          "target": "table:ordering-platform/order-database",
+          "type": "writes-to",
+          "label": "writes to"
+        },
+        {
+          "id": "service:Payment%20API->command:ordering/authorize-payment@1.0.0:handles",
+          "source": "command:ordering/authorize-payment@1.0.0",
+          "target": "service:Payment%20API",
+          "type": "receives",
+          "label": "handled by"
+        },
+        {
+          "id": "service:Payment%20API->table:payments-platform/payment-database:reads",
+          "source": "service:Payment%20API",
+          "target": "table:payments-platform/payment-database",
+          "type": "reads-from",
+          "label": "reads from"
+        },
+        {
+          "id": "service:Payment%20API->table:payments-platform/payment-database:writes",
+          "source": "service:Payment%20API",
+          "target": "table:payments-platform/payment-database",
+          "type": "writes-to",
+          "label": "writes to"
+        },
+        {
+          "id": "service:Payment%20Worker->event:payments-platform%2Fpayments/payment-requested@1.0.0:produces",
+          "source": "service:Payment%20Worker",
+          "target": "event:payments-platform%2Fpayments/payment-requested@1.0.0",
+          "type": "publishes",
+          "label": "publishes"
+        },
+        {
+          "id": "service:Payment%20Worker->event:payments-platform%2Fpayments/refund-requested@1.0.0:produces",
+          "source": "service:Payment%20Worker",
+          "target": "event:payments-platform%2Fpayments/refund-requested@1.0.0",
+          "type": "publishes",
+          "label": "publishes"
+        },
+        {
+          "id": "service:Payment%20Worker->table:payments-platform/payment-database:reads",
+          "source": "service:Payment%20Worker",
+          "target": "table:payments-platform/payment-database",
+          "type": "reads-from",
+          "label": "reads from"
+        },
+        {
+          "id": "service:Payment%20Worker->table:payments-platform/payment-database:writes",
+          "source": "service:Payment%20Worker",
+          "target": "table:payments-platform/payment-database",
+          "type": "writes-to",
+          "label": "writes to"
+        },
+        {
+          "id": "service:Picking%20Worker->event:fulfilment-platform%2Ffulfilment/order-packed@1.0.0:produces",
+          "source": "service:Picking%20Worker",
+          "target": "event:fulfilment-platform%2Ffulfilment/order-packed@1.0.0",
+          "type": "publishes",
+          "label": "publishes"
+        },
+        {
+          "id": "service:Picking%20Worker->table:fulfilment-platform/warehouse-database:reads",
+          "source": "service:Picking%20Worker",
+          "target": "table:fulfilment-platform/warehouse-database",
+          "type": "reads-from",
+          "label": "reads from"
+        },
+        {
+          "id": "service:Picking%20Worker->table:fulfilment-platform/warehouse-database:writes",
+          "source": "service:Picking%20Worker",
+          "target": "table:fulfilment-platform/warehouse-database",
+          "type": "writes-to",
+          "label": "writes to"
+        },
+        {
+          "id": "service:Product%20API->command:catalog/create-product@1.0.0:handles",
+          "source": "command:catalog/create-product@1.0.0",
+          "target": "service:Product%20API",
+          "type": "receives",
+          "label": "handled by"
+        },
+        {
+          "id": "service:Product%20API->command:catalog/delete-product@1.0.0:handles",
+          "source": "command:catalog/delete-product@1.0.0",
+          "target": "service:Product%20API",
+          "type": "receives",
+          "label": "handled by"
+        },
+        {
+          "id": "service:Product%20API->command:catalog/get-product@1.0.0:handles",
+          "source": "command:catalog/get-product@1.0.0",
+          "target": "service:Product%20API",
+          "type": "receives",
+          "label": "handled by"
+        },
+        {
+          "id": "service:Product%20API->command:catalog/update-product@1.0.0:handles",
+          "source": "command:catalog/update-product@1.0.0",
+          "target": "service:Product%20API",
+          "type": "receives",
+          "label": "handled by"
+        },
+        {
+          "id": "service:Product%20API->table:product-platform/product-database:reads",
+          "source": "service:Product%20API",
+          "target": "table:product-platform/product-database",
+          "type": "reads-from",
+          "label": "reads from"
+        },
+        {
+          "id": "service:Product%20API->table:product-platform/product-database:writes",
+          "source": "service:Product%20API",
+          "target": "table:product-platform/product-database",
+          "type": "writes-to",
+          "label": "writes to"
+        },
+        {
+          "id": "service:Product%20Search%20Publisher->event:product-platform%2Fcatalog/product-created@1.0.0:produces",
+          "source": "service:Product%20Search%20Publisher",
+          "target": "event:product-platform%2Fcatalog/product-created@1.0.0",
+          "type": "publishes",
+          "label": "publishes"
+        },
+        {
+          "id": "service:Product%20Search%20Publisher->event:product-platform%2Fcatalog/product-deleted@1.0.0:produces",
+          "source": "service:Product%20Search%20Publisher",
+          "target": "event:product-platform%2Fcatalog/product-deleted@1.0.0",
+          "type": "publishes",
+          "label": "publishes"
+        },
+        {
+          "id": "service:Product%20Search%20Publisher->event:product-platform%2Fcatalog/product-updated@1.0.0:produces",
+          "source": "service:Product%20Search%20Publisher",
+          "target": "event:product-platform%2Fcatalog/product-updated@1.0.0",
+          "type": "publishes",
+          "label": "publishes"
+        },
+        {
+          "id": "service:Product%20Search%20Publisher->table:product-platform/product-database:reads",
+          "source": "service:Product%20Search%20Publisher",
+          "target": "table:product-platform/product-database",
+          "type": "reads-from",
+          "label": "reads from"
+        },
+        {
+          "id": "service:Product%20Worker->table:product-platform/product-database:reads",
+          "source": "service:Product%20Worker",
+          "target": "table:product-platform/product-database",
+          "type": "reads-from",
+          "label": "reads from"
+        },
+        {
+          "id": "service:Product%20Worker->table:product-platform/product-database:writes",
+          "source": "service:Product%20Worker",
+          "target": "table:product-platform/product-database",
+          "type": "writes-to",
+          "label": "writes to"
+        },
+        {
+          "id": "service:Promotion%20Service->command:shopping/calculate-discount@1.0.0:handles",
+          "source": "command:shopping/calculate-discount@1.0.0",
+          "target": "service:Promotion%20Service",
+          "type": "receives",
+          "label": "handled by"
+        },
+        {
+          "id": "service:Promotion%20Service->event:shopping-platform%2Fshopping/discount-calculated@1.0.0:produces",
+          "source": "service:Promotion%20Service",
+          "target": "event:shopping-platform%2Fshopping/discount-calculated@1.0.0",
+          "type": "publishes",
+          "label": "publishes"
+        },
+        {
+          "id": "service:Promotion%20Service->table:shopping-platform/promotion-database:reads",
+          "source": "service:Promotion%20Service",
+          "target": "table:shopping-platform/promotion-database",
+          "type": "reads-from",
+          "label": "reads from"
+        },
+        {
+          "id": "service:Rating%20Aggregator->event:reviews-platform%2Freviews/rating-updated@1.0.0:produces",
+          "source": "service:Rating%20Aggregator",
+          "target": "event:reviews-platform%2Freviews/rating-updated@1.0.0",
+          "type": "publishes",
+          "label": "publishes"
+        },
+        {
+          "id": "service:Rating%20Aggregator->table:reviews-platform/rating-cache:reads",
+          "source": "service:Rating%20Aggregator",
+          "target": "table:reviews-platform/rating-cache",
+          "type": "reads-from",
+          "label": "reads from"
+        },
+        {
+          "id": "service:Rating%20Aggregator->table:reviews-platform/review-database:reads",
+          "source": "service:Rating%20Aggregator",
+          "target": "table:reviews-platform/review-database",
+          "type": "reads-from",
+          "label": "reads from"
+        },
+        {
+          "id": "service:Rating%20Aggregator->table:reviews-platform/rating-cache:writes",
+          "source": "service:Rating%20Aggregator",
+          "target": "table:reviews-platform/rating-cache",
+          "type": "writes-to",
+          "label": "writes to"
+        },
+        {
+          "id": "service:Returns%20API->command:returns/request-return@1.0.0:handles",
+          "source": "command:returns/request-return@1.0.0",
+          "target": "service:Returns%20API",
+          "type": "receives",
+          "label": "handled by"
+        },
+        {
+          "id": "service:Returns%20API->event:fulfilment-platform%2Freturns/return-requested@1.0.0:produces",
+          "source": "service:Returns%20API",
+          "target": "event:fulfilment-platform%2Freturns/return-requested@1.0.0",
+          "type": "publishes",
+          "label": "publishes"
+        },
+        {
+          "id": "service:Returns%20API->table:fulfilment-platform/returns-database:writes",
+          "source": "service:Returns%20API",
+          "target": "table:fulfilment-platform/returns-database",
+          "type": "writes-to",
+          "label": "writes to"
+        },
+        {
+          "id": "service:Returns%20Processor->event:fulfilment-platform%2Freturns/return-approved@1.0.0:produces",
+          "source": "service:Returns%20Processor",
+          "target": "event:fulfilment-platform%2Freturns/return-approved@1.0.0",
+          "type": "publishes",
+          "label": "publishes"
+        },
+        {
+          "id": "service:Returns%20Processor->event:fulfilment-platform%2Freturns/return-received@1.0.0:produces",
+          "source": "service:Returns%20Processor",
+          "target": "event:fulfilment-platform%2Freturns/return-received@1.0.0",
+          "type": "publishes",
+          "label": "publishes"
+        },
+        {
+          "id": "service:Returns%20Processor->table:fulfilment-platform/returns-database:reads",
+          "source": "service:Returns%20Processor",
+          "target": "table:fulfilment-platform/returns-database",
+          "type": "reads-from",
+          "label": "reads from"
+        },
+        {
+          "id": "service:Returns%20Processor->table:fulfilment-platform/returns-database:writes",
+          "source": "service:Returns%20Processor",
+          "target": "table:fulfilment-platform/returns-database",
+          "type": "writes-to",
+          "label": "writes to"
+        },
+        {
+          "id": "service:Review%20API->command:reviews/flag-review@1.0.0:handles",
+          "source": "command:reviews/flag-review@1.0.0",
+          "target": "service:Review%20API",
+          "type": "receives",
+          "label": "handled by"
+        },
+        {
+          "id": "service:Review%20API->command:reviews/get-product-reviews@1.0.0:handles",
+          "source": "command:reviews/get-product-reviews@1.0.0",
+          "target": "service:Review%20API",
+          "type": "receives",
+          "label": "handled by"
+        },
+        {
+          "id": "service:Review%20API->command:reviews/submit-review@1.0.0:handles",
+          "source": "command:reviews/submit-review@1.0.0",
+          "target": "service:Review%20API",
+          "type": "receives",
+          "label": "handled by"
+        },
+        {
+          "id": "service:Review%20API->command:reviews/vote-review-helpful@1.0.0:handles",
+          "source": "command:reviews/vote-review-helpful@1.0.0",
+          "target": "service:Review%20API",
+          "type": "receives",
+          "label": "handled by"
+        },
+        {
+          "id": "service:Review%20API->event:reviews-platform%2Freviews/review-flagged@1.0.0:produces",
+          "source": "service:Review%20API",
+          "target": "event:reviews-platform%2Freviews/review-flagged@1.0.0",
+          "type": "publishes",
+          "label": "publishes"
+        },
+        {
+          "id": "service:Review%20API->event:reviews-platform%2Freviews/review-helpful-voted@1.0.0:produces",
+          "source": "service:Review%20API",
+          "target": "event:reviews-platform%2Freviews/review-helpful-voted@1.0.0",
+          "type": "publishes",
+          "label": "publishes"
+        },
+        {
+          "id": "service:Review%20API->event:reviews-platform%2Freviews/review-submitted@1.0.0:produces",
+          "source": "service:Review%20API",
+          "target": "event:reviews-platform%2Freviews/review-submitted@1.0.0",
+          "type": "publishes",
+          "label": "publishes"
+        },
+        {
+          "id": "service:Review%20API->table:reviews-platform/rating-cache:reads",
+          "source": "service:Review%20API",
+          "target": "table:reviews-platform/rating-cache",
+          "type": "reads-from",
+          "label": "reads from"
+        },
+        {
+          "id": "service:Review%20API->table:reviews-platform/review-database:reads",
+          "source": "service:Review%20API",
+          "target": "table:reviews-platform/review-database",
+          "type": "reads-from",
+          "label": "reads from"
+        },
+        {
+          "id": "service:Review%20API->table:reviews-platform/review-database:writes",
+          "source": "service:Review%20API",
+          "target": "table:reviews-platform/review-database",
+          "type": "writes-to",
+          "label": "writes to"
+        },
+        {
+          "id": "service:Review%20Moderation%20Worker->event:reviews-platform%2Freviews/review-published@1.0.0:produces",
+          "source": "service:Review%20Moderation%20Worker",
+          "target": "event:reviews-platform%2Freviews/review-published@1.0.0",
+          "type": "publishes",
+          "label": "publishes"
+        },
+        {
+          "id": "service:Review%20Moderation%20Worker->event:reviews-platform%2Freviews/review-rejected@1.0.0:produces",
+          "source": "service:Review%20Moderation%20Worker",
+          "target": "event:reviews-platform%2Freviews/review-rejected@1.0.0",
+          "type": "publishes",
+          "label": "publishes"
+        },
+        {
+          "id": "service:Review%20Moderation%20Worker->table:reviews-platform/review-database:reads",
+          "source": "service:Review%20Moderation%20Worker",
+          "target": "table:reviews-platform/review-database",
+          "type": "reads-from",
+          "label": "reads from"
+        },
+        {
+          "id": "service:Review%20Moderation%20Worker->table:reviews-platform/review-database:writes",
+          "source": "service:Review%20Moderation%20Worker",
+          "target": "table:reviews-platform/review-database",
+          "type": "writes-to",
+          "label": "writes to"
+        },
+        {
+          "id": "service:Search%20API->command:catalog/search-products@1.0.0:handles",
+          "source": "command:catalog/search-products@1.0.0",
+          "target": "service:Search%20API",
+          "type": "receives",
+          "label": "handled by"
+        },
+        {
+          "id": "service:Search%20API->table:search-platform/search-index:reads",
+          "source": "service:Search%20API",
+          "target": "table:search-platform/search-index",
+          "type": "reads-from",
+          "label": "reads from"
+        },
+        {
+          "id": "service:Search%20Indexer->table:search-platform/search-index:writes",
+          "source": "service:Search%20Indexer",
+          "target": "table:search-platform/search-index",
+          "type": "writes-to",
+          "label": "writes to"
+        },
+        {
+          "id": "service:Shipping%20API->command:fulfilment/create-shipment@1.0.0:handles",
+          "source": "command:fulfilment/create-shipment@1.0.0",
+          "target": "service:Shipping%20API",
+          "type": "receives",
+          "label": "handled by"
+        },
+        {
+          "id": "service:Tracking%20API->event:fulfilment-platform%2Ffulfilment/shipment-created@1.0.0:produces",
+          "source": "service:Tracking%20API",
+          "target": "event:fulfilment-platform%2Ffulfilment/shipment-created@1.0.0",
+          "type": "publishes",
+          "label": "publishes"
+        },
+        {
+          "id": "service:Tracking%20API->event:fulfilment-platform%2Ffulfilment/shipment-delivered@1.0.0:produces",
+          "source": "service:Tracking%20API",
+          "target": "event:fulfilment-platform%2Ffulfilment/shipment-delivered@1.0.0",
+          "type": "publishes",
+          "label": "publishes"
+        },
+        {
+          "id": "service:Tracking%20API->event:fulfilment-platform%2Ffulfilment/shipment-failed@1.0.0:produces",
+          "source": "service:Tracking%20API",
+          "target": "event:fulfilment-platform%2Ffulfilment/shipment-failed@1.0.0",
+          "type": "publishes",
+          "label": "publishes"
+        },
+        {
+          "id": "service:Warehouse%20Service->event:fulfilment-platform%2Ffulfilment/order-ready-for-shipping@1.0.0:produces",
+          "source": "service:Warehouse%20Service",
+          "target": "event:fulfilment-platform%2Ffulfilment/order-ready-for-shipping@1.0.0",
+          "type": "publishes",
+          "label": "publishes"
+        },
+        {
+          "id": "service:Warehouse%20Service->table:fulfilment-platform/warehouse-database:reads",
+          "source": "service:Warehouse%20Service",
+          "target": "table:fulfilment-platform/warehouse-database",
+          "type": "reads-from",
+          "label": "reads from"
+        },
+        {
+          "id": "service:Warehouse%20Service->table:fulfilment-platform/warehouse-database:writes",
+          "source": "service:Warehouse%20Service",
+          "target": "table:fulfilment-platform/warehouse-database",
+          "type": "writes-to",
+          "label": "writes to"
+        },
+        {
+          "id": "service:Webhook%20Endpoint->event:payments-platform%2Fpayments/payment-failed@1.0.0:produces",
+          "source": "service:Webhook%20Endpoint",
+          "target": "event:payments-platform%2Fpayments/payment-failed@1.0.0",
+          "type": "publishes",
+          "label": "publishes"
+        },
+        {
+          "id": "service:Webhook%20Endpoint->event:payments-platform%2Fpayments/payment-succeeded@1.0.0:produces",
+          "source": "service:Webhook%20Endpoint",
+          "target": "event:payments-platform%2Fpayments/payment-succeeded@1.0.0",
+          "type": "publishes",
+          "label": "publishes"
+        },
+        {
+          "id": "service:Webhook%20Endpoint->event:payments-platform%2Fpayments/refund-processed@1.0.0:produces",
+          "source": "service:Webhook%20Endpoint",
+          "target": "event:payments-platform%2Fpayments/refund-processed@1.0.0",
+          "type": "publishes",
+          "label": "publishes"
+        }
+      ],
+      "options": { "legend": true, "search": true }
+    },
+    "hrefs": {
+      "command:catalog/create-product@1.0.0": "/catalog/#resource-command%3Acatalog%2Fcreate-product%401.0.0",
+      "command:catalog/delete-product@1.0.0": "/catalog/#resource-command%3Acatalog%2Fdelete-product%401.0.0",
+      "command:catalog/get-product@1.0.0": "/catalog/#resource-command%3Acatalog%2Fget-product%401.0.0",
+      "command:catalog/search-products@1.0.0": "/catalog/#resource-command%3Acatalog%2Fsearch-products%401.0.0",
+      "command:catalog/update-product@1.0.0": "/catalog/#resource-command%3Acatalog%2Fupdate-product%401.0.0",
+      "command:customer/authenticate-customer@1.0.0": "/catalog/#resource-command%3Acustomer%2Fauthenticate-customer%401.0.0",
+      "command:customer/get-customer@1.0.0": "/catalog/#resource-command%3Acustomer%2Fget-customer%401.0.0",
+      "command:customer/register-customer@1.0.0": "/catalog/#resource-command%3Acustomer%2Fregister-customer%401.0.0",
+      "command:customer/update-customer@1.0.0": "/catalog/#resource-command%3Acustomer%2Fupdate-customer%401.0.0",
+      "command:fulfilment/create-shipment@1.0.0": "/catalog/#resource-command%3Afulfilment%2Fcreate-shipment%401.0.0",
+      "command:fulfilment/get-stock-level@1.0.0": "/catalog/#resource-command%3Afulfilment%2Fget-stock-level%401.0.0",
+      "command:fulfilment/release-inventory@1.0.0": "/catalog/#resource-command%3Afulfilment%2Frelease-inventory%401.0.0",
+      "command:ordering/authorize-payment@1.0.0": "/catalog/#resource-command%3Aordering%2Fauthorize-payment%401.0.0",
+      "command:ordering/cancel-order@1.0.0": "/catalog/#resource-command%3Aordering%2Fcancel-order%401.0.0",
+      "command:ordering/create-order@1.0.0": "/catalog/#resource-command%3Aordering%2Fcreate-order%401.0.0",
+      "command:ordering/get-order@1.0.0": "/catalog/#resource-command%3Aordering%2Fget-order%401.0.0",
+      "command:ordering/reserve-inventory@1.0.0": "/catalog/#resource-command%3Aordering%2Freserve-inventory%401.0.0",
+      "command:returns/request-return@1.0.0": "/catalog/#resource-command%3Areturns%2Frequest-return%401.0.0",
+      "command:reviews/flag-review@1.0.0": "/catalog/#resource-command%3Areviews%2Fflag-review%401.0.0",
+      "command:reviews/get-product-reviews@1.0.0": "/catalog/#resource-command%3Areviews%2Fget-product-reviews%401.0.0",
+      "command:reviews/submit-review@1.0.0": "/catalog/#resource-command%3Areviews%2Fsubmit-review%401.0.0",
+      "command:reviews/vote-review-helpful@1.0.0": "/catalog/#resource-command%3Areviews%2Fvote-review-helpful%401.0.0",
+      "command:shopping/add-item-to-cart@1.0.0": "/catalog/#resource-command%3Ashopping%2Fadd-item-to-cart%401.0.0",
+      "command:shopping/calculate-discount@1.0.0": "/catalog/#resource-command%3Ashopping%2Fcalculate-discount%401.0.0",
+      "command:shopping/checkout-cart@1.0.0": "/catalog/#resource-command%3Ashopping%2Fcheckout-cart%401.0.0",
+      "command:shopping/remove-item-from-cart@1.0.0": "/catalog/#resource-command%3Ashopping%2Fremove-item-from-cart%401.0.0",
+      "event:customer-platform%2Fcustomer/customer-authenticated@1.0.0": "/events/customer-platform/customer/customer-authenticated/",
+      "event:customer-platform%2Fcustomer/customer-registered@1.0.0": "/events/customer-platform/customer/customer-registered/",
+      "event:customer-platform%2Fcustomer/customer-updated@1.0.0": "/events/customer-platform/customer/customer-updated/",
+      "event:customer-platform%2Floyalty/loyalty-points-earned@1.0.0": "/events/customer-platform/loyalty/loyalty-points-earned/",
+      "event:customer-platform%2Floyalty/loyalty-points-reversed@1.0.0": "/events/customer-platform/loyalty/loyalty-points-reversed/",
+      "event:customer-platform%2Fnotifications/customer-notified@1.0.0": "/events/customer-platform/notifications/customer-notified/",
+      "event:fulfilment-platform%2Ffulfilment/inventory-reserved@1.0.0": "/events/fulfilment-platform/fulfilment/inventory-reserved/",
+      "event:fulfilment-platform%2Ffulfilment/inventory-unavailable@1.0.0": "/events/fulfilment-platform/fulfilment/inventory-unavailable/",
+      "event:fulfilment-platform%2Ffulfilment/order-packed@1.0.0": "/events/fulfilment-platform/fulfilment/order-packed/",
+      "event:fulfilment-platform%2Ffulfilment/order-ready-for-shipping@1.0.0": "/events/fulfilment-platform/fulfilment/order-ready-for-shipping/",
+      "event:fulfilment-platform%2Ffulfilment/shipment-created@1.0.0": "/events/fulfilment-platform/fulfilment/shipment-created/",
+      "event:fulfilment-platform%2Ffulfilment/shipment-delivered@1.0.0": "/events/fulfilment-platform/fulfilment/shipment-delivered/",
+      "event:fulfilment-platform%2Ffulfilment/shipment-failed@1.0.0": "/events/fulfilment-platform/fulfilment/shipment-failed/",
+      "event:fulfilment-platform%2Freturns/return-approved@1.0.0": "/events/fulfilment-platform/returns/return-approved/",
+      "event:fulfilment-platform%2Freturns/return-received@1.0.0": "/events/fulfilment-platform/returns/return-received/",
+      "event:fulfilment-platform%2Freturns/return-requested@1.0.0": "/events/fulfilment-platform/returns/return-requested/",
+      "event:ordering-platform%2Fordering/order-amended@1.0.0": "/events/ordering-platform/ordering/order-amended/",
+      "event:ordering-platform%2Fordering/order-archived@1.0.0": "/events/ordering-platform/ordering/order-archived/",
+      "event:ordering-platform%2Fordering/order-cancelled@1.0.0": "/events/ordering-platform/ordering/order-cancelled/",
+      "event:ordering-platform%2Fordering/order-completed@1.0.0": "/events/ordering-platform/ordering/order-completed/",
+      "event:ordering-platform%2Fordering/order-confirmed@1.0.0": "/events/ordering-platform/ordering/order-confirmed/",
+      "event:ordering-platform%2Fordering/order-created@1.0.0": "/events/ordering-platform/ordering/order-created/",
+      "event:ordering-platform%2Fordering/order-delivery-address-changed@1.0.0": "/events/ordering-platform/ordering/order-delivery-address-changed/",
+      "event:ordering-platform%2Fordering/order-fulfilment-started@1.0.0": "/events/ordering-platform/ordering/order-fulfilment-started/",
+      "event:ordering-platform%2Fordering/order-hold-released@1.0.0": "/events/ordering-platform/ordering/order-hold-released/",
+      "event:ordering-platform%2Fordering/order-placed-on-hold@1.0.0": "/events/ordering-platform/ordering/order-placed-on-hold/",
+      "event:ordering-platform%2Fordering/order-status-changed@1.0.0": "/events/ordering-platform/ordering/order-status-changed/",
+      "event:payments-platform%2Fpayments/fraud-check-failed@1.0.0": "/events/payments-platform/payments/fraud-check-failed/",
+      "event:payments-platform%2Fpayments/fraud-check-passed@1.0.0": "/events/payments-platform/payments/fraud-check-passed/",
+      "event:payments-platform%2Fpayments/payment-failed@1.0.0": "/events/payments-platform/payments/payment-failed/",
+      "event:payments-platform%2Fpayments/payment-requested@1.0.0": "/events/payments-platform/payments/payment-requested/",
+      "event:payments-platform%2Fpayments/payment-succeeded@1.0.0": "/events/payments-platform/payments/payment-succeeded/",
+      "event:payments-platform%2Fpayments/refund-processed@1.0.0": "/events/payments-platform/payments/refund-processed/",
+      "event:payments-platform%2Fpayments/refund-requested@1.0.0": "/events/payments-platform/payments/refund-requested/",
+      "event:product-platform%2Fcatalog/product-created@1.0.0": "/events/product-platform/catalog/product-created/",
+      "event:product-platform%2Fcatalog/product-deleted@1.0.0": "/events/product-platform/catalog/product-deleted/",
+      "event:product-platform%2Fcatalog/product-updated@1.0.0": "/events/product-platform/catalog/product-updated/",
+      "event:reviews-platform%2Freviews/rating-updated@1.0.0": "/events/reviews-platform/reviews/rating-updated/",
+      "event:reviews-platform%2Freviews/review-flagged@1.0.0": "/events/reviews-platform/reviews/review-flagged/",
+      "event:reviews-platform%2Freviews/review-helpful-voted@1.0.0": "/events/reviews-platform/reviews/review-helpful-voted/",
+      "event:reviews-platform%2Freviews/review-published@1.0.0": "/events/reviews-platform/reviews/review-published/",
+      "event:reviews-platform%2Freviews/review-rejected@1.0.0": "/events/reviews-platform/reviews/review-rejected/",
+      "event:reviews-platform%2Freviews/review-submitted@1.0.0": "/events/reviews-platform/reviews/review-submitted/",
+      "event:shopping-platform%2Fmarketing/campaign-offer-sent@1.0.0": "/events/shopping-platform/marketing/campaign-offer-sent/",
+      "event:shopping-platform%2Fshopping/cart-checked-out@1.0.0": "/events/shopping-platform/shopping/cart-checked-out/",
+      "event:shopping-platform%2Fshopping/discount-calculated@1.0.0": "/events/shopping-platform/shopping/discount-calculated/",
+      "service:Campaign%20Service": "/services/Campaign Service/",
+      "service:Carrier%20Adapter": "/services/Carrier Adapter/",
+      "service:Cart%20API": "/services/Cart API/",
+      "service:Checkout%20API": "/services/Checkout API/",
+      "service:Checkout%20Orchestrator": "/services/Checkout Orchestrator/",
+      "service:Customer%20API": "/services/Customer API/",
+      "service:Fraud%20API": "/services/Fraud API/",
+      "service:Inventory%20Service": "/services/Inventory Service/",
+      "service:Ledger%20Exporter": "/services/Ledger Exporter/",
+      "service:Loyalty%20Service": "/services/Loyalty Service/",
+      "service:Notification%20Service": "/services/Notification Service/",
+      "service:OAuth%20API": "/services/OAuth API/",
+      "service:Offer%20Service": "/services/Offer Service/",
+      "service:Order%20Service": "/services/Order Service/",
+      "service:Payment%20API": "/services/Payment API/",
+      "service:Payment%20Worker": "/services/Payment Worker/",
+      "service:Payments%20API": "/services/Payments API/",
+      "service:Picking%20Worker": "/services/Picking Worker/",
+      "service:Product%20API": "/services/Product API/",
+      "service:Product%20Search%20Publisher": "/services/Product Search Publisher/",
+      "service:Product%20Worker": "/services/Product Worker/",
+      "service:Promotion%20Service": "/services/Promotion Service/",
+      "service:Rating%20Aggregator": "/services/Rating Aggregator/",
+      "service:Returns%20API": "/services/Returns API/",
+      "service:Returns%20Processor": "/services/Returns Processor/",
+      "service:Review%20API": "/services/Review API/",
+      "service:Review%20Moderation%20Worker": "/services/Review Moderation Worker/",
+      "service:Search%20API": "/services/Search API/",
+      "service:Search%20Indexer": "/services/Search Indexer/",
+      "service:Shipping%20API": "/services/Shipping API/",
+      "service:Tracking%20API": "/services/Tracking API/",
+      "service:Warehouse%20Service": "/services/Warehouse Service/",
+      "service:Webhook%20Endpoint": "/services/Webhook Endpoint/",
+      "table:customer-platform/customer-database": "/data/customer-platform/customer-database/",
+      "table:customer-platform/loyalty-database": "/data/customer-platform/loyalty-database/",
+      "table:customer-platform/notification-preferences": "/data/customer-platform/notification-preferences/",
+      "table:customer-platform/user-directory": "/data/customer-platform/user-directory/",
+      "table:fulfilment-platform/inventory-database": "/data/fulfilment-platform/inventory-database/",
+      "table:fulfilment-platform/returns-database": "/data/fulfilment-platform/returns-database/",
+      "table:fulfilment-platform/warehouse-database": "/data/fulfilment-platform/warehouse-database/",
+      "table:ordering-platform/order-database": "/data/ordering-platform/order-database/",
+      "table:payments-platform/payment-database": "/data/payments-platform/payment-database/",
+      "table:product-platform/product-database": "/data/product-platform/product-database/",
+      "table:reviews-platform/rating-cache": "/data/reviews-platform/rating-cache/",
+      "table:reviews-platform/review-database": "/data/reviews-platform/review-database/",
+      "table:search-platform/search-index": "/data/search-platform/search-index/",
+      "table:shopping-platform/cart-database": "/data/shopping-platform/cart-database/",
+      "table:shopping-platform/promotion-database": "/data/shopping-platform/promotion-database/",
+      "domain:catalog": "/domains/catalog/",
+      "domain:customer": "/domains/customer/",
+      "domain:fulfilment": "/domains/fulfilment/",
+      "domain:loyalty": "/domains/loyalty/",
+      "domain:marketing": "/domains/marketing/",
+      "domain:notifications": "/domains/notifications/",
+      "domain:ordering": "/domains/ordering/",
+      "domain:payments": "/domains/payments/",
+      "domain:returns": "/domains/returns/",
+      "domain:reviews": "/domains/reviews/",
+      "domain:shopping": "/domains/shopping/"
+    },
+    "levels": {
+      "1": {
+        "nodes": [
+          {
+            "id": "domain:catalog",
+            "type": "step",
+            "label": "Catalog",
+            "metadata": { "group": "domain" }
+          },
+          {
+            "id": "domain:customer",
+            "type": "step",
+            "label": "Customer",
+            "metadata": { "group": "domain" }
+          },
+          {
+            "id": "domain:fulfilment",
+            "type": "step",
+            "label": "Fulfilment",
+            "metadata": { "group": "domain" }
+          },
+          {
+            "id": "domain:loyalty",
+            "type": "step",
+            "label": "Loyalty",
+            "metadata": { "group": "domain" }
+          },
+          {
+            "id": "domain:marketing",
+            "type": "step",
+            "label": "Marketing",
+            "metadata": { "group": "domain" }
+          },
+          {
+            "id": "domain:notifications",
+            "type": "step",
+            "label": "Customer Notifications",
+            "metadata": { "group": "domain" }
+          },
+          {
+            "id": "domain:ordering",
+            "type": "step",
+            "label": "Ordering",
+            "metadata": { "group": "domain" }
+          },
+          {
+            "id": "domain:payments",
+            "type": "step",
+            "label": "Payments",
+            "metadata": { "group": "domain" }
+          },
+          {
+            "id": "domain:returns",
+            "type": "step",
+            "label": "Returns",
+            "metadata": { "group": "domain" }
+          },
+          {
+            "id": "domain:reviews",
+            "type": "step",
+            "label": "Reviews & Ratings",
+            "metadata": { "group": "domain" }
+          },
+          {
+            "id": "domain:shopping",
+            "type": "step",
+            "label": "Shopping",
+            "metadata": { "group": "domain" }
+          }
+        ],
+        "edges": [
+          {
+            "id": "domain:loyalty->domain:customer",
+            "source": "domain:loyalty",
+            "target": "domain:customer",
+            "type": "calls",
+            "label": "1 message"
+          },
+          {
+            "id": "domain:loyalty->domain:shopping",
+            "source": "domain:loyalty",
+            "target": "domain:shopping",
+            "type": "calls",
+            "label": "1 message"
+          },
+          {
+            "id": "domain:fulfilment->domain:ordering",
+            "source": "domain:fulfilment",
+            "target": "domain:ordering",
+            "type": "calls",
+            "label": "1 message"
+          },
+          {
+            "id": "domain:fulfilment->domain:customer",
+            "source": "domain:fulfilment",
+            "target": "domain:customer",
+            "type": "calls",
+            "label": "1 message"
+          },
+          {
+            "id": "domain:returns->domain:customer",
+            "source": "domain:returns",
+            "target": "domain:customer",
+            "type": "calls",
+            "label": "1 message"
+          },
+          {
+            "id": "domain:returns->domain:fulfilment",
+            "source": "domain:returns",
+            "target": "domain:fulfilment",
+            "type": "calls",
+            "label": "3 messages"
+          },
+          {
+            "id": "domain:returns->domain:payments",
+            "source": "domain:returns",
+            "target": "domain:payments",
+            "type": "calls",
+            "label": "1 message"
+          },
+          {
+            "id": "domain:ordering->domain:customer",
+            "source": "domain:ordering",
+            "target": "domain:customer",
+            "type": "calls",
+            "label": "3 messages"
+          },
+          {
+            "id": "domain:ordering->domain:fulfilment",
+            "source": "domain:ordering",
+            "target": "domain:fulfilment",
+            "type": "calls",
+            "label": "2 messages"
+          },
+          {
+            "id": "domain:ordering->domain:marketing",
+            "source": "domain:ordering",
+            "target": "domain:marketing",
+            "type": "calls",
+            "label": "1 message"
+          },
+          {
+            "id": "domain:payments->domain:customer",
+            "source": "domain:payments",
+            "target": "domain:customer",
+            "type": "calls",
+            "label": "2 messages"
+          },
+          {
+            "id": "domain:reviews->domain:customer",
+            "source": "domain:reviews",
+            "target": "domain:customer",
+            "type": "calls",
+            "label": "1 message"
+          },
+          {
+            "id": "domain:customer->domain:loyalty",
+            "source": "domain:customer",
+            "target": "domain:loyalty",
+            "type": "calls",
+            "label": "2 messages"
+          },
+          {
+            "id": "domain:customer->domain:notifications",
+            "source": "domain:customer",
+            "target": "domain:notifications",
+            "type": "calls",
+            "label": "1 message"
+          },
+          {
+            "id": "domain:marketing->domain:shopping",
+            "source": "domain:marketing",
+            "target": "domain:shopping",
+            "type": "calls",
+            "label": "1 message"
+          },
+          {
+            "id": "domain:ordering->domain:payments",
+            "source": "domain:ordering",
+            "target": "domain:payments",
+            "type": "calls",
+            "label": "1 message"
+          },
+          {
+            "id": "domain:fulfilment->domain:returns",
+            "source": "domain:fulfilment",
+            "target": "domain:returns",
+            "type": "calls",
+            "label": "3 messages"
+          }
+        ]
+      },
+      "2": {
+        "nodes": [
+          {
+            "id": "service:Campaign%20Service",
+            "type": "service",
+            "label": "Campaign Service",
+            "metadata": {
+              "summary": "Runs the welcome campaign and sends customers campaign offers."
+            }
+          },
+          {
+            "id": "service:Carrier%20Adapter",
+            "type": "service",
+            "label": "Carrier Adapter",
+            "metadata": {
+              "summary": "Translates Acme Inc shipment requests into the external carrier's format and sends them to create a shipment."
+            }
+          },
+          {
+            "id": "service:Cart%20API",
+            "type": "service",
+            "label": "Cart API",
+            "metadata": {
+              "summary": "The public-facing API for shopping carts. Handles commands to add and remove items and to check out, and publishes an event when a cart is checked out."
+            }
+          },
+          {
+            "id": "service:Checkout%20API",
+            "type": "service",
+            "label": "Checkout API",
+            "metadata": {
+              "summary": "The entry point to the Checkout System. Receives the checkout command from the Shopping domain and starts the checkout flow."
+            }
+          },
+          {
+            "id": "service:Checkout%20Orchestrator",
+            "type": "service",
+            "label": "Checkout Orchestrator",
+            "metadata": {
+              "summary": "Runs the checkout saga. Reserves inventory, authorizes payment and creates the order, coordinating the steps that turn a checked-out cart into a confirmed order."
+            }
+          },
+          {
+            "id": "service:Customer%20API",
+            "type": "service",
+            "label": "Customer API",
+            "metadata": {
+              "summary": "The public-facing API for customer profiles. Handles commands to register and update customers, serves customer reads, and publishes customer change events."
+            }
+          },
+          {
+            "id": "service:Fraud%20API",
+            "type": "service",
+            "label": "Fraud API",
+            "metadata": {
+              "summary": "External fraud screening API. It consumes payment requests and returns a pass or fail verdict for each."
+            }
+          },
+          {
+            "id": "service:Inventory%20Service",
+            "type": "service",
+            "label": "Inventory Service",
+            "metadata": {
+              "summary": "The system of record for stock. Reserves and releases inventory, serves stock-level queries, and publishes events when stock is reserved or unavailable."
+            }
+          },
+          {
+            "id": "service:Ledger%20Exporter",
+            "type": "service",
+            "label": "Ledger Exporter",
+            "metadata": {
+              "summary": "Builds the month-end ledger export used for finance reporting. It runs on a schedule and doesn't send or receive any messages."
+            }
+          },
+          {
+            "id": "service:Loyalty%20Service",
+            "type": "service",
+            "label": "Loyalty Service",
+            "metadata": {
+              "summary": "Awards loyalty points when orders complete and reverses them when orders are cancelled. Owns the points ledger and customer balances."
+            }
+          },
+          {
+            "id": "service:Notification%20Service",
+            "type": "service",
+            "label": "Notification Service",
+            "metadata": {
+              "summary": "Sends customers email, SMS and push notifications in response to events from across Acme Inc, honouring each customer's channel preferences."
+            }
+          },
+          {
+            "id": "service:OAuth%20API",
+            "type": "service",
+            "label": "OAuth API",
+            "metadata": {
+              "summary": "OAuth-style authentication API for the Identity Provider. Verifies customer credentials and publishes an event when a customer successfully authenticates."
+            }
+          },
+          {
+            "id": "service:Offer%20Service",
+            "type": "service",
+            "label": "Offer Service",
+            "metadata": {
+              "summary": "Builds follow-up offers for customers after they order, priced with the Shopping domain's promotions."
+            }
+          },
+          {
+            "id": "service:Order%20Service",
+            "type": "service",
+            "label": "Order Service",
+            "metadata": {
+              "summary": "The system of record for orders. Creates and cancels orders, serves order lookups, and publishes events as orders move through their lifecycle."
+            }
+          },
+          {
+            "id": "service:Payment%20API",
+            "type": "service",
+            "label": "Payment API",
+            "metadata": {
+              "summary": "Receives payment authorization requests from the Ordering domain and records the payment intent, kicking off the charge against the payment processor."
+            }
+          },
+          {
+            "id": "service:Payment%20Worker",
+            "type": "service",
+            "label": "Payment Worker",
+            "metadata": {
+              "summary": "Drives charges and refunds against the external payment processor and records the outcomes. It requests payments and refunds, and consumes the success/failure events Stripe returns."
+            }
+          },
+          {
+            "id": "service:Payments%20API",
+            "type": "service",
+            "label": "Payments API",
+            "metadata": {
+              "summary": "Stripe's API for charging cards and issuing refunds. Acme Inc's Payment Processing System calls it to request payments and refunds."
+            }
+          },
+          {
+            "id": "service:Picking%20Worker",
+            "type": "service",
+            "label": "Picking Worker",
+            "metadata": {
+              "summary": "Works through picking jobs on the warehouse floor and signals when an order has been picked and packed."
+            }
+          },
+          {
+            "id": "service:Product%20API",
+            "type": "service",
+            "label": "Product API",
+            "metadata": {
+              "summary": "The public-facing API for the product catalog. Handles commands to create, update and delete products, serves product reads, and is the entry point into the Product Catalog System."
+            }
+          },
+          {
+            "id": "service:Product%20Search%20Publisher",
+            "type": "service",
+            "label": "Product Search Publisher",
+            "metadata": {
+              "summary": "Reads product changes from the product database (outbox) and reliably publishes product-created, product-updated and product-deleted events for the Search System to consume."
+            }
+          },
+          {
+            "id": "service:Product%20Worker",
+            "type": "service",
+            "label": "Product Worker",
+            "metadata": {
+              "summary": "Background worker that handles long-running and asynchronous catalog work off the request path, such as enrichment, image processing and bulk imports."
+            }
+          },
+          {
+            "id": "service:Promotion%20Service",
+            "type": "service",
+            "label": "Promotion Service",
+            "metadata": {
+              "summary": "Evaluates promotion rules and calculates the discount that applies to a cart. Receives discount requests and publishes the calculated result."
+            }
+          },
+          {
+            "id": "service:Rating%20Aggregator",
+            "type": "service",
+            "label": "Rating Aggregator",
+            "metadata": {
+              "summary": "Keeps each product's aggregate star rating up to date as reviews are published, and serves it fast from a cache."
+            }
+          },
+          {
+            "id": "service:Returns%20API",
+            "type": "service",
+            "label": "Returns API",
+            "metadata": {
+              "summary": "Public API customers use to start a return. Validates the request against the original order and records it."
+            }
+          },
+          {
+            "id": "service:Returns%20Processor",
+            "type": "service",
+            "label": "Returns Processor",
+            "metadata": {
+              "summary": "Applies the returns policy to new requests and tracks returned parcels until they arrive back at the warehouse."
+            }
+          },
+          {
+            "id": "service:Review%20API",
+            "type": "service",
+            "label": "Review API",
+            "metadata": {
+              "summary": "The public-facing API for product reviews. Accepts review submissions, serves published reviews, and is the entry point into the Reviews & Ratings domain."
+            }
+          },
+          {
+            "id": "service:Review%20Moderation%20Worker",
+            "type": "service",
+            "label": "Review Moderation Worker",
+            "metadata": {
+              "summary": "Asynchronous worker that screens submitted reviews for spam, abuse and policy violations, then publishes or rejects them."
+            }
+          },
+          {
+            "id": "service:Search%20API",
+            "type": "service",
+            "label": "Search API",
+            "metadata": {
+              "summary": "Public-facing API that serves fast, relevant product search to the rest of the business, reading from the search index."
+            }
+          },
+          {
+            "id": "service:Search%20Indexer",
+            "type": "service",
+            "label": "Search Indexer",
+            "metadata": {
+              "summary": "Consumes product change events from the Product Catalog System and keeps the search index up to date so products are discoverable."
+            }
+          },
+          {
+            "id": "service:Shipping%20API",
+            "type": "service",
+            "label": "Shipping API",
+            "metadata": {
+              "summary": "The carrier's API for creating shipments. Acme Inc's Shipping System calls it to dispatch packed orders."
+            }
+          },
+          {
+            "id": "service:Tracking%20API",
+            "type": "service",
+            "label": "Tracking API",
+            "metadata": {
+              "summary": "The carrier's API for reporting delivery progress. It notifies Acme Inc when a shipment is created, delivered, or fails."
+            }
+          },
+          {
+            "id": "service:Warehouse%20Service",
+            "type": "service",
+            "label": "Warehouse Service",
+            "metadata": {
+              "summary": "Orchestrates picking and packing in the warehouse. It reacts to completed orders, creates picking jobs, and signals when an order is ready to ship."
+            }
+          },
+          {
+            "id": "service:Webhook%20Endpoint",
+            "type": "service",
+            "label": "Webhook Endpoint",
+            "metadata": {
+              "summary": "Stripe's webhook delivery for payment and refund outcomes. It notifies Acme Inc whether a charge succeeded or failed, and when a refund is processed."
+            }
+          },
+          {
+            "id": "table:customer-platform/customer-database",
+            "type": "data",
+            "label": "Customer Database",
+            "metadata": {
+              "summary": "PostgreSQL database that is the system of record for all customer profile data."
+            }
+          },
+          {
+            "id": "table:customer-platform/loyalty-database",
+            "type": "data",
+            "label": "Loyalty Database",
+            "metadata": {
+              "summary": "PostgreSQL database that holds the loyalty points ledger and each customer's points balance."
+            }
+          },
+          {
+            "id": "table:customer-platform/notification-preferences",
+            "type": "data",
+            "label": "Notification Preferences",
+            "metadata": {
+              "summary": "PostgreSQL database holding each customer's notification channels, opt-ins and quiet hours."
+            }
+          },
+          {
+            "id": "table:customer-platform/user-directory",
+            "type": "data",
+            "label": "User Directory",
+            "metadata": {
+              "summary": "The directory of customer credentials and identities — the source of truth for authentication."
+            }
+          },
+          {
+            "id": "table:fulfilment-platform/inventory-database",
+            "type": "data",
+            "label": "Inventory Database",
+            "metadata": {
+              "summary": "PostgreSQL database that is the system of record for stock levels and reservations."
+            }
+          },
+          {
+            "id": "table:fulfilment-platform/returns-database",
+            "type": "data",
+            "label": "Returns Database",
+            "metadata": {
+              "summary": "PostgreSQL database that is the system of record for return requests and their status."
+            }
+          },
+          {
+            "id": "table:fulfilment-platform/warehouse-database",
+            "type": "data",
+            "label": "Warehouse Database",
+            "metadata": {
+              "summary": "PostgreSQL database that stores picking jobs and their status."
+            }
+          },
+          {
+            "id": "table:ordering-platform/order-database",
+            "type": "data",
+            "label": "Order Database",
+            "metadata": {
+              "summary": "PostgreSQL database that is the system of record for orders and their items."
+            }
+          },
+          {
+            "id": "table:payments-platform/payment-database",
+            "type": "data",
+            "label": "Payment Database",
+            "metadata": {
+              "summary": "PostgreSQL database that is the system of record for payments and refunds."
+            }
+          },
+          {
+            "id": "table:product-platform/product-database",
+            "type": "data",
+            "label": "Product Database",
+            "metadata": {
+              "summary": "PostgreSQL database that is the system of record for all product data."
+            }
+          },
+          {
+            "id": "table:reviews-platform/rating-cache",
+            "type": "data",
+            "label": "Rating Cache",
+            "metadata": {
+              "summary": "Redis cache that serves each product's aggregate star rating with low latency."
+            }
+          },
+          {
+            "id": "table:reviews-platform/review-database",
+            "type": "data",
+            "label": "Review Database",
+            "metadata": {
+              "summary": "PostgreSQL database that is the system of record for reviews and their moderation state."
+            }
+          },
+          {
+            "id": "table:search-platform/search-index",
+            "type": "data",
+            "label": "Search Index",
+            "metadata": {
+              "summary": "The denormalised, search-optimised index of products that powers product search."
+            }
+          },
+          {
+            "id": "table:shopping-platform/cart-database",
+            "type": "data",
+            "label": "Cart Database",
+            "metadata": {
+              "summary": "PostgreSQL database that is the system of record for shopping carts and their items."
+            }
+          },
+          {
+            "id": "table:shopping-platform/promotion-database",
+            "type": "data",
+            "label": "Promotion Database",
+            "metadata": { "summary": "PostgreSQL store of promotion and discount rules." }
+          }
+        ],
+        "edges": [
+          {
+            "id": "service:Cart%20API->table:shopping-platform/cart-database:reads",
+            "source": "service:Cart%20API",
+            "target": "table:shopping-platform/cart-database",
+            "type": "reads-from",
+            "label": "reads from"
+          },
+          {
+            "id": "service:Cart%20API->table:shopping-platform/cart-database:writes",
+            "source": "service:Cart%20API",
+            "target": "table:shopping-platform/cart-database",
+            "type": "writes-to",
+            "label": "writes to"
+          },
+          {
+            "id": "service:Customer%20API->table:customer-platform/customer-database:reads",
+            "source": "service:Customer%20API",
+            "target": "table:customer-platform/customer-database",
+            "type": "reads-from",
+            "label": "reads from"
+          },
+          {
+            "id": "service:Customer%20API->table:customer-platform/customer-database:writes",
+            "source": "service:Customer%20API",
+            "target": "table:customer-platform/customer-database",
+            "type": "writes-to",
+            "label": "writes to"
+          },
+          {
+            "id": "service:Inventory%20Service->table:fulfilment-platform/inventory-database:reads",
+            "source": "service:Inventory%20Service",
+            "target": "table:fulfilment-platform/inventory-database",
+            "type": "reads-from",
+            "label": "reads from"
+          },
+          {
+            "id": "service:Inventory%20Service->table:fulfilment-platform/inventory-database:writes",
+            "source": "service:Inventory%20Service",
+            "target": "table:fulfilment-platform/inventory-database",
+            "type": "writes-to",
+            "label": "writes to"
+          },
+          {
+            "id": "service:Loyalty%20Service->table:customer-platform/loyalty-database:reads",
+            "source": "service:Loyalty%20Service",
+            "target": "table:customer-platform/loyalty-database",
+            "type": "reads-from",
+            "label": "reads from"
+          },
+          {
+            "id": "service:Loyalty%20Service->table:customer-platform/loyalty-database:writes",
+            "source": "service:Loyalty%20Service",
+            "target": "table:customer-platform/loyalty-database",
+            "type": "writes-to",
+            "label": "writes to"
+          },
+          {
+            "id": "service:Notification%20Service->table:customer-platform/notification-preferences:reads",
+            "source": "service:Notification%20Service",
+            "target": "table:customer-platform/notification-preferences",
+            "type": "reads-from",
+            "label": "reads from"
+          },
+          {
+            "id": "service:OAuth%20API->table:customer-platform/user-directory:reads",
+            "source": "service:OAuth%20API",
+            "target": "table:customer-platform/user-directory",
+            "type": "reads-from",
+            "label": "reads from"
+          },
+          {
+            "id": "service:Order%20Service->table:ordering-platform/order-database:reads",
+            "source": "service:Order%20Service",
+            "target": "table:ordering-platform/order-database",
+            "type": "reads-from",
+            "label": "reads from"
+          },
+          {
+            "id": "service:Order%20Service->table:ordering-platform/order-database:writes",
+            "source": "service:Order%20Service",
+            "target": "table:ordering-platform/order-database",
+            "type": "writes-to",
+            "label": "writes to"
+          },
+          {
+            "id": "service:Payment%20API->table:payments-platform/payment-database:reads",
+            "source": "service:Payment%20API",
+            "target": "table:payments-platform/payment-database",
+            "type": "reads-from",
+            "label": "reads from"
+          },
+          {
+            "id": "service:Payment%20API->table:payments-platform/payment-database:writes",
+            "source": "service:Payment%20API",
+            "target": "table:payments-platform/payment-database",
+            "type": "writes-to",
+            "label": "writes to"
+          },
+          {
+            "id": "service:Payment%20Worker->table:payments-platform/payment-database:reads",
+            "source": "service:Payment%20Worker",
+            "target": "table:payments-platform/payment-database",
+            "type": "reads-from",
+            "label": "reads from"
+          },
+          {
+            "id": "service:Payment%20Worker->table:payments-platform/payment-database:writes",
+            "source": "service:Payment%20Worker",
+            "target": "table:payments-platform/payment-database",
+            "type": "writes-to",
+            "label": "writes to"
+          },
+          {
+            "id": "service:Picking%20Worker->table:fulfilment-platform/warehouse-database:reads",
+            "source": "service:Picking%20Worker",
+            "target": "table:fulfilment-platform/warehouse-database",
+            "type": "reads-from",
+            "label": "reads from"
+          },
+          {
+            "id": "service:Picking%20Worker->table:fulfilment-platform/warehouse-database:writes",
+            "source": "service:Picking%20Worker",
+            "target": "table:fulfilment-platform/warehouse-database",
+            "type": "writes-to",
+            "label": "writes to"
+          },
+          {
+            "id": "service:Product%20API->table:product-platform/product-database:reads",
+            "source": "service:Product%20API",
+            "target": "table:product-platform/product-database",
+            "type": "reads-from",
+            "label": "reads from"
+          },
+          {
+            "id": "service:Product%20API->table:product-platform/product-database:writes",
+            "source": "service:Product%20API",
+            "target": "table:product-platform/product-database",
+            "type": "writes-to",
+            "label": "writes to"
+          },
+          {
+            "id": "service:Product%20Search%20Publisher->table:product-platform/product-database:reads",
+            "source": "service:Product%20Search%20Publisher",
+            "target": "table:product-platform/product-database",
+            "type": "reads-from",
+            "label": "reads from"
+          },
+          {
+            "id": "service:Product%20Worker->table:product-platform/product-database:reads",
+            "source": "service:Product%20Worker",
+            "target": "table:product-platform/product-database",
+            "type": "reads-from",
+            "label": "reads from"
+          },
+          {
+            "id": "service:Product%20Worker->table:product-platform/product-database:writes",
+            "source": "service:Product%20Worker",
+            "target": "table:product-platform/product-database",
+            "type": "writes-to",
+            "label": "writes to"
+          },
+          {
+            "id": "service:Promotion%20Service->table:shopping-platform/promotion-database:reads",
+            "source": "service:Promotion%20Service",
+            "target": "table:shopping-platform/promotion-database",
+            "type": "reads-from",
+            "label": "reads from"
+          },
+          {
+            "id": "service:Rating%20Aggregator->table:reviews-platform/rating-cache:reads",
+            "source": "service:Rating%20Aggregator",
+            "target": "table:reviews-platform/rating-cache",
+            "type": "reads-from",
+            "label": "reads from"
+          },
+          {
+            "id": "service:Rating%20Aggregator->table:reviews-platform/review-database:reads",
+            "source": "service:Rating%20Aggregator",
+            "target": "table:reviews-platform/review-database",
+            "type": "reads-from",
+            "label": "reads from"
+          },
+          {
+            "id": "service:Rating%20Aggregator->table:reviews-platform/rating-cache:writes",
+            "source": "service:Rating%20Aggregator",
+            "target": "table:reviews-platform/rating-cache",
+            "type": "writes-to",
+            "label": "writes to"
+          },
+          {
+            "id": "service:Returns%20API->table:fulfilment-platform/returns-database:writes",
+            "source": "service:Returns%20API",
+            "target": "table:fulfilment-platform/returns-database",
+            "type": "writes-to",
+            "label": "writes to"
+          },
+          {
+            "id": "service:Returns%20Processor->table:fulfilment-platform/returns-database:reads",
+            "source": "service:Returns%20Processor",
+            "target": "table:fulfilment-platform/returns-database",
+            "type": "reads-from",
+            "label": "reads from"
+          },
+          {
+            "id": "service:Returns%20Processor->table:fulfilment-platform/returns-database:writes",
+            "source": "service:Returns%20Processor",
+            "target": "table:fulfilment-platform/returns-database",
+            "type": "writes-to",
+            "label": "writes to"
+          },
+          {
+            "id": "service:Review%20API->table:reviews-platform/rating-cache:reads",
+            "source": "service:Review%20API",
+            "target": "table:reviews-platform/rating-cache",
+            "type": "reads-from",
+            "label": "reads from"
+          },
+          {
+            "id": "service:Review%20API->table:reviews-platform/review-database:reads",
+            "source": "service:Review%20API",
+            "target": "table:reviews-platform/review-database",
+            "type": "reads-from",
+            "label": "reads from"
+          },
+          {
+            "id": "service:Review%20API->table:reviews-platform/review-database:writes",
+            "source": "service:Review%20API",
+            "target": "table:reviews-platform/review-database",
+            "type": "writes-to",
+            "label": "writes to"
+          },
+          {
+            "id": "service:Review%20Moderation%20Worker->table:reviews-platform/review-database:reads",
+            "source": "service:Review%20Moderation%20Worker",
+            "target": "table:reviews-platform/review-database",
+            "type": "reads-from",
+            "label": "reads from"
+          },
+          {
+            "id": "service:Review%20Moderation%20Worker->table:reviews-platform/review-database:writes",
+            "source": "service:Review%20Moderation%20Worker",
+            "target": "table:reviews-platform/review-database",
+            "type": "writes-to",
+            "label": "writes to"
+          },
+          {
+            "id": "service:Search%20API->table:search-platform/search-index:reads",
+            "source": "service:Search%20API",
+            "target": "table:search-platform/search-index",
+            "type": "reads-from",
+            "label": "reads from"
+          },
+          {
+            "id": "service:Search%20Indexer->table:search-platform/search-index:writes",
+            "source": "service:Search%20Indexer",
+            "target": "table:search-platform/search-index",
+            "type": "writes-to",
+            "label": "writes to"
+          },
+          {
+            "id": "service:Warehouse%20Service->table:fulfilment-platform/warehouse-database:reads",
+            "source": "service:Warehouse%20Service",
+            "target": "table:fulfilment-platform/warehouse-database",
+            "type": "reads-from",
+            "label": "reads from"
+          },
+          {
+            "id": "service:Warehouse%20Service->table:fulfilment-platform/warehouse-database:writes",
+            "source": "service:Warehouse%20Service",
+            "target": "table:fulfilment-platform/warehouse-database",
+            "type": "writes-to",
+            "label": "writes to"
+          },
+          {
+            "id": "service:Carrier%20Adapter->service:Shipping%20API",
+            "source": "service:Carrier%20Adapter",
+            "target": "service:Shipping%20API",
+            "type": "calls",
+            "label": "Create Shipment"
+          },
+          {
+            "id": "service:Cart%20API->service:Promotion%20Service",
+            "source": "service:Cart%20API",
+            "target": "service:Promotion%20Service",
+            "type": "calls",
+            "label": "Calculate Discount"
+          },
+          {
+            "id": "service:Offer%20Service->service:Promotion%20Service",
+            "source": "service:Offer%20Service",
+            "target": "service:Promotion%20Service",
+            "type": "calls",
+            "label": "Calculate Discount"
+          },
+          {
+            "id": "service:Checkout%20Orchestrator->service:Payment%20API",
+            "source": "service:Checkout%20Orchestrator",
+            "target": "service:Payment%20API",
+            "type": "calls",
+            "label": "Authorize Payment"
+          },
+          {
+            "id": "service:Checkout%20Orchestrator->service:Order%20Service",
+            "source": "service:Checkout%20Orchestrator",
+            "target": "service:Order%20Service",
+            "type": "calls",
+            "label": "Create Order"
+          },
+          {
+            "id": "service:Checkout%20Orchestrator->service:Inventory%20Service",
+            "source": "service:Checkout%20Orchestrator",
+            "target": "service:Inventory%20Service",
+            "type": "calls",
+            "label": "Reserve Inventory"
+          },
+          {
+            "id": "service:Loyalty%20Service->service:Notification%20Service",
+            "source": "service:Loyalty%20Service",
+            "target": "service:Notification%20Service",
+            "type": "calls",
+            "label": "Loyalty Points Earned"
+          },
+          {
+            "id": "service:Loyalty%20Service->service:Promotion%20Service",
+            "source": "service:Loyalty%20Service",
+            "target": "service:Promotion%20Service",
+            "type": "calls",
+            "label": "Loyalty Points Earned"
+          },
+          {
+            "id": "service:Order%20Service->service:Loyalty%20Service",
+            "source": "service:Order%20Service",
+            "target": "service:Loyalty%20Service",
+            "type": "calls",
+            "label": "Order Cancelled, Order Completed"
+          },
+          {
+            "id": "service:Order%20Service->service:Warehouse%20Service",
+            "source": "service:Order%20Service",
+            "target": "service:Warehouse%20Service",
+            "type": "calls",
+            "label": "Order Completed"
+          },
+          {
+            "id": "service:Order%20Service->service:Notification%20Service",
+            "source": "service:Order%20Service",
+            "target": "service:Notification%20Service",
+            "type": "calls",
+            "label": "Order Confirmed"
+          },
+          {
+            "id": "service:Order%20Service->service:Offer%20Service",
+            "source": "service:Order%20Service",
+            "target": "service:Offer%20Service",
+            "type": "calls",
+            "label": "Order Confirmed"
+          },
+          {
+            "id": "service:Payment%20Worker->service:Fraud%20API",
+            "source": "service:Payment%20Worker",
+            "target": "service:Fraud%20API",
+            "type": "calls",
+            "label": "Payment Requested"
+          },
+          {
+            "id": "service:Payment%20Worker->service:Payments%20API",
+            "source": "service:Payment%20Worker",
+            "target": "service:Payments%20API",
+            "type": "calls",
+            "label": "Payment Requested, Refund Requested"
+          },
+          {
+            "id": "service:Picking%20Worker->service:Order%20Service",
+            "source": "service:Picking%20Worker",
+            "target": "service:Order%20Service",
+            "type": "calls",
+            "label": "Order Packed"
+          },
+          {
+            "id": "service:Product%20Search%20Publisher->service:Search%20Indexer",
+            "source": "service:Product%20Search%20Publisher",
+            "target": "service:Search%20Indexer",
+            "type": "calls",
+            "label": "Product Created, Product Deleted, Product Updated"
+          },
+          {
+            "id": "service:Returns%20API->service:Returns%20Processor",
+            "source": "service:Returns%20API",
+            "target": "service:Returns%20Processor",
+            "type": "calls",
+            "label": "Return Requested"
+          },
+          {
+            "id": "service:Returns%20Processor->service:Notification%20Service",
+            "source": "service:Returns%20Processor",
+            "target": "service:Notification%20Service",
+            "type": "calls",
+            "label": "Return Approved"
+          },
+          {
+            "id": "service:Returns%20Processor->service:Inventory%20Service",
+            "source": "service:Returns%20Processor",
+            "target": "service:Inventory%20Service",
+            "type": "calls",
+            "label": "Return Received"
+          },
+          {
+            "id": "service:Returns%20Processor->service:Payment%20Worker",
+            "source": "service:Returns%20Processor",
+            "target": "service:Payment%20Worker",
+            "type": "calls",
+            "label": "Return Received"
+          },
+          {
+            "id": "service:Review%20API->service:Review%20Moderation%20Worker",
+            "source": "service:Review%20API",
+            "target": "service:Review%20Moderation%20Worker",
+            "type": "calls",
+            "label": "Review Flagged, Review Submitted"
+          },
+          {
+            "id": "service:Review%20Moderation%20Worker->service:Notification%20Service",
+            "source": "service:Review%20Moderation%20Worker",
+            "target": "service:Notification%20Service",
+            "type": "calls",
+            "label": "Review Published"
+          },
+          {
+            "id": "service:Review%20Moderation%20Worker->service:Rating%20Aggregator",
+            "source": "service:Review%20Moderation%20Worker",
+            "target": "service:Rating%20Aggregator",
+            "type": "calls",
+            "label": "Review Published"
+          },
+          {
+            "id": "service:Tracking%20API->service:Notification%20Service",
+            "source": "service:Tracking%20API",
+            "target": "service:Notification%20Service",
+            "type": "calls",
+            "label": "Shipment Delivered"
+          },
+          {
+            "id": "service:Warehouse%20Service->service:Shipping%20API",
+            "source": "service:Warehouse%20Service",
+            "target": "service:Shipping%20API",
+            "type": "calls",
+            "label": "Order Ready For Shipping"
+          },
+          {
+            "id": "service:Webhook%20Endpoint->service:Notification%20Service",
+            "source": "service:Webhook%20Endpoint",
+            "target": "service:Notification%20Service",
+            "type": "calls",
+            "label": "Payment Failed, Refund Processed"
+          },
+          {
+            "id": "service:Webhook%20Endpoint->service:Payment%20Worker",
+            "source": "service:Webhook%20Endpoint",
+            "target": "service:Payment%20Worker",
+            "type": "calls",
+            "label": "Payment Failed, Payment Succeeded"
+          }
+        ]
+      }
+    },
+    "initialLevel": 1
+  },
+  "catalogHref": "/catalog/",
+  "provenance": {
+    "resources": { "declared": 209, "extracted": 64, "inferred": 9 },
+    "relationships": { "declared": 169, "extracted": 193, "inferred": 46 }
+  }
+}

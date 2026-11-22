@@ -15,11 +15,13 @@ import {
   provenanceSummary,
   readResourceGraph,
   resourceKey,
-  type CatalogResource,
-  type JsonObject,
-  type LoadedEvent,
-  type ResourceGraph,
-  type ResourceRef,
+} from 'autocatalog-core';
+import type {
+  CatalogResource,
+  JsonObject,
+  LoadedEvent,
+  ResourceGraph,
+  ResourceRef,
 } from 'autocatalog-core';
 import { z } from 'zod';
 import { AdapterExecutionError } from './adapters';
@@ -36,13 +38,15 @@ import { AdapterExecutionError } from './adapters';
 /** A repository's events, current and historical, as the exporter takes them. */
 export interface EventCatalogSource {
   name: string;
-  events: LoadedEvent[];
+  events: Array<LoadedEvent>;
   /** Its commands, services and datastores: the `.autocatalog/resources.json` beside `events/`. */
   graph?: ResourceGraph | undefined;
 }
 
 /** Load published `events/` roots, one per repository, for {@link exportToEventCatalog}. */
-export async function loadEventCatalogSources(roots: string[]): Promise<EventCatalogSource[]> {
+export async function loadEventCatalogSources(
+  roots: Array<string>,
+): Promise<Array<EventCatalogSource>> {
   return Promise.all(
     roots.map(async (root) => ({
       name: root,
@@ -54,7 +58,7 @@ export async function loadEventCatalogSources(roots: string[]): Promise<EventCat
 
 export interface ExportToEventCatalogOptions {
   /** One loaded catalog per repository, named for messages about it. */
-  catalogs: EventCatalogSource[];
+  catalogs: Array<EventCatalogSource>;
   /** The EventCatalog project to write into. */
   catalogDir: string;
   /**
@@ -77,7 +81,7 @@ export interface ExportToEventCatalogResult {
   commands: number;
   dataStores: number;
   /** Resources left alone because autocatalog did not write them. */
-  skipped: string[];
+  skipped: Array<string>;
   /** The current version of each resource written, keyed by autocatalog's id: what EventCatalog calls it. */
   written: Record<'events' | 'services' | 'domains', Record<string, EventCatalogPointer>>;
 }
@@ -90,14 +94,16 @@ export interface EventCatalogPointer {
 const slug = (value: string) =>
   value
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '');
+    .replaceAll(/[^a-z0-9]+/g, '-')
+    .replaceAll(/^-|-$/g, '');
 
 /** One line a reader can check: where the contract is defined and how we know. */
 export function provenanceLine(event: LoadedEvent): string | null {
   const { location, symbol, facts } = provenanceSummary(event.frontmatter);
 
-  if (!location) return null;
+  if (!location) {
+    return null;
+  }
   const where = `${codeSpan(location)}${symbol ? ` as ${codeSpan(symbol)}` : ''}`;
 
   return `Defined in ${where} · ${facts.join(' · ')}. Published by [autocatalog](https://github.com/jagreehal/autocatalog).`;
@@ -152,7 +158,9 @@ const SAFE_CHANNEL_ID = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
  * channels however they slug.
  */
 function channelId(address: string): string {
-  if (SAFE_CHANNEL_ID.test(address)) return address;
+  if (SAFE_CHANNEL_ID.test(address)) {
+    return address;
+  }
   const hash = createHash('sha256').update(address).digest('hex').slice(0, 8);
 
   return [slug(address), hash].filter(Boolean).join('-');
@@ -176,9 +184,9 @@ const SERVICE_SIGNATURE =
 
 interface PreviousExport {
   /** Files the last export provably wrote, to remove. */
-  files: string[];
+  files: Array<string>;
   /** Files it may have written but nothing proves it; kept, and reported. */
-  unproven: string[];
+  unproven: Array<string>;
 }
 
 /**
@@ -190,8 +198,8 @@ interface PreviousExport {
  * again and reports the rest. Notes, diagrams and anything else stay too.
  */
 async function legacyExport(catalogDir: string): Promise<PreviousExport> {
-  const files: string[] = [];
-  const unproven: string[] = [];
+  const files: Array<string> = [];
+  const unproven: Array<string> = [];
 
   // The export only ever wrote index.mdx, plus a schema and examples for
   // events. A schema beside a domain or service came from someone else.
@@ -199,10 +207,15 @@ async function legacyExport(catalogDir: string): Promise<PreviousExport> {
     files.push(path.join(dir, 'index.mdx'));
     const schema = path.join(dir, 'schema.json');
 
-    if (isEvent) files.push(schema);
-    else if (await fs.stat(schema).catch(() => null)) unproven.push(schema);
+    if (isEvent) {
+      files.push(schema);
+    } else if (await fs.stat(schema).catch(() => null)) {
+      unproven.push(schema);
+    }
 
-    if (!isEvent) return;
+    if (!isEvent) {
+      return;
+    }
 
     for (const name of await fs.readdir(path.join(dir, 'examples')).catch(() => [])) {
       unproven.push(path.join(dir, 'examples', name));
@@ -213,7 +226,9 @@ async function legacyExport(catalogDir: string): Promise<PreviousExport> {
     for (const name of ['index.mdx', 'index.md']) {
       const data = await readFrontmatter(path.join(dir, name));
 
-      if (data && MARKER in data) return true;
+      if (data && MARKER in data) {
+        return true;
+      }
     }
 
     return false;
@@ -227,7 +242,9 @@ async function legacyExport(catalogDir: string): Promise<PreviousExport> {
     for (const version of await fs.readdir(path.join(dir, 'versioned')).catch(() => [])) {
       const versionDir = path.join(dir, 'versioned', version);
 
-      if (await marked(versionDir)) await pageFiles(versionDir, isEvent);
+      if (await marked(versionDir)) {
+        await pageFiles(versionDir, isEvent);
+      }
     }
   };
 
@@ -236,14 +253,20 @@ async function legacyExport(catalogDir: string): Promise<PreviousExport> {
       const full = path.join(dir, entry.name);
 
       if (entry.isDirectory()) {
-        if (!IGNORED.has(entry.name) && entry.name !== 'versioned') await walk(full);
+        if (!IGNORED.has(entry.name) && entry.name !== 'versioned') {
+          await walk(full);
+        }
         continue;
       }
 
-      if (!RESOURCE_FILE.test(entry.name)) continue;
+      if (!RESOURCE_FILE.test(entry.name)) {
+        continue;
+      }
       const data = await readFrontmatter(full);
 
-      if (!data || !(MARKER in data)) continue;
+      if (!data || !(MARKER in data)) {
+        continue;
+      }
       await generated(dir);
 
       // A domain lists its services, but a hand-written service linked to it
@@ -252,10 +275,15 @@ async function legacyExport(catalogDir: string): Promise<PreviousExport> {
         const serviceDir = path.join(dir, 'services', id);
         const page = await fs.readFile(path.join(serviceDir, 'index.mdx'), 'utf8').catch(() => '');
 
-        if (!page || (await marked(serviceDir))) continue; // absent, or found by the walk
+        if (!page || (await marked(serviceDir))) {
+          continue;
+        } // absent, or found by the walk
 
-        if (page.trimEnd().endsWith(SERVICE_SIGNATURE)) await generated(serviceDir);
-        else unproven.push(path.join(serviceDir, 'index.mdx'));
+        if (page.trimEnd().endsWith(SERVICE_SIGNATURE)) {
+          await generated(serviceDir);
+        } else {
+          unproven.push(path.join(serviceDir, 'index.mdx'));
+        }
       }
     }
   };
@@ -284,7 +312,7 @@ async function previousExport(catalogDir: string): Promise<PreviousExport> {
     throw error;
   }
 
-  let files: string[] | undefined;
+  let files: Array<string> | undefined;
 
   try {
     files = exportManifest.safeParse(JSON.parse(text)).data?.files;
@@ -307,20 +335,22 @@ async function previousExport(catalogDir: string): Promise<PreviousExport> {
  */
 const STAMP = /<!-- autotel:stamp-start -->[\s\S]*?<!-- autotel:stamp-end -->/;
 
-async function readStamps(files: string[]): Promise<Map<string, string>> {
+async function readStamps(files: Array<string>): Promise<Map<string, string>> {
   const stamps = new Map<string, string>();
 
   for (const file of files.filter((name) => name.endsWith('.mdx'))) {
     const block = (await fs.readFile(file, 'utf8').catch(() => '')).match(STAMP)?.[0];
 
-    if (block) stamps.set(file, block);
+    if (block) {
+      stamps.set(file, block);
+    }
   }
 
   return stamps;
 }
 
 /** Replace the manifest in one step, so a crash never leaves half of it. */
-async function saveManifest(catalogDir: string, files: string[]): Promise<void> {
+async function saveManifest(catalogDir: string, files: Array<string>): Promise<void> {
   const target = path.join(catalogDir, MANIFEST);
   const body = { files: files.map((file) => file.split(path.sep).join('/')).sort() };
   await fs.writeFile(`${target}.tmp`, `${JSON.stringify(body, null, 2)}\n`);
@@ -328,7 +358,7 @@ async function saveManifest(catalogDir: string, files: string[]): Promise<void> 
 }
 
 /** Remove the files, then any folder they leave empty. Nothing outside the project. */
-async function removeFiles(files: string[], catalogDir: string): Promise<void> {
+async function removeFiles(files: Array<string>, catalogDir: string): Promise<void> {
   const inside = (file: string) => file.startsWith(catalogDir + path.sep);
 
   for (const file of files.filter(inside)) {
@@ -337,7 +367,9 @@ async function removeFiles(files: string[], catalogDir: string): Promise<void> {
     for (let dir = path.dirname(file); inside(dir); dir = path.dirname(dir)) {
       const left = await fs.readdir(dir).catch(() => null);
 
-      if (left === null || left.length > 0) break;
+      if (left === null || left.length > 0) {
+        break;
+      }
       await fs.rmdir(dir);
     }
   }
@@ -348,8 +380,8 @@ async function removeFiles(files: string[], catalogDir: string): Promise<void> {
  * two domains cannot become one event without merging unrelated contracts.
  * Refuse before anything is written.
  */
-function eventsById(catalogs: EventCatalogSource[]) {
-  const byId = new Map<string, { root: string; event: LoadedEvent }[]>();
+function eventsById(catalogs: Array<EventCatalogSource>) {
+  const byId = new Map<string, Array<{ root: string; event: LoadedEvent }>>();
 
   for (const { name, events } of catalogs) {
     for (const event of events) {
@@ -358,7 +390,7 @@ function eventsById(catalogs: EventCatalogSource[]) {
     }
   }
 
-  const problems: string[] = [];
+  const problems: Array<string> = [];
 
   for (const [id, entries] of byId) {
     const places = [
@@ -367,8 +399,11 @@ function eventsById(catalogs: EventCatalogSource[]) {
 
     const current = entries.filter(({ event }) => !event.folder.isVersioned).length;
 
-    if (places.length > 1) problems.push(`${id} is published by ${places.join(' and ')}`);
-    else if (current !== 1) problems.push(`${id} has ${current} current versions in ${places[0]}`);
+    if (places.length > 1) {
+      problems.push(`${id} is published by ${places.join(' and ')}`);
+    } else if (current !== 1) {
+      problems.push(`${id} has ${current} current versions in ${places[0]}`);
+    }
   }
 
   if (problems.length > 0) {
@@ -383,7 +418,7 @@ function eventsById(catalogs: EventCatalogSource[]) {
 type Guarantee = NonNullable<LoadedEvent['frontmatter']['delivery']>['guarantee'];
 
 /** Where an example goes under examples/: its case folder, as EventCatalog nests them. */
-function examplePath(example: LoadedEvent['examples'][number]): string[] {
+function examplePath(example: LoadedEvent['examples'][number]): Array<string> {
   return [...(example.case ? [example.case] : []), `${example.name}.json`];
 }
 
@@ -395,7 +430,9 @@ function exampleConfig(event: LoadedEvent) {
   const entries = event.examples.flatMap((example) => {
     const summary = example.summary ?? (example.case && exampleCaseSummary(example.case));
 
-    if (!summary && !example.title) return [];
+    if (!summary && !example.title) {
+      return [];
+    }
 
     return [
       [
@@ -420,11 +457,15 @@ export const webAddress = z.url({ protocol: /^https?$/ });
 function contactFields(contact: string | undefined) {
   const email = z.email().safeParse(contact?.replace(/^mailto:/, ''));
 
-  if (contact?.startsWith('mailto:') && email.success) return { email: email.data };
+  if (contact?.startsWith('mailto:') && email.success) {
+    return { email: email.data };
+  }
 
   const url = webAddress.safeParse(contact);
 
-  if (!url.success) return {};
+  if (!url.success) {
+    return {};
+  }
 
   return new URL(url.data).hostname === 'teams.microsoft.com'
     ? { msTeamsDirectMessageUrl: url.data }
@@ -479,17 +520,19 @@ const dataStoreAttributes = z
  * resource standing: its commands, services and datastores, and who sends,
  * handles, reads and writes what.
  */
-function repositoryGraph(catalogs: EventCatalogSource[]) {
+function repositoryGraph(catalogs: Array<EventCatalogSource>) {
   const resources = new Map<string, CatalogResource>();
   const edges = new Map<string, { type: string; from: ResourceRef; to: ResourceRef }>();
 
   for (const { graph } of catalogs) {
-    for (const resource of graph?.resources ?? [])
+    for (const resource of graph?.resources ?? []) {
       if (!resources.has(resourceKey(resource.ref)))
         resources.set(resourceKey(resource.ref), resource);
+    }
 
-    for (const edge of graph?.relationships ?? [])
+    for (const edge of graph?.relationships ?? []) {
       edges.set(`${resourceKey(edge.from)} ${edge.type} ${resourceKey(edge.to)}`, edge);
+    }
   }
 
   const all = [...resources.values()];
@@ -545,18 +588,22 @@ export async function exportToEventCatalog(
     assertPathSegment(catalogDir, 'version', command.ref.version ?? '1.0.0');
   }
 
-  for (const store of graph.dataStores)
+  for (const store of graph.dataStores) {
     assertPathSegment(catalogDir, 'data store', dataStoreId(store.ref));
+  }
 
   for (const [name, service] of graph.services) {
     assertPathSegment(catalogDir, 'service', name);
 
-    for (const domain of service.attributes.domains)
+    for (const domain of service.attributes.domains) {
       assertPathSegment(catalogDir, 'domain', domain);
+    }
 
     const system = systemAttribute.parse(service.attributes.system);
 
-    if (system) assertPathSegment(catalogDir, 'system', system.id);
+    if (system) {
+      assertPathSegment(catalogDir, 'system', system.id);
+    }
   }
 
   // One channel per address, however many events travel on it. EventCatalog 4
@@ -569,7 +616,7 @@ export async function exportToEventCatalog(
     { id: string; protocols: Set<string>; guarantees: Set<Guarantee | undefined> }
   >();
 
-  for (const event of events)
+  for (const event of events) {
     for (const { address, protocols } of event.frontmatter.transport ?? []) {
       if (!address) continue;
 
@@ -586,9 +633,10 @@ export async function exportToEventCatalog(
       if (!event.folder.isVersioned) channel.guarantees.add(event.frontmatter.delivery?.guarantee);
       channels.set(address, channel);
     }
+  }
 
   // A command makes no delivery promise, so a channel carrying one claims none.
-  for (const command of graph.commands)
+  for (const command of graph.commands) {
     for (const { address, protocols } of commandAttributes.parse(command.attributes).transport) {
       const channel = channels.get(address) ?? {
         id: channelId(address),
@@ -600,6 +648,7 @@ export async function exportToEventCatalog(
       channel.guarantees.add(undefined);
       channels.set(address, channel);
     }
+  }
 
   // Distinct addresses are distinct channels: one id for two would merge their
   // transports and point both at whichever was written last. Refused here,
@@ -627,9 +676,9 @@ export async function exportToEventCatalog(
   await removeFiles(previous.files, catalogDir);
   // Ownership is recorded before each file is written, so an export that
   // fails part way leaves a manifest the next run can clean up from.
-  const written: string[] = [];
+  const written: Array<string> = [];
 
-  const own = async (...files: string[][]) => {
+  const own = async (...files: Array<string>[]) => {
     written.push(...files.map((parts) => path.join(...parts)));
     await saveManifest(catalogDir, written);
   };
@@ -641,12 +690,14 @@ export async function exportToEventCatalog(
   await fs.utimes(catalogDir, now, now);
   const sdk = utils(catalogDir);
 
-  const skipped: string[] = [];
+  const skipped: Array<string> = [];
   const pointers: ExportToEventCatalogResult['written'] = { events: {}, services: {}, domains: {} };
 
   /** Whatever is still there after cleanup is someone else's, and is left alone. */
   const foreign = (kind: string, id: string, exists: boolean) => {
-    if (!exists) return false;
+    if (!exists) {
+      return false;
+    }
     skipped.push(`${kind} ${id} exists and was not written by autocatalog; left as it is`);
 
     return true;
@@ -667,15 +718,18 @@ export async function exportToEventCatalog(
   for (const owner of [
     ...events.map((event) => event.frontmatter.owner),
     ...[...graph.commands, ...graph.dataStores, ...graph.services.values()].map((r) => r.owner),
-  ])
+  ]) {
     if (owner && !teams.get(slug(owner.team))?.name) teams.set(slug(owner.team), owner);
+  }
 
   let teamsWritten = 0;
 
   for (const [id, { team, name, contact }] of teams) {
     // A team or person page is theirs; create a team page when there is
     // neither, and never overwrite one.
-    if ((await sdk.getTeam(id)) || (await sdk.getUser(id))) continue;
+    if ((await sdk.getTeam(id)) || (await sdk.getUser(id))) {
+      continue;
+    }
     await sdk.writeTeam({ id, name: name ?? team, ...contactFields(contact), markdown: '' });
     teamsWritten += 1;
   }
@@ -699,7 +753,9 @@ export async function exportToEventCatalog(
   };
 
   for (const [address, { id, protocols, guarantees }] of channels) {
-    if (foreign('channel', id, Boolean(await sdk.getChannel(id)))) continue;
+    if (foreign('channel', id, Boolean(await sdk.getChannel(id)))) {
+      continue;
+    }
 
     const [guarantee] = guarantees.size === 1 ? guarantees : [];
 
@@ -814,11 +870,12 @@ export async function exportToEventCatalog(
 
       const config = exampleConfig(event);
 
-      if (config)
+      if (config) {
         await fs.writeFile(
           path.join(dir, 'examples', 'examples.config.yaml'),
           stringifyYaml(config),
         );
+      }
     }
 
     exported.add(id);
@@ -835,7 +892,9 @@ export async function exportToEventCatalog(
     const kind = query ? 'query' : 'command';
     const exists = query ? await sdk.getQuery(id) : await sdk.getCommand(id);
 
-    if (foreign(kind, id, Boolean(exists))) continue;
+    if (foreign(kind, id, Boolean(exists))) {
+      continue;
+    }
 
     const dir = path.join('domains', namespace, query ? 'queries' : 'commands', id);
     const { schema, transport } = commandAttributes.parse(command.attributes);
@@ -859,14 +918,18 @@ export async function exportToEventCatalog(
     await own([dir, 'index.mdx'], ...(schema ? [[dir, 'schema.json']] : []));
 
     // Paths resolve from the SDK's own commands/ or queries/ folder.
-    if (query) await sdk.writeQuery(data, { path: path.join('..', dir), override: true });
-    else await sdk.writeCommand(data, { path: path.join('..', dir), override: true });
+    if (query) {
+      await sdk.writeQuery(data, { path: path.join('..', dir), override: true });
+    } else {
+      await sdk.writeCommand(data, { path: path.join('..', dir), override: true });
+    }
 
-    if (schema)
+    if (schema) {
       await fs.writeFile(
         path.join(catalogDir, dir, 'schema.json'),
         `${JSON.stringify(schema, null, 2)}\n`,
       );
+    }
 
     commandsWritten += 1;
   }
@@ -886,9 +949,13 @@ export async function exportToEventCatalog(
       !store.evidence &&
       Object.keys(store.attributes).length === 0;
 
-    if (placeholder) continue;
+    if (placeholder) {
+      continue;
+    }
 
-    if (foreign('data store', id, Boolean(await sdk.getDataStore(id)))) continue;
+    if (foreign('data store', id, Boolean(await sdk.getDataStore(id)))) {
+      continue;
+    }
 
     const { technology, containerType } = dataStoreAttributes.parse(store.attributes);
 
@@ -930,10 +997,10 @@ export async function exportToEventCatalog(
     current.map((event) => [event.frontmatter.id, event.frontmatter.consumerFields]),
   );
 
-  const servicesByDomain = new Map<string, string[]>();
+  const servicesByDomain = new Map<string, Array<string>>();
 
   // Systems, with the domain of their first service and the services they group.
-  const systems = new Map<string, { name?: string; home?: string; services: string[] }>();
+  const systems = new Map<string, { name?: string; home?: string; services: Array<string> }>();
   let servicesWritten = 0;
 
   // The services events name, and the ones the graph knows that no event does:
@@ -964,7 +1031,9 @@ export async function exportToEventCatalog(
 
     const dir = home ? path.join('domains', home, 'services', name) : path.join('services', name);
 
-    if (home) servicesByDomain.set(home, [...(servicesByDomain.get(home) ?? []), name]);
+    if (home) {
+      servicesByDomain.set(home, [...(servicesByDomain.get(home) ?? []), name]);
+    }
 
     const system = systemAttribute.parse(declared?.attributes.system);
 
@@ -1029,7 +1098,9 @@ export async function exportToEventCatalog(
   }
 
   for (const [id, { name, home, services }] of systems) {
-    if (foreign('system', id, Boolean(await sdk.getSystem(id)))) continue;
+    if (foreign('system', id, Boolean(await sdk.getSystem(id)))) {
+      continue;
+    }
 
     const dir = home ? path.join('domains', home, 'systems', id) : path.join('systems', id);
 
@@ -1078,7 +1149,9 @@ export async function exportToEventCatalog(
 
   // Back where `stamp` puts it on a page without a <Footer />, so re-stamping changes nothing.
   for (const [file, block] of stamps) {
-    if (!rewritten.has(file)) continue;
+    if (!rewritten.has(file)) {
+      continue;
+    }
     const page = await fs.readFile(file, 'utf8');
     await fs.writeFile(file, `${page.trimEnd()}\n\n${block}\n`);
   }
@@ -1110,11 +1183,11 @@ interface EventCatalogConfig {
 
 export interface AutocatalogGeneratorOptions {
   /** Repositories to scan the way `ac scan` does, relative to the EventCatalog project. */
-  repositories?: string[];
+  repositories?: Array<string>;
   /** Run the adapters installed in each repository, such as Zod, which evaluate its code. */
   allowCodeExecution?: boolean;
   /** Published `events/` roots, scanned and committed beforehand. */
-  roots?: string[];
+  roots?: Array<string>;
   narrative?: boolean;
 }
 
@@ -1153,7 +1226,7 @@ async function generate(options: AutocatalogGeneratorOptions): Promise<void> {
 
   try {
     const { runScan } = await import('./commands/scan');
-    const scanned: EventCatalogSource[] = [];
+    const scanned: Array<EventCatalogSource> = [];
 
     for (const [i, repository] of repositories.entries()) {
       const out = path.join(work, String(i), 'events');
@@ -1177,7 +1250,9 @@ async function generate(options: AutocatalogGeneratorOptions): Promise<void> {
         throw error;
       });
 
-      if (code !== 0) throw new Error(`autocatalog: could not scan ${repository}`);
+      if (code !== 0) {
+        throw new Error(`autocatalog: could not scan ${repository}`);
+      }
 
       scanned.push({
         name: repository,
@@ -1196,7 +1271,9 @@ async function generate(options: AutocatalogGeneratorOptions): Promise<void> {
       `autocatalog: ${result.events} event(s) in ${result.versions} version(s), ${result.commands} command(s) and queries, ${result.services} service(s) and ${result.dataStores} data store(s) across ${result.domains} domain(s)`,
     );
 
-    for (const reason of result.skipped) console.warn(`autocatalog: ${reason}`);
+    for (const reason of result.skipped) {
+      console.warn(`autocatalog: ${reason}`);
+    }
   } finally {
     await fs.rm(work, { recursive: true, force: true });
   }

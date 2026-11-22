@@ -8,7 +8,7 @@ import { cjsShimAliases, reactRendererIntegration } from '../src/react-integrati
 
 const require = createRequire(import.meta.url);
 
-const here = path.dirname(fileURLToPath(import.meta.url));
+const here = import.meta.dirname;
 
 /** Resolves a transitive dep the way the docs package's React tree does. */
 function resolveFromReactAria(id: string): string {
@@ -67,7 +67,7 @@ describe('CJS shims that React Aria named-imports', () => {
 
 describe('reactRendererIntegration', () => {
   it('installs the CJS shim aliases on the Vite config', () => {
-    const patches: AstroUserConfig[] = [];
+    const patches: Array<AstroUserConfig> = [];
     const setup = reactRendererIntegration().hooks['astro:config:setup'];
 
     // SAFETY: the hook calls only updateConfig.

@@ -7,7 +7,7 @@ interface HastNode {
   type: string;
   tagName?: string;
   properties?: { [name: string]: PropertyValue };
-  children?: HastNode[];
+  children?: Array<HastNode>;
 }
 
 /**
@@ -24,5 +24,7 @@ export function focusTables(node: HastNode): void {
     node.properties = { ...node.properties, tabIndex: 0 };
   }
 
-  for (const child of node.children ?? []) focusTables(child);
+  for (const child of node.children ?? []) {
+    focusTables(child);
+  }
 }

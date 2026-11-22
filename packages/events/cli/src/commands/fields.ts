@@ -6,8 +6,8 @@ import {
   indexFields,
   loadCatalog,
   queryFields,
-  type FieldSummary,
 } from 'autocatalog-core';
+import type { FieldSummary } from 'autocatalog-core';
 
 export interface RunFieldsOptions {
   cwd: string;
@@ -23,7 +23,7 @@ function conflictNote(field: FieldSummary): string {
   return note ? kleur.yellow(`  ⚠ ${note}`) : '';
 }
 
-function printList(fields: FieldSummary[]): void {
+function printList(fields: Array<FieldSummary>): void {
   const width = Math.min(44, Math.max(...fields.map((f) => f.path.length)));
 
   for (const field of fields) {
@@ -40,7 +40,9 @@ function printDetail(field: FieldSummary): void {
   console.log(kleur.bold(`\n${field.path}`) + kleur.dim(`  ${field.types.join(' | ')}`));
   const note = conflictNote(field);
 
-  if (note) console.log(note.trimStart());
+  if (note) {
+    console.log(note.trimStart());
+  }
 
   for (const o of field.occurrences) {
     const guarantee = o.required ? kleur.green('required') : kleur.dim('optional');
@@ -80,11 +82,16 @@ export async function runFields(opts: RunFieldsOptions): Promise<number> {
     return opts.query ? 1 : 0;
   }
 
-  if (opts.quiet) return 0;
+  if (opts.quiet) {
+    return 0;
+  }
 
   // One match is a lookup ("where does customerId live?"); many is a browse.
-  if (fields.length === 1 && opts.query) printDetail(fields[0]!);
-  else printList(fields);
+  if (fields.length === 1 && opts.query) {
+    printDetail(fields[0]!);
+  } else {
+    printList(fields);
+  }
 
   const conflicts = fields.filter(hasFieldConflict).length;
   console.log(

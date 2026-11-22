@@ -17,10 +17,10 @@ import {
   PolicySchema,
   ToolSchema,
   WorkflowSchema,
-  type Entity,
 } from './schemas.js';
+import type { Entity } from './schemas.js';
 
-const entities: Entity[] = [
+const entities: Array<Entity> = [
   DomainSchema.parse({ id: 'support', name: 'Support', owner: 'support' }),
   ModelSchema.parse({
     id: 'fast-model',
@@ -79,7 +79,7 @@ const entities: Entity[] = [
   }),
 ];
 
-function catalogOf(input: Entity[] = entities): Catalog {
+function catalogOf(input: Array<Entity> = entities): Catalog {
   const byKind = new Map(ENTITY_KINDS.map((kind) => [kind, new Map<string, Entity>()]));
   const meta = new Map<string, { body: string; path: string }>();
 
@@ -161,7 +161,9 @@ describe('createAgentsResourceGraph', () => {
     try {
       createAgentsResourceGraph(broken);
     } catch (error) {
-      if (!(error instanceof AgentsResourceGraphError)) throw error;
+      if (!(error instanceof AgentsResourceGraphError)) {
+        throw error;
+      }
       expect(error.failures).toEqual(
         expect.arrayContaining([
           '/repo/bad.json: invalid JSON',

@@ -16,11 +16,12 @@ import {
   TableRow,
 } from '#ui/components/ui/table.tsx';
 import { Icon } from '../components/Icon';
-import { BigPicture, type BigPictureLaneView } from '../components/Storm';
+import { BigPicture } from '../components/Storm';
+import type { BigPictureLaneView } from '../components/Storm';
 
 export interface FlowsPageProps {
   /** Every flow as a lane of facts, so the processes read side by side. */
-  bigPicture?: BigPictureLaneView[] | undefined;
+  bigPicture?: Array<BigPictureLaneView> | undefined;
   flows: Array<{
     title: string;
     summary?: string | undefined;

@@ -38,7 +38,9 @@ async function ac(args, expected = 0) {
 
     return result.stdout;
   } catch (error) {
-    if (expected !== 0 && error.code === expected) return error.stdout;
+    if (expected !== 0 && error.code === expected) {
+      return error.stdout;
+    }
     throw new Error(`ac ${args.join(' ')} failed:\n${error.stdout ?? ''}\n${error.stderr ?? ''}`, {
       cause: error,
     });

@@ -8,10 +8,10 @@ import { inside } from './inside';
 
 /** The states one field of an entity moves through. */
 export interface Lifecycle {
-  states: string[];
+  states: Array<string>;
   /** Where it can begin, so a state nothing leads to is not reported as missed. */
-  initial: string[];
-  terminal: string[];
+  initial: Array<string>;
+  terminal: Array<string>;
 }
 
 const state = z.string().trim().min(1);
@@ -40,12 +40,12 @@ export const lifecyclesSchema = z.record(
 export interface LifecycleEntity {
   id: string;
   lifecycles: Record<string, Lifecycle>;
-  properties?: Array<{ name: string; enum?: string[] | undefined }> | undefined;
+  properties?: Array<{ name: string; enum?: Array<string> | undefined }> | undefined;
 }
 
 export interface LifecycleCheck {
-  failures: string[];
-  warnings: string[];
+  failures: Array<string>;
+  warnings: Array<string>;
 }
 
 /** Identifies a lifecycle: either part can hold a dot, so joining with one would not. */
@@ -64,23 +64,27 @@ const place = (flow: Flow, step: FlowStep) => `${flow.repository}/${flow.file}: 
  * defines is the composed site's to check, so `deferMissing` lets it pass.
  */
 export function checkLifecycles(
-  flows: Flow[],
-  entities: LifecycleEntity[],
+  flows: Array<Flow>,
+  entities: Array<LifecycleEntity>,
   options: { deferMissing?: boolean } = {},
 ): LifecycleCheck {
-  const failures: string[] = [];
-  const warnings: string[] = [];
+  const failures: Array<string> = [];
+  const warnings: Array<string> = [];
   const reached = new Map<string, Set<string>>();
 
   for (const flow of flows) {
     for (const step of flow.steps) {
-      if (!step.transition) continue;
+      if (!step.transition) {
+        continue;
+      }
 
       const { entity: id, field, to } = step.transition;
       const entity = entities.find((candidate) => candidate.id === id);
 
       if (!entity) {
-        if (!options.deferMissing) failures.push(`${place(flow, step)}: no entity '${id}'`);
+        if (!options.deferMissing) {
+          failures.push(`${place(flow, step)}: no entity '${id}'`);
+        }
         continue;
       }
 
@@ -107,7 +111,9 @@ export function checkLifecycles(
     for (const [field, lifecycle] of Object.entries(entity.lifecycles)) {
       const into = reached.get(lifecycleKey(entity.id, field));
 
-      if (!into) continue;
+      if (!into) {
+        continue;
+      }
 
       for (const name of lifecycle.states) {
         if (!into.has(name) && !lifecycle.initial.includes(name)) {
@@ -157,8 +163,8 @@ interface NoteDocument {
 }
 
 export interface FlowNotes {
-  notes: FlowNote[];
-  warnings: string[];
+  notes: Array<FlowNote>;
+  warnings: Array<string>;
 }
 
 /**
@@ -166,14 +172,16 @@ export interface FlowNotes {
  * join the map the way findings do. `flow:` is a flow's id, or `<repository>/<id>`
  * for one another repository keeps.
  */
-export function flowNotes(documents: NoteDocument[], flows: Flow[]): FlowNotes {
-  const notes: FlowNote[] = [];
-  const warnings: string[] = [];
+export function flowNotes(documents: Array<NoteDocument>, flows: Array<Flow>): FlowNotes {
+  const notes: Array<FlowNote> = [];
+  const warnings: Array<string> = [];
 
   for (const { id, repo, data } of documents) {
     const { title, flow: named, step, nature, status, resolved } = noteFields.parse(data);
 
-    if (!named) continue;
+    if (!named) {
+      continue;
+    }
 
     const flow = flows.find((candidate) =>
       named.includes('/')
@@ -243,11 +251,15 @@ export function parseTransitionObservations(raw: string): TransitionObservations
   const json = JSON.parse(raw);
   const snapshot = snapshotSchema.safeParse(json);
 
-  if (snapshot.success) return fromSnapshot(snapshot.data);
+  if (snapshot.success) {
+    return fromSnapshot(snapshot.data);
+  }
 
   const parsed = observationsSchema.safeParse(json);
 
-  if (!parsed.success) throw new Error(z.prettifyError(parsed.error).replace(/\n+/g, '; '));
+  if (!parsed.success) {
+    throw new Error(z.prettifyError(parsed.error).replace(/\n+/g, '; '));
+  }
 
   return parsed.data;
 }
@@ -282,7 +294,7 @@ export interface TransitionEvidence {
   step: string;
   entity: string;
   field: string;
-  from: string[];
+  from: Array<string>;
   to: string;
   via?: string | undefined;
   /** Its states are in the entity's lifecycle. */
@@ -318,21 +330,21 @@ export interface FlowEvidence {
   commit?: string | undefined;
   window?: { from: string; to: string } | undefined;
   source?: string | undefined;
-  transitions: TransitionEvidence[];
+  transitions: Array<TransitionEvidence>;
   /** Recorded at runtime, and in no flow. */
-  undeclared: UndeclaredTransition[];
+  undeclared: Array<UndeclaredTransition>;
 }
 
 export interface VerifyFlowsInput {
-  flows: Flow[];
-  entities: LifecycleEntity[];
+  flows: Array<Flow>;
+  entities: Array<LifecycleEntity>;
   /** The checkout code and test links are relative to. */
   dir: string;
   checkedAt: string;
   commit?: string | undefined;
   observations?: TransitionObservations | undefined;
   /** Every flow in this check, so a sibling repository's transition reads as declared. */
-  allFlows?: Flow[] | undefined;
+  allFlows?: Array<Flow> | undefined;
 }
 
 // A link must stay in the checkout, and be a file: a flow is data, and could name
@@ -348,7 +360,9 @@ function fileText(dir: string, file: string): string | undefined {
 }
 
 function codeOf(step: FlowStep, dir: string): TransitionEvidence['code'] {
-  if (step.code.length === 0) return 'not checked';
+  if (step.code.length === 0) {
+    return 'not checked';
+  }
 
   return step.code.every(({ file, contains }) => {
     const found = fileText(dir, file);
@@ -360,7 +374,9 @@ function codeOf(step: FlowStep, dir: string): TransitionEvidence['code'] {
 }
 
 function rulesOf(step: FlowStep, dir: string): TransitionEvidence['rules'] {
-  if (step.rules.length === 0) return 'none';
+  if (step.rules.length === 0) {
+    return 'none';
+  }
 
   return step.rules.every(({ test }) => test && fileText(dir, test) !== undefined)
     ? 'test linked'
@@ -373,7 +389,9 @@ function schemaOf(
 ): TransitionEvidence['schema'] {
   const values = entity?.properties?.find(({ name }) => name === transition.field)?.enum;
 
-  if (!values) return 'not checked';
+  if (!values) {
+    return 'not checked';
+  }
 
   return statesOf(transition).every((name) => values.includes(name)) ? 'yes' : 'no';
 }
@@ -384,11 +402,11 @@ function schemaOf(
  */
 export const sameValue = (a: string, b: string) => normalised(a) === normalised(b);
 
-const normalised = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, '_');
+const normalised = (value: string) => value.toLowerCase().replaceAll(/[^a-z0-9]+/g, '_');
 
 const sameTarget = (
   row: { entity: string; field: string; from: string; to: string },
-  { entity, field, from, to }: { entity: string; field: string; from: string[]; to: string },
+  { entity, field, from, to }: { entity: string; field: string; from: Array<string>; to: string },
 ) =>
   sameValue(row.entity, entity) &&
   sameValue(row.field, field) &&
@@ -399,7 +417,9 @@ function observedOf(
   transition: FlowTransition,
   observations: TransitionObservations | undefined,
 ): Pick<TransitionEvidence, 'observed' | 'count' | 'otherVia'> {
-  if (!observations) return { observed: 'not checked' };
+  if (!observations) {
+    return { observed: 'not checked' };
+  }
 
   const { entity, field, via } = transition;
 
@@ -407,7 +427,9 @@ function observedOf(
     (candidate) => sameValue(candidate.entity, entity) && sameValue(candidate.field, field),
   );
 
-  if (!instrumented) return { observed: 'not instrumented' };
+  if (!instrumented) {
+    return { observed: 'not instrumented' };
+  }
 
   const rows = observations.transitions.filter((row) => sameTarget(row, transition));
 
@@ -431,10 +453,12 @@ export function verifyFlows(input: VerifyFlowsInput): FlowEvidence {
   const { flows, entities, dir, checkedAt, commit, observations, allFlows = flows } = input;
 
   const transitions = flows.flatMap((flow) =>
-    flow.steps.flatMap((step): TransitionEvidence[] => {
+    flow.steps.flatMap((step): Array<TransitionEvidence> => {
       const { transition } = step;
 
-      if (!transition) return [];
+      if (!transition) {
+        return [];
+      }
 
       const entity = entities.find((candidate) => candidate.id === transition.entity);
       const lifecycle = lifecycleOf(entity, transition.field);
@@ -465,7 +489,7 @@ export function verifyFlows(input: VerifyFlowsInput): FlowEvidence {
   );
 
   const undeclared = (observations?.transitions ?? []).flatMap(
-    ({ entity, field, from, to, via, count }): UndeclaredTransition[] =>
+    ({ entity, field, from, to, via, count }): Array<UndeclaredTransition> =>
       declared.some((row) => sameTarget({ entity, field, from, to }, row))
         ? []
         : [{ entity, field, from, to, via, count }],
@@ -481,7 +505,7 @@ export function verifyFlows(input: VerifyFlowsInput): FlowEvidence {
   };
 }
 
-const sameStates = (a: string[], b: string[]) =>
+const sameStates = (a: Array<string>, b: Array<string>) =>
   a.length === b.length && a.every((name) => b.includes(name));
 
 /**
@@ -493,7 +517,9 @@ export function stepEvidence(
   flow: Flow,
   { id, transition }: FlowStep,
 ): TransitionEvidence | undefined {
-  if (!transition) return undefined;
+  if (!transition) {
+    return undefined;
+  }
 
   return evidence?.transitions.find(
     (row) =>
@@ -549,13 +575,16 @@ const realFlowsFolder = (dir: string) =>
 
 /** Saves the record, refusing to follow a link a checkout could use to overwrite another file. */
 export function writeFlowEvidence(dir: string, evidence: FlowEvidence): void {
-  if (!realFlowsFolder(dir)) throw new Error(`${FLOWS_DIR} is not a real folder`);
+  if (!realFlowsFolder(dir)) {
+    throw new Error(`${FLOWS_DIR} is not a real folder`);
+  }
 
   const target = path.join(dir, FLOW_EVIDENCE_FILE);
 
   // Windows has no O_NOFOLLOW, so the flag alone would write through the link.
-  if (fs.lstatSync(target, { throwIfNoEntry: false })?.isSymbolicLink())
+  if (fs.lstatSync(target, { throwIfNoEntry: false })?.isSymbolicLink()) {
     throw new Error(`${FLOW_EVIDENCE_FILE} is a link`);
+  }
 
   const { O_WRONLY, O_CREAT, O_TRUNC, O_NOFOLLOW = 0 } = fs.constants;
 
@@ -573,7 +602,9 @@ export function readFlowEvidence(dir: string): FlowEvidence | undefined {
   const file = path.join(dir, FLOW_EVIDENCE_FILE);
 
   try {
-    if (!realFlowsFolder(dir) || !fs.lstatSync(file).isFile()) return undefined;
+    if (!realFlowsFolder(dir) || !fs.lstatSync(file).isFile()) {
+      return undefined;
+    }
 
     const raw = JSON.parse(fs.readFileSync(file, 'utf8'));
 

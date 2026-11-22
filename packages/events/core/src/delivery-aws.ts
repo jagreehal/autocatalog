@@ -1,21 +1,12 @@
-import { parse, type CollectionTag, type ScalarTag, type YAMLMap, type YAMLSeq } from 'yaml';
+import { parse } from 'yaml';
+import type { CollectionTag, ScalarTag, YAMLMap, YAMLSeq } from 'yaml';
 import { z } from 'zod';
 import { emptyResourceGraph } from './architecture';
 import type { SourceLocation } from './adapter-event';
-import {
-  brokerResource,
-  deadLetterEdge,
-  nodeRef,
-  routeEdge,
-  type BrokerNode,
-} from './delivery-model';
-import {
-  isJsonObject,
-  jsonObjectSchema,
-  jsonValueSchema,
-  type JsonObject,
-  type JsonValue,
-} from './json';
+import { brokerResource, deadLetterEdge, nodeRef, routeEdge } from './delivery-model';
+import type { BrokerNode } from './delivery-model';
+import { isJsonObject, jsonObjectSchema, jsonValueSchema } from './json';
+import type { JsonObject, JsonValue } from './json';
 import type { CatalogResource, ResourceGraph } from './resource-graph';
 import { sourceLines } from './source-lines';
 
@@ -49,9 +40,13 @@ const INTRINSICS = [
 
 /** CloudFormation's short-form intrinsics as the long form JSON templates use. */
 const intrinsic = (name: string, value: JsonValue): JsonObject => {
-  if (name === 'Ref') return { Ref: value };
+  if (name === 'Ref') {
+    return { Ref: value };
+  }
 
-  if (name === 'Condition') return { Condition: value };
+  if (name === 'Condition') {
+    return { Condition: value };
+  }
 
   if (name === 'GetAtt') {
     const parts = z.string().safeParse(value);
@@ -87,7 +82,9 @@ const template = z.object({
 
 /** A template's text parsed, when it is a CloudFormation template with messaging resources. */
 export function parseCloudFormation(text: string, file: string): JsonValue | undefined {
-  if (!MESSAGING.test(text)) return undefined;
+  if (!MESSAGING.test(text)) {
+    return undefined;
+  }
 
   let value: JsonValue;
 
@@ -113,11 +110,15 @@ const redrive = z
 
 /** A JSON policy written inline or as a JSON string, as both are allowed. */
 const inlineJson = (value: JsonValue | undefined): JsonObject | undefined => {
-  if (isJsonObject(value)) return value;
+  if (isJsonObject(value)) {
+    return value;
+  }
 
   const text = optionalString.parse(value);
 
-  if (!text) return undefined;
+  if (!text) {
+    return undefined;
+  }
 
   try {
     const parsed = jsonValueSchema.parse(JSON.parse(text));
@@ -144,7 +145,7 @@ const SOURCE_OPERATORS = new Set(['ArnEquals', 'ArnLike', 'StringEquals', 'Strin
 
 type Statement = z.infer<typeof statement>;
 
-const statements = (document: JsonValue | undefined): Statement[] => {
+const statements = (document: JsonValue | undefined): Array<Statement> => {
   const doc = inlineJson(document);
   const list = doc?.Statement;
 
@@ -155,7 +156,7 @@ const statements = (document: JsonValue | undefined): Statement[] => {
   });
 };
 
-const asList = (value: JsonValue | undefined): JsonValue[] =>
+const asList = (value: JsonValue | undefined): Array<JsonValue> =>
   value === undefined ? [] : Array.isArray(value) ? value : [value];
 
 /** Whether an IAM action pattern such as `sns:*` covers an action. */
@@ -183,10 +184,14 @@ export function globMatches(pattern: string, text: string): boolean {
     } else if (star !== -1) {
       p = star + 1;
       t = ++resume;
-    } else return false;
+    } else {
+      return false;
+    }
   }
 
-  while (pattern[p] === '*') p++;
+  while (pattern[p] === '*') {
+    p++;
+  }
 
   return p === pattern.length;
 }
@@ -266,7 +271,9 @@ export function cloudFormationGraph(
 
     const text = optionalString.parse(value);
 
-    if (!text) return undefined;
+    if (!text) {
+      return undefined;
+    }
 
     const name = text.split(/[:/]/).at(-1);
 
@@ -296,12 +303,13 @@ export function cloudFormationGraph(
   // Identity policies: which role may publish to and consume from what.
   const identityStatements: Array<{ identity: string; statement: Statement }> = [];
 
-  for (const role of ofType('AWS::IAM::Role'))
+  for (const role of ofType('AWS::IAM::Role')) {
     for (const policy of asList(role.properties.Policies))
       for (const entry of statements(isJsonObject(policy) ? policy.PolicyDocument : undefined))
         identityStatements.push({ identity: role.name, statement: entry });
+  }
 
-  for (const policy of [...ofType('AWS::IAM::Policy'), ...ofType('AWS::IAM::ManagedPolicy')])
+  for (const policy of [...ofType('AWS::IAM::Policy'), ...ofType('AWS::IAM::ManagedPolicy')]) {
     for (const role of asList(policy.properties.Roles)) {
       const identity = resolve(role)?.name ?? optionalString.parse(role);
 
@@ -310,6 +318,7 @@ export function cloudFormationGraph(
       for (const entry of statements(policy.properties.PolicyDocument))
         identityStatements.push({ identity, statement: entry });
     }
+  }
 
   const grantsFor = (
     entity: Entity,
@@ -317,7 +326,9 @@ export function cloudFormationGraph(
     consumeAction?: string,
   ): BrokerNode['grants'] => {
     // A template with no IAM in it says nothing about access.
-    if (identityStatements.length === 0) return undefined;
+    if (identityStatements.length === 0) {
+      return undefined;
+    }
 
     // What the statements say per identity and action, resolved as IAM does
     // once all are read: a Deny wins; a Deny that may apply leaves the answer
@@ -331,18 +342,25 @@ export function cloudFormationGraph(
     for (const { identity, statement: entry } of identityStatements) {
       const match = resourceMatches(entry.Resource, entity);
 
-      if (match === false) continue;
+      if (match === false) {
+        continue;
+      }
 
       for (const [action, key] of [
         [publishAction, `publish\0${identity}`],
         ...(consumeAction ? [[consumeAction, `consume\0${identity}`]] : []),
       ] as const) {
-        if (!covers(entry.Action, action)) continue;
+        if (!covers(entry.Action, action)) {
+          continue;
+        }
 
         const conditional = entry.Condition !== undefined || match === undefined;
 
-        if (entry.Effect === 'Deny') record(key, conditional ? 'maybe-deny' : 'deny');
-        else if (entry.Effect === 'Allow') record(key, conditional ? 'maybe-allow' : 'allow');
+        if (entry.Effect === 'Deny') {
+          record(key, conditional ? 'maybe-deny' : 'deny');
+        } else if (entry.Effect === 'Allow') {
+          record(key, conditional ? 'maybe-allow' : 'allow');
+        }
       }
     }
 
@@ -388,45 +406,51 @@ export function cloudFormationGraph(
    * applies to what it is attached to.
    */
   function resourceMatches(resource: JsonValue | undefined, entity: Entity): boolean | undefined {
-    if (resource === undefined) return true;
+    if (resource === undefined) {
+      return true;
+    }
 
-    const results = asList(resource).map((value) => {
-      const text = optionalString.parse(value);
+    const results = new Set(
+      asList(resource).map((value) => {
+        const text = optionalString.parse(value);
 
-      if (text === '*') return true;
+        if (text === '*') return true;
 
-      if (text?.includes('*')) return undefined;
+        if (text?.includes('*')) return undefined;
 
-      const target = resolve(value);
+        const target = resolve(value);
 
-      if (target) return target.logicalId === entity.logicalId;
+        if (target) return target.logicalId === entity.logicalId;
 
-      return undefined;
-    });
+        return undefined;
+      }),
+    );
 
-    return results.includes(true) ? true : results.includes(undefined) ? undefined : false;
+    return results.has(true) ? true : results.has(undefined) ? undefined : false;
   }
 
-  for (const topic of ofType('AWS::SNS::Topic'))
+  for (const topic of ofType('AWS::SNS::Topic')) {
     addNode(topic, {
       system: 'sns',
       entity: 'topic',
       role: 'router',
       grants: grantsFor(topic, 'sns:Publish'),
     });
+  }
 
-  for (const bus of ofType('AWS::Events::EventBus'))
+  for (const bus of ofType('AWS::Events::EventBus')) {
     addNode(bus, {
       system: 'eventbridge',
       entity: 'bus',
       role: 'router',
       grants: grantsFor(bus, 'events:PutEvents'),
     });
+  }
 
   for (const queue of ofType('AWS::SQS::Queue')) {
     const policy = redrive.parse(inlineJson(queue.properties.RedrivePolicy));
     const target = policy && resolve(policy.deadLetterTargetArn);
-    const retention = optionalNumber.parse(queue.properties.MessageRetentionPeriod) ?? 345600;
+    const retention = optionalNumber.parse(queue.properties.MessageRetentionPeriod) ?? 345_600;
 
     addNode(queue, {
       system: 'sqs',
@@ -452,8 +476,9 @@ export function cloudFormationGraph(
     const policy = redrive.parse(inlineJson(queue.properties.RedrivePolicy));
     const target = policy && resolve(policy.deadLetterTargetArn);
 
-    if (target && nodes.has(target.logicalId))
+    if (target && nodes.has(target.logicalId)) {
       graph.relationships.push(deadLetterEdge(refOf(queue), refOf(target), queue.source));
+    }
   }
 
   // Whether a queue's policy lets a topic or bus send to it.
@@ -464,26 +489,32 @@ export function cloudFormationGraph(
     condition: JsonValue | undefined,
     source: Entity,
   ): boolean | undefined => {
-    if (condition === undefined) return true;
+    if (condition === undefined) {
+      return true;
+    }
 
-    if (!isJsonObject(condition)) return undefined;
+    if (!isJsonObject(condition)) {
+      return undefined;
+    }
 
-    const results = Object.entries(condition).map(([operator, block]) => {
-      if (!SOURCE_OPERATORS.has(operator) || !isJsonObject(block)) return undefined;
+    const results = new Set(
+      Object.entries(condition).map(([operator, block]) => {
+        if (!SOURCE_OPERATORS.has(operator) || !isJsonObject(block)) return undefined;
 
-      const keys = Object.keys(block);
+        const keys = Object.keys(block);
 
-      if (keys.some((key) => key !== 'aws:SourceArn')) return undefined;
+        if (keys.some((key) => key !== 'aws:SourceArn')) return undefined;
 
-      const values = asList(block['aws:SourceArn']);
+        const values = asList(block['aws:SourceArn']);
 
-      // A wildcard ARN is a pattern this does not run.
-      if (values.some((value) => optionalString.parse(value)?.includes('*'))) return undefined;
+        // A wildcard ARN is a pattern this does not run.
+        if (values.some((value) => optionalString.parse(value)?.includes('*'))) return undefined;
 
-      return values.some((value) => resolve(value)?.logicalId === source.logicalId);
-    });
+        return values.some((value) => resolve(value)?.logicalId === source.logicalId);
+      }),
+    );
 
-    return results.includes(false) ? false : results.includes(undefined) ? undefined : true;
+    return results.has(false) ? false : results.has(undefined) ? undefined : true;
   };
 
   /**
@@ -500,7 +531,9 @@ export function cloudFormationGraph(
       asList(policy.properties.Queues).some((q) => resolve(q)?.logicalId === queue.logicalId),
     );
 
-    if (applicable.length === 0) return 'missing';
+    if (applicable.length === 0) {
+      return 'missing';
+    }
 
     // As IAM decides: a Deny that applies wins; one that may apply leaves any
     // grant undecided. An Allow grants; one that may apply, alone, is
@@ -518,40 +551,60 @@ export function cloudFormationGraph(
           entry.NotAction !== undefined ||
           entry.NotResource !== undefined
         ) {
-          if (deny) maybeDenied = true;
-          else maybeAllowed = true;
+          if (deny) {
+            maybeDenied = true;
+          } else {
+            maybeAllowed = true;
+          }
 
           continue;
         }
 
-        if (!covers(entry.Action, 'sqs:SendMessage')) continue;
+        if (!covers(entry.Action, 'sqs:SendMessage')) {
+          continue;
+        }
 
         const resource = resourceMatches(entry.Resource, queue);
 
-        if (resource === false) continue;
+        if (resource === false) {
+          continue;
+        }
 
         const principal = entry.Principal;
         const services = isJsonObject(principal) ? asList(principal.Service) : [];
         const anyone = principal === '*' || (isJsonObject(principal) && principal.AWS === '*');
 
-        if (!anyone && !services.includes(service)) continue;
+        if (!anyone && !services.includes(service)) {
+          continue;
+        }
 
         const condition = conditionHolds(entry.Condition, source);
         // A Resource not resolved is as undecided as a condition not evaluated.
         const holds = resource === undefined && condition !== false ? undefined : condition;
 
         if (deny) {
-          if (holds === true) return 'denied';
+          if (holds === true) {
+            return 'denied';
+          }
 
-          if (holds === undefined) maybeDenied = true;
-        } else if (holds === true) allowed = true;
-        else if (holds === undefined) maybeAllowed = true;
+          if (holds === undefined) {
+            maybeDenied = true;
+          }
+        } else if (holds === true) {
+          allowed = true;
+        } else if (holds === undefined) {
+          maybeAllowed = true;
+        }
       }
     }
 
-    if (maybeDenied && (allowed || maybeAllowed)) return 'unknown';
+    if (maybeDenied && (allowed || maybeAllowed)) {
+      return 'unknown';
+    }
 
-    if (allowed) return 'granted';
+    if (allowed) {
+      return 'granted';
+    }
 
     return maybeAllowed ? 'unknown' : 'denied';
   };
@@ -585,8 +638,9 @@ export function cloudFormationGraph(
       !topic ||
       !queue ||
       queue.type !== 'AWS::SQS::Queue'
-    )
+    ) {
       continue;
+    }
 
     const filter = inlineJson(props.FilterPolicy);
 
@@ -609,7 +663,9 @@ export function cloudFormationGraph(
   const defaultBus = (): Entity => {
     const existing = entities.get('(default event bus)');
 
-    if (existing) return existing;
+    if (existing) {
+      return existing;
+    }
 
     const bus: Entity = {
       logicalId: '(default event bus)',
@@ -635,7 +691,9 @@ export function cloudFormationGraph(
     const bus = busValue === undefined ? defaultBus() : resolve(busValue);
     const pattern = inlineJson(rule.properties.EventPattern);
 
-    if (!bus) continue;
+    if (!bus) {
+      continue;
+    }
 
     const ruleEntity: Entity = { ...rule, name: `${bus.name}/${rule.name}` };
     entities.set(rule.logicalId, ruleEntity);
@@ -655,11 +713,15 @@ export function cloudFormationGraph(
     );
 
     for (const target of asList(rule.properties.Targets)) {
-      if (!isJsonObject(target)) continue;
+      if (!isJsonObject(target)) {
+        continue;
+      }
 
       const destination = resolve(target.Arn);
 
-      if (!destination || !namespaceOf.has(destination.type)) continue;
+      if (!destination || !namespaceOf.has(destination.type)) {
+        continue;
+      }
 
       const retry = isJsonObject(target.RetryPolicy) ? target.RetryPolicy : {};
 
@@ -673,7 +735,7 @@ export function cloudFormationGraph(
             access: access(destination, rule, 'events.amazonaws.com'),
           }),
           maxAttempts: optionalNumber.parse(retry.MaximumRetryAttempts) ?? 185,
-          maxAgeSeconds: optionalNumber.parse(retry.MaximumEventAgeInSeconds) ?? 86400,
+          maxAgeSeconds: optionalNumber.parse(retry.MaximumEventAgeInSeconds) ?? 86_400,
           ...(dlq && { deadLetter: dlq.name }),
           environment,
         }),

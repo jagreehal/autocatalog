@@ -5,7 +5,8 @@ import { emptyResourceGraph } from './architecture';
 import { endpointsByService, endpointFacts } from './api-resources';
 import { mergeConsumerGraph, shownName } from './consumes';
 import { readOptionalResourceJson, writeResourceFile } from './resource-files';
-import { compileRoutePattern, matchesRoutePattern, type RoutePattern } from './route-pattern';
+import { compileRoutePattern, matchesRoutePattern } from './route-pattern';
+import type { RoutePattern } from './route-pattern';
 import type { CatalogRelationship, CatalogResource, ResourceGraph } from './resource-graph';
 
 /**
@@ -62,11 +63,15 @@ export type GatewayFile = z.infer<typeof gatewayFileSchema>;
 export async function readGatewayFile(root: string): Promise<GatewayFile | undefined> {
   const value = await readOptionalResourceJson(path.join(root, GATEWAY_FILE), { root });
 
-  if (value === undefined) return undefined;
+  if (value === undefined) {
+    return undefined;
+  }
 
   const parsed = gatewayFileSchema.safeParse(value);
 
-  if (parsed.success) return parsed.data;
+  if (parsed.success) {
+    return parsed.data;
+  }
 
   const issue = parsed.error.issues[0];
 
@@ -95,8 +100,9 @@ export async function writeGatewayFile(
   const text = `${JSON.stringify(file, null, 2)}\n`;
   const out = path.join(root, GATEWAY_FILE);
 
-  if (options.check)
+  if (options.check) {
     return (await fs.readFile(out, 'utf8').catch(() => undefined)) === text ? 'current' : 'stale';
+  }
 
   await writeResourceFile(out, text);
 
@@ -119,20 +125,27 @@ export function publicPath(gatewayRoute: GatewayRoute, servedAt: string): string
         ? servedAt.slice(upstream.length)
         : undefined;
 
-  if (below === undefined) return undefined;
+  if (below === undefined) {
+    return undefined;
+  }
 
   for (const prefix of gatewayRoute.paths ?? []) {
-    if (gatewayRoute.stripPath)
+    if (gatewayRoute.stripPath) {
       return `${withoutTrailingSlash(prefix)}${below === '/' ? '' : below}` || '/';
+    }
 
-    if (below.startsWith(prefix)) return below;
+    if (below.startsWith(prefix)) {
+      return below;
+    }
   }
 
   // What a pattern stripped cannot be put back, so only an unstripped one is compared.
-  if (gatewayRoute.stripPath) return undefined;
+  if (gatewayRoute.stripPath) {
+    return undefined;
+  }
 
   // A template parameter stands for a segment: try a number and a word.
-  const samples = ['1', 'a'].map((value) => below.replace(/\{[^}]*\}/g, value).slice(0, 400));
+  const samples = ['1', 'a'].map((value) => below.replaceAll(/\{[^}]*\}/g, value).slice(0, 400));
 
   return (gatewayRoute.patterns ?? []).some((pattern) => {
     const expression = compiled(pattern);
@@ -171,7 +184,7 @@ export function linkGateway(
   };
 
   const byService = endpointsByService(composed);
-  const relationships: CatalogRelationship[] = [];
+  const relationships: Array<CatalogRelationship> = [];
   const reached = new Set<CatalogResource>();
   const say = (message: string) => onFinding(`${repository}: ${GATEWAY_FILE}: ${message}`);
 
@@ -190,11 +203,15 @@ export function linkGateway(
     for (const endpoint of endpoints) {
       const facts = endpointFacts.safeParse(endpoint.attributes);
 
-      if (!facts.success) continue;
+      if (!facts.success) {
+        continue;
+      }
 
       const { method, path: servedAt, secured, basePaths } = facts.data;
 
-      if (gatewayRoute.methods && !gatewayRoute.methods.some((m) => m === method)) continue;
+      if (gatewayRoute.methods && !gatewayRoute.methods.some((m) => m === method)) {
+        continue;
+      }
 
       // Where the spec says the service serves it: below each `servers` path, such
       // as /v1, or at the root when it declares no servers.
@@ -205,10 +222,11 @@ export function linkGateway(
       if (!at) {
         // What a pattern reaches the samples cannot always prove. For the auth
         // check, a route that may reach a secured operation is taken to.
-        if (secured && !gatewayRoute.auth?.length && mayReach(gatewayRoute, servedAt))
+        if (secured && !gatewayRoute.auth?.length && mayReach(gatewayRoute, servedAt)) {
           say(
             `route ${gatewayRoute.name} may reach ${gatewayRoute.service} ${shownName(endpoint.ref.id)}, which it secures, and ${gatewayRoute.auth ? 'authenticates nothing' : 'does not say what authenticates it'}`,
           );
+        }
 
         continue;
       }
@@ -230,12 +248,13 @@ export function linkGateway(
       });
 
       // A file that does not say what authenticates a route is unknown, never safe.
-      if (secured && !gatewayRoute.auth?.length)
+      if (secured && !gatewayRoute.auth?.length) {
         say(
           gatewayRoute.auth
             ? `route ${gatewayRoute.name} authenticates nothing, and ${gatewayRoute.service} secures ${shownName(endpoint.ref.id)}`
             : `route ${gatewayRoute.name} does not say what authenticates it, and ${gatewayRoute.service} secures ${shownName(endpoint.ref.id)}`,
         );
+      }
     }
 
     const where = [
@@ -243,27 +262,31 @@ export function linkGateway(
       ...(gatewayRoute.patterns ?? []).map((pattern) => `~${pattern}`),
     ];
 
-    for (const pattern of gatewayRoute.patterns ?? [])
+    for (const pattern of gatewayRoute.patterns ?? []) {
       if (!compiled(pattern))
         say(
           `route ${gatewayRoute.name}: ~${pattern} uses what the catalog does not match, such as a group, so it was not compared`,
         );
+    }
 
-    if (gatewayRoute.stripPath && gatewayRoute.patterns?.length)
+    if (gatewayRoute.stripPath && gatewayRoute.patterns?.length) {
       say(
         `route ${gatewayRoute.name} strips a regular expression path, which the catalog does not compare`,
       );
+    }
 
-    if (!any)
+    if (!any) {
       say(
         `route ${gatewayRoute.name} sends ${where.join(', ')} to ${gatewayRoute.service}, which serves no operation there`,
       );
+    }
   }
 
-  for (const service of new Set(file.routes.map((r) => r.service)))
+  for (const service of new Set(file.routes.map((r) => r.service))) {
     for (const endpoint of byService.get(service) ?? [])
       if (!reached.has(endpoint))
         say(`${service} ${shownName(endpoint.ref.id)} is not exposed through ${file.gateway}`);
+  }
 
   return { ...emptyResourceGraph(), resources: [gateway], relationships };
 }
@@ -283,7 +306,9 @@ function mayReach(gatewayRoute: GatewayRoute, servedAt: string): boolean {
   const path = fixedStart(servedAt, /\{/);
 
   return (gatewayRoute.patterns ?? []).some((pattern) => {
-    if (!compiled(pattern)) return true;
+    if (!compiled(pattern)) {
+      return true;
+    }
 
     const start = fixedStart(pattern, /[\\.[\]()*+?{}|^$]/);
 
@@ -294,7 +319,7 @@ function mayReach(gatewayRoute: GatewayRoute, servedAt: string): boolean {
 /** Every repository's gateway, joined to the endpoints already in the graph. */
 export async function withGateways(
   composed: ResourceGraph,
-  repositories: { repository: string; dir: string }[],
+  repositories: Array<{ repository: string; dir: string }>,
   onFinding: (message: string) => void,
 ): Promise<ResourceGraph> {
   let graph = composed;
@@ -309,8 +334,9 @@ export async function withGateways(
       continue;
     }
 
-    if (file)
+    if (file) {
       graph = mergeConsumerGraph(graph, linkGateway(graph, { repository, file }, onFinding));
+    }
   }
 
   return graph;

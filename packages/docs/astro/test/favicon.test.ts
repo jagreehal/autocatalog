@@ -4,10 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_FAVICON, resolveFavicon } from '../src/favicon';
 
-const faviconFile = path.resolve(
-  path.dirname(fileURLToPath(import.meta.url)),
-  '../site/public/favicon.svg',
-);
+const faviconFile = path.resolve(import.meta.dirname, '../site/public/favicon.svg');
 
 describe('resolveFavicon', () => {
   it('prefers Starlight config, then the env, then the shipped default', () => {

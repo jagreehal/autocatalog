@@ -13,12 +13,16 @@ export interface DirectoryEnrichment {
 export function githubDirectoryEnrichment(
   handle: string | undefined,
 ): DirectoryEnrichment | undefined {
-  if (!handle) return undefined;
+  if (!handle) {
+    return undefined;
+  }
 
   const named = handle.trim();
   const trimmed = named.replace(/^@/, '');
 
-  if (!trimmed) return undefined;
+  if (!trimmed) {
+    return undefined;
+  }
 
   const team = /^([A-Za-z0-9-]+)\/([A-Za-z0-9._-]+)$/.exec(trimmed);
 
@@ -31,9 +35,13 @@ export function githubDirectoryEnrichment(
   }
 
   // Only `@name` is a handle. A plain `payments` is a team, not GitHub's user of that name.
-  if (!named.startsWith('@')) return undefined;
+  if (!named.startsWith('@')) {
+    return undefined;
+  }
 
-  if (!/^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$/.test(trimmed)) return undefined;
+  if (!/^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$/.test(trimmed)) {
+    return undefined;
+  }
 
   return {
     avatarUrl: `https://github.com/${trimmed}.png`,
@@ -48,11 +56,13 @@ export function githubDirectoryEnrichment(
 export function withDirectoryEnrichment<T extends { avatarUrl?: string | undefined }>(
   profile: T | undefined,
   ownerName: string,
-  contact?: string | undefined,
+  contact?: string,
 ): (T & DirectoryEnrichment) | undefined {
   const enrichment = githubDirectoryEnrichment(ownerName);
 
-  if (!profile && !enrichment) return undefined;
+  if (!profile && !enrichment) {
+    return undefined;
+  }
 
   if (!profile) {
     // SAFETY: an owner with no directory file has only what GitHub's URLs give, and

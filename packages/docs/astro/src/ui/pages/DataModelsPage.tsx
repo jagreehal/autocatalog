@@ -39,8 +39,8 @@ export interface DataModelsPageProps {
     owner?: string | undefined;
     /** Its columns, relations left out. */
     fields: number;
-    readers: ServiceLink[];
-    writers: ServiceLink[];
+    readers: Array<ServiceLink>;
+    writers: Array<ServiceLink>;
   }>;
 }
 
@@ -48,7 +48,7 @@ const link =
   'text-foreground underline decoration-border underline-offset-4 hover:decoration-foreground';
 
 /** Services as a sentence's list: "a, b and c". */
-export function ServiceList({ services }: { services: ServiceLink[] }) {
+export function ServiceList({ services }: { services: Array<ServiceLink> }) {
   return services.map((service, i) => (
     <Fragment key={service.name}>
       {i > 0 && (i === services.length - 1 ? ' and ' : ', ')}

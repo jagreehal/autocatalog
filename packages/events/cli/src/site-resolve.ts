@@ -48,10 +48,14 @@ export const packageName = (specifier: string) =>
 const declared = new Map<string, Set<string>>();
 
 /** Where to look for a bare import, best first. */
-export function resolveOrder(specifier: string, folders = from, project = site): string[] {
-  if (!project) return folders;
+export function resolveOrder(specifier: string, folders = from, project = site): Array<string> {
+  if (!project) {
+    return folders;
+  }
 
-  if (!declared.has(project)) declared.set(project, declaredPackages(project));
+  if (!declared.has(project)) {
+    declared.set(project, declaredPackages(project));
+  }
 
   return declared.get(project)!.has(packageName(specifier))
     ? [parent(project), ...folders]
@@ -77,7 +81,7 @@ const out = process.env.AUTOCATALOG_RESOLVE_OUT
 export const fromBuiltSite = (parentURL: string | undefined, built = out) =>
   built !== undefined && parentURL?.startsWith(built) === true;
 
-if (from.length > 0 || site)
+if (from.length > 0 || site) {
   registerHooks({
     resolve: (specifier, context, next) => {
       if (resolving) return next(specifier, context);
@@ -133,3 +137,4 @@ if (from.length > 0 || site)
       }
     },
   });
+}

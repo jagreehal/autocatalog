@@ -1,9 +1,12 @@
 import { parseAllDocuments } from 'yaml';
 import { z } from 'zod';
 import { architectureService, emptyResourceGraph, mergeArchitectureGraphs } from './architecture';
-import { resourceKey, type ResourceGraph, type ResourceRef } from './resource-graph';
-import { jsonValueSchema, type JsonValue } from './json';
-import { ownerForPath, type CodeownersRule } from './codeowners';
+import { resourceKey } from './resource-graph';
+import type { ResourceGraph, ResourceRef } from './resource-graph';
+import { jsonValueSchema } from './json';
+import type { JsonValue } from './json';
+import { ownerForPath } from './codeowners';
+import type { CodeownersRule } from './codeowners';
 
 export type OwnershipSource = 'backstage' | 'datadog' | 'codeowners';
 
@@ -16,13 +19,13 @@ export interface OwnershipClaim {
 
 export interface OwnershipImport {
   graph: ResourceGraph;
-  claims: OwnershipClaim[];
+  claims: Array<OwnershipClaim>;
 }
 
 export interface OwnershipOptions {
-  claims: OwnershipClaim[];
-  codeowners?: CodeownersRule[];
-  precedence?: OwnershipSource[];
+  claims: Array<OwnershipClaim>;
+  codeowners?: Array<CodeownersRule>;
+  precedence?: Array<OwnershipSource>;
   teamAliases?: Record<string, string>;
 }
 
@@ -38,14 +41,19 @@ const backstageEntity = z.object({
   relations: z.array(z.object({ type: z.string(), targetRef: z.string() })).default([]),
 });
 
-export function importBackstageEntities(entities: JsonValue[], location: string): OwnershipImport {
+export function importBackstageEntities(
+  entities: Array<JsonValue>,
+  location: string,
+): OwnershipImport {
   const graph = emptyResourceGraph();
-  const claims: OwnershipClaim[] = [];
+  const claims: Array<OwnershipClaim> = [];
 
   for (const input of entities) {
     const entity = backstageEntity.parse(input);
 
-    if (entity.kind.toLowerCase() !== 'component' || entity.spec.type !== 'service') continue;
+    if (entity.kind.toLowerCase() !== 'component' || entity.spec.type !== 'service') {
+      continue;
+    }
 
     const id =
       entity.metadata.annotations['autocatalog.io/service'] ??
@@ -64,7 +72,9 @@ export function importBackstageEntities(entities: JsonValue[], location: string)
       entity.relations.find((relation) => relation.type === 'ownedBy')?.targetRef ??
       entity.spec.owner;
 
-    if (owner) claims.push({ resource: resource.ref, team: owner, source: 'backstage', location });
+    if (owner) {
+      claims.push({ resource: resource.ref, team: owner, source: 'backstage', location });
+    }
   }
 
   return { graph: mergeArchitectureGraphs(graph), claims };
@@ -72,8 +82,9 @@ export function importBackstageEntities(entities: JsonValue[], location: string)
 
 export function importBackstageYaml(content: string, location: string): OwnershipImport {
   const entities = parseAllDocuments(content).map((document) => {
-    if (document.errors.length)
+    if (document.errors.length) {
       throw new Error(`${location}: invalid Backstage YAML: ${document.errors[0]?.message}`);
+    }
 
     return jsonValueSchema.parse(document.toJSON());
   });
@@ -87,7 +98,8 @@ export function resolveResourceOwnership(graph: ResourceGraph, options: Ownershi
   // A Map, not the object: a team named `constructor` must not resolve to Object.
   const aliases = new Map(Object.entries(options.teamAliases ?? {}));
   const normalize = (team: string) => aliases.get(team) ?? team.replace(/^@/, '');
-  const conflicts: Array<{ resource: ResourceRef; selected: string; alternatives: string[] }> = [];
+  const conflicts: Array<{ resource: ResourceRef; selected: string; alternatives: Array<string> }> =
+    [];
 
   const resources = graph.resources.map((resource) => {
     const key = resourceKey(resource.ref);
@@ -100,13 +112,14 @@ export function resolveResourceOwnership(graph: ResourceGraph, options: Ownershi
       ? ownerForPath(options.codeowners ?? [], resource.source.file)
       : undefined;
 
-    if (codeowner)
+    if (codeowner) {
       claims.push({
         resource: resource.ref,
         team: normalize(codeowner),
         source: 'codeowners',
         location: resource.source?.file ?? '',
       });
+    }
     claims.sort((a, b) => {
       const rank = (source: OwnershipSource) => {
         const index = precedence.indexOf(source);
@@ -121,7 +134,9 @@ export function resolveResourceOwnership(graph: ResourceGraph, options: Ownershi
     const owner = resource.owner && normalize(resource.owner.team);
     const selected = explicit ? owner : (claims[0]?.team ?? owner);
 
-    if (!selected) return resource;
+    if (!selected) {
+      return resource;
+    }
 
     const alternatives = [
       ...new Set([...claims.map((claim) => claim.team), ...(owner ? [owner] : [])]),
@@ -129,9 +144,13 @@ export function resolveResourceOwnership(graph: ResourceGraph, options: Ownershi
       .filter((team) => team !== selected)
       .sort();
 
-    if (alternatives.length) conflicts.push({ resource: resource.ref, selected, alternatives });
+    if (alternatives.length) {
+      conflicts.push({ resource: resource.ref, selected, alternatives });
+    }
 
-    if (explicit || !claims.length) return resource;
+    if (explicit || !claims.length) {
+      return resource;
+    }
 
     return {
       ...resource,
@@ -167,18 +186,22 @@ export async function syncBackstageOwnership(
   client: BackstageCatalogClient,
   location: string,
 ): Promise<OwnershipImport> {
-  const entities: JsonValue[] = [];
+  const entities: Array<JsonValue> = [];
   const seen = new Set<string>();
   let cursor: string | undefined;
 
-  for (let page = 0; page < 10000; page++) {
+  for (let page = 0; page < 10_000; page++) {
     const response = backstagePage.parse(await client.getEntities(cursor));
     entities.push(...response.items);
     cursor = response.pageInfo.nextCursor;
 
-    if (!cursor) return importBackstageEntities(entities, location);
+    if (!cursor) {
+      return importBackstageEntities(entities, location);
+    }
 
-    if (seen.has(cursor)) throw new Error('Repeated Backstage cursor');
+    if (seen.has(cursor)) {
+      throw new Error('Repeated Backstage cursor');
+    }
     seen.add(cursor);
   }
 
@@ -206,9 +229,9 @@ export async function syncDatadogOwnership(
   pageSize = 100,
 ): Promise<OwnershipImport> {
   const graph = emptyResourceGraph();
-  const claims: OwnershipClaim[] = [];
+  const claims: Array<OwnershipClaim> = [];
 
-  for (let page = 0; page < 10000; page++) {
+  for (let page = 0; page < 10_000; page++) {
     const response = datadogPage.parse(await client.getDefinitions(page));
 
     for (const definition of response.data) {
@@ -221,10 +244,14 @@ export async function syncDatadogOwnership(
       graph.resources.push(resource);
       const team = schema.team ?? schema['dd-team'];
 
-      if (team) claims.push({ resource: resource.ref, team, source: 'datadog', location });
+      if (team) {
+        claims.push({ resource: resource.ref, team, source: 'datadog', location });
+      }
     }
 
-    if (response.data.length < pageSize) return { graph: mergeArchitectureGraphs(graph), claims };
+    if (response.data.length < pageSize) {
+      return { graph: mergeArchitectureGraphs(graph), claims };
+    }
   }
 
   throw new Error('Datadog page limit exceeded');
@@ -242,20 +269,23 @@ export async function getCatalogJson(
 ): Promise<JsonValue> {
   const where = `${url.origin}${url.pathname}`;
 
-  if (Object.keys(headers).length && url.protocol !== 'https:' && !isLoopback(url.hostname))
+  if (Object.keys(headers).length && url.protocol !== 'https:' && !isLoopback(url.hostname)) {
     throw new Error(
       `Refusing to send credentials over ${url.protocol} to ${url.hostname}; use https`,
     );
+  }
 
   const response = await fetch(url, {
     headers,
-    signal: AbortSignal.timeout(30000),
+    signal: AbortSignal.timeout(30_000),
     redirect: 'error',
   });
 
-  if (!response.ok) throw new Error(`Catalog request failed (${response.status}) at ${where}`);
+  if (!response.ok) {
+    throw new Error(`Catalog request failed (${response.status}) at ${where}`);
+  }
 
-  const chunks: Uint8Array[] = [];
+  const chunks: Array<Uint8Array> = [];
   let size = 0;
 
   for await (const chunk of response.body ?? []) {
@@ -289,7 +319,9 @@ export function backstageHttpClient(baseUrl: string, token?: string): BackstageC
       const url = new URL(`${baseUrl.replace(/\/$/, '')}/entities/by-query`);
       url.searchParams.set('limit', '500');
 
-      if (cursor) url.searchParams.set('cursor', cursor);
+      if (cursor) {
+        url.searchParams.set('cursor', cursor);
+      }
 
       return getCatalogJson(url, token ? { Authorization: `Bearer ${token}` } : {});
     },

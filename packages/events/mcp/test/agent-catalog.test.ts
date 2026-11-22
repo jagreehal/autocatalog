@@ -18,7 +18,7 @@ import {
 } from '../src/tools.js';
 import type { CatalogSnapshot } from '../src/tools.js';
 
-const here = path.dirname(fileURLToPath(import.meta.url));
+const here = import.meta.dirname;
 
 const demoRepo = path.resolve(here, '../../../../fixtures/demo-repo');
 
@@ -33,7 +33,7 @@ describe('MCP over a scanned catalog (executable story: the AI surface)', () => 
     out = await fs.mkdtemp(path.join(os.tmpdir(), 'ac-mcp-demo-'));
     await scanRepo({ root: demoRepo, out });
     catalog = await loadCatalog(out);
-  }, 60000);
+  }, 60_000);
 
   afterAll(async () => {
     await fs.rm(out, { recursive: true, force: true });
@@ -72,7 +72,9 @@ describe('MCP over a scanned catalog (executable story: the AI surface)', () => 
 
     // Direct consumers are the easy half; the notify list must also pick up
     // consumers of other events carrying the same field.
-    for (const consumer of impact.consumers) expect(impact.notify).toContain(consumer);
+    for (const consumer of impact.consumers) {
+      expect(impact.notify).toContain(consumer);
+    }
     expect(impact.notify.length).toBeGreaterThanOrEqual(impact.consumers.length);
     expect(impact.needsReview).toBe(false);
   });
@@ -81,7 +83,7 @@ describe('MCP over a scanned catalog (executable story: the AI surface)', () => 
     const before = describeEvent(catalog, 'payment.completed');
     const proposed = structuredClone(before.schema);
     const { properties } = proposed;
-    assert(isJsonObject(properties));
+    assert.ok(isJsonObject(properties));
     delete properties.amountMinor;
 
     const report = checkChange(catalog, 'payment.completed', proposed);
@@ -97,7 +99,7 @@ describe('MCP over a scanned catalog (executable story: the AI surface)', () => 
     const before = describeEvent(catalog, 'payment.completed');
     const proposed = structuredClone(before.schema);
     const { properties } = proposed;
-    assert(isJsonObject(properties));
+    assert.ok(isJsonObject(properties));
     properties.refundedAt = { type: 'string' };
 
     const report = checkChange(catalog, 'payment.completed', proposed);
@@ -160,6 +162,6 @@ describe('MCP over a scanned catalog (executable story: the AI surface)', () => 
   it('indexes schema fields across events', () => {
     const amountMinor = searchFieldsInCatalog(catalog, 'amountMinor');
     expect(amountMinor.some((f) => f.path === 'amountMinor')).toBe(true);
-    expect(amountMinor[0]!.consumers.length).toBeGreaterThan(0);
+    expect(amountMinor[0].consumers.length).toBeGreaterThan(0);
   });
 });

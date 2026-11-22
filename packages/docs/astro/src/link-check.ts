@@ -32,8 +32,8 @@ export async function brokenLinks(
   base = '/',
   /** Paths the server renders per request, such as `/team/runbook/`: no file holds them. */
   served: ReadonlySet<string> = new Set(),
-): Promise<BrokenLink[]> {
-  const prefix = `/${base.replace(/^\/+|\/+$/g, '')}`.replace(/^\/$/, '');
+): Promise<Array<BrokenLink>> {
+  const prefix = `/${base.replaceAll(/^\/+|\/+$/g, '')}`.replace(/^\/$/, '');
 
   const files = new Set(
     (await fs.readdir(outDir, { recursive: true, withFileTypes: true }))
@@ -43,15 +43,15 @@ export async function brokenLinks(
       ),
   );
 
-  const pages = new Map<string, { ids: Set<string>; hrefs: string[] }>();
+  const pages = new Map<string, { ids: Set<string>; hrefs: Array<string> }>();
 
   const ours = (name: string) => name.endsWith('.html') && !name.startsWith(EVENTCATALOG);
 
   for (const file of [...files].filter(ours).sort()) {
     // Comments, scripts and styles can contain href-shaped text that is not a link.
     const html = (await fs.readFile(path.join(outDir, file), 'utf8'))
-      .replace(/<!--[\s\S]*?-->/g, '')
-      .replace(/<(script|style|template)\b[\s\S]*?<\/\1>/gi, '');
+      .replaceAll(/<!--[\s\S]*?-->/g, '')
+      .replaceAll(/<(script|style|template)\b[\s\S]*?<\/\1>/gi, '');
 
     const attr = (pattern: RegExp) =>
       [...html.matchAll(pattern)].map((match) => unescape(match[1]!));
@@ -72,7 +72,7 @@ export async function brokenLinks(
     ].find((candidate) => files.has(candidate));
   };
 
-  const broken: BrokenLink[] = [];
+  const broken: Array<BrokenLink> = [];
 
   for (const [file, { hrefs }] of pages) {
     const page = `${prefix}/${file.replace(/(^|\/)index\.html$/, '$1')}`;
@@ -95,11 +95,15 @@ export async function brokenLinks(
           !target.pathname.startsWith(`${prefix}/`)) ||
         target.pathname.startsWith(`${prefix}/${EVENTCATALOG}`);
 
-      if (target.origin !== ORIGIN || outside) continue;
+      if (target.origin !== ORIGIN || outside) {
+        continue;
+      }
 
       const pathname = target.pathname.slice(prefix.length) || '/';
 
-      if (served.has(decode(pathname).replace(/\/?$/, '/'))) continue;
+      if (served.has(decode(pathname).replace(/\/?$/, '/'))) {
+        continue;
+      }
 
       const found = fileFor(pathname);
 
@@ -125,7 +129,7 @@ export async function brokenLinks(
   return broken;
 }
 
-export function formatBrokenLinks(links: BrokenLink[]): string {
+export function formatBrokenLinks(links: Array<BrokenLink>): string {
   return [
     `${links.length} broken internal ${links.length === 1 ? 'link' : 'links'}:`,
     ...links.map(
@@ -145,10 +149,10 @@ function decode(value: string): string {
 // Astro writes `&` in an attribute as `&#x26;`, so numeric references are decoded too.
 function unescape(value: string): string {
   return value
-    .replace(/&#x([0-9a-f]+);/gi, (_, hex: string) =>
+    .replaceAll(/&#x([0-9a-f]+);/gi, (_, hex: string) =>
       String.fromCodePoint(Number.parseInt(hex, 16)),
     )
-    .replace(/&#(\d+);/g, (_, dec: string) => String.fromCodePoint(Number(dec)))
-    .replace(/&amp;/g, '&')
-    .replace(/&quot;/g, '"');
+    .replaceAll(/&#(\d+);/g, (_, dec: string) => String.fromCodePoint(Number(dec)))
+    .replaceAll('&amp;', '&')
+    .replaceAll('&quot;', '"');
 }

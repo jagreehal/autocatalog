@@ -23,12 +23,14 @@ const CASE_LABEL = {
 } as const;
 
 export interface ExamplesProps {
-  examples: ExampleView[];
+  examples: Array<ExampleView>;
 }
 
 /** A card of example payloads; nothing at all when there are none. */
 export function Examples({ examples }: ExamplesProps) {
-  if (examples.length === 0) return null;
+  if (examples.length === 0) {
+    return null;
+  }
 
   return (
     <div className="not-content">

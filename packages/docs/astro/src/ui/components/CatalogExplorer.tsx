@@ -2,8 +2,9 @@
 import { useFieldValue } from '#ui/lib/field.ts';
 import { cn } from 'cn';
 import { ChevronRightIcon, SearchIcon } from 'lucide-react';
-import { useEffect, useState, type MouseEvent, type ReactNode } from 'react';
-import { flushSync } from 'react-dom';
+import { useEffect, useState } from 'react';
+import type { ReactNode } from 'react';
+import type { Key, SortDescriptor } from 'react-aria-components';
 import { Button } from '#ui/components/ui/button.tsx';
 import { Card, CardContent } from '#ui/components/ui/card.tsx';
 import { Collapsible, CollapsibleContent } from '#ui/components/ui/collapsible.tsx';
@@ -16,21 +17,74 @@ import {
   EmptyTitle,
 } from '#ui/components/ui/empty.tsx';
 import { InputGroup, InputGroupAddon, InputGroupInput } from '#ui/components/ui/input-group.tsx';
-import { Item, ItemContent, ItemMedia } from '#ui/components/ui/item.tsx';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '#ui/components/ui/table.tsx';
 import { Toggle } from '#ui/components/ui/toggle.tsx';
 import { ToggleGroup, ToggleGroupItem } from '#ui/components/ui/toggle-group.tsx';
 import { kindIcon } from '../../icons';
+import { pageOf, pageOfIndex, rangeLabel, readSort, sortRows, writeSort } from '../lib/paging';
 import type { ExplorerModel, ExplorerRow } from './catalog-explorer-model';
 import { Code } from './Code';
-import { Evidence, isMethod, rule, tone, type ProvenanceMethod } from './Evidence';
+import { Evidence, isMethod, rule, tone } from './Evidence';
+import type { ProvenanceMethod } from './Evidence';
 import { Icon } from './Icon';
-import { Stats } from './Stats';
 import { IconTile } from './IconTile';
+import { ExpandButton, SortableHead, TablePager } from './PagedTable';
+import { Stats } from './Stats';
 
 export interface CatalogExplorerProps {
   /** The graph, ready to draw; see `explorerModel`, which builds it where autocatalog-core can run. */
   model: ExplorerModel;
 }
+
+interface Filters {
+  kind: string;
+  query: string;
+  reviewOnly: boolean;
+}
+
+const everything: Filters = { kind: 'all', query: '', reviewOnly: false };
+
+function filterRows(rows: Array<ExplorerRow>, { kind, query, reviewOnly }: Filters) {
+  const needle = query.trim().toLocaleLowerCase();
+
+  return rows.filter(
+    (row) =>
+      (kind === 'all' || row.kind === kind) &&
+      (!needle || row.searchText.includes(needle)) &&
+      (!reviewOnly || row.needsReview),
+  );
+}
+
+function sortValue(row: ExplorerRow, column: Key) {
+  if (column === 'name') {
+    return row.title.toLocaleLowerCase();
+  }
+
+  if (column === 'owner') {
+    return row.owner;
+  }
+
+  if (column === 'source') {
+    return row.at;
+  }
+
+  return row.key;
+}
+
+const byKey: SortDescriptor = { column: 'key', direction: 'ascending' };
+
+const SORT_COLUMNS = ['name', 'key', 'owner', 'source'] as const;
+
+// Anchors are percent-encoded keys; a hand-typed fragment may not be.
+const isAnchorOf = (row: ExplorerRow, hash: string) =>
+  hash === row.anchor || hash === decodeURIComponent(row.anchor);
 
 export function CatalogExplorer({ model }: CatalogExplorerProps) {
   const { value: query, setValue: setQuery, field: queryField } = useFieldValue();
@@ -39,52 +93,118 @@ export function CatalogExplorer({ model }: CatalogExplorerProps) {
 
   const [reviewOnly, setReviewOnly] = useState(false);
 
+  const [sort, setSort] = useState(byKey);
+
+  const [page, setPage] = useState(1);
+
+  const [open, setOpen] = useState<ReadonlySet<string>>(new Set());
+
+  // The row a fragment named, scrolled to once its page has drawn.
+  const [landing, setLanding] = useState<string | null>(null);
+
+  const filters: Filters = { kind, query, reviewOnly };
+
+  const apply = (next: Filters) => {
+    setKind(next.kind);
+    setQuery(next.query);
+    setReviewOnly(next.reviewOnly);
+    setPage(1);
+  };
+
+  // `#resource-…` names one row, which may sit on a later page or behind the
+  // current filters: show the whole graph if it must, turn to the row's page
+  // and open it.
+  const land = (from: Filters, by: SortDescriptor = sort) => {
+    const hash = location.hash.slice(1);
+
+    const row = hash ? model.rows.find((candidate) => isAnchorOf(candidate, hash)) : undefined;
+
+    if (!row) {
+      return;
+    }
+
+    const view = filterRows(model.rows, from).includes(row) ? from : everything;
+
+    apply(view);
+    setPage(pageOfIndex(sortRows(filterRows(model.rows, view), by, sortValue).indexOf(row)));
+    setOpen((was) => new Set(was).add(row.key));
+    setLanding(row.anchor);
+  };
+
   // `?kind=service` opens the explorer on one kind, which is how the rail's
   // Services entry lands here; `?q=` and `?review=1` arrive from wiki links and
-  // the homepage's review count.
+  // the homepage's review count, and `?page=` from the pager.
   useEffect(() => {
     const params = new URLSearchParams(location.search);
-    const initialKind = params.get('kind');
 
-    if (initialKind && model.kinds.includes(initialKind)) setKind(initialKind);
-    setQuery(params.get('q') ?? '');
+    const named = params.get('kind') ?? 'all';
 
-    if (params.get('review') === '1') setReviewOnly(true);
-  }, [model.kinds]);
+    const initial: Filters = {
+      kind: model.kinds.includes(named) ? named : 'all',
+      query: params.get('q') ?? '',
+      reviewOnly: params.get('review') === '1',
+    };
 
-  const needle = query.trim().toLocaleLowerCase();
+    const sorted = readSort(params, SORT_COLUMNS, byKey);
 
-  const shown = model.rows.filter(
-    (row) =>
-      (kind === 'all' || row.kind === kind) &&
-      (!needle || row.searchText.includes(needle)) &&
-      (!reviewOnly || row.needsReview),
-  );
+    apply(initial);
+    setSort(sorted);
+    setPage(Number(params.get('page')) || 1);
+    land(initial, sorted);
+  }, [model]);
 
-  const showAll = () => {
-    setKind('all');
-    setReviewOnly(false);
-    setQuery('');
+  // A connection, the datastore table or any other link on the page can name
+  // a row by its fragment. Registered each render, so it sees the current view.
+  useEffect(() => {
+    const onHashChange = () => land(filters);
+
+    addEventListener('hashchange', onHashChange);
+
+    return () => removeEventListener('hashchange', onHashChange);
+  });
+
+  const shown = sortRows(filterRows(model.rows, filters), sort, sortValue);
+
+  const current = pageOf(shown, page);
+
+  const hrefOf = (target: number) => {
+    const params = new URLSearchParams();
+
+    if (kind !== 'all') {
+      params.set('kind', kind);
+    }
+
+    if (query) {
+      params.set('q', query);
+    }
+
+    if (reviewOnly) {
+      params.set('review', '1');
+    }
+
+    writeSort(params, sort, byKey);
+    params.set('page', String(target));
+
+    return `?${params}`;
   };
 
-  // A connection can target a row hidden by the current view. Restore the
-  // complete graph, synchronously, before the browser follows its fragment.
-  const onClickCapture = (event: MouseEvent<HTMLElement>) => {
-    if (!(event.target instanceof Element)) return;
+  const toggle = (key: string) =>
+    setOpen((was) => {
+      const next = new Set(was);
 
-    if (!event.target.closest('[data-relations] a[href^="#resource-"]')) return;
+      if (!next.delete(key)) {
+        next.add(key);
+      }
 
-    flushSync(showAll);
-  };
+      return next;
+    });
 
   const noun = shown.length === 1 ? 'resource' : 'resources';
 
+  const range = rangeLabel(current.page, shown.length);
+
   return (
-    <section
-      className="not-content flex flex-col gap-4"
-      data-catalog-explorer
-      onClickCapture={onClickCapture}
-    >
+    <section className="not-content flex flex-col gap-4" data-catalog-explorer>
       <div className="flex flex-wrap items-baseline justify-between gap-x-6">
         <Stats
           label="Graph totals"
@@ -111,6 +231,10 @@ export function CatalogExplorer({ model }: CatalogExplorerProps) {
             placeholder="Filter by name, owner, kind…"
             autoComplete="off"
             {...queryField}
+            onChange={(event) => {
+              queryField.onChange(event);
+              setPage(1);
+            }}
           />
         </InputGroup>
         {model.kinds.length > 0 && (
@@ -123,7 +247,10 @@ export function CatalogExplorer({ model }: CatalogExplorerProps) {
             // One kind is always shown; All is the kind that is every kind.
             disallowEmptySelection
             selectedKeys={[kind]}
-            onSelectionChange={(keys) => setKind(String([...keys][0] ?? 'all'))}
+            onSelectionChange={(keys) => {
+              setKind(String([...keys][0] ?? 'all'));
+              setPage(1);
+            }}
           >
             <ToggleGroupItem id="all">
               All <Count>{model.rows.length}</Count>
@@ -141,7 +268,15 @@ export function CatalogExplorer({ model }: CatalogExplorerProps) {
           // The review queue: what the tool guessed and wants a person to confirm.
           // Automation earns trust by making its own uncertainty the easiest thing
           // on the page to find.
-          <Toggle variant="outline" size="sm" isSelected={reviewOnly} onChange={setReviewOnly}>
+          <Toggle
+            variant="outline"
+            size="sm"
+            isSelected={reviewOnly}
+            onChange={(selected) => {
+              setReviewOnly(selected);
+              setPage(1);
+            }}
+          >
             Needs review <Count>{model.review}</Count>
           </Toggle>
         )}
@@ -150,18 +285,68 @@ export function CatalogExplorer({ model }: CatalogExplorerProps) {
           role="status"
           aria-live="polite"
         >
-          {reviewOnly ? `${shown.length} ${noun} to review` : `${shown.length} ${noun}`}
+          {reviewOnly ? `${range} ${noun} to review` : `${range} ${noun}`}
         </p>
+      </div>
+
+      {/* Every other row's fragment, so a link to a row on a later page still
+          names a target in the page as built; landing turns to its page. */}
+      <div hidden>
+        {model.rows
+          .filter((row) => !current.rows.includes(row))
+          .map((row) => (
+            <span key={row.key} id={row.anchor} />
+          ))}
       </div>
 
       <Card>
         <CardContent>
           {shown.length > 0 ? (
-            <ol className="m-0 flex list-none flex-col divide-y p-0">
-              {shown.map((row) => (
-                <ResourceRow key={row.key} row={row} />
-              ))}
-            </ol>
+            <Table
+              aria-label="Resources"
+              sortDescriptor={sort}
+              onSortChange={(next) => {
+                setSort(next);
+                setPage(1);
+              }}
+            >
+              <TableHeader>
+                <TableHead id="details">
+                  <span className="sr-only">Details</span>
+                </TableHead>
+                <SortableHead id="name" isRowHeader>
+                  Name
+                </SortableHead>
+                <SortableHead id="key" className="hidden md:table-cell">
+                  Key
+                </SortableHead>
+                <SortableHead id="owner" className="hidden sm:table-cell">
+                  Owner
+                </SortableHead>
+                <SortableHead id="source" className="hidden xl:table-cell">
+                  Source
+                </SortableHead>
+              </TableHeader>
+              <TableBody>
+                {current.rows.flatMap((row) => {
+                  const expanded = open.has(row.key);
+
+                  const line = (
+                    <ResourceRow
+                      key={row.key}
+                      row={row}
+                      expanded={expanded}
+                      onToggle={() => toggle(row.key)}
+                      onLanded={landing === row.anchor ? () => setLanding(null) : undefined}
+                    />
+                  );
+
+                  return expanded
+                    ? [line, <ResourceDetails key={`${row.key}#details`} row={row} />]
+                    : [line];
+                })}
+              </TableBody>
+            </Table>
           ) : model.rows.length === 0 ? (
             <Empty>
               <EmptyHeader>
@@ -191,7 +376,7 @@ export function CatalogExplorer({ model }: CatalogExplorerProps) {
                   variant="outline"
                   size="sm"
                   onPress={() => {
-                    showAll();
+                    apply(everything);
                     queryField.ref.current?.focus();
                   }}
                 >
@@ -202,6 +387,14 @@ export function CatalogExplorer({ model }: CatalogExplorerProps) {
           )}
         </CardContent>
       </Card>
+
+      <TablePager
+        label="Resource pages"
+        page={current.page}
+        pages={current.pages}
+        hrefOf={hrefOf}
+        onPage={setPage}
+      />
     </section>
   );
 }
@@ -213,32 +406,98 @@ function Count({ children }: { children: number | undefined }) {
 /** A stored provenance as this design draws it; anything unrecognised is treated as a guess. */
 const methodOf = (value: string): ProvenanceMethod => (isMethod(value) ? value : 'inferred');
 
-function ResourceRow({ row }: { row: ExplorerRow }) {
+/** Muted, because an absence is secondary to the values around it. */
+function None() {
+  return <span className="text-muted-foreground">Not recorded</span>;
+}
+
+/** One line per resource: what it is, its key, who owns it and where it was read. */
+function ResourceRow({
+  row,
+  expanded,
+  onToggle,
+  onLanded,
+}: {
+  row: ExplorerRow;
+  expanded: boolean;
+  onToggle: () => void;
+  /** Set on the row a fragment named; called once it is scrolled to. */
+  onLanded?: (() => void) | undefined;
+}) {
   return (
-    <li
-      id={row.anchor}
-      className="m-0 scroll-mt-20 target:bg-muted"
+    <TableRow
+      id={row.key}
       data-resource
       data-kind={row.kind}
       data-review={row.needsReview ? 'true' : undefined}
-      data-search={row.searchText}
     >
-      <Item className="items-start">
-        <ItemMedia>
-          <IconTile name={kindIcon(row.kind)} />
-        </ItemMedia>
-        <ItemContent className="min-w-0 basis-64">
-          <div className="flex flex-col gap-3">
-            <div className="flex flex-col gap-1">
-              <h2 className="m-0 text-sm font-semibold">
-                <a
-                  href={row.href}
-                  className="text-foreground no-underline underline-offset-4 hover:underline"
-                >
-                  {row.title}
-                </a>
-              </h2>
-              <code className="font-mono text-xs break-all text-muted-foreground">{row.key}</code>
+      <TableCell>
+        <ExpandButton expanded={expanded} label={row.title} onToggle={onToggle} />
+      </TableCell>
+      <TableCell className="whitespace-normal md:whitespace-nowrap">
+        {/* The fragment target, kept below the sticky header. The table draws
+            its rows a pass after the page state changes, so the row scrolls
+            itself into view when it arrives. */}
+        <span
+          id={row.anchor}
+          className="flex scroll-mt-20 items-center gap-3"
+          ref={
+            onLanded &&
+            ((node) => {
+              if (!node) {
+                return;
+              }
+
+              node.scrollIntoView({ block: 'start' });
+              onLanded();
+            })
+          }
+        >
+          <IconTile name={kindIcon(row.kind)} kind={row.kind} />
+          <a
+            href={row.href}
+            className="font-medium text-foreground no-underline underline-offset-4 hover:underline"
+          >
+            {row.title}
+          </a>
+        </span>
+      </TableCell>
+      <TableCell className="hidden md:table-cell">
+        <code
+          className="block max-w-xs truncate font-mono text-xs text-muted-foreground"
+          title={row.key}
+        >
+          {row.key}
+        </code>
+      </TableCell>
+      <TableCell className="hidden sm:table-cell">{row.owner ?? <None />}</TableCell>
+      <TableCell className="hidden xl:table-cell">
+        {row.at ? (
+          <code
+            className="block max-w-xs truncate font-mono text-xs text-muted-foreground"
+            title={row.at}
+          >
+            {row.at}
+          </code>
+        ) : (
+          <None />
+        )}
+      </TableCell>
+    </TableRow>
+  );
+}
+
+/** What a row opens to: the summary, where it was read and how sure, its schema and connections. */
+function ResourceDetails({ row }: { row: ExplorerRow }) {
+  return (
+    <TableRow id={`${row.key}#details`}>
+      <TableCell colSpan={5} className="whitespace-normal">
+        <div className="grid gap-4 py-2 lg:grid-cols-3">
+          <div className="flex min-w-0 flex-col gap-3 lg:col-span-2">
+            {/* The columns a narrow screen hides. */}
+            <div className="flex flex-col gap-1 text-xs text-muted-foreground md:hidden">
+              <code className="font-mono break-all">{row.key}</code>
+              <span className="sm:hidden">Owned by {row.owner ?? 'nobody on record'}</span>
             </div>
             {row.summary && <p className="m-0 text-sm">{row.summary}</p>}
             <Evidence
@@ -248,22 +507,14 @@ function ResourceRow({ row }: { row: ExplorerRow }) {
               confidence={null}
               needsReview={row.needsReview}
             />
-            {(row.owner || row.commit || row.evidence || row.notableFields.length > 0) && (
+            {(row.commit || row.evidence || row.notableFields.length > 0) && (
               <div className="flex flex-col gap-1 text-xs text-muted-foreground">
-                {(row.owner || row.commit) && (
+                {row.commit && (
                   <p className="m-0">
-                    {row.owner && (
-                      <>
-                        Owned by <span className="text-foreground">{row.owner}</span>
-                      </>
-                    )}
-                    {row.owner && row.commit && ', at commit '}
-                    {!row.owner && row.commit && 'At commit '}
-                    {row.commit && (
-                      <code className="font-mono" title={row.commit}>
-                        {row.commit.slice(0, 12)}
-                      </code>
-                    )}
+                    At commit{' '}
+                    <code className="font-mono" title={row.commit}>
+                      {row.commit.slice(0, 12)}
+                    </code>
                   </p>
                 )}
                 {row.evidence && <p className="m-0">{row.evidence}</p>}
@@ -292,55 +543,50 @@ function ResourceRow({ row }: { row: ExplorerRow }) {
               </Collapsible>
             )}
           </div>
-        </ItemContent>
-        <ItemContent className="sm:w-56 sm:flex-none" data-relations>
-          {row.connections.length > 0 ? (
-            <Collapsible>
-              <Disclosure>
-                {row.connections.length}{' '}
-                {row.connections.length === 1 ? 'connection' : 'connections'}
-              </Disclosure>
-              <CollapsibleContent>
-                <ul className="m-0 flex list-none flex-col gap-2 p-0 pt-2">
-                  {row.connections.map((connection) => (
-                    <li
-                      key={connection.key}
-                      className={cn(
-                        'flex flex-col gap-0.5 border-0 border-l-2 pl-3 text-xs',
-                        rule[methodOf(connection.provenance)],
-                      )}
-                    >
-                      {connection.target ? (
-                        <a
-                          href={`#${connection.target.anchor}`}
-                          className="break-all text-foreground underline underline-offset-4"
-                        >
-                          {connection.target.title}
-                        </a>
-                      ) : (
-                        <code className="font-mono break-all">{connection.targetKey}</code>
-                      )}
-                      <span className="text-muted-foreground">
-                        {connection.direction === 'in' ? 'Inbound' : 'Outbound'}{' '}
-                        <code className="font-mono">{connection.type}</code>,{' '}
-                        <span className={tone[methodOf(connection.provenance)]}>
-                          {connection.provenance}
-                        </span>
+          <div className="flex min-w-0 flex-col gap-2" data-relations>
+            <p className="m-0 text-xs text-muted-foreground">
+              {row.connections.length === 0
+                ? 'No connections'
+                : `${row.connections.length} ${row.connections.length === 1 ? 'connection' : 'connections'}`}
+            </p>
+            {row.connections.length > 0 && (
+              <ul className="m-0 flex list-none flex-col gap-2 p-0">
+                {row.connections.map((connection) => (
+                  <li
+                    key={connection.key}
+                    className={cn(
+                      'flex flex-col gap-0.5 border-0 border-l-2 pl-3 text-xs',
+                      rule[methodOf(connection.provenance)],
+                    )}
+                  >
+                    {connection.target ? (
+                      <a
+                        href={`#${connection.target.anchor}`}
+                        className="break-all text-foreground underline underline-offset-4"
+                      >
+                        {connection.target.title}
+                      </a>
+                    ) : (
+                      <code className="font-mono break-all">{connection.targetKey}</code>
+                    )}
+                    <span className="text-muted-foreground">
+                      {connection.direction === 'in' ? 'Inbound' : 'Outbound'}{' '}
+                      <code className="font-mono">{connection.type}</code>,{' '}
+                      <span className={tone[methodOf(connection.provenance)]}>
+                        {connection.provenance}
                       </span>
-                      {connection.evidence && (
-                        <span className="text-muted-foreground">{connection.evidence}</span>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              </CollapsibleContent>
-            </Collapsible>
-          ) : (
-            <p className="m-0 py-1 text-xs text-muted-foreground">No connections</p>
-          )}
-        </ItemContent>
-      </Item>
-    </li>
+                    </span>
+                    {connection.evidence && (
+                      <span className="text-muted-foreground">{connection.evidence}</span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      </TableCell>
+    </TableRow>
   );
 }
 

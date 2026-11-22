@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import {
-  AUTOCATALOG_GRAPH_SPEC,
-  type CatalogRelationship,
-  type CatalogResource,
-  type JsonObject,
-  type ResourceGraph,
-  type ResourceRef,
+import { AUTOCATALOG_GRAPH_SPEC } from 'autocatalog-core';
+import type {
+  CatalogRelationship,
+  CatalogResource,
+  JsonObject,
+  ResourceGraph,
+  ResourceRef,
 } from 'autocatalog-core';
 import { buildChannels, channelPath } from '../src/channels';
 
@@ -104,8 +104,9 @@ describe('buildChannels with namespaced queues', () => {
 
 describe('channelPath', () => {
   it('gives no page to a name that would be written outside channels/', () => {
-    for (const id of ['../../catalog', 'a/../b', 'a//b', '.', 'a\\b', '/a'])
+    for (const id of ['../../catalog', 'a/../b', 'a//b', '.', String.raw`a\b`, '/a']) {
       expect(channelPath(id)).toBeUndefined();
+    }
   });
 
   it('keeps the slash in a rule or subscription name, so its page is reachable', () => {

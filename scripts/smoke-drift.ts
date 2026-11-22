@@ -4,7 +4,7 @@ import { CallToolResultSchema } from '@modelcontextprotocol/sdk/types.js';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 
-const here = dirname(fileURLToPath(import.meta.url));
+const here = import.meta.dirname;
 
 const repoRoot = resolve(here, '..');
 
@@ -49,7 +49,7 @@ const main = async () => {
   await client.close();
 };
 
-main().catch((err) => {
-  process.stderr.write(`smoke failed: ${err instanceof Error ? err.message : String(err)}\n`);
+main().catch((error) => {
+  process.stderr.write(`smoke failed: ${error instanceof Error ? error.message : String(error)}\n`);
   process.exit(1);
 });

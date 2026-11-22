@@ -25,7 +25,7 @@ describe('resource contract drift', () => {
       ['reconciliation', ['amount']],
       ['reporting', ['currency']],
       ['legacy', []],
-    ] as const)
+    ] as const) {
       baseline.relationships.push({
         type: 'reads',
         from: { kind: 'service', id: service },
@@ -34,6 +34,7 @@ describe('resource contract drift', () => {
         needsReview: false,
         attributes: fields.length ? { fields: [...fields] } : undefined,
       });
+    }
 
     const current = {
       ...baseline,
@@ -167,37 +168,39 @@ describe('resource contract drift', () => {
       [before, 10],
       [after, 11],
     ] as const) {
-      graph.resources.push({
-        ref: { kind: 'event', namespace: 'registry', id: 'statement', version: String(latest) },
-        title: 'Statement',
-        tags: [],
-        provenance: { default: 'extracted', fields: {} },
-        needsReview: false,
-        attributes: {
-          domain: 'registry',
-          status: 'active',
-          schema: 'schema.json',
-          examples: 0,
-          payloadSchema: {
-            type: 'object',
-            properties: latest === 10 ? { amount: { type: 'number' } } : {},
+      graph.resources.push(
+        {
+          ref: { kind: 'event', namespace: 'registry', id: 'statement', version: String(latest) },
+          title: 'Statement',
+          tags: [],
+          provenance: { default: 'extracted', fields: {} },
+          needsReview: false,
+          attributes: {
+            domain: 'registry',
+            status: 'active',
+            schema: 'schema.json',
+            examples: 0,
+            payloadSchema: {
+              type: 'object',
+              properties: latest === 10 ? { amount: { type: 'number' } } : {},
+            },
           },
         },
-      });
-      graph.resources.push({
-        ref: { kind: 'event', namespace: 'registry', id: 'statement', version: '9' },
-        title: 'Statement',
-        tags: [],
-        provenance: { default: 'extracted', fields: {} },
-        needsReview: false,
-        attributes: {
-          domain: 'registry',
-          status: 'active',
-          schema: 'schema.json',
-          examples: 0,
-          payloadSchema: { type: 'object', properties: { amount: { type: 'number' } } },
+        {
+          ref: { kind: 'event', namespace: 'registry', id: 'statement', version: '9' },
+          title: 'Statement',
+          tags: [],
+          provenance: { default: 'extracted', fields: {} },
+          needsReview: false,
+          attributes: {
+            domain: 'registry',
+            status: 'active',
+            schema: 'schema.json',
+            examples: 0,
+            payloadSchema: { type: 'object', properties: { amount: { type: 'number' } } },
+          },
         },
-      });
+      );
     }
 
     expect(driftResources(before, after)).toContainEqual(
@@ -385,7 +388,7 @@ describe('access to another team’s datastore', () => {
       owned(architectureService('checkout-api'), teams.service),
     );
 
-    for (const edge of access)
+    for (const edge of access) {
       g.relationships.push({
         type: edge.type,
         from: { kind: 'service', id: 'checkout-api' },
@@ -394,6 +397,7 @@ describe('access to another team’s datastore', () => {
         needsReview: !edge.reviewed,
         ...(edge.reviewed && { attributes: { reviewed: true } }),
       });
+    }
 
     return g;
   }
@@ -448,10 +452,11 @@ describe('access to another team’s datastore', () => {
       { service: 'Billing', table: 'Billing' },
       { service: 'Checkout' },
       { table: 'Billing' },
-    ])
+    ]) {
       expect(crossOwner(driftResources(graph(teams), graph(teams, [{ type: 'reads' }])))).toEqual(
         [],
       );
+    }
   });
 
   it('keeps a reviewed exception visible without failing the build', () => {
@@ -467,10 +472,11 @@ describe('access to another team’s datastore', () => {
   it('notes a new command named as something that happened', () => {
     const current = emptyResourceGraph();
 
-    for (const id of ['PlaceOrder', 'OrderPlaced'])
+    for (const id of ['PlaceOrder', 'OrderPlaced']) {
       current.resources.push(
         architectureResource({ kind: 'command', namespace: 'orders', id }, {}),
       );
+    }
 
     expect(
       driftResources(emptyResourceGraph(), current)
