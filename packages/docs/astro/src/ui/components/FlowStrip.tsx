@@ -26,12 +26,12 @@ export type FlowNodeLink = ShellLink & { detail?: string };
 
 export interface FlowStripProps {
   label: string;
-  from: ShellLink[];
+  from: Array<ShellLink>;
   /** Says how the left column reaches the centre: "publishes". */
   inbound: string;
   centre: FlowNodeLink;
   outbound: string;
-  to: ShellLink[];
+  to: Array<ShellLink>;
 }
 
 interface Missing {
@@ -134,7 +134,7 @@ function Column({
   empty,
   isCentre = false,
 }: {
-  nodes: FlowNodeLink[];
+  nodes: Array<FlowNodeLink>;
   empty?: Missing;
   isCentre?: boolean;
 }) {

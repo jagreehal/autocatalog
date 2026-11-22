@@ -6,21 +6,24 @@ import {
   loadCodeowners,
   pascalCase,
   publishCatalog,
-  type AdapterEvent,
-  type DiscoveryAdapter,
-  type DiscoveryCandidate,
-  type DiscoveryOutput,
-  type ProvenanceValue,
+} from 'autocatalog-core/plugin';
+import type {
+  AdapterEvent,
+  DiscoveryAdapter,
+  DiscoveryCandidate,
+  DiscoveryOutput,
+  ProvenanceValue,
 } from 'autocatalog-core/plugin';
 import { z } from 'zod';
 import { isCompactItem, isExplicitEvent, toAdapterEvent } from './event-mapper';
-import { importsZod, staticExports, type StaticExport } from './static-scan';
+import { importsZod, staticExports } from './static-scan';
+import type { StaticExport } from './static-scan';
 
 export interface ScanOptions {
   root: string; // repo to scan
   out: string; // events output directory
   /** Directory names never descended into. */
-  exclude?: string[];
+  exclude?: Array<string>;
   /** When false, discover only — do not write folders (for multi-source merge). Default true. */
   write?: boolean;
 }
@@ -37,16 +40,16 @@ export interface ScanFinding {
 
 export interface ScanResult {
   eventsWritten: number;
-  findings: ScanFinding[];
-  errors: string[];
+  findings: Array<ScanFinding>;
+  errors: Array<string>;
   /** Populated even when write:false — for multi-source merge. */
-  events: AdapterEvent[];
+  events: Array<AdapterEvent>;
 }
 
 /** Discovery output whose findings keep their Zod-specific type. */
 export interface ZodDiscoveryOutput extends DiscoveryOutput {
-  candidates: DiscoveryCandidate<ScanFinding>[];
-  findings: ScanFinding[];
+  candidates: Array<DiscoveryCandidate<ScanFinding>>;
+  findings: Array<ScanFinding>;
 }
 
 /**
@@ -79,14 +82,16 @@ const CONVENTION_RE = /(Event|EventSchema)$/;
 export function idFromSymbol(symbol: string): string {
   const base = symbol.replace(/EventSchema$|Event$|Schema$/, '') || symbol;
 
-  return base.replace(/([a-z0-9])([A-Z])/g, '$1.$2').toLowerCase();
+  return base.replaceAll(/([a-z0-9])([A-Z])/g, '$1.$2').toLowerCase();
 }
 
 /** Domain guess: schema metadata wins, then the defining file's directory name. */
 export function domainForFile(relFile: string, fallbackId: string): string {
   const dir = path.basename(path.dirname(relFile));
 
-  if (dir && !['src', 'lib', 'source', '.', ''].includes(dir)) return dir;
+  if (dir && !['src', 'lib', 'source', '.', ''].includes(dir)) {
+    return dir;
+  }
 
   return fallbackId.split('.')[0]!;
 }
@@ -96,8 +101,8 @@ async function walkSource(
   exclude: Set<string>,
   signal?: AbortSignal,
   maxFiles = 50_000,
-): Promise<string[]> {
-  const results: string[] = [];
+): Promise<Array<string>> {
+  const results: Array<string> = [];
 
   async function walk(dir: string): Promise<void> {
     signal?.throwIfAborted();
@@ -113,11 +118,15 @@ async function walkSource(
       const full = path.join(dir, entry.name);
 
       if (entry.isDirectory()) {
-        if (!exclude.has(entry.name) && !entry.name.startsWith('.')) await walk(full);
+        if (!exclude.has(entry.name) && !entry.name.startsWith('.')) {
+          await walk(full);
+        }
       } else if (SOURCE_EXT.test(entry.name) && !TEST_FILE.test(entry.name)) {
         results.push(full);
 
-        if (results.length > maxFiles) throw new Error(`source file limit exceeded (${maxFiles})`);
+        if (results.length > maxFiles) {
+          throw new Error(`source file limit exceeded (${maxFiles})`);
+        }
       }
     }
   }
@@ -135,7 +144,9 @@ function eventFromStatic(input: {
 }): { event: AdapterEvent; finding: ScanFinding } | null {
   const { ex, meta, relFile, isRegistryMember } = input;
 
-  if (!ex.schema) return null;
+  if (!ex.schema) {
+    return null;
+  }
 
   const limits = ex.schema.limits;
 
@@ -152,13 +163,21 @@ function eventFromStatic(input: {
 
   const inferredFields: Record<string, ProvenanceValue> = {};
 
-  if (!meta?.id) inferredFields.id = 'inferred';
+  if (!meta?.id) {
+    inferredFields.id = 'inferred';
+  }
 
-  if (!meta?.version) inferredFields.version = 'inferred';
+  if (!meta?.version) {
+    inferredFields.version = 'inferred';
+  }
 
-  if (!meta?.domain) inferredFields.domain = 'inferred';
+  if (!meta?.domain) {
+    inferredFields.domain = 'inferred';
+  }
 
-  if (!meta?.summary) inferredFields.summary = 'inferred';
+  if (!meta?.summary) {
+    inferredFields.summary = 'inferred';
+  }
 
   // A schema we could not fully represent is never silently published as fact.
   const incomplete = limits.length > 0;
@@ -174,7 +193,7 @@ function eventFromStatic(input: {
   const event: AdapterEvent = {
     id,
     version,
-    name: meta?.name ?? pascalCase(id).replace(/([a-z])([A-Z])/g, '$1 $2'),
+    name: meta?.name ?? pascalCase(id).replaceAll(/([a-z])([A-Z])/g, '$1 $2'),
     summary,
     domain,
     folderName: pascalCase(id),
@@ -214,7 +233,7 @@ function eventFromStatic(input: {
  */
 export async function discoverZodEvents(opts: {
   root: string;
-  exclude?: string[];
+  exclude?: Array<string>;
   signal?: AbortSignal;
   maxFiles?: number;
   maxFileBytes?: number;
@@ -223,7 +242,7 @@ export async function discoverZodEvents(opts: {
   const exclude = new Set([...DEFAULT_EXCLUDE, ...(opts.exclude ?? [])]);
   const files = await walkSource(root, exclude, opts.signal, opts.maxFiles);
 
-  const errors: string[] = [];
+  const errors: Array<string> = [];
   const candidates: ZodDiscoveryOutput['candidates'] = [];
 
   for (const file of files) {
@@ -237,16 +256,18 @@ export async function discoverZodEvents(opts: {
 
     const text = await fs.readFile(file, 'utf8');
 
-    if (!importsZod(text) && !text.includes('defineEvent(')) continue;
+    if (!importsZod(text) && !text.includes('defineEvent(')) {
+      continue;
+    }
     // Forward slashes on every platform: the path is recorded in the event's source.
     const relFile = path.relative(root, file).split(path.sep).join('/');
 
-    let exports: StaticExport[];
+    let exports: Array<StaticExport>;
 
     try {
       exports = staticExports(text, file);
-    } catch (err) {
-      errors.push(`${relFile}: ${err instanceof Error ? err.message : String(err)}`);
+    } catch (error) {
+      errors.push(`${relFile}: ${error instanceof Error ? error.message : String(error)}`);
       continue;
     }
 
@@ -256,23 +277,29 @@ export async function discoverZodEvents(opts: {
     const registryMembers = new Set<string>();
 
     for (const ex of exports) {
-      if (!CONVENTION_RE.test(ex.symbol)) continue;
+      if (!CONVENTION_RE.test(ex.symbol)) {
+        continue;
+      }
 
-      for (const member of ex.unionMembers ?? []) registryMembers.add(member);
+      for (const member of ex.unionMembers ?? []) {
+        registryMembers.add(member);
+      }
     }
 
     for (const ex of exports) {
       for (const { item, limits } of ex.registryItems ?? []) {
         // An array of anything else is not an event registry.
-        if (!isExplicitEvent(item) && !isCompactItem(item)) continue;
+        if (!isExplicitEvent(item) && !isCompactItem(item)) {
+          continue;
+        }
 
         let event: AdapterEvent;
 
         try {
           event = toAdapterEvent(item);
-        } catch (err) {
+        } catch (error) {
           errors.push(
-            `${relFile}: ${ex.symbol}: ${err instanceof Error ? err.message : String(err)}`,
+            `${relFile}: ${ex.symbol}: ${error instanceof Error ? error.message : String(error)}`,
           );
           continue;
         }
@@ -295,12 +322,18 @@ export async function discoverZodEvents(opts: {
         });
       }
 
-      if (ex.registryItems) continue;
+      if (ex.registryItems) {
+        continue;
+      }
 
-      if (ex.unionMembers) continue; // the union itself is a registry, not an event
+      if (ex.unionMembers) {
+        continue;
+      } // the union itself is a registry, not an event
       const isRegistryMember = registryMembers.has(ex.symbol);
 
-      if (!ex.defineEventMeta && !CONVENTION_RE.test(ex.symbol) && !isRegistryMember) continue;
+      if (!ex.defineEventMeta && !CONVENTION_RE.test(ex.symbol) && !isRegistryMember) {
+        continue;
+      }
       const parsedMeta = ex.defineEventMeta && StaticMetaSchema.safeParse(ex.defineEventMeta);
 
       if (parsedMeta && !parsedMeta.success) {
@@ -354,13 +387,15 @@ export async function scanRepo(opts: ScanOptions): Promise<ScanResult> {
     const events = discovered.candidates.map((candidate) => candidate.event);
 
     try {
-      for (const event of events) enrichEvent(event, codeowners);
+      for (const event of events) {
+        enrichEvent(event, codeowners);
+      }
 
       if (errors.length === 0) {
         written = (await publishCatalog({ outRoot: path.resolve(opts.out), events })).eventsWritten;
       }
-    } catch (err) {
-      errors.push(err instanceof Error ? err.message : String(err));
+    } catch (error) {
+      errors.push(error instanceof Error ? error.message : String(error));
     }
   }
 

@@ -18,7 +18,7 @@ afterEach(async () => {
   await fs.rm(work, { recursive: true, force: true });
 });
 
-const git = (cwd: string, ...args: string[]) =>
+const git = (cwd: string, ...args: Array<string>) =>
   execFileSync(
     'git',
     ['-c', 'user.name=t', '-c', 'user.email=t@acme.dev', '-c', 'commit.gpgsign=false', ...args],
@@ -41,7 +41,7 @@ const repository = async (name: string, files: Record<string, string>): Promise<
   return `file://${dir}`;
 };
 
-const sweep = (repos: string[], extra = {}) =>
+const sweep = (repos: Array<string>, extra = {}) =>
   runMcpSweep({
     repos,
     root: path.join(work, 'catalog'),

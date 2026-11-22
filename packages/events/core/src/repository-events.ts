@@ -8,14 +8,11 @@ import { builtInDiscoveryAdapters } from './built-in-adapters';
 import { conventionDiscoveryAdapter, conventionFiles, CONVENTIONS_PATH } from './scan-convention';
 import { scanCatalog } from './scan-catalog';
 import { hasMessageContracts, messageContractDiscoveryAdapter } from './scan-message-contract';
-import { loadCatalogSnapshot, type LoadedEvent } from './load';
+import { loadCatalogSnapshot } from './load';
+import type { LoadedEvent } from './load';
 import { DEFAULT_SCAN_EXCLUDE, isRealFileInside } from './utils';
-import {
-  applySnapshot,
-  readSnapshot,
-  type ArchitectureSnapshot,
-  type WorkflowObservation,
-} from './snapshot';
+import { applySnapshot, readSnapshot } from './snapshot';
+import type { ArchitectureSnapshot, WorkflowObservation } from './snapshot';
 import { RESOURCE_GRAPH_FILE } from './resource-store';
 import { CONSUMES_FILE } from './consumes';
 import { GATEWAY_FILE } from './gateways';
@@ -71,12 +68,18 @@ export const RUNTIME_SNAPSHOT = '.autotel/snapshot.json';
  * site's source.
  */
 function isCatalogFolder(folder: string): boolean {
-  if (!fs.existsSync(folder)) return false;
+  if (!fs.existsSync(folder)) {
+    return false;
+  }
 
   // These hold Markdown and nothing else: a gateway's `teams/` of YAML is not one.
-  if (MARKDOWN_ROOTS.has(path.basename(folder))) return holdsMarkdown(folder);
+  if (MARKDOWN_ROOTS.has(path.basename(folder))) {
+    return holdsMarkdown(folder);
+  }
 
-  if (fs.existsSync(path.join(folder, 'package.json'))) return false;
+  if (fs.existsSync(path.join(folder, 'package.json'))) {
+    return false;
+  }
 
   try {
     // A folder of packages is decided from its own entries, before any listing
@@ -150,10 +153,14 @@ export function publishesCatalogContent(dir: string): boolean {
 function hasResourceGraph(dir: string): boolean {
   const file = path.join(dir, RESOURCE_GRAPH_FILE);
 
-  if (!fs.existsSync(file)) return false;
+  if (!fs.existsSync(file)) {
+    return false;
+  }
 
   try {
-    if (!isRealFileInside(dir, file) || fs.statSync(file).size > 2 * 1024 * 1024) return true;
+    if (!isRealFileInside(dir, file) || fs.statSync(file).size > 2 * 1024 * 1024) {
+      return true;
+    }
 
     const graph: { resources?: { length?: number } } | null = JSON.parse(
       fs.readFileSync(file, 'utf8'),
@@ -185,9 +192,13 @@ const REPOSITORY_MARKERS = ['.git', 'package.json'];
  * must not hide every repository enrolled under it.
  */
 export function isSingleRepository(root: string): boolean {
-  if (SINGLE_ROOTS.some((name) => isCatalogFolder(path.join(root, name)))) return true;
+  if (SINGLE_ROOTS.some((name) => isCatalogFolder(path.join(root, name)))) {
+    return true;
+  }
 
-  if (!REPOSITORY_MARKERS.some((name) => fs.existsSync(path.join(root, name)))) return false;
+  if (!REPOSITORY_MARKERS.some((name) => fs.existsSync(path.join(root, name)))) {
+    return false;
+  }
 
   const holdsCheckouts = fs
     .readdirSync(root, { withFileTypes: true })
@@ -216,7 +227,7 @@ export interface CatalogRoot {
   /** Path below the aggregation root, forward-slashed; `''` for the root itself. */
   path: string;
   /** Roots inside this one: theirs to publish, so this one's scans skip them. */
-  nested: string[];
+  nested: Array<string>;
   /** Set when an earlier root has the same name: the path of that one, which publishes instead. */
   duplicateOf?: string;
 }
@@ -239,10 +250,10 @@ export function isEventCatalogProject(dir: string): boolean {
 }
 
 /** Every EventCatalog project under a root, the root included, skipping what scans skip. */
-export function findEventCatalogProjects(root: string): string[] {
+export function findEventCatalogProjects(root: string): Array<string> {
   const top = path.resolve(root);
   const exclude = new Set(DEFAULT_SCAN_EXCLUDE);
-  const found: string[] = [];
+  const found: Array<string> = [];
 
   const walk = (dir: string) => {
     if (isEventCatalogProject(dir)) {
@@ -251,7 +262,7 @@ export function findEventCatalogProjects(root: string): string[] {
       return;
     }
 
-    let entries: fs.Dirent[] = [];
+    let entries: Array<fs.Dirent> = [];
 
     try {
       entries = fs.readdirSync(dir, { withFileTypes: true });
@@ -259,9 +270,10 @@ export function findEventCatalogProjects(root: string): string[] {
       return;
     }
 
-    for (const entry of entries)
+    for (const entry of entries) {
       if (entry.isDirectory() && !entry.name.startsWith('.') && !exclude.has(entry.name))
         walk(path.join(dir, entry.name));
+    }
   };
 
   walk(top);
@@ -312,13 +324,15 @@ export function findCatalogRoots(
     /** Told about a folder that could not be read; the search carries on around it. */
     onWarning?: (message: string) => void;
   } = {},
-): CatalogRoot[] {
+): Array<CatalogRoot> {
   const top = path.resolve(root);
   const exclude = new Set(DEFAULT_SCAN_EXCLUDE);
-  const found: CatalogRoot[] = [];
+  const found: Array<CatalogRoot> = [];
 
   // An EventCatalog project holds no autocatalog repository: `ac site` reads it whole.
-  if (options.name === undefined && isEventCatalogProject(top)) return found;
+  if (options.name === undefined && isEventCatalogProject(top)) {
+    return found;
+  }
 
   if (options.name !== undefined || (isSingleRepository(top) && !isEventCatalogProject(top))) {
     const name = options.name ?? path.basename(top);
@@ -327,7 +341,7 @@ export function findCatalogRoots(
   }
 
   const walk = (dir: string): void => {
-    let entries: fs.Dirent[];
+    let entries: Array<fs.Dirent>;
 
     try {
       entries = fs.readdirSync(dir, { withFileTypes: true });
@@ -347,15 +361,18 @@ export function findCatalogRoots(
         entry.name.startsWith('.') ||
         exclude.has(entry.name) ||
         NOT_ROOTS.has(entry.name)
-      )
+      ) {
         continue;
+      }
 
       const child = path.join(dir, entry.name);
 
       // An EventCatalog project is read as one, by `ac site`, and never walked into.
-      if (isEventCatalogProject(child)) continue;
+      if (isEventCatalogProject(child)) {
+        continue;
+      }
 
-      if (publishesCatalogContent(child))
+      if (publishesCatalogContent(child)) {
         found.push({
           name: entry.name,
           repository: entry.name,
@@ -363,6 +380,7 @@ export function findCatalogRoots(
           path: path.relative(top, child).split(path.sep).join('/'),
           nested: [],
         });
+      }
       walk(child);
     }
   };
@@ -383,8 +401,11 @@ export function findCatalogRoots(
     // A root renamed by its identity claims both names.
     const earlier = first.get(candidate.name) ?? first.get(candidate.repository);
 
-    if (earlier) candidate.duplicateOf = earlier.path;
-    else for (const key of [candidate.name, candidate.repository]) first.set(key, candidate);
+    if (earlier) {
+      candidate.duplicateOf = earlier.path;
+    } else {
+      for (const key of [candidate.name, candidate.repository]) first.set(key, candidate);
+    }
   }
 
   return found;
@@ -402,11 +423,11 @@ export interface LoadRepositoryEventsOptions {
   /** Told that the repository's runtime snapshot was read, whatever it matched. */
   onSnapshot?: () => void;
   /** Handed the workflow runs the repository's runtime snapshot recorded. */
-  onWorkflows?: (workflows: WorkflowObservation[]) => void;
+  onWorkflows?: (workflows: Array<WorkflowObservation>) => void;
   /** How far above the repository to look for CODEOWNERS: its monorepo's root. */
   ownersWithin?: string;
   /** Directories the whole-repository scan skips: packages that publish for themselves. */
-  exclude?: string[];
+  exclude?: Array<string>;
 }
 
 /**
@@ -420,7 +441,7 @@ export interface LoadRepositoryEventsOptions {
 export async function loadRepositoryEvents(
   repositoryRoot: string,
   options: LoadRepositoryEventsOptions = {},
-): Promise<LoadedEvent[]> {
+): Promise<Array<LoadedEvent>> {
   const committed = path.join(repositoryRoot, 'events');
 
   if (isDirectory(committed)) {
@@ -433,7 +454,9 @@ export async function loadRepositoryEvents(
   const current = await discoverContracts(repositoryRoot, options);
   await applyRuntimeSnapshot(repositoryRoot, current, options);
 
-  if (!options.history) return current;
+  if (!options.history) {
+    return current;
+  }
 
   return [...current, ...(await contractHistory(repositoryRoot, current))];
 }
@@ -446,13 +469,15 @@ export async function loadRepositoryEvents(
  */
 async function applyRuntimeSnapshot(
   repositoryRoot: string,
-  events: LoadedEvent[],
+  events: Array<LoadedEvent>,
   options: LoadRepositoryEventsOptions,
 ): Promise<void> {
   const file = path.join(repositoryRoot, RUNTIME_SNAPSHOT);
   const current = events.filter((event) => !event.folder.isVersioned);
 
-  if (!isRealFileInside(repositoryRoot, file)) return;
+  if (!isRealFileInside(repositoryRoot, file)) {
+    return;
+  }
 
   const notApplied = (reason: string) =>
     options.onWarning?.(
@@ -472,9 +497,13 @@ async function applyRuntimeSnapshot(
   // A saga's runs belong to its flow, which a repository with no events can declare.
   const workflows = Object.values(snapshot.workflows ?? {});
 
-  if (workflows.length > 0) options.onWorkflows?.(workflows);
+  if (workflows.length > 0) {
+    options.onWorkflows?.(workflows);
+  }
 
-  if (current.length === 0) return;
+  if (current.length === 0) {
+    return;
+  }
 
   // The snapshot joins scanner output; a loaded event is that output, published.
   const joined = current.map((event) => ({
@@ -518,7 +547,7 @@ async function discoverContracts(
     exclude,
     conventions,
   }: LoadRepositoryEventsOptions & { conventions?: string } = {},
-): Promise<LoadedEvent[]> {
+): Promise<Array<LoadedEvent>> {
   const outRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'autocatalog-repository-'));
   const hasContracts = isDirectory(path.join(repositoryRoot, CONTRACTS));
 
@@ -536,7 +565,9 @@ async function discoverContracts(
       ...(conventions && { conventions }),
     });
 
-    if (scan.errors.length > 0) throw new Error(scan.errors.join('; '));
+    if (scan.errors.length > 0) {
+      throw new Error(scan.errors.join('; '));
+    }
 
     return scan.events.length === 0 ? [] : (await loadCatalogSnapshot(outRoot)).events;
   } finally {
@@ -562,8 +593,8 @@ async function discoverContracts(
  */
 async function contractHistory(
   repositoryRoot: string,
-  current: LoadedEvent[],
-): Promise<LoadedEvent[]> {
+  current: Array<LoadedEvent>,
+): Promise<Array<LoadedEvent>> {
   const key = (event: LoadedEvent) => `${event.frontmatter.domain}/${event.frontmatter.id}`;
 
   const declared = (event: LoadedEvent) =>
@@ -571,9 +602,13 @@ async function contractHistory(
 
   const today = new Map<string, LoadedEvent>();
 
-  for (const event of current) if (declared(event)) today.set(key(event), event);
+  for (const event of current) {
+    if (declared(event)) today.set(key(event), event);
+  }
 
-  if (today.size === 0) return [];
+  if (today.size === 0) {
+    return [];
+  }
 
   const sources = await conventionFiles(repositoryRoot);
 
@@ -593,7 +628,7 @@ async function contractHistory(
 
   const seen = new Set(current.map((event) => `${key(event)}@${event.frontmatter.version}`));
   const kept = new Map<string, number>();
-  const history: LoadedEvent[] = [];
+  const history: Array<LoadedEvent> = [];
 
   for (const commit of commits) {
     const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'autocatalog-history-'));
@@ -604,7 +639,9 @@ async function contractHistory(
         () => false,
       );
 
-      if (!readable) continue;
+      if (!readable) {
+        continue;
+      }
 
       for (const event of await discoverContracts(scratch, conventions).catch(() => [])) {
         const now = today.get(key(event));
@@ -612,7 +649,9 @@ async function contractHistory(
         const count = kept.get(key(event)) ?? 0;
 
         // An event retired since has no page today to hang its history on.
-        if (!now || !declared(event) || seen.has(version) || count >= HISTORY_VERSIONS) continue;
+        if (!now || !declared(event) || seen.has(version) || count >= HISTORY_VERSIONS) {
+          continue;
+        }
         seen.add(version);
         kept.set(key(event), count + 1);
         history.push({
@@ -633,7 +672,7 @@ async function extractTree(
   repositoryRoot: string,
   commit: string,
   into: string,
-  sources: string[],
+  sources: Array<string>,
 ): Promise<void> {
   const listing = await git(repositoryRoot, [
     'ls-tree',
@@ -653,7 +692,9 @@ async function extractTree(
     const [mode, type, object = ''] = entry.slice(0, tab).split(' ');
     const target = path.join(into, file);
 
-    if (type !== 'blob' || mode === '120000' || !target.startsWith(into + path.sep)) continue;
+    if (type !== 'blob' || mode === '120000' || !target.startsWith(into + path.sep)) {
+      continue;
+    }
     fs.mkdirSync(path.dirname(target), { recursive: true });
     fs.writeFileSync(target, await git(repositoryRoot, ['cat-file', 'blob', object]));
   }
@@ -667,7 +708,7 @@ async function extractTree(
  */
 const SAFE_GIT = ['-c', 'core.fsmonitor=false', '-c', 'safe.bareRepository=explicit'];
 
-async function git(cwd: string, args: string[]): Promise<Buffer> {
+async function git(cwd: string, args: Array<string>): Promise<Buffer> {
   const { stdout } = await execFileAsync('git', [...SAFE_GIT, '--literal-pathspecs', ...args], {
     cwd,
     encoding: 'buffer',

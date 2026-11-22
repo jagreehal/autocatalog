@@ -8,7 +8,7 @@ import type {
 } from './Storm';
 
 const rows = (
-  partial: Partial<Record<keyof StormColumnView['rows'], StormStickyView[]>>,
+  partial: Partial<Record<keyof StormColumnView['rows'], Array<StormStickyView>>>,
 ): StormColumnView['rows'] => ({
   who: [],
   command: [],
@@ -20,7 +20,7 @@ const rows = (
 });
 
 /** A catalogue import, stormed from its code. */
-export const importColumns: StormColumnView[] = [
+export const importColumns: Array<StormColumnView> = [
   {
     stage: 'Request import',
     rows: rows({
@@ -126,7 +126,7 @@ export const importColumns: StormColumnView[] = [
   },
 ];
 
-export const importHotspots: StormHotspotView[] = [
+export const importHotspots: Array<StormHotspotView> = [
   {
     title: 'Missing import or supplier vanishes silently',
     href: '/imports/findings/missing-import-or-supplier/',
@@ -142,7 +142,7 @@ export const importHotspots: StormHotspotView[] = [
   },
 ];
 
-export const importEndings: StormEndingView[] = [
+export const importEndings: Array<StormEndingView> = [
   {
     title: 'Catalogue import completed',
     track: 'happy',
@@ -160,7 +160,7 @@ export const importEndings: StormEndingView[] = [
   { title: 'Import not found', track: 'failure', status: 'unchanged', policies: [] },
 ];
 
-export const importScenarios: StormScenarioView[] = [
+export const importScenarios: Array<StormScenarioView> = [
   {
     given: 'A valid file with new products',
     when: 'The import runs',
@@ -179,7 +179,7 @@ export const importScenarios: StormScenarioView[] = [
   },
 ];
 
-export const lanes: BigPictureLaneView[] = [
+export const lanes: Array<BigPictureLaneView> = [
   {
     title: 'Catalogue import',
     href: '/flows/imports/catalogue-import/',

@@ -2,15 +2,12 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import {
-  AdapterExecutionError,
-  createIsolatedDiscoveryAdapter,
-  type AdapterManifest,
-} from '../src/adapters';
+import { AdapterExecutionError, createIsolatedDiscoveryAdapter } from '../src/adapters';
+import type { AdapterManifest } from '../src/adapters';
 
-const roots: string[] = [];
+const roots: Array<string> = [];
 
-async function adapter(source: string, timeoutMs = 2_000) {
+async function adapter(source: string, timeoutMs = 2000) {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'autocatalog-adapter-isolation-'));
   roots.push(root);
   const entry = path.join(root, 'adapter.mjs');

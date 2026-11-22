@@ -31,11 +31,15 @@ export async function pullRequestFromEnv(
 ): Promise<PullRequest | undefined> {
   const token = env.GITHUB_TOKEN ?? env.GH_TOKEN;
 
-  if (!token || !env.GITHUB_REPOSITORY || !env.GITHUB_EVENT_PATH) return undefined;
+  if (!token || !env.GITHUB_REPOSITORY || !env.GITHUB_EVENT_PATH) {
+    return undefined;
+  }
 
   const text = await fs.readFile(env.GITHUB_EVENT_PATH, 'utf8').catch(() => null);
 
-  if (text === null) return undefined;
+  if (text === null) {
+    return undefined;
+  }
 
   const number = pullRequestNumber(text);
 
@@ -80,7 +84,9 @@ export async function upsertComment(
   const call = async (url: string, init: RequestInit = {}) => {
     const response = await fetchImpl(url, { ...init, headers, redirect: 'error' });
 
-    if (!response.ok) throw new Error(`GitHub answered ${response.status} for ${url}`);
+    if (!response.ok) {
+      throw new Error(`GitHub answered ${response.status} for ${url}`);
+    }
 
     return response;
   };
@@ -96,7 +102,9 @@ export async function upsertComment(
       (comment) => comment.user?.type === 'Bot' && comment.body?.startsWith(COMMENT_MARKER),
     )?.id;
 
-    if (comments.length < 100) break;
+    if (comments.length < 100) {
+      break;
+    }
   }
 
   const text = `${COMMENT_MARKER}\n${body}`;
@@ -110,7 +118,9 @@ export async function upsertComment(
     return 'updated';
   }
 
-  if (!worthSaying) return 'skipped';
+  if (!worthSaying) {
+    return 'skipped';
+  }
 
   await call(`${base}/${pr.number}/comments`, {
     method: 'POST',

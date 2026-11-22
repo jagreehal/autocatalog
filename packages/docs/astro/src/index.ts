@@ -7,19 +7,22 @@ import tailwindcss from '@tailwindcss/vite';
 import type { StarlightPlugin } from '@astrojs/starlight/types';
 import { z } from 'astro/zod';
 import {
-  type Doc,
   HOME_BLOCKS,
   INSIDE_ONLY_BLOCKS,
-  type SiteConfig,
   resolveDocsLayout,
   siteNavLinkSchema,
-  type SiteAccessConfig,
-  type SiteNavigationInput,
-  type SiteNavLink,
-  type SITE_THEMES,
+} from 'autocatalog-docs-core';
+import type {
+  Doc,
+  SiteConfig,
+  SiteAccessConfig,
+  SiteNavigationInput,
+  SiteNavLink,
+  SITE_THEMES,
 } from 'autocatalog-docs-core';
 import type { PluginOption } from 'vite';
-import { type DocsSiteConfig, docsSiteConfig, servesMcp as siteServesMcp } from './config';
+import { docsSiteConfig, servesMcp as siteServesMcp } from './config';
+import type { DocsSiteConfig } from './config';
 import { ownPageRoutes } from './own-pages';
 import { autocatalogDocsRoutes } from './routes';
 
@@ -136,7 +139,7 @@ export interface AutocatalogDocsOptions {
   /** What the sidebar calls the link to an API's reference under its service: `Scalar` by default. */
   apiReferenceLabel?: string;
   /** The kinds the home page counts, in order: six chosen for it by default. */
-  homeCounts?: string[];
+  homeCounts?: Array<string>;
   /** Pages composed from blocks: `home`, in order. Unset, the home page is as built. */
   layouts?: SiteConfig['layouts'];
   /** Blocks a layout can name beyond the built-in ones: an Astro component's path by name. */
@@ -162,7 +165,7 @@ export interface AutocatalogDocsOptions {
   /** The site's own words for its interface, by Starlight's translation key. */
   strings?: Record<string, string>;
   /** The site's sections, in the rail beside the sidebar and atop the menu on a phone. `[]` names none. */
-  nav?: SiteNavLink[];
+  nav?: Array<SiteNavLink>;
   /**
    * Who may open each document, per request, on a site with `output: 'server'`:
    * `module` default-exports `SiteAccess`, and `denied` is what a closed
@@ -216,7 +219,9 @@ export default function autocatalogDocs(opts: AutocatalogDocsOptions = {}): Star
         process.env.AUTOCATALOG_DOCS_ROOT ??= root;
         process.env.AUTOCATALOG_DOCS_TITLE ??= starlightTitle.parse(config.title);
 
-        if (opts.description) process.env.AUTOCATALOG_DOCS_DESCRIPTION ??= opts.description;
+        if (opts.description) {
+          process.env.AUTOCATALOG_DOCS_DESCRIPTION ??= opts.description;
+        }
 
         const nav = opts.nav ?? siteNav(process.env.AUTOCATALOG_SITE_NAV);
 
@@ -226,9 +231,13 @@ export default function autocatalogDocs(opts: AutocatalogDocsOptions = {}): Star
 
         const theme = opts.theme ?? process.env.AUTOCATALOG_SITE_THEME;
 
-        if (opts.audience) process.env.AUTOCATALOG_SITE_AUDIENCE ??= opts.audience;
+        if (opts.audience) {
+          process.env.AUTOCATALOG_SITE_AUDIENCE ??= opts.audience;
+        }
 
-        if (opts.apiReference) process.env.AUTOCATALOG_SITE_API_REFERENCE ??= opts.apiReference;
+        if (opts.apiReference) {
+          process.env.AUTOCATALOG_SITE_API_REFERENCE ??= opts.apiReference;
+        }
 
         if (opts.apiReferenceLabel) {
           process.env.AUTOCATALOG_SITE_API_REFERENCE_LABEL ??= opts.apiReferenceLabel;
@@ -238,7 +247,9 @@ export default function autocatalogDocs(opts: AutocatalogDocsOptions = {}): Star
           process.env.AUTOCATALOG_SITE_HOME_COUNTS ??= JSON.stringify(opts.homeCounts);
         }
 
-        if (opts.layouts) process.env.AUTOCATALOG_SITE_LAYOUTS ??= JSON.stringify(opts.layouts);
+        if (opts.layouts) {
+          process.env.AUTOCATALOG_SITE_LAYOUTS ??= JSON.stringify(opts.layouts);
+        }
 
         const blocks = opts.blocks ?? {};
 
@@ -253,9 +264,13 @@ export default function autocatalogDocs(opts: AutocatalogDocsOptions = {}): Star
           },
         });
 
-        if (opts.mcp !== undefined) process.env.AUTOCATALOG_SITE_MCP ??= String(opts.mcp);
+        if (opts.mcp !== undefined) {
+          process.env.AUTOCATALOG_SITE_MCP ??= String(opts.mcp);
+        }
 
-        if (opts.atRoot !== undefined) process.env.AUTOCATALOG_DOCS_AT_ROOT ??= String(opts.atRoot);
+        if (opts.atRoot !== undefined) {
+          process.env.AUTOCATALOG_DOCS_AT_ROOT ??= String(opts.atRoot);
+        }
 
         if (opts.access) {
           const { rule: _rule, ...settings } = opts.access;
@@ -266,18 +281,25 @@ export default function autocatalogDocs(opts: AutocatalogDocsOptions = {}): Star
           });
         }
 
-        if (opts.repo) process.env.AUTOCATALOG_DOCS_REPO ??= opts.repo;
+        if (opts.repo) {
+          process.env.AUTOCATALOG_DOCS_REPO ??= opts.repo;
+        }
 
-        if (opts.repository) process.env.AUTOCATALOG_DOCS_REPOSITORY ??= opts.repository;
+        if (opts.repository) {
+          process.env.AUTOCATALOG_DOCS_REPOSITORY ??= opts.repository;
+        }
 
         if (opts.live) {
           process.env.AUTOCATALOG_DOCS_LIVE_URL ??= opts.live.url;
 
-          if (opts.live.event) process.env.AUTOCATALOG_DOCS_LIVE_EVENT ??= opts.live.event;
+          if (opts.live.event) {
+            process.env.AUTOCATALOG_DOCS_LIVE_EVENT ??= opts.live.event;
+          }
         }
 
-        if (opts.pages)
+        if (opts.pages) {
           process.env.AUTOCATALOG_DOCS_PAGES ??= path.resolve(projectRoot, opts.pages);
+        }
 
         if (opts.schema) {
           process.env.AUTOCATALOG_DOCS_SCHEMA ??= path.resolve(projectRoot, opts.schema);
@@ -304,7 +326,9 @@ export default function autocatalogDocs(opts: AutocatalogDocsOptions = {}): Star
               ? soleRepository(effective)
               : undefined;
 
-        if (rootRepo) process.env.AUTOCATALOG_DOCS_ROOT_REPO = rootRepo;
+        if (rootRepo) {
+          process.env.AUTOCATALOG_DOCS_ROOT_REPO = rootRepo;
+        }
 
         addIntegration({
           name: 'autocatalog-docs-root',
@@ -328,9 +352,13 @@ export default function autocatalogDocs(opts: AutocatalogDocsOptions = {}): Star
 
         // Configuration is the one place a build compiles the catalog exactly
         // once, so it is where the build says what the catalog left out.
-        for (const warning of catalog.warnings) logger.warn(warning);
+        for (const warning of catalog.warnings) {
+          logger.warn(warning);
+        }
 
-        if (rootRepo) refuseRootClashes(catalog.docs);
+        if (rootRepo) {
+          refuseRootClashes(catalog.docs);
+        }
 
         // The rail and TopNav read the sections from here, at build time: a
         // server site has no build environment left when it renders. A site
@@ -609,7 +637,9 @@ export default function autocatalogDocs(opts: AutocatalogDocsOptions = {}): Star
                 : 'Name sample readers in the access module (readers) to see who may open each document.',
             );
 
-            for (const link of closedLinks(catalog.docs, table)) logger.warn(link);
+            for (const link of closedLinks(catalog.docs, table)) {
+              logger.warn(link);
+            }
           }
         } else if (access) {
           logger.warn(
@@ -636,7 +666,9 @@ export default function autocatalogDocs(opts: AutocatalogDocsOptions = {}): Star
         // Agents connect by URL, so the endpoint needs a server; llms.txt names it.
         const servesMcp = siteServesMcp(effective, astroConfig.output);
 
-        if (servesMcp) process.env.AUTOCATALOG_SITE_MCP_ENDPOINT = 'mcp';
+        if (servesMcp) {
+          process.env.AUTOCATALOG_SITE_MCP_ENDPOINT = 'mcp';
+        }
 
         const snapshot =
           command === 'build' && astroConfig.output === 'server'
@@ -812,7 +844,7 @@ export default function autocatalogDocs(opts: AutocatalogDocsOptions = {}): Star
 const stringsSchema = z.record(z.string(), z.string());
 
 /** Header links `ac site` passes as JSON; none when unset. */
-function siteNav(json: string | undefined): SiteNavLink[] | undefined {
+function siteNav(json: string | undefined): Array<SiteNavLink> | undefined {
   return json ? z.array(siteNavLinkSchema).parse(JSON.parse(json)) : undefined;
 }
 
@@ -835,7 +867,9 @@ const require = createRequire(import.meta.url);
 function onlyRepository(site: DocsSiteConfig): string {
   const name = soleRepository(site);
 
-  if (name) return name;
+  if (name) {
+    return name;
+  }
 
   const { roots } = resolveDocsLayout(site.root, { repo: site.repo, repository: site.repository });
 
@@ -855,7 +889,7 @@ function soleRepository(site: DocsSiteConfig): string | undefined {
 const ROOT_TAKEN = new Set([...RESERVED_SEGMENTS, 'search', 'no-access', 'api', '404']);
 
 /** A document at the root whose first folder is an address of the catalog's own. */
-function refuseRootClashes(docs: readonly Doc[]): void {
+function refuseRootClashes(docs: ReadonlyArray<Doc>): void {
   const clashes = docs.flatMap((doc) => {
     const first = docPage(doc.id).split('/')[0] ?? '';
 
@@ -896,7 +930,12 @@ export function builtSettings(env: NodeJS.ProcessEnv): Record<string, string> {
  */
 function buildModules(
   chat:
-    | { module: string; component: string | undefined; pages: ChatPage[]; panel: ChatPanelProps }
+    | {
+        module: string;
+        component: string | undefined;
+        pages: Array<ChatPage>;
+        panel: ChatPanelProps;
+      }
     | undefined,
   documentsPerRequest: boolean,
   access: SiteAccessConfig | undefined,
@@ -914,7 +953,9 @@ function buildModules(
       }
 
       if (id === `\0${ACCESS_MODULE}`) {
-        if (!access) throw new Error('The site has no access: set access in autocatalog.site.json');
+        if (!access) {
+          throw new Error('The site has no access: set access in autocatalog.site.json');
+        }
 
         return [
           `export { default as access } from ${JSON.stringify(access.module)};`,
@@ -929,9 +970,13 @@ function buildModules(
         ].join('\n');
       }
 
-      if (id !== `\0${CHAT_MODULE}`) return undefined;
+      if (id !== `\0${CHAT_MODULE}`) {
+        return undefined;
+      }
 
-      if (!chat) throw new Error('The site has no assistant: set chat in autocatalog.site.json');
+      if (!chat) {
+        throw new Error('The site has no assistant: set chat in autocatalog.site.json');
+      }
 
       return [
         `export { default as options } from ${JSON.stringify(chat.module)};`,
@@ -996,7 +1041,7 @@ function blocksModule(blocks: Record<string, string>): PluginOption {
 const NAV_MODULE = 'virtual:autocatalog-docs-nav';
 
 /** The header's links as a module, so pages read what the build was given. */
-function navModule(links: SiteNavLink[]): PluginOption {
+function navModule(links: Array<SiteNavLink>): PluginOption {
   return {
     name: 'autocatalog-docs-nav',
     resolveId: (id) => (id === NAV_MODULE ? `\0${NAV_MODULE}` : undefined),
@@ -1020,7 +1065,7 @@ export const microlighterGrammars = {
 };
 
 /** Whether Tailwind's Vite plugin, which registers several, is among these. */
-function hasTailwind(plugins: PluginOption[]): boolean {
+function hasTailwind(plugins: Array<PluginOption>): boolean {
   return plugins.some((plugin) =>
     Array.isArray(plugin)
       ? hasTailwind(plugin)

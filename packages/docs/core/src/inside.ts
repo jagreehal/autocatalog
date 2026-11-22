@@ -9,7 +9,9 @@ import path from 'node:path';
 export function inside(dir: string, file: string): string {
   const full = path.resolve(dir, file);
 
-  if (!fs.existsSync(full)) throw new Error(`'${file}' does not exist`);
+  if (!fs.existsSync(full)) {
+    throw new Error(`'${file}' does not exist`);
+  }
 
   const relative = path.relative(fs.realpathSync(dir), fs.realpathSync(full));
 

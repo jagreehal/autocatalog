@@ -6,19 +6,20 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import utils from '@eventcatalog/sdk';
 import { exportToEventCatalog, loadEventCatalogSources, provenanceLine } from '../src/eventcatalog';
 import { runFromEventCatalog } from '../src/commands/from-eventcatalog';
-import { loadCatalog, type JsonObject, type JsonValue } from 'autocatalog-core';
+import { loadCatalog } from 'autocatalog-core';
+import type { JsonObject, JsonValue } from 'autocatalog-core';
 
 /** The CLI's path: load each `events/` root, then export them. */
 const exportRoots = async ({
   roots,
   ...rest
 }: {
-  roots: string[];
+  roots: Array<string>;
   catalogDir: string;
   narrative?: boolean;
 }) => exportToEventCatalog({ catalogs: await loadEventCatalogSources(roots), ...rest });
 
-const here = path.dirname(fileURLToPath(import.meta.url));
+const here = import.meta.dirname;
 
 const demoRepo = path.resolve(here, '../../../../fixtures/demo-repo');
 
@@ -230,8 +231,8 @@ describe('transport through EventCatalog channels', () => {
   const writeEvent = async (
     id: string,
     folderName: string,
-    transport: Array<{ address: string; protocols?: string[]; deliveryMode?: string }>,
-    services: { producers?: string[]; consumers?: string[] } = {},
+    transport: Array<{ address: string; protocols?: Array<string>; deliveryMode?: string }>,
+    services: { producers?: Array<string>; consumers?: Array<string> } = {},
   ) => {
     const folder = path.join(work, 'events/orders', folderName);
     await fs.mkdir(folder, { recursive: true });
@@ -387,7 +388,9 @@ describe('repository content never becomes code or a path in the EventCatalog pr
     );
     await fs.writeFile(path.join(folder, 'schema.json'), '{ "type": "object" }');
 
-    if (body) await fs.writeFile(path.join(folder, 'index.mdx'), `---\n---\n${body}\n`);
+    if (body) {
+      await fs.writeFile(path.join(folder, 'index.mdx'), `---\n---\n${body}\n`);
+    }
 
     return path.join(work, 'events');
   }

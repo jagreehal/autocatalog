@@ -12,10 +12,12 @@ const PATH = /^(?:[\w\-.~!$&'()*+,;=:@/]|%[0-9A-Fa-f]{2})*$/;
  * `1.0.0+build.7`, an encoded space — is a page EventCatalog can have built.
  */
 export function eventCatalogPath(value: string | null): string | null {
-  if (!value?.startsWith(EVENTCATALOG_DIR) || !PATH.test(value)) return null;
+  if (!value?.startsWith(EVENTCATALOG_DIR) || !PATH.test(value)) {
+    return null;
+  }
 
   const dotSegment = value.split('/').some((segment) => {
-    const decoded = segment.replace(/%2e/gi, '.');
+    const decoded = segment.replaceAll(/%2e/gi, '.');
 
     return decoded === '.' || decoded === '..';
   });

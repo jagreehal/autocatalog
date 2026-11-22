@@ -27,7 +27,7 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
 
 const page = systemPageProps(catalog, id, base);
 
-if (!page) throw new Error(`system not found: ${id}`);
+if (!page) {throw new Error(`system not found: ${id}`);}
 
 // The team's own words about it, from `overviews/systems/<id>.md`.
 const overview = catalog.overviews.find(({ kind, target }) => kind === 'system' && target === id);

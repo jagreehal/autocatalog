@@ -42,7 +42,9 @@ export const onRequest = defineMiddleware(async (context, next) => {
   // `ac site dev` views the site as one of the module's sample readers.
   const viewing = import.meta.env.DEV ? viewAs(context) : undefined;
 
-  if (viewing instanceof Response) return viewing;
+  if (viewing instanceof Response) {
+    return viewing;
+  }
 
   const reader = viewing ? viewing.reader : await access.reader(context);
   const canRead = ruleFor(reader);
@@ -64,7 +66,9 @@ export const onRequest = defineMiddleware(async (context, next) => {
   );
 
   // What one reader is shown is not for a shared cache to hand the next.
-  if (!response.headers.has('cache-control')) response.headers.set('cache-control', 'private');
+  if (!response.headers.has('cache-control')) {
+    response.headers.set('cache-control', 'private');
+  }
 
   return response;
 });
@@ -79,15 +83,20 @@ function viewAs(context: APIContext): Response | { name: string; reader: unknown
   const asked = context.url.searchParams.get('view-as');
 
   if (asked !== null) {
-    if (asked) context.cookies.set(VIEW_AS, asked, { path: '/' });
-    else context.cookies.delete(VIEW_AS, { path: '/' });
+    if (asked) {
+      context.cookies.set(VIEW_AS, asked, { path: '/' });
+    } else {
+      context.cookies.delete(VIEW_AS, { path: '/' });
+    }
 
     return context.redirect(context.url.pathname);
   }
 
   const name = context.cookies.get(VIEW_AS)?.value;
 
-  if (name === SIGNED_OUT) return { name, reader: undefined };
+  if (name === SIGNED_OUT) {
+    return { name, reader: undefined };
+  }
 
   return name && access.readers?.[name] !== undefined
     ? { name, reader: access.readers[name] }
@@ -125,7 +134,9 @@ async function refuse(
         });
   }
 
-  if (denied === 'teaser') context.locals.denied = { id: doc.id, title, description };
+  if (denied === 'teaser') {
+    context.locals.denied = { id: doc.id, title, description };
+  }
 
   const page = await context.rewrite(denied === 'teaser' ? '/no-access' : '/404');
 

@@ -36,7 +36,7 @@ export interface RetirementRow extends Omit<Retirement, 'consumers'> {
 }
 
 export interface RetirementsPageProps {
-  retirements: RetirementRow[];
+  retirements: Array<RetirementRow>;
 }
 
 const link =

@@ -1,5 +1,6 @@
 import { createMarkdownProcessor } from '@astrojs/markdown-remark';
-import { compareSemverish, renderVersionChangelog, type BehindReference } from 'autocatalog-core';
+import { compareSemverish, renderVersionChangelog } from 'autocatalog-core';
+import type { BehindReference } from 'autocatalog-core';
 import type { CatalogEvent } from './catalog';
 import { eventPath } from './event-path';
 import { versionLabel } from './shell';
@@ -23,9 +24,9 @@ export function versionPath(entry: CatalogEvent): string {
  * current event and its `versioned/` history from the same repository.
  */
 export function eventVersions(
-  catalog: { events: CatalogEvent[]; history: CatalogEvent[] },
+  catalog: { events: Array<CatalogEvent>; history: Array<CatalogEvent> },
   entry: CatalogEvent,
-): CatalogEvent[] {
+): Array<CatalogEvent> {
   const { domain, id } = entry.event.frontmatter;
 
   return [...catalog.events, ...catalog.history]
@@ -56,7 +57,7 @@ function changelog(from: CatalogEvent, to: CatalogEvent): string {
  * changelog` prints. Null for the oldest version, which has nothing to compare
  * against.
  */
-export function versionChanges(versions: CatalogEvent[], entry: CatalogEvent): string | null {
+export function versionChanges(versions: Array<CatalogEvent>, entry: CatalogEvent): string | null {
   const index = versions.findIndex(({ event }) => event === entry.event);
   const previous = index === -1 ? undefined : versions[index + 1];
 
@@ -64,7 +65,7 @@ export function versionChanges(versions: CatalogEvent[], entry: CatalogEvent): s
 }
 
 /** The services that read exactly this version, while a newer release is out. */
-function readersOf(entry: CatalogEvent, behind: BehindReference[]): BehindReference[] {
+function readersOf(entry: CatalogEvent, behind: Array<BehindReference>): Array<BehindReference> {
   const { domain, id, version } = entry.event.frontmatter;
 
   return behind.filter(
@@ -80,7 +81,7 @@ interface HtmlNode {
   type: string;
   tagName?: string;
   properties?: object;
-  children?: HtmlNode[];
+  children?: Array<HtmlNode>;
 }
 
 /** All a changelog is made of. Anything else came from a schema, and stays as its text. */
@@ -90,7 +91,9 @@ function keepChangelogTags(node: HtmlNode): void {
   node.children = node.children?.flatMap((child) => {
     keepChangelogTags(child);
 
-    if (child.type !== 'element') return [child];
+    if (child.type !== 'element') {
+      return [child];
+    }
 
     child.properties = {};
 
@@ -109,10 +112,10 @@ let changelogProcessor: ReturnType<typeof createMarkdownProcessor> | undefined;
  * to the newest release changes.
  */
 export async function versionLinks(
-  versions: CatalogEvent[],
+  versions: Array<CatalogEvent>,
   active: CatalogEvent,
   base: string,
-  behind: BehindReference[] = [],
+  behind: Array<BehindReference> = [],
 ): Promise<EventVersionsProps['versions']> {
   changelogProcessor ??= createMarkdownProcessor({
     syntaxHighlight: false,

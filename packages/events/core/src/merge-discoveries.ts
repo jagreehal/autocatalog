@@ -1,7 +1,8 @@
 import { z } from 'zod';
 import type { AdapterEvent } from './adapter-event';
 import { eventConfidenceScore } from './adapter-event';
-import { jsonObjectSchema, jsonValueSchema, type JsonValue } from './json';
+import { jsonObjectSchema, jsonValueSchema } from './json';
+import type { JsonValue } from './json';
 
 export interface ScanFindingBase {
   file: string;
@@ -20,32 +21,32 @@ export interface DiscoveryCandidate<TFinding extends ScanFindingBase = ScanFindi
 }
 
 export interface DiscoverResult {
-  candidates: DiscoveryCandidate[];
-  errors: string[];
+  candidates: Array<DiscoveryCandidate>;
+  errors: Array<string>;
   /**
    * Files an Adapter recognised and chose not to catalog, each with why. Not
    * errors: they never block publication, but nobody should have to guess why
    * a contract they committed is missing.
    */
-  skipped?: string[];
+  skipped?: Array<string>;
 }
 
 /** Read-only compatibility projection; candidates remain the source of truth. */
 export interface DiscoveryOutput extends DiscoverResult {
-  events: AdapterEvent[];
-  findings: ScanFindingBase[];
+  events: Array<AdapterEvent>;
+  findings: Array<ScanFindingBase>;
 }
 
 interface LegacyDiscoverResult {
-  events: AdapterEvent[];
-  findings: ScanFindingBase[];
-  errors: string[];
+  events: Array<AdapterEvent>;
+  findings: Array<ScanFindingBase>;
+  errors: Array<string>;
 }
 
 export interface DiscoveryContext {
   root: string;
   outDir?: string;
-  exclude?: string[];
+  exclude?: Array<string>;
   signal?: AbortSignal;
   limits?: DiscoveryLimits;
   /** A shared conventions file, read in place of the repository's own. */
@@ -151,7 +152,7 @@ export function validateDiscoveryResult(
     throw new DiscoveryAdapterContractError(adapterName, 'every error must be a string');
   }
 
-  const valid: DiscoveryCandidate[] = [];
+  const valid: Array<DiscoveryCandidate> = [];
 
   for (const [index, raw] of candidates.entries()) {
     const candidate = candidateSchema.safeParse(raw);
@@ -203,8 +204,8 @@ export function validateDiscoveryResult(
 }
 
 export interface MergeDiscoveriesResult extends DiscoveryOutput {
-  conflicts: DiscoveryConflict[];
-  skipped: string[];
+  conflicts: Array<DiscoveryConflict>;
+  skipped: Array<string>;
 }
 
 export interface DiscoveryConflict {
@@ -222,14 +223,16 @@ export function mergeDiscoveries(
   results: Array<DiscoverResult | LegacyDiscoverResult>,
 ): MergeDiscoveriesResult {
   const byId = new Map<string, DiscoveryCandidate>();
-  const errors: string[] = [];
-  const skipped: string[] = [];
-  const conflicts: DiscoveryConflict[] = [];
+  const errors: Array<string> = [];
+  const skipped: Array<string> = [];
+  const conflicts: Array<DiscoveryConflict> = [];
 
   for (const result of results) {
     errors.push(...result.errors);
 
-    if ('skipped' in result) skipped.push(...(result.skipped ?? []));
+    if ('skipped' in result) {
+      skipped.push(...(result.skipped ?? []));
+    }
 
     const inputCandidates =
       'candidates' in result

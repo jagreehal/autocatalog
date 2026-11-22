@@ -5,10 +5,10 @@ export interface Reader {
   id: string;
   name: string;
   /** What this account has, as a document's `access:` frontmatter names it. */
-  access: Feature[];
+  access: Array<Feature>;
 }
 
-export const readers: Reader[] = [
+export const readers: Array<Reader> = [
   { id: 'riverside', name: 'Riverside Studio', access: ['invoicing', 'payments'] },
   { id: 'lakeview', name: 'Lakeview Shop', access: ['invoicing'] },
 ];
@@ -16,8 +16,10 @@ export const readers: Reader[] = [
 export const findReader = (id: string | undefined) => readers.find((reader) => reader.id === id);
 
 /** Questions the assistant offers this reader first. */
-export function suggestionsFor(reader: Reader | undefined): string[] {
-  if (!reader) return ['How do I get started?'];
+export function suggestionsFor(reader: Reader | undefined): Array<string> {
+  if (!reader) {
+    return ['How do I get started?'];
+  }
 
   return [
     'How do I invite my team?',

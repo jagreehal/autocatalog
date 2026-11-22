@@ -5,7 +5,7 @@ import { jsonSchemaAjv } from 'autocatalog-core';
 import { describe, expect, it } from 'vitest';
 import { defaultConventionsFile, docKinds } from '../src/kinds';
 
-const here = path.dirname(fileURLToPath(import.meta.url));
+const here = import.meta.dirname;
 
 const contract = async (file: string) =>
   jsonSchemaAjv('2020-12').compile(

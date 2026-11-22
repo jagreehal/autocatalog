@@ -30,7 +30,9 @@ const GUARANTEE = {
 export function DeliveryFacts({ delivery }: DeliveryFactsProps) {
   const { guarantee, orderingKey, idempotencyKey, maxLateness, correlationKey } = delivery ?? {};
 
-  if (!guarantee && !orderingKey && !idempotencyKey && !maxLateness && !correlationKey) return null;
+  if (!guarantee && !orderingKey && !idempotencyKey && !maxLateness && !correlationKey) {
+    return null;
+  }
 
   return (
     <Item size="xs" className="items-start">

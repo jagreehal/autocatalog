@@ -16,11 +16,13 @@ import {
   rewriteObjectRefs,
   rewriteRefs,
   scanCommandResources,
-  type CatalogResource,
-  type JsonObject,
-  type ResourceGraph,
-  type JsonValue,
-  type LoadedEvent,
+} from 'autocatalog-core';
+import type {
+  CatalogResource,
+  JsonObject,
+  ResourceGraph,
+  JsonValue,
+  LoadedEvent,
 } from 'autocatalog-core';
 
 export interface AsyncApiExample {
@@ -36,7 +38,7 @@ export interface AsyncApiMessage {
   contentType: 'application/json';
   payload: JsonObject;
   correlationId?: { location: string };
-  examples?: AsyncApiExample[];
+  examples?: Array<AsyncApiExample>;
   /** EventCatalog's generator reads these, so its import keeps the type and version. */
   'x-eventcatalog-message-type'?: 'event' | 'command';
   'x-eventcatalog-message-version'?: string;
@@ -61,9 +63,9 @@ export interface AsyncApiDocument {
     {
       action: 'send' | 'receive';
       channel: { $ref: string };
-      messages: { $ref: string }[];
+      messages: Array<{ $ref: string }>;
       /** Where the handler replies, for a sender that waits for the outcome. */
-      reply?: { channel: { $ref: string }; messages?: { $ref: string }[] };
+      reply?: { channel: { $ref: string }; messages?: Array<{ $ref: string }> };
     }
   >;
   components: { messages: Record<string, AsyncApiMessage>; schemas?: Record<string, JsonValue> };
@@ -88,9 +90,9 @@ export interface CatalogToAsyncApiOptions {
 function keys() {
   const owners = new Map<string, string>();
 
-  return (...parts: string[]): string => {
+  return (...parts: Array<string>): string => {
     const name = JSON.stringify(parts);
-    const readable = parts.map((part) => part.replace(/[^A-Za-z0-9_-]+/g, '_')).join('_');
+    const readable = parts.map((part) => part.replaceAll(/[^A-Za-z0-9_-]+/g, '_')).join('_');
     const owner = owners.get(readable);
 
     if (owner === undefined || owner === name) {
@@ -111,8 +113,9 @@ class SchemaComponents {
   readonly entries: Record<string, JsonValue> = {};
 
   put(key: string, schema: JsonValue): void {
-    if (Object.hasOwn(this.entries, key))
+    if (Object.hasOwn(this.entries, key)) {
       throw new Error(`Schema component ${key} is claimed twice; rename one of the definitions`);
+    }
 
     this.entries[key] = schema;
   }
@@ -135,9 +138,13 @@ function liftDefinitions(
   const lift = (ref: string) => {
     const definition = /^#\/(?:\$defs|definitions)\/([^/]+)(.*)$/.exec(ref);
 
-    if (definition) return `#/components/schemas/${prefix}_${definition[1]}${definition[2]}`;
+    if (definition) {
+      return `#/components/schemas/${prefix}_${definition[1]}${definition[2]}`;
+    }
 
-    if (ref !== '#' && !ref.startsWith('#/')) return ref;
+    if (ref !== '#' && !ref.startsWith('#/')) {
+      return ref;
+    }
 
     rootReferenced = true;
 
@@ -155,7 +162,7 @@ function liftDefinitions(
 
   // A definition may be a boolean schema, which AsyncAPI does not allow as a
   // component; `{ not: {} }` matches nothing, as `false` does, and `{}` all.
-  for (const defs of [definitions, $defs])
+  for (const defs of [definitions, $defs]) {
     if (isJsonObject(defs))
       for (const [name, definition] of Object.entries(defs))
         schemas.put(
@@ -166,10 +173,13 @@ function liftDefinitions(
               ? {}
               : rewriteRefs(definition, lift),
         );
+  }
 
   const lifted = rewriteObjectRefs(payload, lift);
 
-  if (!rootReferenced) return lifted;
+  if (!rootReferenced) {
+    return lifted;
+  }
 
   schemas.put(prefix, lifted);
 
@@ -180,9 +190,11 @@ function message(event: LoadedEvent, messageKey: string, schemas: SchemaComponen
   const fm = event.frontmatter;
   const correlation = correlationPath(event);
 
-  const examples = event.examples.flatMap((example): AsyncApiExample[] => {
+  const examples = event.examples.flatMap((example): Array<AsyncApiExample> => {
     // An invalid example is not a message; a mock server would serve it as one.
-    if (example.case === 'invalid') return [];
+    if (example.case === 'invalid') {
+      return [];
+    }
 
     const summary = example.summary ?? (example.case && exampleCaseSummary(example.case));
 
@@ -199,15 +211,25 @@ function message(event: LoadedEvent, messageKey: string, schemas: SchemaComponen
 
   const meta: JsonObject = { id: fm.id, version: fm.version, domain: fm.domain };
 
-  if (fm.owner) meta.owner = { ...fm.owner };
+  if (fm.owner) {
+    meta.owner = { ...fm.owner };
+  }
 
-  if (fm.producers.length) meta.producers = fm.producers;
+  if (fm.producers.length) {
+    meta.producers = fm.producers;
+  }
 
-  if (fm.consumers.length) meta.consumers = fm.consumers;
+  if (fm.consumers.length) {
+    meta.consumers = fm.consumers;
+  }
 
-  if (fm.delivery) meta.delivery = { ...fm.delivery };
+  if (fm.delivery) {
+    meta.delivery = { ...fm.delivery };
+  }
 
-  if (fm.envelope) meta.envelope = { ...fm.envelope };
+  if (fm.envelope) {
+    meta.envelope = { ...fm.envelope };
+  }
 
   // In structured mode the message is the CloudEvent: its context, and the
   // event as `data`. The examples are whole envelopes, as consumers receive them.
@@ -237,7 +259,7 @@ function message(event: LoadedEvent, messageKey: string, schemas: SchemaComponen
  * channel its transport names (or its id), with its examples for mock servers.
  */
 export function catalogToAsyncApi(
-  events: LoadedEvent[],
+  events: Array<LoadedEvent>,
   options: CatalogToAsyncApiOptions,
 ): AsyncApiDocument {
   const doc: AsyncApiDocument = {
@@ -265,7 +287,9 @@ export function catalogToAsyncApi(
     const sends = !options.service || fm.producers.includes(options.service);
     const receives = Boolean(options.service && fm.consumers.includes(options.service));
 
-    if (!sends && !receives) continue;
+    if (!sends && !receives) {
+      continue;
+    }
 
     // Told apart by its parts, so sales/eu_created and sales_eu/created stay two names.
     const messageKey = messageKeyOf(fm.domain, fm.id);
@@ -279,21 +303,28 @@ export function catalogToAsyncApi(
       channel.messages[messageKey] = { $ref: `#/components/messages/${messageKey}` };
 
       // A binding names the protocol; ac from-asyncapi reads protocols back from them.
-      for (const protocol of transport.protocols) (channel.bindings ??= {})[protocol] = {};
+      for (const protocol of transport.protocols) {
+        (channel.bindings ??= {})[protocol] = {};
+      }
 
       // A service can send an event and receive it too; its view keeps both.
       const actions: Array<'send' | 'receive'> = [];
 
-      if (sends) actions.push('send');
+      if (sends) {
+        actions.push('send');
+      }
 
-      if (receives) actions.push('receive');
+      if (receives) {
+        actions.push('receive');
+      }
 
-      for (const action of actions)
+      for (const action of actions) {
         doc.operations[operationKeyOf(action, channelKey, messageKey)] = {
           action,
           channel: { $ref: `#/channels/${channelKey}` },
           messages: [{ $ref: `#/channels/${channelKey}/messages/${messageKey}` }],
         };
+      }
     }
   }
 
@@ -303,7 +334,9 @@ export function catalogToAsyncApi(
     writeCommands(doc, options.commands, options.service, keys, schemas);
   }
 
-  if (Object.keys(schemas.entries).length) doc.components.schemas = schemas.entries;
+  if (Object.keys(schemas.entries).length) {
+    doc.components.schemas = schemas.entries;
+  }
 
   return doc;
 }
@@ -320,7 +353,7 @@ const commandAttributes = z
   })
   .catch({ transport: [], outcome: null, outcomeSchema: null });
 
-type Keys = Record<'message' | 'channel' | 'operation', (...parts: string[]) => string>;
+type Keys = Record<'message' | 'channel' | 'operation', (...parts: Array<string>) => string>;
 
 /**
  * Each command as a message its senders send and its handler receives, on the
@@ -356,7 +389,9 @@ function writeCommands(
     const sends = !service || senders.includes(service);
     const receives = Boolean(service && handler === service);
 
-    if (!sends && !receives) continue;
+    if (!sends && !receives) {
+      continue;
+    }
 
     const attributes = commandAttributes.parse(command.attributes);
     // Its own kind and version in the key, so neither an event of the same
@@ -375,7 +410,7 @@ function writeCommands(
       'x-autocatalog': {
         kind: 'command',
         id: ref.id,
-        version: version,
+        version,
         domain,
         ...(senders.length && { senders }),
         ...(handler && { handler }),
@@ -418,17 +453,22 @@ function writeCommands(
 
       const actions: Array<'send' | 'receive'> = [];
 
-      if (sends) actions.push('send');
+      if (sends) {
+        actions.push('send');
+      }
 
-      if (receives) actions.push('receive');
+      if (receives) {
+        actions.push('receive');
+      }
 
-      for (const action of actions)
+      for (const action of actions) {
         doc.operations[keys.operation(action, channelKey, messageKey)] = {
           action,
           channel: { $ref: `#/channels/${channelKey}` },
           messages: [{ $ref: `#/channels/${channelKey}/messages/${messageKey}` }],
           ...(reply && { reply }),
         };
+      }
     }
   }
 }
@@ -445,7 +485,7 @@ export interface RunToAsyncApiOptions {
 }
 
 export async function runToAsyncApi(opts: RunToAsyncApiOptions): Promise<number> {
-  let events: LoadedEvent[];
+  let events: Array<LoadedEvent>;
 
   try {
     events = await loadCatalog(opts.root, { skipVersioned: true });
@@ -464,7 +504,9 @@ export async function runToAsyncApi(opts: RunToAsyncApiOptions): Promise<number>
     const problems = [...scanned.errors, ...scanned.skipped];
 
     if (problems.length) {
-      for (const problem of problems) console.error(kleur.red(`✗ ${problem}`));
+      for (const problem of problems) {
+        console.error(kleur.red(`✗ ${problem}`));
+      }
 
       return 1;
     }
@@ -503,8 +545,9 @@ export async function runToAsyncApi(opts: RunToAsyncApiOptions): Promise<number>
       ...new Set(events.flatMap((e) => [...e.frontmatter.producers, ...e.frontmatter.consumers])),
     ].sort();
 
-    if (opts.service && services.length)
+    if (opts.service && services.length) {
       console.error(`  Services in this catalog: ${services.join(', ')}`);
+    }
 
     return 1;
   }

@@ -29,8 +29,8 @@ export interface DiffResult {
    * `detail`: an enum value containing a hyphen made a widening look like a
    * narrowing when the classifier searched the human-readable text.
    */
-  enumAdded?: unknown[];
-  enumRemoved?: unknown[];
+  enumAdded?: Array<unknown>;
+  enumRemoved?: Array<unknown>;
   /** An unconstrained field gained an enum — a restriction, not an addition. */
   enumIntroduced?: boolean;
   enumDropped?: boolean;
@@ -64,7 +64,7 @@ export interface DiffResult {
 }
 
 /** Anything that can sit under a schema keyword: a subschema, a list, or plain JSON. */
-export type SchemaValue = JsonPrimitive | SchemaNode | SchemaValue[];
+export type SchemaValue = JsonPrimitive | SchemaNode | Array<SchemaValue>;
 
 /**
  * A JSON Schema object. The keywords the comparison reads are typed; any other
@@ -72,13 +72,13 @@ export type SchemaValue = JsonPrimitive | SchemaNode | SchemaValue[];
  */
 export interface SchemaNode {
   [keyword: string]: SchemaValue | undefined;
-  type?: string | string[];
+  type?: string | Array<string>;
   // `properties: { blocked: false }` is legal: an entry can be a boolean schema.
   properties?: Record<string, SchemaNode | boolean>;
   items?: SchemaNode | boolean;
-  required?: string[];
+  required?: Array<string>;
   description?: string;
-  enum?: SchemaValue[];
+  enum?: Array<SchemaValue>;
   format?: string;
   $ref?: string;
   $anchor?: string;
@@ -92,12 +92,12 @@ export interface SchemaNode {
   additionalItems?: SchemaNode | boolean;
   unevaluatedItems?: SchemaNode | boolean;
   unevaluatedProperties?: SchemaNode | boolean;
-  prefixItems?: SchemaNode[];
+  prefixItems?: Array<SchemaNode>;
   patternProperties?: Record<string, SchemaNode | boolean>;
   dependentSchemas?: Record<string, SchemaNode | boolean>;
-  anyOf?: SchemaNode[];
-  oneOf?: SchemaNode[];
-  allOf?: SchemaNode[];
+  anyOf?: Array<SchemaNode>;
+  oneOf?: Array<SchemaNode>;
+  allOf?: Array<SchemaNode>;
   minimum?: number;
   exclusiveMinimum?: number;
   minLength?: number;
@@ -134,7 +134,7 @@ const asSchema = (value: SchemaValue | undefined): SchemaNode | boolean | undefi
  */
 const MAX_DEPTH = 24;
 
-const KIND_ORDER: DiffKind[] = [
+const KIND_ORDER: Array<DiffKind> = [
   'removed',
   'added',
   'constraint_changed',
@@ -171,26 +171,42 @@ export function typeLabel(s: SchemaNode | boolean | undefined): string {
   // JSON Schema allows a boolean where a schema is expected. `false` rejects
   // every value, so reading it as "no schema here" hides the most restrictive
   // change there is.
-  if (s === true) return 'any';
+  if (s === true) {
+    return 'any';
+  }
 
-  if (s === false) return 'never';
+  if (s === false) {
+    return 'never';
+  }
 
-  if (!s) return 'unknown';
+  if (!s) {
+    return 'unknown';
+  }
 
-  if (Array.isArray(s.type)) return s.type.join(' | ');
+  if (Array.isArray(s.type)) {
+    return s.type.join(' | ');
+  }
 
-  if (s.type !== undefined) return s.type;
+  if (s.type !== undefined) {
+    return s.type;
+  }
 
-  if (s.enum) return 'enum';
+  if (s.enum) {
+    return 'enum';
+  }
 
   return 'unknown';
 }
 
 /** The JSON types a schema admits, or `undefined` when it admits any type. */
 function typesOf(s: SchemaNode | boolean | undefined): Set<string> | undefined {
-  if (s === false) return new Set();
+  if (s === false) {
+    return new Set();
+  }
 
-  if (s === true || s?.type === undefined) return undefined;
+  if (s === true || s?.type === undefined) {
+    return undefined;
+  }
 
   return new Set(Array.isArray(s.type) ? s.type : [s.type]);
 }
@@ -215,7 +231,9 @@ export function typeDirection(
   const widens = coversTypes(after, before);
   const narrows = coversTypes(before, after);
 
-  if (widens && narrows) return undefined;
+  if (widens && narrows) {
+    return undefined;
+  }
 
   return widens ? 'widened' : narrows ? 'narrowed' : 'changed';
 }
@@ -228,7 +246,9 @@ function typeChange(
 ): DiffResult | null {
   const direction = typeDirection(previous, current);
 
-  if (direction === undefined) return null;
+  if (direction === undefined) {
+    return null;
+  }
 
   return {
     kind: 'type_changed',
@@ -238,24 +258,31 @@ function typeChange(
   };
 }
 
-function arraysEqual(a: unknown[], b: unknown[]): boolean {
-  if (a.length !== b.length) return false;
+function arraysEqual(a: Array<unknown>, b: Array<unknown>): boolean {
+  if (a.length !== b.length) {
+    return false;
+  }
 
   return a.every((v, i) => JSON.stringify(v) === JSON.stringify(b[i]));
 }
 
 interface EnumDiff {
   detail: string;
-  added: unknown[];
-  removed: unknown[];
+  added: Array<unknown>;
+  removed: Array<unknown>;
   introduced: boolean;
   dropped: boolean;
 }
 
-const show = (values: unknown[]) => values.map((v) => JSON.stringify(v)).join(', ');
+const show = (values: Array<unknown>) => values.map((v) => JSON.stringify(v)).join(', ');
 
-function diffEnums(prev: unknown[] | undefined, next: unknown[] | undefined): EnumDiff | null {
-  if (!prev && !next) return null;
+function diffEnums(
+  prev: Array<unknown> | undefined,
+  next: Array<unknown> | undefined,
+): EnumDiff | null {
+  if (!prev && !next) {
+    return null;
+  }
 
   // Constraining a field that accepted anything is a restriction: payloads that
   // were valid yesterday can be rejected today.
@@ -280,14 +307,20 @@ function diffEnums(prev: unknown[] | undefined, next: unknown[] | undefined): En
   }
 
   if (prev && next) {
-    if (arraysEqual(prev, next)) return null;
+    if (arraysEqual(prev, next)) {
+      return null;
+    }
     const added = next.filter((v) => !prev.some((p) => JSON.stringify(p) === JSON.stringify(v)));
     const removed = prev.filter((v) => !next.some((n) => JSON.stringify(n) === JSON.stringify(v)));
-    const parts: string[] = [];
+    const parts: Array<string> = [];
 
-    if (added.length) parts.push(`+${show(added)}`);
+    if (added.length) {
+      parts.push(`+${show(added)}`);
+    }
 
-    if (removed.length) parts.push(`-${show(removed)}`);
+    if (removed.length) {
+      parts.push(`-${show(removed)}`);
+    }
 
     return { detail: parts.join(' '), added, removed, introduced: false, dropped: false };
   }
@@ -328,18 +361,26 @@ function constraintDirection<T extends SchemaValue>(
   current: T | undefined,
   tightens?: (previous: T, current: T) => boolean | undefined,
 ): DiffResult['constraint'] | null {
-  if (JSON.stringify(previous) === JSON.stringify(current)) return null;
+  if (JSON.stringify(previous) === JSON.stringify(current)) {
+    return null;
+  }
   const base = { keyword, previous, current };
 
   // Adding a bound where there was none only ever removes freedom; dropping one
   // only ever adds it.
-  if (previous === undefined) return { ...base, direction: 'tightened' };
+  if (previous === undefined) {
+    return { ...base, direction: 'tightened' };
+  }
 
-  if (current === undefined) return { ...base, direction: 'loosened' };
+  if (current === undefined) {
+    return { ...base, direction: 'loosened' };
+  }
 
   const tighter = tightens?.(previous, current);
 
-  if (tighter !== undefined) return { ...base, direction: tighter ? 'tightened' : 'loosened' };
+  if (tighter !== undefined) {
+    return { ...base, direction: tighter ? 'tightened' : 'loosened' };
+  }
 
   // A changed pattern or multipleOf can go either way and no cheap analysis
   // says which, so it is reported rather than guessed at. So can a bound
@@ -439,11 +480,13 @@ function compareNode(
   previous: SchemaNode,
   current: SchemaNode,
   path: string,
-  results: DiffResult[],
+  results: Array<DiffResult>,
 ): void {
   const type = typeChange(previous, current, path);
 
-  if (type) results.push(type);
+  if (type) {
+    results.push(type);
+  }
 
   // A `$ref` still here after resolution points outside this document, so its
   // target cannot be compared. A different target can be any schema at all.
@@ -485,7 +528,9 @@ function compareNode(
   for (const key of [...new Set([...Object.keys(meantBefore), ...Object.keys(meantNow)])].sort()) {
     const [before, now] = [meantBefore[key], meantNow[key]];
 
-    if (before === now) continue;
+    if (before === now) {
+      continue;
+    }
 
     results.push({
       kind: 'meaning_changed',
@@ -518,15 +563,23 @@ function compareNode(
   // is how `minProperties` and `dependentRequired` slipped through; the safe
   // default for a gate is to report it and let a human clear it.
   for (const keyword of new Set([...Object.keys(previous), ...Object.keys(current)])) {
-    if (ANNOTATION_KEYWORDS.has(keyword) || UNDERSTOOD_KEYWORDS.has(keyword)) continue;
+    if (ANNOTATION_KEYWORDS.has(keyword) || UNDERSTOOD_KEYWORDS.has(keyword)) {
+      continue;
+    }
 
-    if (CONSTRAINT_KEYWORDS.has(keyword)) continue;
+    if (CONSTRAINT_KEYWORDS.has(keyword)) {
+      continue;
+    }
 
-    if (keyword.startsWith('x-')) continue;
+    if (keyword.startsWith('x-')) {
+      continue;
+    }
     const before = previous[keyword];
     const after = current[keyword];
 
-    if (JSON.stringify(before) === JSON.stringify(after)) continue;
+    if (JSON.stringify(before) === JSON.stringify(after)) {
+      continue;
+    }
     results.push({
       kind: 'constraint_changed',
       path,
@@ -587,13 +640,21 @@ function unionDirection(
   before: number,
   after: number,
 ): 'tightened' | 'loosened' | 'changed' {
-  if (!existedBefore && existsNow) return 'tightened';
+  if (!existedBefore && existsNow) {
+    return 'tightened';
+  }
 
-  if (existedBefore && !existsNow) return 'loosened';
+  if (existedBefore && !existsNow) {
+    return 'loosened';
+  }
 
-  if (keyword === 'oneOf') return 'changed';
+  if (keyword === 'oneOf') {
+    return 'changed';
+  }
 
-  if (keyword === 'allOf') return after > before ? 'tightened' : 'loosened';
+  if (keyword === 'allOf') {
+    return after > before ? 'tightened' : 'loosened';
+  }
 
   return after > before ? 'loosened' : 'tightened';
 }
@@ -617,16 +678,22 @@ function anchorTarget(
   name: string,
   depth = 0,
 ): SchemaNode | undefined {
-  if (depth > MAX_DEPTH) return undefined;
+  if (depth > MAX_DEPTH) {
+    return undefined;
+  }
 
-  if (isSchemaNode(node) && node.$anchor === name) return node;
+  if (isSchemaNode(node) && node.$anchor === name) {
+    return node;
+  }
 
   const children = Array.isArray(node) ? node : isSchemaNode(node) ? Object.values(node) : [];
 
   for (const value of children) {
     const found = anchorTarget(value, name, depth + 1);
 
-    if (found) return found;
+    if (found) {
+      return found;
+    }
   }
 
   return undefined;
@@ -640,9 +707,13 @@ function anchorTarget(
 function restrictsUnknownProperties(node: SchemaNode): boolean {
   const additional = node.additionalProperties;
 
-  if (additional === undefined || additional === true) return false;
+  if (additional === undefined || additional === true) {
+    return false;
+  }
 
-  if (additional === false) return true;
+  if (additional === false) {
+    return true;
+  }
 
   return constrainsValues(additional);
 }
@@ -661,7 +732,9 @@ function predicateCanMatter(previous: SchemaNode, current: SchemaNode): boolean 
     const thenBranch = node.then;
     const elseBranch = node.else;
 
-    if (!constrainsValues(thenBranch) && !constrainsValues(elseBranch)) return true;
+    if (!constrainsValues(thenBranch) && !constrainsValues(elseBranch)) {
+      return true;
+    }
 
     return JSON.stringify(thenBranch ?? null) === JSON.stringify(elseBranch ?? null);
   };
@@ -675,9 +748,13 @@ function predicateCanMatter(previous: SchemaNode, current: SchemaNode): boolean 
  * swap, because `not: false` forbids nothing and `not: true` forbids everything.
  */
 function permissiveness(node: SchemaValue, inverts: boolean): number {
-  if (node === true) return inverts ? 0 : 2;
+  if (node === true) {
+    return inverts ? 0 : 2;
+  }
 
-  if (node === false) return inverts ? 2 : 0;
+  if (node === false) {
+    return inverts ? 2 : 0;
+  }
 
   return 1;
 }
@@ -691,9 +768,13 @@ function effectiveUnknown(node: SchemaNode): SchemaNode | undefined {
 
 /** Whether a schema restricts anything at all, as opposed to `true` or `{}`. */
 function constrainsValues(node: SchemaNode | boolean | undefined): boolean {
-  if (node === false) return true;
+  if (node === false) {
+    return true;
+  }
 
-  if (node === true || node === undefined) return false;
+  if (node === true || node === undefined) {
+    return false;
+  }
 
   return Object.keys(node).some(
     (keyword) => !ANNOTATION_KEYWORDS.has(keyword) && !keyword.startsWith('x-'),
@@ -708,9 +789,11 @@ function pointer(root: SchemaNode, ref: string): SchemaNode | undefined {
       .slice(2)
       .split('/')
       .reduce<SchemaValue | undefined>((acc, seg) => {
-        const token = seg.replace(/~1/g, '/').replace(/~0/g, '~');
+        const token = seg.replaceAll('~1', '/').replaceAll('~0', '~');
 
-        if (Array.isArray(acc)) return acc[Number(token)];
+        if (Array.isArray(acc)) {
+          return acc[Number(token)];
+        }
 
         return isSchemaNode(acc) ? acc[token] : undefined;
       }, root);
@@ -718,7 +801,9 @@ function pointer(root: SchemaNode, ref: string): SchemaNode | undefined {
     return isSchemaNode(target) ? target : undefined;
   }
 
-  if (ref.startsWith('#') && ref.length > 1) return anchorTarget(root, ref.slice(1));
+  if (ref.startsWith('#') && ref.length > 1) {
+    return anchorTarget(root, ref.slice(1));
+  }
 
   return undefined;
 }
@@ -726,14 +811,20 @@ function pointer(root: SchemaNode, ref: string): SchemaNode | undefined {
 function resolve(root: SchemaNode, node: SchemaNode, seen = new Set<string>()): SchemaNode {
   const ref = node.$ref;
 
-  if (ref === undefined) return node;
+  if (ref === undefined) {
+    return node;
+  }
 
   // A cycle resolves to the node as written rather than hanging; MAX_DEPTH
   // bounds the walk that follows.
-  if (seen.has(ref)) return node;
+  if (seen.has(ref)) {
+    return node;
+  }
   const target = pointer(root, ref);
 
-  if (target === undefined) return node;
+  if (target === undefined) {
+    return node;
+  }
 
   const { $ref: _ref, ...siblings } = node;
   // Resolved one hop at a time so siblings survive at *every* level: for
@@ -741,7 +832,9 @@ function resolve(root: SchemaNode, node: SchemaNode, seen = new Set<string>()): 
   // straight to B drops A's constraint and the tightening disappears.
   const resolved = resolve(root, target, new Set([...seen, ref]));
 
-  if (Object.keys(siblings).length === 0) return resolved;
+  if (Object.keys(siblings).length === 0) {
+    return resolved;
+  }
 
   return { allOf: [resolved, siblings] };
 }
@@ -751,10 +844,12 @@ function walkPair(
   current: SchemaNode,
   path: string,
   depth: number,
-  results: DiffResult[],
+  results: Array<DiffResult>,
   roots: WalkRoots,
 ): void {
-  if (depth > MAX_DEPTH) return;
+  if (depth > MAX_DEPTH) {
+    return;
+  }
 
   previous = resolve(roots.previous, previous);
   current = resolve(roots.current, current);
@@ -764,7 +859,9 @@ function walkPair(
   // Once the shape diverges, everything underneath reports as removed and
   // buries the one finding that mattered. A widened or narrowed type keeps
   // the shape it shared, so `object → [object, null]` still walks its fields.
-  if (typeDirection(previous, current) === 'changed') return;
+  if (typeDirection(previous, current) === 'changed') {
+    return;
+  }
 
   const prevProps = previous.properties ?? {};
   const currProps = current.properties ?? {};
@@ -836,12 +933,16 @@ function walkPair(
     if (isBooleanSchema(prev) || isBooleanSchema(curr)) {
       const type = typeChange(prev, curr, childPath);
 
-      if (type) results.push(type);
+      if (type) {
+        results.push(type);
+      }
 
       continue;
     }
 
-    if (!prev || !curr) continue;
+    if (!prev || !curr) {
+      continue;
+    }
 
     walkPair(prev, curr, childPath, depth + 1, results, roots);
   }
@@ -855,13 +956,17 @@ function walkPair(
     // exists, so the requirement is reported on its own. The one case to skip
     // is a property removed outright: that is already one finding, and
     // repeating it as "no longer required" only adds noise.
-    if (Object.hasOwn(prevProps, key) && !Object.hasOwn(currProps, key)) continue;
+    if (Object.hasOwn(prevProps, key) && !Object.hasOwn(currProps, key)) {
+      continue;
+    }
 
-    if (!wasReq && isReq)
+    if (!wasReq && isReq) {
       results.push({ kind: 'required_added', path: at(key), detail: 'now required' });
+    }
 
-    if (wasReq && !isReq)
+    if (wasReq && !isReq) {
       results.push({ kind: 'required_removed', path: at(key), detail: 'now optional' });
+    }
   }
 
   // Array elements, including the case where only one side constrains them.
@@ -890,7 +995,9 @@ function walkPair(
       // carries the whole change.
       const type = typeChange(prevItems, currItems, elementPath);
 
-      if (type) results.push(type);
+      if (type) {
+        results.push(type);
+      }
     } else {
       walkPair(prevItems, currItems, elementPath, depth + 1, results, roots);
     }
@@ -939,7 +1046,9 @@ function walkPair(
     after: SchemaValue | undefined,
     childPath: string,
   ): void => {
-    if (before === undefined && after === undefined) return;
+    if (before === undefined && after === undefined) {
+      return;
+    }
 
     // `not` inverts: a wider forbidden set accepts less. `if` decides which of
     // `then`/`else` applies, so widening the predicate can send values into a
@@ -950,7 +1059,9 @@ function walkPair(
     // A predicate that cannot change which payloads are accepted has nothing
     // under it worth reporting either — walking it would surface an enum
     // widening that changes nothing.
-    if (keyword === 'if' && !predicateCanMatter(previous, current)) return;
+    if (keyword === 'if' && !predicateCanMatter(previous, current)) {
+      return;
+    }
     const cannotInherit = inverts || keyword === 'if';
 
     if (before === undefined || after === undefined) {
@@ -977,7 +1088,9 @@ function walkPair(
     // and an object sits between them. Comparing against the literals `true`
     // and `false` alone gets every transition through an object backwards.
     if (isBooleanSchema(before) || isBooleanSchema(after)) {
-      if (permissiveness(before, inverts) === permissiveness(after, inverts)) return;
+      if (permissiveness(before, inverts) === permissiveness(after, inverts)) {
+        return;
+      }
       results.push({
         kind: 'constraint_changed',
         path: childPath,
@@ -996,7 +1109,9 @@ function walkPair(
       return;
     }
 
-    if (!isSchemaNode(before) || !isSchemaNode(after)) return;
+    if (!isSchemaNode(before) || !isSchemaNode(after)) {
+      return;
+    }
 
     if (!cannotInherit) {
       walkPair(before, after, childPath, depth + 1, results, roots);
@@ -1008,7 +1123,7 @@ function walkPair(
     // they describe which branch applies rather than what is accepted.
     // Reporting them as they stand would state the opposite of what happened,
     // so they are replaced by one finding that cannot be cleared automatically.
-    const negated: DiffResult[] = [];
+    const negated: Array<DiffResult> = [];
     walkPair(before, after, childPath, depth + 1, negated, roots);
     const changesValidation = negated.filter((finding) => !isAnnotation(finding));
 
@@ -1032,12 +1147,16 @@ function walkPair(
     const before = previous[keyword];
     const after = current[keyword];
 
-    if (before === undefined && after === undefined) continue;
+    if (before === undefined && after === undefined) {
+      continue;
+    }
 
     if (before === undefined || after === undefined || before.length !== after.length) {
       nested(keyword, before, after, `${path || ''}.${keyword}`);
 
-      if (before === undefined || after === undefined) continue;
+      if (before === undefined || after === undefined) {
+        continue;
+      }
     }
 
     for (let index = 0; index < Math.min(before.length, after.length); index += 1) {
@@ -1056,7 +1175,9 @@ function walkPair(
     const before = previous[keyword];
     const after = current[keyword];
 
-    if (before === undefined && after === undefined) continue;
+    if (before === undefined && after === undefined) {
+      continue;
+    }
 
     for (const name of new Set([...Object.keys(before ?? {}), ...Object.keys(after ?? {})])) {
       nested(keyword, before?.[name], after?.[name], `${path || ''}.${keyword}[${name}]`);
@@ -1069,7 +1190,9 @@ function walkPair(
     const prevBranches = previous[keyword];
     const currBranches = current[keyword];
 
-    if (!Array.isArray(prevBranches) && !Array.isArray(currBranches)) continue;
+    if (!Array.isArray(prevBranches) && !Array.isArray(currBranches)) {
+      continue;
+    }
 
     const before = prevBranches ?? [];
     const after = currBranches ?? [];
@@ -1097,7 +1220,7 @@ function walkPair(
     // Positional pairing is the only correspondence a schema gives us; a
     // reordered union reports as changed branches, which is the honest answer
     // when nothing says which branch became which.
-    const branchResults: DiffResult[] = [];
+    const branchResults: Array<DiffResult> = [];
 
     for (let index = 0; index < Math.min(before.length, after.length); index += 1) {
       walkPair(
@@ -1142,8 +1265,8 @@ function walkPair(
  * to `payment.amount` is as visible as a change to a top-level field. Paths are
  * dotted, with `[]` marking an array element (`items[].sku`).
  */
-export function diffSchemas(previous: SchemaNode, current: SchemaNode): DiffResult[] {
-  const results: DiffResult[] = [];
+export function diffSchemas(previous: SchemaNode, current: SchemaNode): Array<DiffResult> {
+  const results: Array<DiffResult> = [];
   // The payload root is a node like any other, and `walkPair` treats it that
   // way: one recursion covers properties, array elements, union branches, the
   // node itself, and whatever a local `$ref` points at.

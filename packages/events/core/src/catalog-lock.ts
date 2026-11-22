@@ -104,7 +104,9 @@ export async function acquireCatalogPublicationLock(outRoot: string): Promise<He
           Object.assign(record, state);
           const current = await readRecord(lockPath);
 
-          if (current?.token !== token) throw new CatalogPublicationLockedError(lockPath);
+          if (current?.token !== token) {
+            throw new CatalogPublicationLockedError(lockPath);
+          }
           const handle = await fs.open(lockPath, 'w', 0o600);
           await handle.writeFile(`${JSON.stringify(record)}\n`);
           await handle.sync();
@@ -113,14 +115,20 @@ export async function acquireCatalogPublicationLock(outRoot: string): Promise<He
         async release() {
           const current = await readRecord(lockPath);
 
-          if (current?.token === token) await fs.unlink(lockPath).catch(() => undefined);
+          if (current?.token === token) {
+            await fs.unlink(lockPath).catch(() => undefined);
+          }
         },
       };
     } catch (error) {
-      if (!(error instanceof Error && 'code' in error && error.code === 'EEXIST')) throw error;
+      if (!(error instanceof Error && 'code' in error && error.code === 'EEXIST')) {
+        throw error;
+      }
       const existing = await readRecord(lockPath);
 
-      if (!existing) throw new CatalogPublicationLockedError(lockPath);
+      if (!existing) {
+        throw new CatalogPublicationLockedError(lockPath);
+      }
       await recoverAbandonedPublication(existing);
       await fs.unlink(lockPath).catch(() => undefined);
     }
@@ -130,7 +138,7 @@ export async function acquireCatalogPublicationLock(outRoot: string): Promise<He
 }
 
 /** Readers wait for the transactional swap so they observe old or new, never its rename gap. */
-export async function waitForCatalogPublication(outRoot: string, timeoutMs = 5_000): Promise<void> {
+export async function waitForCatalogPublication(outRoot: string, timeoutMs = 5000): Promise<void> {
   const lockPath = catalogPublicationLockPath(outRoot);
   const deadline = Date.now() + timeoutMs;
 
@@ -144,7 +152,9 @@ export async function waitForCatalogPublication(outRoot: string, timeoutMs = 5_0
       return;
     }
 
-    if (Date.now() >= deadline) throw new CatalogPublicationLockedError(lockPath);
+    if (Date.now() >= deadline) {
+      throw new CatalogPublicationLockedError(lockPath);
+    }
     await new Promise((resolve) => setTimeout(resolve, 25));
   }
 }

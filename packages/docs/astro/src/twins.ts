@@ -1,5 +1,6 @@
 import path from 'node:path';
-import { docToMarkdown, sourceUrl, type Doc, type DocsManifest } from 'autocatalog-docs-core';
+import { docToMarkdown, sourceUrl } from 'autocatalog-docs-core';
+import type { Doc, DocsManifest } from 'autocatalog-docs-core';
 import type { CatalogEvent } from './catalog';
 import type { ComponentRow } from './components';
 import { docsSiteConfig } from './config';
@@ -138,10 +139,10 @@ export function componentTwin(component: ComponentRow, url?: string): string {
  */
 export function serviceTwin(
   service: { name: string; summary?: string | undefined; owner?: string | undefined },
-  lists: { produces: CatalogEvent[]; consumes: CatalogEvent[] },
+  lists: { produces: Array<CatalogEvent>; consumes: Array<CatalogEvent> },
   links: { base: string; repository?: string | undefined; url?: string | undefined },
 ): string {
-  const section = (heading: string, events: CatalogEvent[]) =>
+  const section = (heading: string, events: Array<CatalogEvent>) =>
     events.length === 0
       ? []
       : [

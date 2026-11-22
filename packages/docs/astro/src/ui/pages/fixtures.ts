@@ -13,7 +13,7 @@ import type { SystemRow } from '../../systems';
 // Props for the page stories: what the Astro routes would hand each page, kept
 // small and in one place so the pages' variants differ only where they should.
 
-export const docs: DocListItem[] = [
+export const docs: Array<DocListItem> = [
   {
     id: 'orders/runbook',
     repo: 'orders',
@@ -90,7 +90,7 @@ export const schema = schemaTree({
   },
 });
 
-export const examples: ExampleView[] = [
+export const examples: Array<ExampleView> = [
   {
     name: 'captured',
     code: JSON.stringify({ id: 'pay_1', amount: 12.5, currency: 'GBP' }, null, 2),
@@ -102,7 +102,7 @@ export const evidence: RuntimeEvidenceView = {
   ref: 'payments/payment.completed',
   caveat:
     'A consumer absent from the evidence is not proof it is gone. Counts may be sampled and describe observations, not continuous coverage.',
-  count: 18342,
+  count: 18_342,
   observedRange: { firstSeen: '2026-09-01T00:00:00Z', lastSeen: '2026-10-09T23:59:00Z' },
   snapshot: { generatedAt: '2026-10-10T08:00:00Z' },
   declaredConsumers: ['LedgerService', 'AuditService'],
@@ -110,7 +110,7 @@ export const evidence: RuntimeEvidenceView = {
   additionalConsumers: [],
   neverObserved: ['AuditService'],
   consumerEvidence: 'observed',
-  sources: [{ producer: 'PaymentService', channel: 'payments.completed', count: 18342 }],
+  sources: [{ producer: 'PaymentService', channel: 'payments.completed', count: 18_342 }],
   consumerOutcomes: [],
   deadLetters: [],
   sampleTraceIds: ['4bf92f3577b34da6a3ce929d0e0e4736'],
@@ -156,7 +156,7 @@ export const designChannel: ChannelRow = {
   designHref: '/designs/payments/refunds-v2/',
 };
 
-export const channels: ChannelRow[] = [observedChannel, designChannel];
+export const channels: Array<ChannelRow> = [observedChannel, designChannel];
 
 export const documentedComponent: ComponentRow = {
   id: 'web-ui/order-summary',
@@ -207,7 +207,7 @@ export const bareComponent: ComponentRow = {
   alsoIn: [],
 };
 
-export const components: ComponentRow[] = [documentedComponent, bareComponent];
+export const components: Array<ComponentRow> = [documentedComponent, bareComponent];
 
 export const internalSystem: SystemRow = {
   id: 'payments-platform',
@@ -228,7 +228,7 @@ export const externalSystem: SystemRow = {
   members: [],
 };
 
-export const systems: SystemRow[] = [internalSystem, externalSystem];
+export const systems: Array<SystemRow> = [internalSystem, externalSystem];
 
 export const builtMcpServer: McpServerRow = {
   id: 'orders-mcp',
@@ -289,7 +289,7 @@ export const unknownMcpServer: McpServerRow = {
   needsReview: true,
 };
 
-export const mcpServers: McpServerRow[] = [builtMcpServer, unknownMcpServer];
+export const mcpServers: Array<McpServerRow> = [builtMcpServer, unknownMcpServer];
 
 export const skillsPage: SkillsPageProps = {
   plugins: [

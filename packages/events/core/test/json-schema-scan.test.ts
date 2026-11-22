@@ -13,8 +13,8 @@ import {
   mergeDiscoveries,
   validateDiscoveryResult,
   writeEventFolder,
-  type AdapterEvent,
 } from '../src/index';
+import type { AdapterEvent } from '../src/index';
 import {
   loadedEventToAdapterEvent,
   parseAdapterEventMeta,
@@ -24,7 +24,7 @@ import { eventFrontmatter } from '../src/schema';
 import { loadCatalog } from '../src/load';
 import type { JsonObject } from '../src/json';
 
-const here = path.dirname(fileURLToPath(import.meta.url));
+const here = import.meta.dirname;
 
 const jsonSchemaRepo = path.resolve(here, '../../../../fixtures/json-schema-repo');
 

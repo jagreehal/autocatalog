@@ -26,7 +26,7 @@ export interface EventVersionsProps {
     current: boolean;
     active: boolean;
     changesHtml?: string | null;
-    readBy?: string[];
+    readBy?: Array<string>;
     upgradeHtml?: string | null;
   }>;
 }

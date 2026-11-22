@@ -13,24 +13,11 @@ steps:
   - id: product_api
     title: Product API
     service: Product API
-    next_step:
-      id: product_database
-      label: Write change + outbox row
-  - id: product_database
-    title: Product Database
-    custom:
-      title: Product Database
-    next_step:
-      id: outbox_note
-      label: Outbox row committed
-  - id: outbox_note
-    title: Outbox pattern
-    custom:
-      title: Transactional outbox
-      summary: The product change and an outbox row are written in the same transaction, so the event can never be lost or out of sync with the data.
+    systems: [Product Database]
+    policy: Whenever a product changes, write the change and an outbox row in the same transaction, so the event can never be lost or out of sync with the data
     next_step:
       id: product_search_publisher
-      label: Drain outbox
+      label: Outbox row committed
   - id: product_search_publisher
     title: Product Search Publisher
     service: Product Search Publisher
@@ -50,25 +37,21 @@ steps:
   - id: product_updated
     title: Product Updated
     event: catalog/product-updated
+    track: happy
     next_step:
       id: search_indexer
       label: Re-index product
   - id: product_deleted
     title: Product Deleted
     event: catalog/product-deleted
+    track: happy
     next_step:
       id: search_indexer
       label: Remove from index
   - id: search_indexer
     title: Search Indexer
     service: Search Indexer
-    next_step:
-      id: search_index
-      label: Apply to index
-  - id: search_index
-    title: Search Index
-    custom:
-      title: Search Index
+    systems: [Search Index]
     next_step:
       id: searchable
       label: Available to search

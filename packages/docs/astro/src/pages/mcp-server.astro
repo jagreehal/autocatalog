@@ -26,7 +26,7 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
 
 const page = mcpServerPageProps(catalog, id, base);
 
-if (!page) throw new Error(`MCP server not found: ${id}`);
+if (!page) {throw new Error(`MCP server not found: ${id}`);}
 
 setResourceContext(Astro.locals, {
   kind: 'service',

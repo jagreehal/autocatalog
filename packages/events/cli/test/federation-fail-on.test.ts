@@ -1,5 +1,6 @@
 import { expect, it } from 'vitest';
-import { failingFindings, type FederationStatus } from '../src/federation';
+import { failingFindings } from '../src/federation';
+import type { FederationStatus } from '../src/federation';
 
 const status: FederationStatus = {
   sources: [],

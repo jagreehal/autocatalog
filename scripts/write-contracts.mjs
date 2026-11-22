@@ -18,7 +18,7 @@ import {
   networkFileSchema,
 } from '../packages/events/core/dist/index.js';
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const root = path.resolve(import.meta.dirname, '..');
 
 // What a person writes, so a field with a default is optional. Refinements have
 // no JSON Schema form; the catalog still applies them when it reads the file.
@@ -58,7 +58,9 @@ for (const [file, schema] of Object.entries(contracts)) {
   const content = `${JSON.stringify(schema, null, 2)}\n`;
 
   if (check) {
-    if (!fs.existsSync(target) || fs.readFileSync(target, 'utf8') !== content) stale.push(file);
+    if (!fs.existsSync(target) || fs.readFileSync(target, 'utf8') !== content) {
+      stale.push(file);
+    }
     continue;
   }
 

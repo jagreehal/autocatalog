@@ -26,7 +26,6 @@ import {
   ListChecksIcon,
   ListIcon,
   Link2Icon,
-  type LucideIcon,
   MessageSquareIcon,
   MoonIcon,
   NetworkIcon,
@@ -46,6 +45,7 @@ import {
   WrenchIcon,
   ZapIcon,
 } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 
 /** Every icon the site draws, by what it stands for: Lucide, shadcn/ui's icon library. */
 export const icons = {
@@ -113,7 +113,9 @@ const KIND_ICONS = new Map<string, IconName>([
 export function kindIcon(kind: string): IconName {
   const icon = KIND_ICONS.get(kind);
 
-  if (icon) return icon;
+  if (icon) {
+    return icon;
+  }
 
   return isIcon(kind) ? kind : 'doc';
 }

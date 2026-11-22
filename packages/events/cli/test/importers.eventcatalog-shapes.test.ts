@@ -19,7 +19,7 @@ let dir: string;
 
 let out: string;
 
-let said: string[];
+let said: Array<string>;
 
 beforeEach(async () => {
   dir = await fs.mkdtemp(path.join(os.tmpdir(), 'ac-ec-shapes-'));
@@ -27,7 +27,7 @@ beforeEach(async () => {
   said = [];
 
   for (const stream of ['log', 'warn', 'error'] as const) {
-    vi.spyOn(console, stream).mockImplementation((...args: unknown[]) => {
+    vi.spyOn(console, stream).mockImplementation((...args: Array<unknown>) => {
       said.push(args.map(String).join(' '));
     });
   }
@@ -267,11 +267,12 @@ describe('from-eventcatalog: commands and queries', () => {
   it('leaves the handler out, and says so, when several services receive a command', async () => {
     await write('commands/PlaceOrder/index.md', doc({ id: 'PlaceOrder', version: '1.0.0' }));
 
-    for (const service of ['A', 'B'])
+    for (const service of ['A', 'B']) {
       await write(
         `services/${service}/index.md`,
         `---\nid: ${service}\nversion: 1.0.0\nreceives:\n  - id: PlaceOrder\n---\n`,
       );
+    }
 
     await runFromEventCatalog({ source: dir, out: path.join(out, 'events'), cwd: out });
 
@@ -435,11 +436,12 @@ describe('from-eventcatalog: services that share a name', () => {
     for (const [id, container] of [
       ['ShippingAPI', 'parcels'],
       ['CarrierShippingAPI', 'carriers'],
-    ])
+    ]) {
       await write(
         `services/${id}/index.md`,
         `---\nid: ${id}\nname: Shipping API\nversion: 1.0.0\nwritesTo:\n  - id: ${container}\n  - id: shared\n---\n`,
       );
+    }
 
     expect(
       await runFromEventCatalog({ source: dir, out: path.join(out, 'events'), cwd: out }),

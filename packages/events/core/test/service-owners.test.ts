@@ -2,7 +2,7 @@ import { expect, it } from 'vitest';
 import { resolveServiceOwners } from '../src/service-owners';
 
 const resolve = (
-  claims: Record<string, string[]>,
+  claims: Record<string, Array<string>>,
   previous: Record<string, string> = {},
   chosen: Record<string, string> = {},
 ) => resolveServiceOwners({ claims: new Map(Object.entries(claims)), previous, chosen });

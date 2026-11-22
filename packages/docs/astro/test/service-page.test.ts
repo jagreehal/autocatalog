@@ -4,13 +4,15 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { AUTOCATALOG_GRAPH_SPEC, type ResourceGraph } from 'autocatalog-core';
+import { AUTOCATALOG_GRAPH_SPEC } from 'autocatalog-core';
+import type { ResourceGraph } from 'autocatalog-core';
 import { buildDocsCatalog } from '../src/catalog';
 import { serviceFacts, servicePageProps } from '../src/page-models';
-import { ServicePage, type ServicePageProps } from '../src/ui/pages/ServicePage';
+import { ServicePage } from '../src/ui/pages/ServicePage';
+import type { ServicePageProps } from '../src/ui/pages/ServicePage';
 
 const service = (attributes: {
-  domains: string[];
+  domains: Array<string>;
   repository?: string;
   system?: { id: string; name?: string };
 }): ResourceGraph => ({

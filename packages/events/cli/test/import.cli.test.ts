@@ -11,13 +11,16 @@ import { runImport } from '../src/commands/import';
 /** A TCP server's bound address; a pipe or an unbound server has no port. */
 const listening = z.object({ port: z.number() });
 
-async function run(cmd: string, args: string[], cwd: string): Promise<void> {
+async function run(cmd: string, args: Array<string>, cwd: string): Promise<void> {
   await new Promise<void>((resolve, reject) => {
     const child = spawn(cmd, args, { cwd, stdio: 'ignore' });
     child.on('error', reject);
     child.on('exit', (code) => {
-      if (code === 0) resolve();
-      else reject(new Error(`${cmd} ${args.join(' ')} failed with ${code ?? 1}`));
+      if (code === 0) {
+        resolve();
+      } else {
+        reject(new Error(`${cmd} ${args.join(' ')} failed with ${code ?? 1}`));
+      }
     });
   });
 }
@@ -73,7 +76,9 @@ afterEach(async () => {
   while (cleanups.length > 0) {
     const fn = cleanups.pop();
 
-    if (fn) await fn();
+    if (fn) {
+      await fn();
+    }
   }
 });
 
@@ -231,7 +236,7 @@ describe('runImport', () => {
       cwd: projectRoot,
       manifestUrl,
       timeoutMs: 3000,
-      maxBytes: 200000,
+      maxBytes: 200_000,
       allowedHosts: ['127.0.0.1'],
     });
 

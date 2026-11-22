@@ -4,7 +4,7 @@ import type { DocsManifest } from '../src/manifest';
 import type { Doc } from '../src/read-docs';
 import { createDocsResourceGraph, DocsResourceGraphError } from '../src/resource-graph';
 
-const docs: Doc[] = [
+const docs: Array<Doc> = [
   {
     id: 'payments-service/runbook',
     repo: 'payments-service',

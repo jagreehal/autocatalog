@@ -1,7 +1,8 @@
 import type { ErrorObject, ValidateFunction } from 'ajv';
 import type { DiffResult } from './diff';
 import { generateExampleFromSchema } from './example-gen';
-import { isJsonObject, type JsonObject, type JsonValue } from './json';
+import { isJsonObject } from './json';
+import type { JsonObject, JsonValue } from './json';
 import { jsonSchemaAjv, jsonSchemaDialect } from './json-schema-dialect';
 
 /**
@@ -16,10 +17,12 @@ export interface Rehearsal {
 }
 
 /** Delete `path` (`amount`, `items[].sku`) wherever it occurs in `value`, in place. */
-function remove(value: JsonValue | undefined, path: string[]): void {
+function remove(value: JsonValue | undefined, path: Array<string>): void {
   const [head, ...rest] = path;
 
-  if (head === undefined || !isJsonObject(value)) return;
+  if (head === undefined || !isJsonObject(value)) {
+    return;
+  }
   const many = head.endsWith('[]');
   const key = many ? head.slice(0, -2) : head;
 
@@ -31,7 +34,9 @@ function remove(value: JsonValue | undefined, path: string[]): void {
 
   const child = value[key];
 
-  for (const target of many && Array.isArray(child) ? child : [child]) remove(target, rest);
+  for (const target of many && Array.isArray(child) ? child : [child]) {
+    remove(target, rest);
+  }
 }
 
 /** The payload without the field at `path`, on a copy. */
@@ -53,7 +58,7 @@ function pointerOf(error: ErrorObject): string {
 
 /** `items[].sku` → matches `/items/0/sku` and anything below it. */
 function pointerPattern(path: string): RegExp {
-  const escape = (part: string) => part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const escape = (part: string) => part.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
 
   const segments = path
     .split('.')
@@ -71,9 +76,13 @@ function valueAt(value: JsonValue | undefined, pointer: string): JsonValue | und
   let here = value;
 
   for (const part of parts(pointer)) {
-    if (Array.isArray(here)) here = here[Number(part)];
-    else if (isJsonObject(here)) here = here[part];
-    else return undefined;
+    if (Array.isArray(here)) {
+      here = here[Number(part)];
+    } else if (isJsonObject(here)) {
+      here = here[part];
+    } else {
+      return undefined;
+    }
   }
 
   return here;
@@ -84,7 +93,9 @@ function setAt(value: JsonValue, pointer: string, next: JsonValue): boolean {
   const last = path.pop();
   const parent = valueAt(value, path.length > 0 ? `/${path.join('/')}` : '');
 
-  if (last === undefined || !isJsonObject(parent)) return false;
+  if (last === undefined || !isJsonObject(parent)) {
+    return false;
+  }
   parent[last] = next;
 
   return true;
@@ -134,21 +145,27 @@ export function rehearser(
     const payload = structuredClone(candidate);
 
     for (let round = 0; round < REPAIRS; round++) {
-      if (!accepts(payload) || current(payload)) return undefined;
+      if (!accepts(payload) || current(payload)) {
+        return undefined;
+      }
       const errors = current.errors ?? [];
       const elsewhere = errors.filter((error) => !changed.test(pointerOf(error)));
 
-      if (elsewhere.length === 0) return { payload, failure: describeFailure(errors[0]!) };
+      if (elsewhere.length === 0) {
+        return { payload, failure: describeFailure(errors[0]!) };
+      }
 
       // Borrow what the current schema expects there, from its own example.
       const repaired = elsewhere.filter((error) => {
         const pointer = pointerOf(error);
-        const wanted = valueAt(previousExample, pointer.replace(/\/\d+(?=\/|$)/g, '/0'));
+        const wanted = valueAt(previousExample, pointer.replaceAll(/\/\d+(?=\/|$)/g, '/0'));
 
         return wanted !== undefined && setAt(payload, pointer, structuredClone(wanted));
       });
 
-      if (repaired.length === 0) return undefined;
+      if (repaired.length === 0) {
+        return undefined;
+      }
     }
 
     return undefined;
@@ -161,7 +178,9 @@ export function rehearser(
     for (const candidate of [base, without(base, path)]) {
       const rehearsal = isolate(candidate, changed);
 
-      if (rehearsal) return rehearsal;
+      if (rehearsal) {
+        return rehearsal;
+      }
     }
 
     return undefined;

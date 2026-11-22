@@ -7,13 +7,12 @@ import Ajv2020 from 'ajv/dist/2020.js';
 import type { ValidateFunction } from 'ajv';
 import addFormats from 'ajv-formats';
 import {
-  type JsonObject,
-  type JsonValue,
   isJsonObject,
   isRealFileInside,
   jsonObjectSchema,
   jsonValueSchema,
 } from 'autocatalog-core';
+import type { JsonObject, JsonValue } from 'autocatalog-core';
 import { z } from 'zod';
 
 /**
@@ -138,15 +137,21 @@ export function resolvePublishedFile(
   relative: string,
   options: { explicit?: string | undefined; what: string; remedy: string },
 ): PublishedFile | null {
-  if (options.explicit) return readJson(path.resolve(options.explicit));
+  if (options.explicit) {
+    return readJson(path.resolve(options.explicit));
+  }
 
   const absolute = path.resolve(root);
   const conventional = path.join(absolute, relative);
 
-  if (fs.existsSync(conventional)) return readJson(conventional);
+  if (fs.existsSync(conventional)) {
+    return readJson(conventional);
+  }
 
   // One repository: its subdirectories are its own code, not enrolled repositories.
-  if (fs.existsSync(path.join(absolute, 'docs'))) return null;
+  if (fs.existsSync(path.join(absolute, 'docs'))) {
+    return null;
+  }
 
   const files = fs
     .readdirSync(absolute, { withFileTypes: true })
@@ -161,7 +166,9 @@ export function resolvePublishedFile(
   const published = files.map(readJson);
   const [first] = published;
 
-  if (!first) return null;
+  if (!first) {
+    return null;
+  }
 
   if (published.some((candidate) => !isDeepStrictEqual(candidate.json, first.json))) {
     throw new Error(
@@ -193,7 +200,7 @@ function readJson(file: string): PublishedFile {
  * was not told about, so a field a company added to its own contract would
  * validate and then vanish before any page could show it.
  */
-export function declaredFrontmatterFields(schema: JsonObject): string[] {
+export function declaredFrontmatterFields(schema: JsonObject): Array<string> {
   const properties = schema.properties;
 
   return isJsonObject(properties) ? Object.keys(properties) : [];
@@ -223,7 +230,7 @@ export interface FrontmatterIssue {
 }
 
 export interface FrontmatterValidator {
-  validate(data: JsonObject): FrontmatterIssue[];
+  validate(data: JsonObject): Array<FrontmatterIssue>;
 }
 
 /**
@@ -242,11 +249,13 @@ export function frontmatterValidator(schema: JsonObject): FrontmatterValidator {
   const compiled: ValidateFunction = ajv.compile(schema);
 
   return {
-    validate(data: JsonObject): FrontmatterIssue[] {
-      if (compiled(data)) return [];
+    validate(data: JsonObject): Array<FrontmatterIssue> {
+      if (compiled(data)) {
+        return [];
+      }
 
       return (compiled.errors ?? []).map((error) => ({
-        path: error.instancePath.replace(/^\//, '').replace(/\//g, '.') || '(root)',
+        path: error.instancePath.replace(/^\//, '').replaceAll('/', '.') || '(root)',
         // ajv says only "one of the allowed values"; the author needs the list.
         message:
           error.keyword === 'enum' && Array.isArray(error.params.allowedValues)

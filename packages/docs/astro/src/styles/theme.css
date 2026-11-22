@@ -50,6 +50,22 @@
   --ac-storm-actor: oklch(0.9 0.08 100);
   --ac-storm-hotspot: oklch(0.76 0.16 18);
 
+  /*
+   * One hue per resource kind, the map legend's: events orange, commands blue,
+   * queries green, services pink, data cyan. A tile tints with it and its icon
+   * carries it; the icon still says the kind, so colour is never alone.
+   */
+  --ac-kind-event: oklch(0.78 0.15 55);
+  --ac-kind-command: oklch(0.74 0.13 250);
+  --ac-kind-query: oklch(0.78 0.14 150);
+  --ac-kind-service: oklch(0.75 0.15 355);
+  --ac-kind-data: oklch(0.78 0.11 210);
+  --ac-kind-domain: oklch(0.82 0.13 88);
+  --ac-kind-flow: oklch(0.78 0.11 180);
+  --ac-kind-endpoint: oklch(0.74 0.12 270);
+  --ac-kind-entity: oklch(0.8 0.13 125);
+  --ac-kind-document: oklch(0.72 0.02 250);
+
   --ac-radius: var(--radius);
 
   --sl-color-white: var(--ac-heading);
@@ -107,6 +123,17 @@
   --ac-storm-system: oklch(0.85 0.09 350);
   --ac-storm-actor: oklch(0.95 0.08 100);
   --ac-storm-hotspot: oklch(0.76 0.16 18);
+
+  --ac-kind-event: oklch(0.6 0.16 50);
+  --ac-kind-command: oklch(0.53 0.16 255);
+  --ac-kind-query: oklch(0.55 0.14 150);
+  --ac-kind-service: oklch(0.56 0.18 355);
+  --ac-kind-data: oklch(0.55 0.11 215);
+  --ac-kind-domain: oklch(0.6 0.13 75);
+  --ac-kind-flow: oklch(0.55 0.1 185);
+  --ac-kind-endpoint: oklch(0.52 0.15 268);
+  --ac-kind-entity: oklch(0.56 0.14 130);
+  --ac-kind-document: oklch(0.5 0.02 250);
 
   --sl-color-gray-6: var(--ac-panel-2);
   --sl-color-gray-7: var(--ac-panel-2);
@@ -537,6 +564,16 @@ starlight-toc a[aria-current='true'] {
   }
   :root[data-sidebar='collapsed'] [data-sidebar-toggle] {
     inset-inline-start: calc(var(--ac-rail-width) + 0.5rem);
+  }
+  /* The narrow "On this page" bar starts at the same edge, so its toggle starts after the button. */
+  mobile-starlight-toc summary {
+    padding-inline-start: 3.25rem;
+  }
+  @media (max-width: 71.999rem) {
+    /* Centred in that bar, level with its toggle. */
+    :root:has(mobile-starlight-toc) [data-sidebar-toggle] {
+      top: calc(var(--sl-nav-height) + (var(--sl-mobile-toc-height) - 2.25rem) / 2);
+    }
   }
 
   [data-sidebar-resizer] {

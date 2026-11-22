@@ -95,7 +95,7 @@ const promise = {
 
 it('counts a track record by run, the last 30, unknown as not kept', () => {
   const day = (n: number) => new Date(Date.UTC(2026, 9, 1 + n)).toISOString();
-  const lines: string[] = [];
+  const lines: Array<string> = [];
 
   for (let n = 0; n < 32; n++) {
     const freshness = n === 20 ? 'breached' : n === 25 ? 'unknown' : 'kept';

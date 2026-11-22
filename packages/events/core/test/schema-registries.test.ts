@@ -244,7 +244,7 @@ describe('schema registries', () => {
       paid,
     });
 
-    const errors: string[] = [];
+    const errors: Array<string> = [];
 
     const graph = await importConfluentRegistry(registry, {
       id: 'acme-kafka',

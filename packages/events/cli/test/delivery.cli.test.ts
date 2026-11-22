@@ -7,7 +7,7 @@ import { compareDeployment } from '../src/commands/delivery';
 import { runDrift } from '../src/commands/drift';
 import { runScan } from '../src/commands/scan';
 
-const here = path.dirname(fileURLToPath(import.meta.url));
+const here = import.meta.dirname;
 
 const fixture = path.resolve(here, '../../../../fixtures/delivery-rabbitmq');
 
@@ -19,8 +19,9 @@ describe('ac drift between two saved artifacts', () => {
   beforeAll(async () => {
     work = await fs.mkdtemp(path.join(os.tmpdir(), 'ac-delivery-artifacts-'));
 
-    for (const side of ['base', 'current'])
+    for (const side of ['base', 'current']) {
       await fs.cp(fixture, path.join(work, side), { recursive: true });
+    }
 
     const changed = path.join(work, 'current', DEFINITIONS);
 
@@ -30,20 +31,21 @@ describe('ac drift between two saved artifacts', () => {
     );
 
     // Artifacts kept apart from their source trees, as CI saves them.
-    for (const side of ['base', 'current'])
+    for (const side of ['base', 'current']) {
       await runScan({
         root: path.join(work, side),
         out: path.join(work, 'artifacts', side),
         quiet: true,
       });
-  }, 60000);
+    }
+  }, 60_000);
 
   afterAll(async () => {
     await fs.rm(work, { recursive: true, force: true });
   });
 
   it('carries the consumer declarations in each artifact and checks delivery from them', async () => {
-    const output: string[] = [];
+    const output: Array<string> = [];
 
     const log = vi
       .spyOn(console, 'log')

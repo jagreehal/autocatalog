@@ -1,14 +1,15 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { z } from 'zod';
-import { AUTOCATALOG_EVENT_FILE, eventFrontmatter, type EventFrontmatter } from './schema';
+import { AUTOCATALOG_EVENT_FILE, eventFrontmatter } from './schema';
+import type { EventFrontmatter } from './schema';
 import type { AdapterEvent } from './adapter-event';
 
 export interface WriteEventFolderOptions {
   outRoot: string;
   event: AdapterEvent;
   /** Internal publication placement; every segment is validated for portability. */
-  folderSegments?: string[];
+  folderSegments?: Array<string>;
 }
 
 function safeSegment(value: string, label: string): string {

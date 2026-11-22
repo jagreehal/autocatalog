@@ -10,7 +10,7 @@ import {
   validateEdges,
 } from 'autocatalog-agents-core';
 
-export const runValidate = async (args: string[]): Promise<number> => {
+export const runValidate = async (args: Array<string>): Promise<number> => {
   // `--root <dir>` is accepted because the scripts were written that way; a
   // flag silently parsed as the directory name is how a check ends up
   // validating nothing and passing.
@@ -75,7 +75,7 @@ export const runValidate = async (args: string[]): Promise<number> => {
   // rather than passed: a check that quietly skips is a check that lies.
   const declared = declaredEventLinks(cat);
   const eventsRoot = eventsFlag ? resolve(eventsFlag) : join(absRoot, 'events');
-  let eventIssues: string[] = [];
+  let eventIssues: Array<string> = [];
 
   if (declared.length > 0) {
     if (existsSync(eventsRoot)) {
@@ -84,7 +84,9 @@ export const runValidate = async (args: string[]): Promise<number> => {
       if (eventIssues.length > 0) {
         process.stdout.write(kleur.red(`event issues (${eventIssues.length}):\n`));
 
-        for (const message of eventIssues) process.stdout.write(`  ${kleur.red('✗')} ${message}\n`);
+        for (const message of eventIssues) {
+          process.stdout.write(`  ${kleur.red('✗')} ${message}\n`);
+        }
 
         process.stdout.write('\n');
       } else {

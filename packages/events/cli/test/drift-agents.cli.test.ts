@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { runDrift } from '../src/commands/drift';
 
-const here = path.dirname(fileURLToPath(import.meta.url));
+const here = import.meta.dirname;
 
 const starter = path.resolve(here, '../../../../starters/agent-default');
 
@@ -144,7 +144,9 @@ describe('ac drift names agents that consume the event it breaks', () => {
 
     expect(broken.length).toBeGreaterThan(0);
 
-    for (const finding of broken) expect(finding.consumers).toEqual([]);
+    for (const finding of broken) {
+      expect(finding.consumers).toEqual([]);
+    }
   });
 
   it.each([

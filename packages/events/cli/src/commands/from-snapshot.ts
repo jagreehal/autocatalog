@@ -1,13 +1,7 @@
 import path from 'node:path';
 import kleur from 'kleur';
-import {
-  applySnapshot,
-  pascalCase,
-  publishCatalog,
-  readSnapshot,
-  type AdapterEvent,
-  type SnapshotObservation,
-} from 'autocatalog-core';
+import { applySnapshot, pascalCase, publishCatalog, readSnapshot } from 'autocatalog-core';
+import type { AdapterEvent, SnapshotObservation } from 'autocatalog-core';
 
 export interface RunFromSnapshotOptions {
   file: string; // a runtime architecture snapshot (autotel-architecture/*)
@@ -21,7 +15,7 @@ const JSON_TYPES = new Set(['string', 'number', 'boolean', 'object', 'array', 'n
 
 /** The part of JSON Schema an inferred contract uses. */
 type InferredSchema = {
-  type?: string | string[];
+  type?: string | Array<string>;
   properties?: Record<string, InferredSchema>;
   items?: InferredSchema;
 };
@@ -39,7 +33,9 @@ function child(parent: InferredSchema, segment: string): InferredSchema {
 
   const node = (parent.properties[key] ??= {});
 
-  if (!array) return node;
+  if (!array) {
+    return node;
+  }
 
   node.type ??= 'array';
 
@@ -66,8 +62,11 @@ export function inferSchema(observation: SnapshotObservation): InferredSchema {
     const declared = node.properties ? ['object', ...types] : types;
     const unique = [...new Set(declared)].sort();
 
-    if (unique.length === 1) node.type = unique[0]!;
-    else if (unique.length > 1) node.type = unique;
+    if (unique.length === 1) {
+      node.type = unique[0]!;
+    } else if (unique.length > 1) {
+      node.type = unique;
+    }
   }
 
   return root;
@@ -91,7 +90,7 @@ export async function runFromSnapshot(opts: RunFromSnapshotOptions): Promise<num
 
   const fallbackDomain = opts.domain ?? (snapshot.service || 'events');
 
-  const events: AdapterEvent[] = Object.entries(snapshot.events).map(([name, observation]) => {
+  const events: Array<AdapterEvent> = Object.entries(snapshot.events).map(([name, observation]) => {
     const slash = name.indexOf('/');
     const domain = slash === -1 ? fallbackDomain : name.slice(0, slash);
     const id = name.slice(slash + 1);
@@ -148,7 +147,9 @@ export async function runFromSnapshot(opts: RunFromSnapshotOptions): Promise<num
   }
 
   if (!opts.quiet) {
-    for (const event of events) console.log(`${kleur.green('✓')} ${event.domain}/${event.id}`);
+    for (const event of events) {
+      console.log(`${kleur.green('✓')} ${event.domain}/${event.id}`);
+    }
 
     console.log(kleur.bold(`\n${events.length} draft event(s) written to ${opts.out}`));
     console.log(

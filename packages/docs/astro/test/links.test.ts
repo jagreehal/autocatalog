@@ -20,7 +20,7 @@ const tree = () => ({
   ],
 });
 
-const hrefs = (root: ReturnType<typeof tree>): unknown[] =>
+const hrefs = (root: ReturnType<typeof tree>): Array<unknown> =>
   root.children.flatMap((node) =>
     node.children ? node.children.map((child) => child.properties.src) : [node.properties.href],
   );
@@ -71,7 +71,7 @@ describe('rehypeDocsBase on links written for GitHub', () => {
     return root;
   };
 
-  const render = (base: string, from: string, links: string[]) => {
+  const render = (base: string, from: string, links: Array<string>) => {
     const tree = { children: links.map((href) => ({ tagName: 'a', properties: { href } })) };
     rehypeDocsBase(base)()(tree, { path: from });
 

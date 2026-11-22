@@ -1,7 +1,8 @@
 import fs from 'node:fs/promises';
 import { z } from 'zod';
 import type { AdapterEvent } from './adapter-event';
-import { consumerOutcome, observationSource, type ConsumerOutcome } from './schema';
+import { consumerOutcome, observationSource } from './schema';
+import type { ConsumerOutcome } from './schema';
 
 /**
  * A runtime architecture snapshot: what the running system was actually seen
@@ -23,20 +24,20 @@ export interface SnapshotObservation {
   firstSeen: string;
   lastSeen: string;
   producer?: string;
-  consumers?: string[];
+  consumers?: Array<string>;
   channel?: string;
-  fieldPaths?: string[];
-  sampleTraceIds?: string[];
-  sources?: z.infer<typeof observationSource>[];
+  fieldPaths?: Array<string>;
+  sampleTraceIds?: Array<string>;
+  sources?: Array<z.infer<typeof observationSource>>;
   /** Each consumer seen receiving the event, with what happened to its deliveries. */
-  observedConsumers?: ConsumerOutcome[];
+  observedConsumers?: Array<ConsumerOutcome>;
   fieldStats?: Record<string, FieldStats>;
   consumerEvidence?: 'reported' | 'observed' | 'unknown';
 }
 
 /** What payloads carried at one field path: its runtime types, and a few primitive values. */
 export interface FieldStats {
-  types: string[];
+  types: Array<string>;
   sampleValues?: Array<string | number | boolean | null>;
 }
 
@@ -63,8 +64,8 @@ export interface WorkflowObservation {
   failed?: number | undefined;
   compensated?: number | undefined;
   compensationFailed?: number | undefined;
-  steps: WorkflowStepObservation[];
-  sampleTraceIds?: string[] | undefined;
+  steps: Array<WorkflowStepObservation>;
+  sampleTraceIds?: Array<string> | undefined;
 }
 
 export interface ArchitectureSnapshot {
@@ -170,7 +171,9 @@ export async function readSnapshot(filePath: string): Promise<ArchitectureSnapsh
 
   const root = jsonObject.safeParse(parsed);
 
-  if (!root.success) throw new Error(`Snapshot must be a JSON object: ${filePath}`);
+  if (!root.success) {
+    throw new Error(`Snapshot must be a JSON object: ${filePath}`);
+  }
 
   const spec = snapshotSpec.safeParse(root.data.spec);
 
@@ -214,9 +217,9 @@ export async function readSnapshot(filePath: string): Promise<ArchitectureSnapsh
 
 export interface SnapshotMergeResult {
   /** Events the runtime saw that the catalog does not document. */
-  undocumented: string[];
+  undocumented: Array<string>;
   /** Catalogued events the snapshot never saw. */
-  neverObserved: string[];
+  neverObserved: Array<string>;
   /** Events the evidence touched. */
   observed: number;
 }
@@ -265,7 +268,10 @@ export interface RenameSuggestion {
  * is used once, best match first. A suggestion is a question for a person:
  * both findings stay reported.
  */
-export function suggestRenames(observed: string[], documented: string[]): RenameSuggestion[] {
+export function suggestRenames(
+  observed: Array<string>,
+  documented: Array<string>,
+): Array<RenameSuggestion> {
   const pairs = observed
     .flatMap((o) =>
       documented.map((d) => {
@@ -290,7 +296,9 @@ export function suggestRenames(observed: string[], documented: string[]): Rename
   const used = new Set<string>();
 
   return pairs.flatMap((pair) => {
-    if (used.has(`o:${pair.observed}`) || used.has(`d:${pair.documented}`)) return [];
+    if (used.has(`o:${pair.observed}`) || used.has(`d:${pair.documented}`)) {
+      return [];
+    }
 
     used.add(`o:${pair.observed}`).add(`d:${pair.documented}`);
 
@@ -305,12 +313,12 @@ export function suggestRenames(observed: string[], documented: string[]): Rename
  * guessing.
  */
 export function matchSnapshot<T>(
-  events: T[],
+  events: Array<T>,
   identify: (event: T) => { domain: string; id: string },
   snapshot: ArchitectureSnapshot,
 ): { matches: Map<string, T> } & Omit<SnapshotMergeResult, 'observed'> {
   const byName = (name: (domain: string, id: string) => string) => {
-    const index = new Map<string, T[]>();
+    const index = new Map<string, Array<T>>();
 
     for (const event of events) {
       const { domain, id } = identify(event);
@@ -344,7 +352,9 @@ export function matchSnapshot<T>(
         throw new Error(`Ambiguous snapshot event: ${name}. Use domain/id to identify it.`);
       }
 
-      if (found[0]) return found[0];
+      if (found[0]) {
+        return found[0];
+      }
     }
 
     return undefined;
@@ -356,12 +366,16 @@ export function matchSnapshot<T>(
   for (const name of Object.keys(snapshot.events)) {
     const event = resolve(name);
 
-    if (!event) continue;
+    if (!event) {
+      continue;
+    }
 
     const { domain, id } = identify(event);
     const key = `${domain}/${id}`;
 
-    if (seen.has(key)) throw new Error(`Duplicate snapshot observation for ${key}`);
+    if (seen.has(key)) {
+      throw new Error(`Duplicate snapshot observation for ${key}`);
+    }
 
     seen.add(key);
     matches.set(name, event);
@@ -403,7 +417,9 @@ export function applySnapshot(
   for (const [name, observation] of Object.entries(snapshot.events)) {
     const event = matches.get(name);
 
-    if (!event) continue;
+    if (!event) {
+      continue;
+    }
     observed += 1;
 
     const declaredConsumers = event.observed?.declaredConsumers ?? event.meta?.consumers ?? [];

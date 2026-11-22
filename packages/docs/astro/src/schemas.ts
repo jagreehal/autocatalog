@@ -10,9 +10,13 @@ import type { SchemasPageProps } from './ui/pages';
 export function schemaFormat({ repository, event }: CatalogEvent, catalog: DocsCatalog): string {
   const file = event.frontmatter.source?.file ?? '';
 
-  if (/\.avsc$/i.test(file)) return 'Avro';
+  if (/\.avsc$/i.test(file)) {
+    return 'Avro';
+  }
 
-  if (/\.proto$/i.test(file)) return 'Protobuf';
+  if (/\.proto$/i.test(file)) {
+    return 'Protobuf';
+  }
 
   if (catalog.apis.some((api) => api.repository === repository && api.file === file)) {
     return 'OpenAPI';

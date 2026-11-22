@@ -25,8 +25,8 @@ export function statusVariant(status: string): StatusVariant {
 /** `supersededBy` as "Superseded by", for a field with no title of its own. */
 export function fieldHeading(field: string): string {
   const words = field
-    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
-    .replace(/[_-]+/g, ' ')
+    .replaceAll(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .replaceAll(/[_-]+/g, ' ')
     .toLowerCase();
 
   return words.charAt(0).toUpperCase() + words.slice(1);

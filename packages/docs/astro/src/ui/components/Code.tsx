@@ -18,7 +18,9 @@ let pending = false;
 
 function highlightPage() {
   // A browser without the Custom Highlight API shows the code plain.
-  if (pending || !('Highlight' in globalThis)) return;
+  if (pending || !('Highlight' in globalThis)) {
+    return;
+  }
 
   pending = true;
   queueMicrotask(() => {

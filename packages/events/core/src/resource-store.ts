@@ -3,9 +3,11 @@ import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import Ajv2020 from 'ajv/dist/2020.js';
 import contract from '../contracts/graph-v1.schema.json' with { type: 'json' };
-import { jsonValueSchema, type JsonValue } from './json';
+import { jsonValueSchema } from './json';
+import type { JsonValue } from './json';
 import { readOptionalResourceJson, ResourceReadError } from './resource-files';
-import { resourceKey, relationshipKey, type ResourceGraph } from './resource-graph';
+import { resourceKey, relationshipKey } from './resource-graph';
+import type { ResourceGraph } from './resource-graph';
 
 export const RESOURCE_GRAPH_FILE = '.autocatalog/resources.json';
 
@@ -30,7 +32,9 @@ export function parseResourceGraph(input: JsonValue): ResourceGraph {
   for (const resource of input.resources) {
     const key = resourceKey(resource.ref);
 
-    if (resources.has(key)) throw new Error(`Duplicate resource: ${key}`);
+    if (resources.has(key)) {
+      throw new Error(`Duplicate resource: ${key}`);
+    }
     resources.add(key);
   }
 
@@ -39,10 +43,13 @@ export function parseResourceGraph(input: JsonValue): ResourceGraph {
   for (const edge of input.relationships) {
     const key = relationshipKey(edge);
 
-    if (relationships.has(key)) throw new Error(`Duplicate relationship: ${key}`);
+    if (relationships.has(key)) {
+      throw new Error(`Duplicate relationship: ${key}`);
+    }
 
-    if (!resources.has(resourceKey(edge.from)) || !resources.has(resourceKey(edge.to)))
+    if (!resources.has(resourceKey(edge.from)) || !resources.has(resourceKey(edge.to))) {
       throw new Error(`Unresolved relationship: ${key}`);
+    }
     relationships.add(key);
   }
 
@@ -52,7 +59,9 @@ export function parseResourceGraph(input: JsonValue): ResourceGraph {
 export async function readResourceGraph(root: string): Promise<ResourceGraph | undefined> {
   const value = await readOptionalResourceJson(path.join(root, RESOURCE_GRAPH_FILE), { root });
 
-  if (value === undefined) return undefined;
+  if (value === undefined) {
+    return undefined;
+  }
 
   try {
     return parseResourceGraph(value);

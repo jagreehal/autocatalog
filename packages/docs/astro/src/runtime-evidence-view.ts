@@ -8,7 +8,7 @@ import type { DeadLetterView, RuntimeEvidenceView } from './ui/components/Runtim
 export function runtimeEvidenceView(
   evidence: EventRuntimeEvidence,
   ref: string,
-  deadLetters: DeadLetterView[] = [],
+  deadLetters: Array<DeadLetterView> = [],
 ): RuntimeEvidenceView {
   if (evidence.status === 'no-evidence') {
     return { status: 'no-evidence', ref, caveat: evidence.caveat, deadLetters };

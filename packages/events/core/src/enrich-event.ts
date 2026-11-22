@@ -4,14 +4,16 @@ import type { AdapterEvent } from './adapter-event';
 import type { EventFrontmatter } from './schema';
 import { generateExampleFromSchema } from './example-gen';
 import { jsonSchemaAjv, jsonSchemaDialect } from './json-schema-dialect';
-import { isJsonObject, type JsonObject, type JsonValue } from './json';
-import { ownerForPath, parseCodeowners, type CodeownersRule } from './codeowners';
+import { isJsonObject } from './json';
+import type { JsonObject, JsonValue } from './json';
+import { ownerForPath, parseCodeowners } from './codeowners';
+import type { CodeownersRule } from './codeowners';
 
 /**
  * The CODEOWNERS that covers `root`: its own, or, for a package inside a
  * monorepo, the nearest one above it, read no higher than `within`.
  */
-export async function loadCodeowners(root: string, within = root): Promise<CodeownersRule[]> {
+export async function loadCodeowners(root: string, within = root): Promise<Array<CodeownersRule>> {
   const top = path.resolve(within);
 
   for (let dir = path.resolve(root); ; dir = path.dirname(dir)) {
@@ -26,16 +28,22 @@ export async function loadCodeowners(root: string, within = root): Promise<Codeo
       }
     }
 
-    if (dir === top || !dir.startsWith(top + path.sep)) return [];
+    if (dir === top || !dir.startsWith(top + path.sep)) {
+      return [];
+    }
   }
 }
 
 /** No declared team + a CODEOWNERS match on the defining file → inferred owner. */
-export function inferOwnership(event: AdapterEvent, rules: CodeownersRule[]): void {
-  if (event.meta?.team || rules.length === 0 || !event.source?.file) return;
+export function inferOwnership(event: AdapterEvent, rules: Array<CodeownersRule>): void {
+  if (event.meta?.team || rules.length === 0 || !event.source?.file) {
+    return;
+  }
   const owner = ownerForPath(rules, event.source.file);
 
-  if (!owner) return;
+  if (!owner) {
+    return;
+  }
   event.meta = { ...event.meta, team: owner };
   event.provenance = {
     default: event.provenance?.default ?? 'extracted',
@@ -50,7 +58,7 @@ export function inferOwnership(event: AdapterEvent, rules: CodeownersRule[]): vo
  */
 function satisfies(schema: JsonObject, data: JsonValue): boolean {
   try {
-    return jsonSchemaAjv(jsonSchemaDialect(schema)).validate(schema, data) === true;
+    return jsonSchemaAjv(jsonSchemaDialect(schema)).validate(schema, data);
   } catch {
     return true;
   }
@@ -58,12 +66,18 @@ function satisfies(schema: JsonObject, data: JsonValue): boolean {
 
 /** No example anywhere → generate a deterministic baseline from the schema. */
 export function generateMissingExample(event: AdapterEvent): void {
-  if (event.examples.length > 0) return;
+  if (event.examples.length > 0) {
+    return;
+  }
   const generated = generateExampleFromSchema(event.schema);
 
-  if (!isJsonObject(generated) && !Array.isArray(generated)) return;
+  if (!isJsonObject(generated) && !Array.isArray(generated)) {
+    return;
+  }
 
-  if (!satisfies(event.schema, generated)) return;
+  if (!satisfies(event.schema, generated)) {
+    return;
+  }
 
   const data =
     event.meta?.envelope?.mode === 'structured'
@@ -83,7 +97,7 @@ export function generateMissingExample(event: AdapterEvent): void {
   };
 }
 
-export function enrichEvent(event: AdapterEvent, rules: CodeownersRule[]): void {
+export function enrichEvent(event: AdapterEvent, rules: Array<CodeownersRule>): void {
   inferOwnership(event, rules);
   generateMissingExample(event);
 }
@@ -97,7 +111,7 @@ export interface ProvenanceSummary {
   location: string | null;
   symbol: string | null;
   /** e.g. ['extracted', 'confidence 95%', 'needs review'] */
-  facts: string[];
+  facts: Array<string>;
 }
 
 export function provenanceSummary(frontmatter: EventFrontmatter): ProvenanceSummary {

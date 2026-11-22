@@ -6,10 +6,7 @@ export const DEFAULT_FAVICON = '/favicon.svg';
  * `AUTOCATALOG_SITE_FAVICON`, then the shipped default. Put a file at that
  * path under `public/` to change the artwork without touching config.
  */
-export function resolveFavicon(
-  configured?: string | undefined,
-  env: NodeJS.ProcessEnv = process.env,
-): string {
+export function resolveFavicon(configured?: string, env: NodeJS.ProcessEnv = process.env): string {
   const fromEnv = env.AUTOCATALOG_SITE_FAVICON?.trim();
 
   return configured?.trim() || fromEnv || DEFAULT_FAVICON;

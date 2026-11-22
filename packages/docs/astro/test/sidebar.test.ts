@@ -298,7 +298,12 @@ describe('docsSidebar', () => {
 });
 
 describe('catalogSidebar', () => {
-  const manifest = (id: string, domain: string, producers: string[], consumers: string[]) =>
+  const manifest = (
+    id: string,
+    domain: string,
+    producers: Array<string>,
+    consumers: Array<string>,
+  ) =>
     JSON.stringify({
       spec: 'autocatalog/v2',
       id,
@@ -407,7 +412,7 @@ describe('catalogSidebar', () => {
   });
 
   it('lists the services OpenAPI specs serve, each with its page and its Scalar reference', () => {
-    const api = (repository: string, services: string[], title = repository) => ({
+    const api = (repository: string, services: Array<string>, title = repository) => ({
       repository,
       name: 'openapi',
       file: 'contracts/openapi.json',

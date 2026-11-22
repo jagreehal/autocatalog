@@ -46,7 +46,9 @@ export async function serveMcp(
   request: Request,
   site: string | undefined = import.meta.env.SITE,
 ): Promise<Response> {
-  if (!isPublic() && crossOrigin(request, site)) return new Response(null, { status: 403 });
+  if (!isPublic() && crossOrigin(request, site)) {
+    return new Response(null, { status: 403 });
+  }
 
   let server: McpServer | undefined;
 
@@ -81,7 +83,7 @@ export async function serveMcp(
     await server?.close().catch(() => undefined);
 
     return Response.json(
-      { jsonrpc: '2.0', error: { code: -32603, message: 'Internal server error' }, id: null },
+      { jsonrpc: '2.0', error: { code: -32_603, message: 'Internal server error' }, id: null },
       { status: 500, headers: { ...corsHeaders(), ...PRIVATE } },
     );
   }

@@ -4,11 +4,8 @@ import path from 'node:path';
 import kleur from 'kleur';
 import { findCatalogRoots, loadRepositoryEvents } from 'autocatalog-core';
 import { ignoredDirectory } from '../enrol';
-import {
-  exportToEventCatalog,
-  type EventCatalogPointer,
-  type EventCatalogSource,
-} from '../eventcatalog';
+import { exportToEventCatalog } from '../eventcatalog';
+import type { EventCatalogPointer, EventCatalogSource } from '../eventcatalog';
 
 /**
  * The EventCatalog the site draws its diagrams with. 4.x only: EventCatalog 5
@@ -47,11 +44,13 @@ export const EVENTCATALOG_DIR = 'eventcatalog';
  * reads them: every checkout or package that publishes, through the same
  * loader. A repository that does not load is left out, as the site quarantines it.
  */
-async function eventSources(root: string): Promise<EventCatalogSource[]> {
-  const sources: EventCatalogSource[] = [];
+async function eventSources(root: string): Promise<Array<EventCatalogSource>> {
+  const sources: Array<EventCatalogSource> = [];
 
   for (const { name, dir, nested, duplicateOf } of findCatalogRoots(root)) {
-    if (duplicateOf !== undefined) continue;
+    if (duplicateOf !== undefined) {
+      continue;
+    }
 
     try {
       const events = await loadRepositoryEvents(dir, {
@@ -60,7 +59,9 @@ async function eventSources(root: string): Promise<EventCatalogSource[]> {
         exclude: nested,
       });
 
-      if (events.length > 0) sources.push({ name, events });
+      if (events.length > 0) {
+        sources.push({ name, events });
+      }
     } catch {
       // The site build names the repository and the reason.
     }
@@ -70,7 +71,7 @@ async function eventSources(root: string): Promise<EventCatalogSource[]> {
 }
 
 /** Run quietly, and show the output only when it fails. */
-function run(command: string, args: string[], cwd: string): Promise<void> {
+function run(command: string, args: Array<string>, cwd: string): Promise<void> {
   return new Promise((resolve, reject) => {
     const child = spawn(command, args, {
       cwd,
@@ -85,8 +86,11 @@ function run(command: string, args: string[], cwd: string): Promise<void> {
     child.stderr.on('data', (chunk: Buffer) => (output += chunk));
     child.on('error', reject);
     child.on('exit', (code) => {
-      if (code === 0) resolve();
-      else reject(new Error(`${command} ${args.join(' ')} failed:\n${output.slice(-4000)}`));
+      if (code === 0) {
+        resolve();
+      } else {
+        reject(new Error(`${command} ${args.join(' ')} failed:\n${output.slice(-4000)}`));
+      }
     });
   });
 }
@@ -137,7 +141,7 @@ export async function buildEventCatalog(opts: {
     await run('npm', ['install', '--no-audit', '--no-fund', '--loglevel=error'], project);
   }
 
-  const base = `/${opts.base.replace(/^\/+|\/+$/g, '')}/`.replace(/^\/\/$/, '/');
+  const base = `/${opts.base.replaceAll(/^\/+|\/+$/g, '')}/`.replace(/^\/\/$/, '/');
 
   await fs.writeFile(
     path.join(project, 'eventcatalog.config.js'),
@@ -160,7 +164,9 @@ export async function buildEventCatalog(opts: {
   // Diagrams only: narrative is on the site's own pages, rendered as Markdown.
   const exported = await exportToEventCatalog({ catalogs, catalogDir: project });
 
-  for (const reason of exported.skipped) console.warn(kleur.yellow(`  ! ${reason}`));
+  for (const reason of exported.skipped) {
+    console.warn(kleur.yellow(`  ! ${reason}`));
+  }
 
   const dist = path.join(project, 'dist');
   await fs.rm(dist, { recursive: true, force: true });
@@ -213,14 +219,17 @@ export async function buildEventCatalog(opts: {
  * Every page the site embeds must exist in the copied output, or the iframe is
  * a 404. EventCatalog writes a disabled page as its 404, so that counts too.
  */
-export async function missingEmbeds(out: string, embeds: EventCatalogEmbeds): Promise<string[]> {
+export async function missingEmbeds(
+  out: string,
+  embeds: EventCatalogEmbeds,
+): Promise<Array<string>> {
   const targets = [
     embeds.graph,
     ...Object.values(embeds.events),
     ...Object.values(embeds.services),
   ];
 
-  const missing: string[] = [];
+  const missing: Array<string> = [];
 
   for (const target of targets) {
     const page = await fs.readFile(path.join(out, target, 'index.html'), 'utf8').catch(() => '');

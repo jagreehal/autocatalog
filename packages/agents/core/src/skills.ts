@@ -2,7 +2,8 @@ import { readdir, readFile, realpath } from 'node:fs/promises';
 import { basename, dirname, extname, isAbsolute, join, posix, relative } from 'node:path';
 import { parseFrontmatter } from 'autocatalog-core';
 import { z } from 'zod';
-import { forEachFile, toId, type DiscoveredSource } from './discovery.js';
+import { forEachFile, toId } from './discovery.js';
+import type { DiscoveredSource } from './discovery.js';
 import { discoverMcpServers } from './mcp-config.js';
 
 export const SKILLS_ADAPTER = 'skills';
@@ -15,9 +16,9 @@ export type DiscoveredSkill = {
   /** Filled for a folder of checkouts: the repository it is in. */
   repository?: string | undefined;
   description?: string | undefined;
-  allowed_tools: string[];
+  allowed_tools: Array<string>;
   plugin?: string | undefined;
-  sources: DiscoveredSource[];
+  sources: Array<DiscoveredSource>;
 };
 
 /** A coding-agent plugin: one a repository builds, lists in a marketplace, or turns on. */
@@ -29,17 +30,17 @@ export type DiscoveredPlugin = {
   marketplace?: string | undefined;
   source?: string | undefined;
   path?: string | undefined;
-  skills: string[];
-  agents: string[];
-  commands: string[];
-  hooks: string[];
-  servers: string[];
-  enabled_in: string[];
+  skills: Array<string>;
+  agents: Array<string>;
+  commands: Array<string>;
+  hooks: Array<string>;
+  servers: Array<string>;
+  enabled_in: Array<string>;
   /** Filled for a folder of checkouts: the repository that builds it. */
   repository?: string | undefined;
   /** Filled for a folder of checkouts: the repositories that turn it on. */
-  used_by?: string[] | undefined;
-  sources: DiscoveredSource[];
+  used_by?: Array<string> | undefined;
+  sources: Array<DiscoveredSource>;
 };
 
 export type SkillsDiscoveryOptions = {
@@ -48,10 +49,10 @@ export type SkillsDiscoveryOptions = {
 };
 
 export type SkillsDiscovery = {
-  skills: DiscoveredSkill[];
-  plugins: DiscoveredPlugin[];
-  files: string[];
-  warnings: string[];
+  skills: Array<DiscoveredSkill>;
+  plugins: Array<DiscoveredPlugin>;
+  files: Array<string>;
+  warnings: Array<string>;
 };
 
 const Text = z.string().trim().min(1).optional().catch(undefined);
@@ -166,11 +167,13 @@ const INSTRUCTIONS: Array<{ file: RegExp; format: DiscoveredSkill['format'] }> =
   { file: CURSOR_RULE, format: 'cursor-rule' },
 ];
 
-const sorted = (values: Iterable<string>): string[] => [...new Set(values)].sort();
+const sorted = (values: Iterable<string>): Array<string> => [...new Set(values)].sort();
 
 /** Markdown files directly in a folder, or the file itself. */
-const markdownIn = async (path: string): Promise<string[]> => {
-  if (path.endsWith('.md')) return [path];
+const markdownIn = async (path: string): Promise<Array<string>> => {
+  if (path.endsWith('.md')) {
+    return [path];
+  }
 
   const entries = await readdir(path, { withFileTypes: true }).catch(() => []);
 
@@ -190,7 +193,7 @@ export const discoverSkills = async (
   { perRepository }: SkillsDiscoveryOptions = {},
 ): Promise<SkillsDiscovery> => {
   const files: Array<{ rel: string; abs: string; text: string }> = [];
-  const warnings: string[] = [];
+  const warnings: Array<string> = [];
 
   await forEachFile(
     root,
@@ -228,13 +231,15 @@ export const discoverSkills = async (
   const skillHomes = new Map<string, DiscoveredPlugin>();
 
   // Plugins each repository defines, by name: two repositories may each keep one of a name.
-  const defined = new Map<string, DiscoveredPlugin[]>();
+  const defined = new Map<string, Array<DiscoveredPlugin>>();
 
   const pluginNamed = (name: string, repository?: string): DiscoveredPlugin => {
     const id = repository ? `${toId(repository)}-${toId(name)}` : toId(name);
     const known = plugins.get(id);
 
-    if (known) return known;
+    if (known) {
+      return known;
+    }
 
     const plugin: DiscoveredPlugin = {
       id,
@@ -266,8 +271,9 @@ export const discoverSkills = async (
     const name = manifest.data.name ?? basename(absFolder);
     const plugin = pluginNamed(name, repositoryOf(file.rel));
 
-    if (!defined.get(name)?.includes(plugin))
+    if (!defined.get(name)?.includes(plugin)) {
       defined.set(name, [...(defined.get(name) ?? []), plugin]);
+    }
 
     plugin.description ??= manifest.data.description;
     plugin.version ??= manifest.data.version;
@@ -277,13 +283,15 @@ export const discoverSkills = async (
     folders.set(folder, plugin);
 
     for (const dir of manifest.data.skills) {
-      if (await inside(join(absFolder, dir)))
+      if (await inside(join(absFolder, dir))) {
         skillHomes.set(posix.normalize(posix.join(folder, dir)), plugin);
-      else warnings.push(`${file.rel}: skills path "${dir}" is outside, not read`);
+      } else {
+        warnings.push(`${file.rel}: skills path "${dir}" is outside, not read`);
+      }
     }
 
-    const named = async (dirs: string[], nameOf: (file: string, text: string) => string) => {
-      const out: string[] = [];
+    const named = async (dirs: Array<string>, nameOf: (file: string, text: string) => string) => {
+      const out: Array<string> = [];
 
       for (const dir of dirs) {
         if (!(await inside(join(absFolder, dir)))) {
@@ -322,7 +330,9 @@ export const discoverSkills = async (
 
       const text = await readFile(join(absFolder, hookFile), 'utf8').catch(() => null);
 
-      if (text !== null) events.push(...(parseJson(HookEvents, text).data ?? []));
+      if (text !== null) {
+        events.push(...(parseJson(HookEvents, text).data ?? []));
+      }
     }
 
     plugin.hooks = sorted(events);
@@ -334,7 +344,9 @@ export const discoverSkills = async (
     while (folder !== '.' && folder !== '/') {
       const plugin = folders.get(folder) ?? skillHomes.get(folder);
 
-      if (plugin) return plugin;
+      if (plugin) {
+        return plugin;
+      }
       folder = posix.dirname(folder);
     }
 
@@ -346,7 +358,9 @@ export const discoverSkills = async (
   for (const file of files) {
     const format = INSTRUCTIONS.find(({ file: pattern }) => pattern.test(file.rel))?.format;
 
-    if (!format) continue;
+    if (!format) {
+      continue;
+    }
 
     const data = SkillFrontmatter.parse(parseFrontmatter(file.text).data);
 
@@ -379,7 +393,9 @@ export const discoverSkills = async (
       sources: [{ file: file.rel, line: 1, symbol: name }],
     });
 
-    if (plugin) plugin.skills = sorted([...plugin.skills, id]);
+    if (plugin) {
+      plugin.skills = sorted([...plugin.skills, id]);
+    }
   }
 
   for (const file of files.filter(({ rel }) => MARKETPLACE.test(rel))) {
@@ -393,7 +409,9 @@ export const discoverSkills = async (
     const folder = posix.dirname(posix.dirname(file.rel));
 
     for (const entry of market.data.plugins) {
-      if (!entry?.name) continue;
+      if (!entry?.name) {
+        continue;
+      }
 
       const { source } = entry;
 
@@ -408,7 +426,9 @@ export const discoverSkills = async (
       plugin.description ??= entry.description;
       plugin.version ??= entry.version;
 
-      if (!local && !plugin.path) plugin.source ??= source;
+      if (!local && !plugin.path) {
+        plugin.source ??= source;
+      }
 
       plugin.sources.push({ file: file.rel, line: 1, symbol: entry.name });
     }
@@ -418,7 +438,9 @@ export const discoverSkills = async (
     const settings = parseJson(Settings, file.text);
 
     for (const [key, on] of Object.entries(settings.data?.enabledPlugins ?? {})) {
-      if (!on) continue;
+      if (!on) {
+        continue;
+      }
 
       const at = key.lastIndexOf('@');
       const name = at > 0 ? key.slice(0, at) : key;
@@ -429,7 +451,9 @@ export const discoverSkills = async (
         candidates.find((p) => p.repository === repositoryOf(file.rel)) ??
         (candidates.length === 1 ? candidates[0]! : pluginNamed(name));
 
-      if (at > 0) plugin.marketplace ??= key.slice(at + 1);
+      if (at > 0) {
+        plugin.marketplace ??= key.slice(at + 1);
+      }
       plugin.enabled_in = sorted([...plugin.enabled_in, file.rel]);
       plugin.sources.push({ file: file.rel, line: 1, symbol: key });
     }
@@ -443,7 +467,9 @@ export const discoverSkills = async (
       for (const { file } of server.sources) {
         const plugin = pluginFolderOf(file.split('\\').join('/'));
 
-        if (plugin) plugin.servers = sorted([...plugin.servers, server.id]);
+        if (plugin) {
+          plugin.servers = sorted([...plugin.servers, server.id]);
+        }
       }
     }
   }
@@ -530,7 +556,7 @@ type ScannedField =
   | 'enabled_in';
 
 /** The fields a scan owns, so a rescan rewrites them and nothing a person decided. */
-const SCANNED: Record<SkillKind, ScannedField[]> = {
+const SCANNED: Record<SkillKind, Array<ScannedField>> = {
   skill: ['name', 'format', 'description', 'allowed_tools', 'plugin', 'repository'],
   'agent-plugin': [
     'name',
@@ -554,7 +580,7 @@ const SCANNED: Record<SkillKind, ScannedField[]> = {
 // unasked, a command that runs on an event, a server it can call.
 const GRANTS = new Set<ScannedField>(['allowed_tools', 'hooks', 'servers']);
 
-const discovery = (sources: DiscoveredSource[]) => ({
+const discovery = (sources: Array<DiscoveredSource>) => ({
   confidence: 'inferred',
   adapter: SKILLS_ADAPTER,
   sources,
@@ -618,7 +644,8 @@ export type SkillChange = {
   message: string;
 };
 
-const listOf = (value: SkillEntry[ScannedField]): string[] => (Array.isArray(value) ? value : []);
+const listOf = (value: SkillEntry[ScannedField]): Array<string> =>
+  Array.isArray(value) ? value : [];
 
 /** What a rescan would change in one entry; `before` is absent for a new one, `after` for a gone one. */
 export const skillChanges = (
@@ -626,10 +653,12 @@ export const skillChanges = (
   id: string,
   before: SkillEntry | undefined,
   after: SkillEntry | undefined,
-): SkillChange[] => {
+): Array<SkillChange> => {
   const ref = `${kind}/${id}`;
 
-  if (!after) return [{ severity: 'info', ref, message: 'no longer found' }];
+  if (!after) {
+    return [{ severity: 'info', ref, message: 'no longer found' }];
+  }
 
   if (!before) {
     const grants = SCANNED[kind].filter((key) => GRANTS.has(key) && listOf(after[key]).length > 0);
@@ -643,7 +672,7 @@ export const skillChanges = (
     ];
   }
 
-  const changes: SkillChange[] = [];
+  const changes: Array<SkillChange> = [];
 
   for (const key of SCANNED[kind]) {
     const [was, now] = [before[key], after[key]];

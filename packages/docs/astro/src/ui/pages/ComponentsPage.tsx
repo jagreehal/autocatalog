@@ -20,7 +20,7 @@ import { Icon } from '../components/Icon';
 import type { ComponentRow } from '../../components';
 
 export interface ComponentsPageProps {
-  components: ComponentRow[];
+  components: Array<ComponentRow>;
 }
 
 export function ComponentsPage({ components }: ComponentsPageProps) {

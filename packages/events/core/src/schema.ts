@@ -175,7 +175,9 @@ const DURATION_RE =
 export function durationSeconds(value: string): number | undefined {
   const match = DURATION_RE.exec(value);
 
-  if (!match || value === 'P' || value.endsWith('T')) return undefined;
+  if (!match || value === 'P' || value.endsWith('T')) {
+    return undefined;
+  }
 
   const [days = 0, hours = 0, minutes = 0, seconds = 0] = match
     .slice(1)

@@ -25,16 +25,16 @@ export interface DeliveryRouteView {
   consumer: string;
   environment?: string | undefined;
   /** Producer, exchange, … queue, consumer. */
-  hops: DeliveryHopView[];
+  hops: Array<DeliveryHopView>;
   examples: Array<{
     name: string;
     headers: string;
     outcome: 'reaches' | 'excluded' | 'not evaluated';
   }>;
   /** Where a message the consumer rejects goes. */
-  deadLetter?: { exchange: string; queues: string[] } | undefined;
+  deadLetter?: { exchange: string; queues: Array<string> } | undefined;
   /** What the consumer's queue promises: retention, attempts, consumer group. */
-  facts?: string[] | undefined;
+  facts?: Array<string> | undefined;
 }
 
 export interface DeliveryFindingView {
@@ -44,8 +44,8 @@ export interface DeliveryFindingView {
 }
 
 export interface DeliveryPathProps {
-  routes: DeliveryRouteView[];
-  findings: DeliveryFindingView[];
+  routes: Array<DeliveryRouteView>;
+  findings: Array<DeliveryFindingView>;
   /** False when part of a route was not evaluated. */
   complete: boolean;
 }
@@ -73,7 +73,9 @@ const CONFIDENCE = {
  * committed example does, then what the configuration gets wrong.
  */
 export function DeliveryPath({ routes, findings, complete }: DeliveryPathProps) {
-  if (routes.length === 0 && findings.length === 0) return null;
+  if (routes.length === 0 && findings.length === 0) {
+    return null;
+  }
 
   return (
     <Card id="delivery-path">
@@ -179,13 +181,17 @@ export function DeliveryPath({ routes, findings, complete }: DeliveryPathProps) 
 export default DeliveryPath;
 
 /** A finding's text, with each name it quotes in backticks shown as code. */
-export function withNames(message: string): ReactNode[] {
+export function withNames(message: string): Array<ReactNode> {
   const parts = message.split(/(`+)(.+?)\1/);
 
-  return parts.flatMap((part, i): ReactNode[] => {
-    if (i % 3 === 1) return [];
+  return parts.flatMap((part, i): Array<ReactNode> => {
+    if (i % 3 === 1) {
+      return [];
+    }
 
-    if (i % 3 === 0) return part ? [part] : [];
+    if (i % 3 === 0) {
+      return part ? [part] : [];
+    }
 
     // A fence padded with a space holds a name that starts or ends with a backtick.
     const name = part.startsWith(' ') && part.endsWith(' ') ? part.slice(1, -1) : part;

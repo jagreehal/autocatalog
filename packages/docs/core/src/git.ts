@@ -44,7 +44,9 @@ const remotes = new Map<string, { web: string; prefix: string; branch: string } 
 export function webUrl(remote: string): string | null {
   const ssh = /^git@([^:]+):(.+?)(\.git)?$/.exec(remote);
 
-  if (ssh) return `https://${ssh[1]}/${ssh[2]}`;
+  if (ssh) {
+    return `https://${ssh[1]}/${ssh[2]}`;
+  }
   const https = /^https:\/\/(?:[^@/]+@)?([^/]+)\/(.+?)(\.git)?\/?$/.exec(remote);
 
   return https ? `https://${https[1]}/${https[2]}` : null;
@@ -71,7 +73,7 @@ export function sourceUrl(
     let remote: { web: string; prefix: string; branch: string } | null = null;
 
     try {
-      const run = (args: string[]) =>
+      const run = (args: Array<string>) =>
         execFileSync('git', args, {
           cwd,
           encoding: 'utf8',
@@ -85,7 +87,7 @@ export function sourceUrl(
 
       // The default branch reads like the link a person would share, and it
       // exists on the host even when the build checked out a local branch.
-      const attempt = (args: string[]) => {
+      const attempt = (args: Array<string>) => {
         try {
           return run(args);
         } catch {

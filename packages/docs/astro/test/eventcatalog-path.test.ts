@@ -26,7 +26,7 @@ it('never lets ?at= name anything outside EventCatalog', () => {
     'javascript:alert(1)',
     'eventcatalog/../catalog.json',
     'eventcatalog/./x',
-    'eventcatalog\\..\\x',
+    String.raw`eventcatalog\..\x`,
     'eventcatalog/x?y=1',
     'eventcatalog/x#y',
     'eventcatalog/%2e%2e/catalog.json',

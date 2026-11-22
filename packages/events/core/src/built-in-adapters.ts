@@ -13,7 +13,7 @@ import { conventionDiscoveryAdapter } from './scan-convention';
  * scanned with fewer Adapters than scan, every event only the missing Adapter
  * finds would read as removed on one side and added on the other.
  */
-export const builtInDiscoveryAdapters: DiscoveryAdapter[] = [
+export const builtInDiscoveryAdapters: Array<DiscoveryAdapter> = [
   jsonSchemaDiscoveryAdapter,
   openApiDiscoveryAdapter,
   avroDiscoveryAdapter,

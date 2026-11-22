@@ -4,7 +4,7 @@ interface Node {
   lang?: string | null;
   meta?: string | null;
   value?: string;
-  children?: Node[];
+  children?: Array<Node>;
 }
 
 /** What a fence becomes: raw HTML, or in MDX an element with attributes. */
@@ -32,14 +32,19 @@ function walk(node: Node, mdx: boolean): void {
   for (const [i, child] of (node.children ?? []).entries()) {
     const diagram = mermaidNode(child, mdx);
 
-    if (diagram) node.children![i] = diagram;
-    else walk(child, mdx);
+    if (diagram) {
+      node.children![i] = diagram;
+    } else {
+      walk(child, mdx);
+    }
   }
 }
 
 /** What a ```mermaid fence becomes, or nothing for any other node. */
 export function mermaidNode(child: Node, mdx: boolean): Diagram | undefined {
-  if (child.type !== 'code' || child.lang !== 'mermaid') return undefined;
+  if (child.type !== 'code' || child.lang !== 'mermaid') {
+    return undefined;
+  }
 
   const player = playerAttributes(child);
 
@@ -87,7 +92,9 @@ function playerAttributes({ meta, value }: Node): Record<string, string | null> 
   const narrated = value?.includes('%% narrate') === true;
   const interactive = /\binteractive\b/.test(meta ?? '');
 
-  if (!narrated && !interactive) return undefined;
+  if (!narrated && !interactive) {
+    return undefined;
+  }
 
   return {
     class: 'not-content',
@@ -98,7 +105,7 @@ function playerAttributes({ meta, value }: Node): Record<string, string | null> 
 }
 
 function escape(text: string): string {
-  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  return text.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
 }
 
 /** Pinned, so a page draws the same diagram tomorrow as it did today. */

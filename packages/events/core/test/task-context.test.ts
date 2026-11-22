@@ -1,11 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import {
-  AUTOCATALOG_GRAPH_SPEC,
-  taskContext,
-  type CatalogResource,
-  type JsonObject,
-  type ResourceGraph,
-} from '../src/index';
+import { AUTOCATALOG_GRAPH_SPEC, taskContext } from '../src/index';
+import type { CatalogResource, JsonObject, ResourceGraph } from '../src/index';
 
 const resource = (
   ref: CatalogResource['ref'],
@@ -257,7 +252,7 @@ describe('taskContext evidence strength and completeness', () => {
     id: 'order.placed',
   };
 
-  const consumers: CatalogResource['ref'][] = Array.from({ length: 5 }, (_, index) => ({
+  const consumers: Array<CatalogResource['ref']> = Array.from({ length: 5 }, (_, index) => ({
     kind: 'service',
     id: `Consumer${index}`,
   }));

@@ -1,7 +1,8 @@
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { parseResourceGraph, type ResourceGraph } from 'autocatalog-core';
+import { parseResourceGraph } from 'autocatalog-core';
+import type { ResourceGraph } from 'autocatalog-core';
 import { afterEach, beforeEach, expect, it } from 'vitest';
 import { withCodeowners } from '../src/codeowned';
 

@@ -13,13 +13,7 @@ steps:
   - id: review_api
     title: Review API
     service: Review API
-    next_step:
-      id: review_database
-      label: Store review
-  - id: review_database
-    title: Review Database
-    custom:
-      title: Review Database
+    systems: [Review Database]
     next_step:
       id: review_submitted
       label: Review stored
@@ -52,13 +46,7 @@ steps:
   - id: rating_aggregator
     title: Rating Aggregator
     service: Rating Aggregator
-    next_step:
-      id: rating_cache
-      label: Write aggregate
-  - id: rating_cache
-    title: Rating Cache
-    custom:
-      title: Rating Cache
+    systems: [Rating Cache]
     next_step:
       id: published_outcome
       label: Visible on storefront
@@ -72,6 +60,7 @@ steps:
     custom:
       title: Review rejected
       summary: The review failed moderation. It is kept for audit but never shown on the storefront.
+    policy: Whenever a review fails moderation, keep it for audit and never show it
 ---
 
 ## Overview

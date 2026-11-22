@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { typeLabel } from './diff';
-import { isJsonObject, jsonValueSchema, type JsonObject, type JsonValue } from './json';
+import { isJsonObject, jsonValueSchema } from './json';
+import type { JsonObject, JsonValue } from './json';
 import { derefLocal } from './json-ref';
 import type { LoadedEvent } from './load';
 
@@ -13,8 +14,8 @@ export interface FieldOccurrence {
   required: boolean;
   /** Declared only in some `oneOf`/`anyOf` branches: present for some payload shapes, not others. */
   conditional: boolean;
-  consumers: string[];
-  producers: string[];
+  consumers: Array<string>;
+  producers: Array<string>;
 }
 
 export interface FieldSummary {
@@ -22,13 +23,13 @@ export interface FieldSummary {
   path: string;
   /** Last path segment — what people actually search for. */
   name: string;
-  occurrences: FieldOccurrence[];
+  occurrences: Array<FieldOccurrence>;
   /** Distinct types this field carries across events. */
-  types: string[];
+  types: Array<string>;
   requiredIn: number;
   /** Every service consuming an event that carries this field — the blast radius. */
-  consumers: string[];
-  producers: string[];
+  consumers: Array<string>;
+  producers: Array<string>;
   /** The same field means different things in different events. */
   typeConflict: boolean;
   /** Guaranteed in some events, optional in others — consumers cannot assume it. */
@@ -46,7 +47,9 @@ const labelKeywords = z.object({
 
 function fieldType(child: JsonValue): string {
   // JSON Schema allows `true`/`false` where a schema is expected.
-  if (child === true || child === false) return typeLabel(child);
+  if (child === true || child === false) {
+    return typeLabel(child);
+  }
 
   return isJsonObject(child) ? typeLabel(labelKeywords.parse(child)) : 'unknown';
 }
@@ -58,7 +61,7 @@ interface Entry {
   /** Taken from one `oneOf`/`anyOf` branch, so `child` may not be how the others declare it. */
   branched?: boolean;
   /** Other definitions that apply as well, from `allOf` parts beside this one. */
-  also?: JsonValue[];
+  also?: Array<JsonValue>;
 }
 
 type Entries = Map<string, Entry>;
@@ -97,7 +100,7 @@ function merge(into: Entries, from: Entries): void {
  * as good as unconditional; one only some branches declare is not, and neither
  * is a guarantee only some branches make.
  */
-function either(branches: Entries[]): Entries {
+function either(branches: Array<Entries>): Entries {
   const out: Entries = new Map();
 
   for (const path of new Set(branches.flatMap((b) => [...b.keys()]))) {
@@ -133,7 +136,9 @@ function collect(
 ): Entries {
   const out: Entries = new Map();
 
-  if (!isJsonObject(value)) return out;
+  if (!isJsonObject(value)) {
+    return out;
+  }
 
   // A pointer already followed on this branch is recursion; stop there.
   const pointer = refKeyword.safeParse(value);
@@ -141,7 +146,9 @@ function collect(
   if (pointer.success) {
     const ref = pointer.data.$ref;
 
-    if (refs.has(ref)) return out;
+    if (refs.has(ref)) {
+      return out;
+    }
 
     return collect(root, deref(root, value), prefix, new Set([...refs, ref]));
   }
@@ -174,13 +181,15 @@ function collect(
     const path = prefix ? `${prefix}.${String(key)}` : String(key);
     const entry = out.get(path);
 
-    if (entry) out.set(path, { ...entry, required: true });
+    if (entry) {
+      out.set(path, { ...entry, required: true });
+    }
   }
 
   return out;
 }
 
-const unique = (values: string[]): string[] => [...new Set(values)].sort();
+const unique = (values: Array<string>): Array<string> => [...new Set(values)].sort();
 
 /**
  * Project every scanned schema into a field-level index: one entry per field
@@ -193,8 +202,8 @@ const unique = (values: string[]): string[] => [...new Set(values)].sort();
  * here as "who receives an event that carries it", which is an over-estimate of
  * the blast radius rather than a confident wrong answer.
  */
-export function indexFields(events: LoadedEvent[]): FieldSummary[] {
-  const byPath = new Map<string, FieldOccurrence[]>();
+export function indexFields(events: Array<LoadedEvent>): Array<FieldSummary> {
+  const byPath = new Map<string, Array<FieldOccurrence>>();
 
   for (const event of events) {
     for (const [path, { child, required, conditional }] of collect(
@@ -245,7 +254,7 @@ export function fieldPaths(schema: JsonObject): Set<string> {
 }
 
 /** The field paths a schema marks `deprecated: true`: the fields on their way out. */
-export function deprecatedFields(schema: JsonObject): string[] {
+export function deprecatedFields(schema: JsonObject): Array<string> {
   return [...collect(schema, schema, '', new Set())].flatMap(([path, { child }]) =>
     isJsonObject(child) && child.deprecated === true ? [path] : [],
   );
@@ -253,8 +262,8 @@ export function deprecatedFields(schema: JsonObject): string[] {
 
 /** What a schema lets one field hold: its JSON types, and the values an enum or const allows. */
 export interface FieldConstraint {
-  types?: string[];
-  values?: JsonValue[];
+  types?: Array<string>;
+  values?: Array<JsonValue>;
   format?: string;
 }
 
@@ -278,7 +287,9 @@ export function fieldConstraints(schema: JsonObject): Map<string, FieldConstrain
   const out = new Map<string, FieldConstraint>();
 
   for (const [path, { child, branched, also = [] }] of collect(schema, schema, '', new Set())) {
-    if (branched) continue;
+    if (branched) {
+      continue;
+    }
 
     // Every `allOf` part applies, so a value must pass them all.
     const constraint = [child, ...also]
@@ -292,7 +303,9 @@ export function fieldConstraints(schema: JsonObject): Map<string, FieldConstrain
         {},
       );
 
-    if (constraint.types || constraint.values) out.set(path, constraint);
+    if (constraint.types || constraint.values) {
+      out.set(path, constraint);
+    }
   }
 
   return out;
@@ -311,7 +324,9 @@ function constraintOf(definition: JsonObject): FieldConstraint {
   const types = type === undefined ? [] : [type].flat();
 
   // OpenAPI 3.0 writes "may be null" as `nullable`, not as a type.
-  if (types.length > 0 && nullable) types.push('null');
+  if (types.length > 0 && nullable) {
+    types.push('null');
+  }
 
   return {
     ...(types.length > 0 && { types }),
@@ -322,20 +337,29 @@ function constraintOf(definition: JsonObject): FieldConstraint {
 }
 
 /** The types both definitions allow: `integer` is a `number`, so the two meet at `integer`. */
-function bothTypes(a: string[] | undefined, b: string[] | undefined): string[] {
-  if (!a || !b) return a ?? b ?? [];
+function bothTypes(a: Array<string> | undefined, b: Array<string> | undefined): Array<string> {
+  if (!a || !b) {
+    return a ?? b ?? [];
+  }
 
-  const within = (type: string, of: string[]) =>
+  const within = (type: string, of: Array<string>) =>
     of.includes(type) || (type === 'integer' && of.includes('number'));
 
   return [...new Set([...a.filter((t) => within(t, b)), ...b.filter((t) => within(t, a))])];
 }
 
 /** What both lists allow, where an absent list allows anything. */
-function intersect<T extends JsonValue>(a: T[] | undefined, b: T[] | undefined): T[] {
-  if (!a) return b ?? [];
+function intersect<T extends JsonValue>(
+  a: Array<T> | undefined,
+  b: Array<T> | undefined,
+): Array<T> {
+  if (!a) {
+    return b ?? [];
+  }
 
-  if (!b) return a;
+  if (!b) {
+    return a;
+  }
 
   const keep = new Set(b.map((value) => JSON.stringify(value)));
 
@@ -345,7 +369,7 @@ function intersect<T extends JsonValue>(a: T[] | undefined, b: T[] | undefined):
 const isObjectType = (type: JsonValue | undefined) =>
   type === 'object' || (Array.isArray(type) && type.every((t) => t === 'object'));
 
-const objectArray = (value: JsonValue | undefined): JsonValue[] =>
+const objectArray = (value: JsonValue | undefined): Array<JsonValue> =>
   Array.isArray(value) ? value : [];
 
 /**
@@ -359,25 +383,31 @@ function guaranteedUnder(
   root: JsonObject,
   raw: JsonValue,
   prefix: string,
-  inherited: { object: boolean; properties: JsonObject; required: string[] },
+  inherited: { object: boolean; properties: JsonObject; required: Array<string> },
   refs: ReadonlySet<string>,
 ): Set<string> {
   const pointer = refKeyword.safeParse(raw);
 
-  if (pointer.success && refs.has(pointer.data.$ref)) return new Set();
+  if (pointer.success && refs.has(pointer.data.$ref)) {
+    return new Set();
+  }
 
   const seen = pointer.success ? new Set([...refs, pointer.data.$ref]) : refs;
   const value = deref(root, raw);
 
-  if (!isJsonObject(value)) return new Set();
+  if (!isJsonObject(value)) {
+    return new Set();
+  }
 
   // This schema and every allOf part beneath it, all of which apply at once.
-  const parts: JsonObject[] = [];
+  const parts: Array<JsonObject> = [];
 
   const flatten = (part: JsonValue) => {
     const resolved = deref(root, part);
 
-    if (!isJsonObject(resolved)) return;
+    if (!isJsonObject(resolved)) {
+      return;
+    }
 
     parts.push(resolved);
     objectArray(resolved.allOf).forEach(flatten);
@@ -391,13 +421,14 @@ function guaranteedUnder(
   // A property declared in several places must satisfy all of them, so they combine as allOf.
   const properties: JsonObject = { ...inherited.properties };
 
-  for (const part of parts)
+  for (const part of parts) {
     for (const [key, schema] of Object.entries(
       isJsonObject(part.properties) ? part.properties : {},
     ))
       properties[key] = Object.hasOwn(properties, key)
         ? { allOf: [properties[key]!, schema] }
         : schema;
+  }
 
   const required = [
     ...new Set([
@@ -408,7 +439,7 @@ function guaranteedUnder(
 
   const out = new Set<string>();
 
-  if (object)
+  if (object) {
     for (const key of required) {
       // A required key is present even when nothing declares what it holds.
       const path = prefix ? `${prefix}.${key}` : key;
@@ -424,13 +455,16 @@ function guaranteedUnder(
       ))
         out.add(child);
     }
+  }
 
   for (const branches of parts.flatMap((part) => [part.anyOf, part.oneOf])) {
     const sets = objectArray(branches).map((branch) =>
       guaranteedUnder(root, branch, prefix, { object, properties, required }, seen),
     );
 
-    for (const path of sets[0] ?? []) if (sets.every((set) => set.has(path))) out.add(path);
+    for (const path of sets[0] ?? []) {
+      if (sets.every((set) => set.has(path))) out.add(path);
+    }
   }
 
   return out;
@@ -451,7 +485,7 @@ export function guaranteedFieldPaths(schema: JsonObject): Set<string> {
 }
 
 /** Fields whose path or final segment contains `query`, case-insensitively. */
-export function searchFields(summaries: FieldSummary[], query: string): FieldSummary[] {
+export function searchFields(summaries: Array<FieldSummary>, query: string): Array<FieldSummary> {
   const needle = query.toLowerCase();
 
   return summaries.filter(
@@ -469,9 +503,11 @@ export function hasFieldConflict(field: FieldSummary): boolean {
  * Shared so the CLI, the site and MCP describe a conflict the same way.
  */
 export function describeFieldConflict(field: FieldSummary): string | null {
-  const notes: string[] = [];
+  const notes: Array<string> = [];
 
-  if (field.typeConflict) notes.push(`types differ: ${field.types.join(' | ')}`);
+  if (field.typeConflict) {
+    notes.push(`types differ: ${field.types.join(' | ')}`);
+  }
 
   if (field.requiredConflict) {
     notes.push(`required in ${field.requiredIn}/${field.occurrences.length}`);
@@ -482,9 +518,9 @@ export function describeFieldConflict(field: FieldSummary): string | null {
 
 /** One query path for every surface: search first, then narrow to conflicts. */
 export function queryFields(
-  summaries: FieldSummary[],
+  summaries: Array<FieldSummary>,
   opts: { query?: string; conflictsOnly?: boolean } = {},
-): FieldSummary[] {
+): Array<FieldSummary> {
   const matched = opts.query ? searchFields(summaries, opts.query) : summaries;
 
   return opts.conflictsOnly ? matched.filter(hasFieldConflict) : matched;

@@ -3,11 +3,13 @@ import {
   createRepositoryResource,
   relationshipKey,
   resourceKey,
-  type CatalogRelationship,
-  type CatalogResource,
-  type DocumentCatalogResource,
-  type ResourceGraph,
-  type ResourceRef,
+} from 'autocatalog-core';
+import type {
+  CatalogRelationship,
+  CatalogResource,
+  DocumentCatalogResource,
+  ResourceGraph,
+  ResourceRef,
 } from 'autocatalog-core';
 import { frontmatterSchema } from './frontmatter';
 import type { DocsManifest } from './manifest';
@@ -60,7 +62,7 @@ export interface CreateDocsResourceGraphOptions {
  * is the edge, not the name.
  */
 export function createDocsResourceGraph(
-  docs: Doc[],
+  docs: Array<Doc>,
   manifest: DocsManifest,
   options: CreateDocsResourceGraphOptions = {},
 ): ResourceGraph {
@@ -70,7 +72,9 @@ export function createDocsResourceGraph(
   for (const doc of [...docs].sort((a, b) => a.id.localeCompare(b.id))) {
     const indexed = manifest[doc.id];
 
-    if (!indexed) throw new DocsResourceGraphError(doc.id);
+    if (!indexed) {
+      throw new DocsResourceGraphError(doc.id);
+    }
 
     // Every document here is in the validated manifest, which already
     // refused any document these fields do not parse for.

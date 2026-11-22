@@ -3,11 +3,12 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { eventFrontmatter, type EventFrontmatter } from 'autocatalog-core';
+import { eventFrontmatter } from 'autocatalog-core';
+import type { EventFrontmatter } from 'autocatalog-core';
 import { runFromEventCatalog } from '../src/commands/from-eventcatalog';
 import { runFromAsyncApi } from '../src/commands/from-asyncapi';
 
-const here = path.dirname(fileURLToPath(import.meta.url));
+const here = import.meta.dirname;
 
 const fixtures = path.resolve(here, '../../../../fixtures');
 
@@ -108,7 +109,7 @@ describe('ac from-eventcatalog (executable story: the on-ramp)', () => {
     await fs.mkdir(project, { recursive: true });
     await fs.writeFile(path.join(project, 'autocatalog.consumes.json'), JSON.stringify(authored));
 
-    for (let run = 0; run < 2; run++)
+    for (let run = 0; run < 2; run++) {
       expect(
         await runFromEventCatalog({
           source: path.join(fixtures, 'eventcatalog-sample'),
@@ -117,6 +118,7 @@ describe('ac from-eventcatalog (executable story: the on-ramp)', () => {
           quiet: true,
         }),
       ).toBe(0);
+    }
 
     const file = JSON.parse(
       await fs.readFile(path.join(project, 'autocatalog.consumes.json'), 'utf8'),

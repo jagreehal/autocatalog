@@ -22,7 +22,7 @@ export function flowContext(
   catalog: CatalogSnapshot,
   id?: string,
   company?: string,
-  audience: readonly string[] = [],
+  audience: ReadonlyArray<string> = [],
   graph = catalog.mapGraph,
 ) {
   const repositories = checkouts(catalog, company);

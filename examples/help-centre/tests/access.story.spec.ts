@@ -1,4 +1,5 @@
-import { expect, test, type Browser } from '@playwright/test';
+import { expect, test } from '@playwright/test';
+import type { Browser } from '@playwright/test';
 import { given, story, then, when } from 'executable-stories-playwright';
 
 const GUIDES = {
@@ -12,7 +13,9 @@ const GUIDES = {
 async function readerPage(browser: Browser, reader?: string) {
   const page = await browser.newPage();
 
-  if (reader) await page.goto(`${GUIDES.start}?reader=${reader}`);
+  if (reader) {
+    await page.goto(`${GUIDES.start}?reader=${reader}`);
+  }
 
   return page;
 }

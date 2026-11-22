@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { isJsonObject, type JsonObject, type JsonValue } from './json';
+import { isJsonObject } from './json';
+import type { JsonObject, JsonValue } from './json';
 import { derefLocal } from './json-ref';
 
 /**
@@ -22,7 +23,9 @@ const UNBOUNDED = -Number.MAX_SAFE_INTEGER;
 function numericSample(schema: JsonObject): number {
   const { minimum, exclusiveMinimum } = scalarKeywords.parse(schema);
 
-  if (minimum !== undefined && minimum > UNBOUNDED) return minimum;
+  if (minimum !== undefined && minimum > UNBOUNDED) {
+    return minimum;
+  }
 
   if (exclusiveMinimum !== undefined && exclusiveMinimum > UNBOUNDED) {
     return exclusiveMinimum + 1;
@@ -55,16 +58,20 @@ interface Walk {
   /** The document local references point into. */
   root: JsonObject;
   /** References followed to reach this node, so a cycle stops. */
-  following: string[];
+  following: Array<string>;
   nodes: { left: number };
   depth: number;
 }
 
 /** What a reference points at, or undefined when it cannot or should not be followed. */
 function followRef(ref: string, walk: Walk): JsonValue | undefined {
-  if (walk.following.includes(ref)) return undefined;
+  if (walk.following.includes(ref)) {
+    return undefined;
+  }
 
-  if (ref === '#') return walk.root;
+  if (ref === '#') {
+    return walk.root;
+  }
 
   try {
     return derefLocal(walk.root, { $ref: ref });
@@ -74,7 +81,9 @@ function followRef(ref: string, walk: Walk): JsonValue | undefined {
 }
 
 function sample(schema: JsonObject, walk: Walk): JsonValue {
-  if ((walk.nodes.left -= 1) < 0 || walk.depth > MAX_DEPTH) return null;
+  if ((walk.nodes.left -= 1) < 0 || walk.depth > MAX_DEPTH) {
+    return null;
+  }
 
   const { $ref: ref } = reference.parse(schema);
 
@@ -85,13 +94,21 @@ function sample(schema: JsonObject, walk: Walk): JsonValue {
     });
   }
 
-  if (schema.const !== undefined) return schema.const;
+  if (schema.const !== undefined) {
+    return schema.const;
+  }
 
-  if (schema.default !== undefined) return schema.default;
+  if (schema.default !== undefined) {
+    return schema.default;
+  }
 
-  if (Array.isArray(schema.examples) && schema.examples.length > 0) return schema.examples[0]!;
+  if (Array.isArray(schema.examples) && schema.examples.length > 0) {
+    return schema.examples[0]!;
+  }
 
-  if (Array.isArray(schema.enum) && schema.enum.length > 0) return schema.enum[0]!;
+  if (Array.isArray(schema.enum) && schema.enum.length > 0) {
+    return schema.enum[0]!;
+  }
 
   // `.nullable()` writes the real type first, so the first branch is the useful
   // one. Beside a type of its own, a branch only narrows it.
@@ -129,7 +146,9 @@ function sample(schema: JsonObject, walk: Walk): JsonValue {
 
       const sampled = format ? FORMAT_SAMPLES.get(format) : undefined;
 
-      if (sampled) return sampled;
+      if (sampled) {
+        return sampled;
+      }
       const target = Math.min(Math.max('string'.length, min), max);
 
       return 'string'.repeat(Math.ceil(target / 6)).slice(0, target) || 's'.repeat(min || 1);
@@ -145,7 +164,9 @@ function sample(schema: JsonObject, walk: Walk): JsonValue {
       return null;
     default:
       // no type: prefer object-ish if properties exist
-      if (schema.properties) return sample({ ...schema, type: 'object' }, walk);
+      if (schema.properties) {
+        return sample({ ...schema, type: 'object' }, walk);
+      }
 
       return null;
   }

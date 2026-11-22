@@ -1,9 +1,11 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { z } from 'zod';
-import { parseAdapterEventMeta, type AdapterEvent } from './adapter-event';
+import { parseAdapterEventMeta } from './adapter-event';
+import type { AdapterEvent } from './adapter-event';
 import { compareSemverish } from './drift';
-import { isJsonObject, jsonObjectSchema, type JsonObject, type JsonValue } from './json';
+import { isJsonObject, jsonObjectSchema } from './json';
+import type { JsonObject, JsonValue } from './json';
 import { rewriteObjectRefs } from './json-ref';
 import type {
   DiscoverResult,
@@ -58,11 +60,15 @@ const conventionsFile = z.looseObject({ sources: conventionSourcesSchema.default
  */
 const compile = (template: string): RegExp => {
   const parts = template.split(PLACEHOLDER).map((part) => {
-    if (part === '{id}') return '(?<id>.+)';
+    if (part === '{id}') {
+      return '(?<id>.+)';
+    }
 
-    if (part === '{version}') return String.raw`(?<version>\d+(?:\.\d+){0,2})`;
+    if (part === '{version}') {
+      return String.raw`(?<version>\d+(?:\.\d+){0,2})`;
+    }
 
-    return part.replace(/[.*+?^${}()|[\]\\/-]/g, String.raw`\$&`);
+    return part.replaceAll(/[.*+?^${}()|[\]\\/-]/g, String.raw`\$&`);
   });
 
   return new RegExp(`^${parts.join('')}$`);
@@ -82,7 +88,9 @@ const unwrapNamed = (schema: JsonObject, key: string): JsonObject => {
   const written = `#/definitions/${key}`;
   const { [key]: body, ...others } = isJsonObject(definitions) ? definitions : {};
 
-  if ($ref !== written || !isJsonObject(body)) return schema;
+  if ($ref !== written || !isJsonObject(body)) {
+    return schema;
+  }
 
   const lifted = { ...rest, ...body };
 
@@ -114,7 +122,7 @@ const eventFromEntry = (
   const event: AdapterEvent = {
     id,
     version: version ? fullVersion(version) : '0.1.0',
-    name: title ?? pascalCase(id).replace(/([a-z])([A-Z])/g, '$1 $2'),
+    name: title ?? pascalCase(id).replaceAll(/([a-z])([A-Z])/g, '$1 $2'),
     summary: description ?? `Read from ${file} by a convention.`,
     domain: source.domain,
     folderName,
@@ -164,7 +172,9 @@ const readSource = async (
         maxFileBytes: limits?.maxFileBytes,
       });
     } catch (error) {
-      if (!(error instanceof ResourceReadError)) throw error;
+      if (!(error instanceof ResourceReadError)) {
+        throw error;
+      }
 
       result.errors.push(error.message);
       continue;
@@ -199,20 +209,27 @@ const readSource = async (
  * The catalog keeps one current version of an event, so choose it here: left to
  * the merge, equal confidence would settle it by name and publish the oldest.
  */
-const keepNewest = ({ candidates, skipped }: Required<DiscoverResult>): DiscoveryCandidate[] => {
+const keepNewest = ({
+  candidates,
+  skipped,
+}: Required<DiscoverResult>): Array<DiscoveryCandidate> => {
   const newest = new Map<string, DiscoveryCandidate>();
 
   for (const candidate of candidates) {
     const { id, version } = candidate.event;
     const kept = newest.get(id);
 
-    if (!kept || compareSemverish(version, kept.event.version) > 0) newest.set(id, candidate);
+    if (!kept || compareSemverish(version, kept.event.version) > 0) {
+      newest.set(id, candidate);
+    }
   }
 
   return candidates.filter((candidate) => {
     const kept = newest.get(candidate.event.id)!;
 
-    if (kept === candidate) return true;
+    if (kept === candidate) {
+      return true;
+    }
 
     const relation = candidate.event.version === kept.event.version ? 'repeats' : 'is older than';
 
@@ -228,7 +245,7 @@ const keepNewest = ({ candidates, skipped }: Required<DiscoverResult>): Discover
  * The files a repository's own conventions file reads, for looking them up in
  * its history. Unreadable or invalid is none: discovery reports that, not this.
  */
-export const conventionFiles = async (root: string): Promise<string[]> => {
+export const conventionFiles = async (root: string): Promise<Array<string>> => {
   const value = await readOptionalResourceJson(path.join(root, CONVENTIONS_PATH), { root }).catch(
     () => undefined,
   );
@@ -257,7 +274,9 @@ export const conventionDiscoveryAdapter: DiscoveryAdapter = {
       return result;
     }
 
-    if (value === undefined) return result;
+    if (value === undefined) {
+      return result;
+    }
 
     const parsed = conventionsFile.safeParse(value);
 
@@ -267,7 +286,9 @@ export const conventionDiscoveryAdapter: DiscoveryAdapter = {
       return result;
     }
 
-    for (const source of parsed.data.sources) await readSource(source, context, result);
+    for (const source of parsed.data.sources) {
+      await readSource(source, context, result);
+    }
 
     return { ...result, candidates: keepNewest(result) };
   },

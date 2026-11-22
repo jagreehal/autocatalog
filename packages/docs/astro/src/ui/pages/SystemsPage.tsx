@@ -20,7 +20,7 @@ import { Icon } from '../components/Icon';
 import type { SystemRow } from '../../systems';
 
 export interface SystemsPageProps {
-  systems: SystemRow[];
+  systems: Array<SystemRow>;
 }
 
 export function SystemsPage({ systems }: SystemsPageProps) {

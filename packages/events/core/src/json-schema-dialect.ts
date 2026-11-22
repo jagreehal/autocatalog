@@ -18,9 +18,13 @@ export function jsonSchemaDialect(
 ): JsonSchemaDialect {
   const declared = String(schema.$schema ?? '');
 
-  if (/draft-0[67]/.test(declared)) return 'draft-07';
+  if (/draft-0[67]/.test(declared)) {
+    return 'draft-07';
+  }
 
-  if (declared.includes('2019-09')) return '2019-09';
+  if (declared.includes('2019-09')) {
+    return '2019-09';
+  }
 
   return declared.includes('2020-12') ? '2020-12' : fallback;
 }

@@ -54,12 +54,12 @@ export interface KindIndexPageProps {
   /** The frontmatter fields the organisation shows for this kind, in order. */
   columns: Array<{ field: string; heading: string }>;
   /** Newest first by the kind's date field. */
-  rows: KindRow[];
+  rows: Array<KindRow>;
   /** The states present, in the order the kind's schema lists them. */
-  statuses: string[];
-  repositories: string[];
+  statuses: Array<string>;
+  repositories: Array<string>;
   /** Each line of succession, oldest first. Empty for a kind nothing supersedes. */
-  chains: KindChainLink[][];
+  chains: Array<KindChainLink>[];
 }
 
 const plural = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
@@ -81,7 +81,7 @@ function Filter({
   onChange,
 }: {
   label: string;
-  values: string[];
+  values: Array<string>;
   counts: Map<string, number>;
   total: number;
   /** Undefined for All. */
@@ -130,7 +130,9 @@ const keyOf = (value: string) => `value:${value}`;
 function tally(values: Array<string | undefined>): Map<string, number> {
   const counts = new Map<string, number>();
 
-  for (const value of values) if (value) counts.set(value, (counts.get(value) ?? 0) + 1);
+  for (const value of values) {
+    if (value) counts.set(value, (counts.get(value) ?? 0) + 1);
+  }
 
   return counts;
 }
@@ -312,7 +314,9 @@ function Cell({ cell }: { cell: KindCell | null }) {
     );
   }
 
-  if (cell.status) return <Badge variant={statusVariant(cell.text)}>{cell.text}</Badge>;
+  if (cell.status) {
+    return <Badge variant={statusVariant(cell.text)}>{cell.text}</Badge>;
+  }
 
   if (cell.href) {
     return (

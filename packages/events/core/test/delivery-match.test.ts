@@ -30,18 +30,18 @@ describe('topicMatches', () => {
 
 describe('RabbitMQ patterns', () => {
   it('evaluates up to two stars and 255 characters, and nothing past them', () => {
-    expect(rabbitPatternMatches('^ledger\\..*$', 'ledger.payments')).toBe(true);
+    expect(rabbitPatternMatches(String.raw`^ledger\..*$`, 'ledger.payments')).toBe(true);
     expect(safePattern('a.*b.*c.*')).toBeUndefined();
     expect(safePattern('a'.repeat(256))).toBeUndefined();
     expect(rabbitPatternMatches('^a.*b.*$', 'a'.repeat(256))).toBeUndefined();
   });
 
   it('evaluates only escapes PCRE and JavaScript read the same way', () => {
-    expect(rabbitPatternMatches('^ledger\\.payments$', 'ledger.payments')).toBe(true);
-    expect(rabbitPatternMatches('^ledger\\\\x$', 'ledger\\x')).toBe(true);
+    expect(rabbitPatternMatches(String.raw`^ledger\.payments$`, 'ledger.payments')).toBe(true);
+    expect(rabbitPatternMatches(String.raw`^ledger\\x$`, String.raw`ledger\x`)).toBe(true);
     // An anchor in PCRE, the letter A in JavaScript.
-    expect(rabbitPatternMatches('\\Aledger', 'ledger')).toBeUndefined();
-    expect(rabbitPatternMatches('ledger\\Z', 'ledger')).toBeUndefined();
+    expect(rabbitPatternMatches(String.raw`\Aledger`, 'ledger')).toBeUndefined();
+    expect(rabbitPatternMatches(String.raw`ledger\Z`, 'ledger')).toBeUndefined();
   });
 });
 

@@ -1,6 +1,7 @@
 /** @jsxImportSource react */
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { ServicesPage, type ServicesPageRow } from './ServicesPage';
+import { ServicesPage } from './ServicesPage';
+import type { ServicesPageRow } from './ServicesPage';
 
 const orders: ServicesPageRow = {
   name: 'orders-api',
@@ -53,7 +54,21 @@ export const ApisOnly: Story = {
   },
 };
 
-/** More than a cell shows: the rest are on the service's page. */
+/** Forty services: 25 a page, sortable by name, domain, owner or how much each sends and receives. */
+export const Many: Story = {
+  args: {
+    services: Array.from({ length: 40 }, (_, index) => ({
+      ...orders,
+      name: `service-${String(index + 1).padStart(2, '0')}`,
+      href: `/services/service-${index + 1}/`,
+      owner: index % 4 === 0 ? undefined : orders.owner,
+      domains: [['orders', 'payments', 'shipping'][index % 3]!],
+      sends: orders.sends.slice(0, index % 3),
+    })),
+  },
+};
+
+/** A service that sends six events: the row counts them and opens to all six. */
 export const Busy: Story = {
   args: {
     services: [

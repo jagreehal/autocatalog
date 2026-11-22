@@ -1,12 +1,8 @@
 /** @jsxImportSource react */
 import '@eventcatalog/visualiser/styles-core.css';
 import '@eventcatalog/visualiser/studio.css';
-import {
-  canvasToModel,
-  getNodeDefinition,
-  modelToCanvas,
-  type ModelCanvasContent,
-} from '@eventcatalog/visualiser/studio';
+import { canvasToModel, getNodeDefinition, modelToCanvas } from '@eventcatalog/visualiser/studio';
+import type { ModelCanvasContent } from '@eventcatalog/visualiser/studio';
 import type { Model } from '@eventcatalog/visualiser/model';
 import type { Edge } from '@xyflow/react';
 import type { DesignReview } from 'autocatalog-docs-core';
@@ -17,18 +13,12 @@ import { Alert, AlertAction, AlertDescription, AlertTitle } from '#ui/components
 import { Badge } from '#ui/components/ui/badge.tsx';
 import { Button, LinkButton } from '#ui/components/ui/button.tsx';
 import { Kbd } from '#ui/components/ui/kbd.tsx';
-import {
-  DESIGN_CHANGED,
-  designCheck,
-  openedDesign,
-  type CanvasModel,
-  type DesignCheck,
-} from '../lib/canvas-model';
-import { edgeWeight, type EdgeEvidence } from '../lib/visualiser';
-import {
-  StudioCanvas,
-  type CanvasSnapshot,
-} from '../vendor/eventcatalog-studio/studio/StudioCanvas';
+import { DESIGN_CHANGED, designCheck, openedDesign } from '../lib/canvas-model';
+import type { CanvasModel, DesignCheck } from '../lib/canvas-model';
+import { edgeWeight } from '../lib/visualiser';
+import type { EdgeEvidence } from '../lib/visualiser';
+import { StudioCanvas } from '../vendor/eventcatalog-studio/studio/StudioCanvas';
+import type { CanvasSnapshot } from '../vendor/eventcatalog-studio/studio/StudioCanvas';
 
 export interface DesignStudioProps {
   title: string;
@@ -79,7 +69,9 @@ const withoutPlaceholder =
       definition?.resourceKey &&
       placeholderOf.safeParse(made?.[definition.resourceKey]).data?.summary;
 
-    if (!placeholder || resource.summary !== placeholder) return resource;
+    if (!placeholder || resource.summary !== placeholder) {
+      return resource;
+    }
 
     const { summary: _, ...rest } = resource;
 
@@ -101,7 +93,7 @@ const edge = (id: string) => `[data-testid="rf__edge-${CSS.escape(id)}"]`;
  * often. Studio renders its own nodes and edges, so the marks go on their
  * elements by id, and again whenever it draws them anew.
  */
-function markCanvas(root: HTMLElement, review: DesignReview | undefined, edges: Edge[]) {
+function markCanvas(root: HTMLElement, review: DesignReview | undefined, edges: Array<Edge>) {
   for (const marked of root.querySelectorAll<HTMLElement>('[data-ac-proposed]')) {
     delete marked.dataset.acProposed;
   }
@@ -110,12 +102,16 @@ function markCanvas(root: HTMLElement, review: DesignReview | undefined, edges: 
     delete marked.dataset.acEvidence;
   }
 
-  if (!review) return;
+  if (!review) {
+    return;
+  }
 
   for (const { id } of review.added) {
     const element = root.querySelector<HTMLElement>(node(id));
 
-    if (element) element.dataset.acProposed = '';
+    if (element) {
+      element.dataset.acProposed = '';
+    }
   }
 
   const evidence = new Map(
@@ -133,7 +129,9 @@ function markCanvas(root: HTMLElement, review: DesignReview | undefined, edges: 
 
     const element = root.querySelector<SVGElement>(edge(id));
 
-    if (!seen || !element) continue;
+    if (!seen || !element) {
+      continue;
+    }
 
     element.dataset.acEvidence = seen.state;
     element.style.setProperty('--ac-edge-weight', String(edgeWeight(seen)));
@@ -147,7 +145,7 @@ const RAN: Record<EdgeEvidence['state'], (count: number) => string> = {
     `ran ${count} ${count === 1 ? 'time' : 'times'}, though nobody declared it`,
 };
 
-const sentence = (names: string[]) =>
+const sentence = (names: Array<string>) =>
   names.length <= 1 ? (names[0] ?? '') : `${names.slice(0, -1).join(', ')} and ${names.at(-1)}`;
 
 /**
@@ -168,7 +166,7 @@ export function DesignStudio({
 
   // The model the canvas opened with: what it changes are changes to.
   const [model, setModel] = useState<Model>(opened);
-  const [edges, setEdges] = useState<Edge[]>([]);
+  const [edges, setEdges] = useState<Array<Edge>>([]);
 
   // The file changed on disk while the canvas had changes of its own.
   const [changedOnDisk, setChangedOnDisk] = useState(false);
@@ -243,14 +241,21 @@ export function DesignStudio({
   useEffect(() => {
     const hot = import.meta.hot;
 
-    if (!hot) return;
+    if (!hot) {
+      return;
+    }
 
     const onChanged = ({ file, by }: { file: string; by?: string }) => {
       // This tab's own save is on its canvas already; another tab's is news here.
-      if (file !== watchFile || by === tab) return;
+      if (file !== watchFile || by === tab) {
+        return;
+      }
 
-      if (statusNow.current === 'saved') void load();
-      else setChangedOnDisk(true);
+      if (statusNow.current === 'saved') {
+        void load();
+      } else {
+        setChangedOnDisk(true);
+      }
     };
 
     hot.on(DESIGN_CHANGED, onChanged);
@@ -271,7 +276,9 @@ export function DesignStudio({
 
       const result = designCheck.parse(await response.json());
 
-      if (sent !== revision.current) return { result, current: false };
+      if (sent !== revision.current) {
+        return { result, current: false };
+      }
 
       setCheck(result);
 
@@ -287,7 +294,9 @@ export function DesignStudio({
     const answer = await send(true).catch(() => undefined);
 
     // Changed while saving: what was written is not what is on the canvas now.
-    if (answer && !answer.current) return;
+    if (answer && !answer.current) {
+      return;
+    }
 
     setStatus(answer?.result.ok ? 'saved' : 'failed');
   }, [send]);
@@ -329,7 +338,9 @@ export function DesignStudio({
 
   // Leaving with unsaved changes asks first.
   useEffect(() => {
-    if (status !== 'unsaved' && status !== 'failed') return;
+    if (status !== 'unsaved' && status !== 'failed') {
+      return;
+    }
     const onBeforeUnload = (event: BeforeUnloadEvent) => event.preventDefault();
 
     window.addEventListener('beforeunload', onBeforeUnload);
@@ -343,7 +354,9 @@ export function DesignStudio({
   useEffect(() => {
     const root = canvas.current;
 
-    if (!root) return;
+    if (!root) {
+      return;
+    }
 
     markCanvas(root, review, edges);
 

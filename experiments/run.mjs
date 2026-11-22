@@ -8,7 +8,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const HERE = path.dirname(fileURLToPath(import.meta.url));
+const HERE = import.meta.dirname;
 
 const CLI = path.join(HERE, '..', 'packages/events/cli/dist/bin.js');
 
@@ -71,7 +71,9 @@ function commitAll(cwd, message) {
 /** Replace a work tree's files (not .git) with `source`, skipping `.history`. */
 function replaceTree(source, dest) {
   for (const entry of fs.readdirSync(dest)) {
-    if (entry !== '.git') fs.rmSync(path.join(dest, entry), { recursive: true, force: true });
+    if (entry !== '.git') {
+      fs.rmSync(path.join(dest, entry), { recursive: true, force: true });
+    }
   }
 
   fs.cpSync(source, dest, { recursive: true, filter: (src) => path.basename(src) !== '.history' });
@@ -133,7 +135,9 @@ function buildSite(args, opts) {
     env: { AUTOCATALOG_DOCS_LINKS: 'error', ...opts?.env },
   });
 
-  if (result.code !== 0) console.log(result.out.split('\n').slice(-40).join('\n'));
+  if (result.code !== 0) {
+    console.log(result.out.split('\n').slice(-40).join('\n'));
+  }
 
   return result;
 }
@@ -213,7 +217,7 @@ function freshRepo(dir, tmp) {
   // The optional step: a scan, for contracts outside contracts/. It writes the
   // catalog and nothing else, and says what to do with it.
   const scan = ac(['.'], { cwd: repo });
-  console.log(scan.out.trim().replace(/^/gm, '        '));
+  console.log(scan.out.trim().replaceAll(/^/gm, '        '));
   check('`ac .` (scan) exits 0 and finds the event', () => {
     assert.equal(scan.code, 0);
     assert.match(scan.out, /1 events?/);
@@ -267,7 +271,7 @@ function breakingChange(dir, tmp) {
         env: { GITHUB_STEP_SUMMARY: summary },
       });
 
-      console.log(drift.out.trim().replace(/^/gm, '        | '));
+      console.log(drift.out.trim().replaceAll(/^/gm, '        | '));
       check(`${format}: exit code ${expect.exit}`, () => assert.equal(drift.code, expect.exit));
 
       for (const [claim, pattern] of Object.entries(expect[format] ?? {})) {
@@ -297,11 +301,11 @@ function pageText(site, page) {
   const main = html.match(/<main[\s\S]*<\/main>/)?.[0] ?? html;
 
   return main
-    .replace(/<(script|style)[\s\S]*?<\/\1>/g, '')
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/&#39;/g, "'")
-    .replace(/&amp;/g, '&')
-    .replace(/\s+/g, ' ');
+    .replaceAll(/<(script|style)[\s\S]*?<\/\1>/g, '')
+    .replaceAll(/<[^>]+>/g, ' ')
+    .replaceAll('&#39;', "'")
+    .replaceAll('&amp;', '&')
+    .replaceAll(/\s+/g, ' ');
 }
 
 /**
@@ -332,7 +336,9 @@ function multiRepo(dir, tmp) {
     check(`\`ac site <root>\` fails, showing ${expect.buildFails.join(' · ')}`, () => {
       assert.notEqual(build.code, 0);
 
-      for (const pattern of expect.buildFails) assert.match(build.out, new RegExp(pattern));
+      for (const pattern of expect.buildFails) {
+        assert.match(build.out, new RegExp(pattern));
+      }
     });
 
     return;
@@ -343,7 +349,9 @@ function multiRepo(dir, tmp) {
     () => assert.equal(build.code, 0),
   );
 
-  if (build.code !== 0) return;
+  if (build.code !== 0) {
+    return;
+  }
 
   const catalog = catalogJson(site);
   check("each repository's commit SHA is in catalog.json", () => {
@@ -365,15 +373,18 @@ function multiRepo(dir, tmp) {
     // Exact: each quarantine is said once per build.
     assert.deepEqual(warned, quarantined);
 
-    for (const name of quarantined) assert.match(pageText(site, 'catalog'), new RegExp(name));
+    for (const name of quarantined) {
+      assert.match(pageText(site, 'catalog'), new RegExp(name));
+    }
   });
 
   for (const [page, texts] of Object.entries(expect.pages)) {
     check(`/${page}/ shows ${texts.join(' · ')}`, () => {
       const text = pageText(site, page);
 
-      for (const wanted of texts)
+      for (const wanted of texts) {
         assert.ok(text.includes(wanted), `"${wanted}" not on /${page}/:\n${text.slice(0, 1500)}`);
+      }
     });
   }
 
@@ -476,7 +487,7 @@ function messageContracts(dir, tmp) {
   });
 
   const scan = ac(['.'], { cwd: repo });
-  console.log(scan.out.trim().replace(/^/gm, '        '));
+  console.log(scan.out.trim().replaceAll(/^/gm, '        '));
   const manifest = path.join(repo, 'events/payments/PaymentCaptured/autocatalog.json');
 
   check('`ac .` exits 0 and catalogs the approved file, with its sidecar metadata', () => {
@@ -546,14 +557,16 @@ function ecPages(project) {
 
     const id = fs.readFileSync(file, 'utf8').match(/^id: ['"]?([^'"\n]+)/m)?.[1];
 
-    if (id) pages[id] = file;
+    if (id) {
+      pages[id] = file;
+    }
   }
 
   return pages;
 }
 
 /** How autotel-eventcatalog matches ids: `order.placed` is `OrderPlaced`. */
-const normal = (id) => id.toLowerCase().replace(/[._\-\s]/g, '');
+const normal = (id) => id.toLowerCase().replaceAll(/[._\-\s]/g, '');
 
 /** The ids in a frontmatter list such as a service's `receives`, or an event's `owners`. */
 function frontmatterList(file, key) {
@@ -664,7 +677,9 @@ function fullPipeline(dir, tmp) {
     assert.ok(fs.existsSync(snapshotFile));
   });
 
-  if (tests.code !== 0) return;
+  if (tests.code !== 0) {
+    return;
+  }
   const snapshot = JSON.parse(fs.readFileSync(snapshotFile, 'utf8'));
   const baselineSnapshot = path.join(tmp, 'snapshot.json');
   fs.copyFileSync(snapshotFile, baselineSnapshot);
@@ -699,7 +714,9 @@ function fullPipeline(dir, tmp) {
     assert.equal(first.code, 0),
   );
 
-  if (first.code !== 0) return;
+  if (first.code !== 0) {
+    return;
+  }
   const placedPage = 'events/orders-service/orders/order.placed';
   check(`/${placedPage}/ shows the runtime evidence the snapshot holds`, () => {
     const text = pageText(site, placedPage);
@@ -732,7 +749,7 @@ function fullPipeline(dir, tmp) {
   // 4. autotel stamps the exported EventCatalog project.
   const pages = ecPages(project);
   const stamp = autotelEc(['stamp', '--snapshot', baselineSnapshot, '--catalog', project]);
-  console.log(stamp.out.trim().replace(/^/gm, '        | '));
+  console.log(stamp.out.trim().replaceAll(/^/gm, '        | '));
   const stampedPage = () => fs.readFileSync(pages['order.placed'], 'utf8');
   check(
     '`autotel-eventcatalog stamp` writes runtime evidence into the exported order.placed page',
@@ -756,7 +773,7 @@ function fullPipeline(dir, tmp) {
     const built = filesUnder(path.join(site, 'eventcatalog')).filter(
       (file) =>
         file.endsWith('.html') &&
-        /Observed in autotel snapshot/.test(fs.readFileSync(file, 'utf8')),
+        fs.readFileSync(file, 'utf8').includes('Observed in autotel snapshot'),
     );
 
     assert.ok(
@@ -812,7 +829,7 @@ function fullPipeline(dir, tmp) {
     });
 
   const markdown = acDrift('--format', 'markdown');
-  console.log(markdown.out.trim().replace(/^/gm, '        | '));
+  console.log(markdown.out.trim().replaceAll(/^/gm, '        | '));
   const report = JSON.parse(acDrift('--format', 'json').out);
   const gated = acDrift('--fail-on', 'suspicious', '--quiet');
   const drift = autotelDrift(snapshotFile);

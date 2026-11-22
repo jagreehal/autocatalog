@@ -20,7 +20,9 @@ export interface ResourceLinksProps {
 
 /** A card of links; nothing at all when there are none. */
 export function ResourceLinks({ id, heading, links }: ResourceLinksProps) {
-  if (links.length === 0) return null;
+  if (links.length === 0) {
+    return null;
+  }
 
   return (
     <div className="not-content">

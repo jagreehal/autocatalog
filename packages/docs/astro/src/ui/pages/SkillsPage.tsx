@@ -29,7 +29,7 @@ const FORMAT: Record<SkillRow['format'], string> = {
 
 const link = 'text-foreground underline-offset-4 hover:underline';
 
-const Links = ({ items }: { items: SkillLink[] }) =>
+const Links = ({ items }: { items: Array<SkillLink> }) =>
   items.length === 0 ? (
     '—'
   ) : (
@@ -46,7 +46,7 @@ const Links = ({ items }: { items: SkillLink[] }) =>
     </span>
   );
 
-const Codes = ({ items }: { items: string[] }) =>
+const Codes = ({ items }: { items: Array<string> }) =>
   items.length === 0 ? (
     '—'
   ) : (
@@ -76,7 +76,7 @@ const Title = ({
   </>
 );
 
-const Owners = ({ owners, needsReview }: { owners: string[]; needsReview: boolean }) => (
+const Owners = ({ owners, needsReview }: { owners: Array<string>; needsReview: boolean }) => (
   <>
     {owners.join(', ') || '—'} {needsReview && <Badge variant="outline">Needs review</Badge>}
   </>

@@ -14,8 +14,8 @@ import {
   emptyResourceGraph,
   datastoreOwnership,
   discoverTraceResources,
-  type ResourceGraph,
 } from 'autocatalog-core';
+import type { ResourceGraph } from 'autocatalog-core';
 
 let root: string;
 
@@ -439,7 +439,7 @@ describe('documentation catalog projection', () => {
     await writeEvent();
     const repo = path.join(root, 'payments-service');
 
-    const git = (...args: string[]) =>
+    const git = (...args: Array<string>) =>
       execFileSync('git', args, { cwd: repo, encoding: 'utf8' }).trim();
 
     git('init', '-q');
@@ -629,7 +629,7 @@ describe('packages inside a monorepo', () => {
 });
 
 describe('agents linked to events across repositories', () => {
-  async function writeConsumingAgent(consumes: string[]): Promise<void> {
+  async function writeConsumingAgent(consumes: Array<string>): Promise<void> {
     await write(
       'ledger-agents/models/fast-model.yaml',
       [
@@ -702,7 +702,7 @@ describe('agents linked to events across repositories', () => {
 });
 
 describe('services consuming events across repositories', () => {
-  const declare = (consumes: Array<{ service: string; event: string; fields?: string[] }>) =>
+  const declare = (consumes: Array<{ service: string; event: string; fields?: Array<string> }>) =>
     write('ledger/autocatalog.consumes.json', JSON.stringify({ consumes }));
 
   it('draws the edge from the event another repository publishes, with the fields it reads', async () => {
@@ -724,7 +724,9 @@ describe('services consuming events across repositories', () => {
     // The event's page lists it, linked to its entry since it has no page of its own.
     const [entry] = catalog.events;
 
-    if (!entry) throw new Error('the event did not publish');
+    if (!entry) {
+      throw new Error('the event did not publish');
+    }
     const { repository, event } = entry;
 
     expect(eventParticipants(catalog, repository, event).consumers).toEqual([
@@ -765,7 +767,9 @@ describe('services consuming events across repositories', () => {
     // LedgerService is on the page already, from the manifest; only FraudService is added.
     const [entry] = catalog.events;
 
-    if (!entry) throw new Error('the event did not publish');
+    if (!entry) {
+      throw new Error('the event did not publish');
+    }
     const { repository, event } = entry;
 
     expect(eventParticipants(catalog, repository, event).consumers.map((c) => c.label)).toEqual([
@@ -880,7 +884,9 @@ describe('resource graphs from several repositories', () => {
     const collection = architectureResource(statements);
     collection.provenance = { default: 'extracted', fields: {} };
 
-    if (owner) collection.owner = { team: owner };
+    if (owner) {
+      collection.owner = { team: owner };
+    }
     graph.resources.push(collection, architectureService(service));
     graph.relationships.push({
       type: 'writes',

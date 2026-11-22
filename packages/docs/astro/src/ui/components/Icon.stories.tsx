@@ -1,7 +1,8 @@
 /** @jsxImportSource react */
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { Item, ItemContent, ItemMedia, ItemTitle } from '#ui/components/ui/item.tsx';
-import { icons, type IconName } from '../../icons';
+import { icons } from '../../icons';
+import type { IconName } from '../../icons';
 import { Icon } from './Icon';
 
 const meta = {
@@ -17,7 +18,7 @@ type Story = StoryObj<typeof meta>;
 export const Default: Story = {};
 
 // SAFETY: the keys of `icons` are exactly IconName, which is derived from it.
-const names = Object.keys(icons) as IconName[];
+const names = Object.keys(icons) as Array<IconName>;
 
 /** Every icon by the name it is drawn under, in the one treatment rows give it. */
 export const AllIcons: Story = {

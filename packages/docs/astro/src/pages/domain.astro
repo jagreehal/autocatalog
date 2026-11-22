@@ -28,6 +28,10 @@ setResourceContext(Astro.locals, {
   kind: 'domain',
   name: domain.name,
   key: `domain:${domain.name}`,
+  crumbs: [
+    { label: 'Home', href: base },
+    { label: 'Domains', href: `${base}domains/` },
+  ],
   pills: [],
 });
 

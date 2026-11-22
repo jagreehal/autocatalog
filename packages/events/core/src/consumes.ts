@@ -5,14 +5,8 @@ import { fieldPaths } from './fields';
 import type { JsonObject } from './json';
 import { readOptionalResourceJson } from './resource-files';
 import { durationSeconds } from './schema';
-import {
-  AUTOCATALOG_GRAPH_SPEC,
-  relationshipKey,
-  resourceKey,
-  type CatalogRelationship,
-  type ResourceGraph,
-  type ResourceRef,
-} from './resource-graph';
+import { AUTOCATALOG_GRAPH_SPEC, relationshipKey, resourceKey } from './resource-graph';
+import type { CatalogRelationship, ResourceGraph, ResourceRef } from './resource-graph';
 
 /**
  * Where a repository says which other teams' events its services consume. The
@@ -136,7 +130,7 @@ export type ConsumerDeclaration = z.infer<typeof consumerDeclaration>;
 export type DeclarationsFile = z.infer<typeof consumesFile>;
 
 /** The repository's {@link CONSUMES_FILE}, or nothing when it has none. */
-export async function readConsumerDeclarations(root: string): Promise<ConsumerDeclaration[]> {
+export async function readConsumerDeclarations(root: string): Promise<Array<ConsumerDeclaration>> {
   return (await readDeclarationsFile(root)).consumes;
 }
 
@@ -144,7 +138,9 @@ export async function readConsumerDeclarations(root: string): Promise<ConsumerDe
 export async function readDeclarationsFile(root: string): Promise<DeclarationsFile> {
   const value = await readOptionalResourceJson(path.join(root, CONSUMES_FILE), { root });
 
-  if (value === undefined) return { consumes: [], receives: [], sends: [], calls: [] };
+  if (value === undefined) {
+    return { consumes: [], receives: [], sends: [], calls: [] };
+  }
 
   const parsed = consumesFile.safeParse(value);
 
@@ -168,7 +164,7 @@ export interface PublishedEvent {
 }
 
 export class ConsumerGraphError extends Error {
-  constructor(public readonly failures: string[]) {
+  constructor(public readonly failures: Array<string>) {
     super(failures.join('; '));
     this.name = 'ConsumerGraphError';
   }
@@ -183,21 +179,21 @@ export class ConsumerGraphError extends Error {
  * settled, and the consumer's own check refuses to guess.
  */
 export function createConsumerResourceGraph(
-  declarations: ConsumerDeclaration[],
+  declarations: Array<ConsumerDeclaration>,
   options: {
     repository?: string;
-    events: PublishedEvent[];
+    events: Array<PublishedEvent>;
     onWarning?: (message: string) => void;
   },
 ): ResourceGraph {
-  const candidates = new Map<string, PublishedEvent[]>();
+  const candidates = new Map<string, Array<PublishedEvent>>();
 
   for (const event of options.events) {
     const key = `${event.domain}/${event.id}`;
     candidates.set(key, [...(candidates.get(key) ?? []), event]);
   }
 
-  const failures: string[] = [];
+  const failures: Array<string> = [];
   const services = new Map<string, ResourceGraph['resources'][number]>();
   const relationships = new Map<string, CatalogRelationship>();
 
@@ -248,7 +244,9 @@ export function createConsumerResourceGraph(
     }
   }
 
-  if (failures.length > 0) throw new ConsumerGraphError(failures);
+  if (failures.length > 0) {
+    throw new ConsumerGraphError(failures);
+  }
 
   return {
     spec: AUTOCATALOG_GRAPH_SPEC,
@@ -268,12 +266,12 @@ export interface GraphConsumers {
   /** Who calls each endpoint, by its spec's file and operation: {@link endpointConsumerKey}. */
   endpoints: Map<string, EventConsumers>;
   /** Events two repositories publish, when it could not tell which is ours, escaped; every copy's consumers count. */
-  ambiguous: string[];
+  ambiguous: Array<string>;
   /** Names not safe to print, escaped; each consumer is counted as {@link UNSAFE_CONSUMER}. */
-  rejected: string[];
+  rejected: Array<string>;
 }
 
-const declaredFields = (edge: CatalogRelationship): string[] | undefined =>
+const declaredFields = (edge: CatalogRelationship): Array<string> | undefined =>
   edgeFields.parse(edge.attributes).fields;
 
 /** What a consumer said it reads of an event its producer already lists it on. */
@@ -343,9 +341,10 @@ export function mergeConsumerGraph(graph: ResourceGraph, fragment: ResourceGraph
     graph.resources.map((resource) => [resourceKey(resource.ref), resource]),
   );
 
-  for (const resource of fragment.resources)
+  for (const resource of fragment.resources) {
     if (!resources.has(resourceKey(resource.ref)))
       resources.set(resourceKey(resource.ref), resource);
+  }
 
   const relationships = new Map(graph.relationships.map((edge) => [relationshipKey(edge), edge]));
 
@@ -356,10 +355,11 @@ export function mergeConsumerGraph(graph: ResourceGraph, fragment: ResourceGraph
     // Any repository can name any service, so a declaration never narrows a
     // consumer the producer's own manifest lists: the producer's word on what
     // it reads stands. Declarations of one consumer combine.
-    if (!existing) relationships.set(key, edge);
-    else if (existing.source?.file === CONSUMES_FILE)
+    if (!existing) {
+      relationships.set(key, edge);
+    } else if (existing.source?.file === CONSUMES_FILE) {
       relationships.set(key, withFields(existing, edge));
-    else {
+    } else {
       // The consumer's own list rides beside the producer's word: drift never
       // reads it, a retirement does, since only the consumer knows what it reads.
       const own = declaredFields(edge);
@@ -393,14 +393,14 @@ export function mergeConsumerGraph(graph: ResourceGraph, fragment: ResourceGraph
 }
 
 export interface EventConsumers {
-  consumers: string[];
+  consumers: Array<string>;
   /** Payload paths each consumer says it reads, by consumer name. */
-  fields: Record<string, string[]>;
+  fields: Record<string, Array<string>>;
   /**
    * What consumers said for themselves of an event whose producer already
    * lists them. Never narrows drift; a retirement reads it.
    */
-  own: Record<string, string[]>;
+  own: Record<string, Array<string>>;
 }
 
 const edgeFields = z
@@ -425,12 +425,16 @@ function publishedEvents(graph: ResourceGraph): Map<string, GraphEventEntry> {
   const events = new Map<string, GraphEventEntry>();
 
   for (const resource of graph.resources) {
-    if (resource.ref.kind !== 'event') continue;
+    if (resource.ref.kind !== 'event') {
+      continue;
+    }
 
     const { domain } = eventDomain.parse(resource.attributes);
 
     // `domain/id` is the key, so a part holding a slash could stand for another event.
-    if (!/^[^/\s]+$/.test(domain) || !/^[^/\s]+$/.test(resource.ref.id)) continue;
+    if (!/^[^/\s]+$/.test(domain) || !/^[^/\s]+$/.test(resource.ref.id)) {
+      continue;
+    }
 
     const namespace = resource.ref.namespace ?? '';
 
@@ -460,7 +464,12 @@ type Reads = Map<string, Set<string> | 'anything'>;
  * another edge names: a filtered list would read as "reads none of these", and
  * the gate would pass a break.
  */
-function addReads(usage: Reads, name: string, fields: string[] | undefined, safeName: boolean) {
+function addReads(
+  usage: Reads,
+  name: string,
+  fields: Array<string> | undefined,
+  safeName: boolean,
+) {
   const before = usage.get(name);
 
   usage.set(
@@ -497,22 +506,27 @@ export function consumersFromGraph(
 
   const publishers = new Map<string, Set<string>>();
 
-  for (const { key, repository } of events.values())
+  for (const { key, repository } of events.values()) {
     publishers.set(key, (publishers.get(key) ?? new Set()).add(repository));
+  }
 
   const consumers = new Map<string, EventConsumers>();
   // What each consumer of each event reads, by `domain/id`, as edges arrive.
   const reads = new Map<string, Reads>();
-  const said = new Map<string, Map<string, string[]>>();
+  const said = new Map<string, Map<string, Array<string>>>();
   const ambiguous = new Set<string>();
   const rejected = new Set<string>();
 
   for (const edge of graph.relationships) {
-    if (edge.type !== 'consumes' || edge.from.kind !== 'event') continue;
+    if (edge.type !== 'consumes' || edge.from.kind !== 'event') {
+      continue;
+    }
 
     const event = events.get(resourceKey(edge.from));
 
-    if (!event) continue;
+    if (!event) {
+      continue;
+    }
 
     // With this repository named among the publishers, another copy's
     // consumers are that copy's. Without it, every copy's consumers count:
@@ -520,14 +534,20 @@ export function consumersFromGraph(
     const all = publishers.get(event.key) ?? new Set();
     const pinned = Boolean(options.repository && all.has(options.repository));
 
-    if (pinned && event.repository !== options.repository) continue;
+    if (pinned && event.repository !== options.repository) {
+      continue;
+    }
 
-    if (!pinned && all.size > 1) ambiguous.add(event.key);
+    if (!pinned && all.size > 1) {
+      ambiguous.add(event.key);
+    }
 
     const safeName = isSafeName(edge.to.id);
     const name = safeName ? edge.to.id : UNSAFE_CONSUMER;
 
-    if (!safeName) rejected.add(shownName(edge.to.id));
+    if (!safeName) {
+      rejected.add(shownName(edge.to.id));
+    }
 
     const { fields } = edgeFields.parse(edge.attributes);
     const { consumerFields } = ownFields.parse(edge.attributes);
@@ -542,41 +562,52 @@ export function consumersFromGraph(
     reads.set(event.key, usage);
   }
 
-  for (const [key, usage] of reads)
+  for (const [key, usage] of reads) {
     consumers.set(key, asConsumers(usage, Object.fromEntries(said.get(key) ?? [])));
+  }
 
   // Endpoints the same way: this repository's copy of a spec, else every copy.
   const specs = new Map<string, { key: string; repository: string | undefined }>();
 
-  for (const { ref, source } of graph.resources)
+  for (const { ref, source } of graph.resources) {
     if (ref.kind === 'endpoint' && source?.file)
       specs.set(resourceKey(ref), {
         key: endpointConsumerKey(source.file, ref.id),
         repository: source.repo,
       });
+  }
 
   const servers = new Map<string, Set<string | undefined>>();
 
-  for (const { key, repository } of specs.values())
+  for (const { key, repository } of specs.values()) {
     servers.set(key, (servers.get(key) ?? new Set()).add(repository));
+  }
 
   const callers = new Map<string, Reads>();
 
   for (const edge of graph.relationships) {
     const spec = edge.type === 'calls' ? specs.get(resourceKey(edge.to)) : undefined;
 
-    if (!spec) continue;
+    if (!spec) {
+      continue;
+    }
 
     const all = servers.get(spec.key) ?? new Set();
     const pinned = Boolean(options.repository && all.has(options.repository));
 
-    if (pinned && spec.repository !== options.repository) continue;
+    if (pinned && spec.repository !== options.repository) {
+      continue;
+    }
 
-    if (!pinned && all.size > 1) ambiguous.add(spec.key);
+    if (!pinned && all.size > 1) {
+      ambiguous.add(spec.key);
+    }
 
     const safeName = isSafeName(edge.from.id);
 
-    if (!safeName) rejected.add(shownName(edge.from.id));
+    if (!safeName) {
+      rejected.add(shownName(edge.from.id));
+    }
 
     const usage: Reads = callers.get(spec.key) ?? new Map();
 
@@ -607,16 +638,17 @@ export function consumersFromGraph(
  * schema that cannot be read fails the declaration rather than passing it.
  */
 export async function checkConsumerDeclarations(
-  declarations: ConsumerDeclaration[],
+  declarations: Array<ConsumerDeclaration>,
   graph: ResourceGraph,
   loadSchema: (event: { repository: string; domain: string; id: string }) => Promise<JsonObject>,
-): Promise<string[]> {
-  const byKey = new Map<string, GraphEventEntry[]>();
+): Promise<Array<string>> {
+  const byKey = new Map<string, Array<GraphEventEntry>>();
 
-  for (const entry of publishedEvents(graph).values())
+  for (const entry of publishedEvents(graph).values()) {
     byKey.set(entry.key, [...(byKey.get(entry.key) ?? []), entry]);
+  }
 
-  const problems: string[] = [];
+  const problems: Array<string> = [];
   const schemas = new Map<string, Promise<JsonObject>>();
 
   for (const { service, event, fields } of declarations) {
@@ -637,7 +669,9 @@ export async function checkConsumerDeclarations(
       continue;
     }
 
-    if (!fields?.length) continue;
+    if (!fields?.length) {
+      continue;
+    }
 
     const key = `${publisher.repository}/${publisher.key}`;
 
@@ -659,11 +693,12 @@ export async function checkConsumerDeclarations(
       continue;
     }
 
-    for (const field of fields)
+    for (const field of fields) {
       if (!published.has(field))
         problems.push(
           `${service} reads \`${field}\` of ${event}, which ${shownName(publisher.repository)} does not publish`,
         );
+    }
   }
 
   return problems;

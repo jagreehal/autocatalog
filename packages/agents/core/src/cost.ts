@@ -1,4 +1,5 @@
-import { entitiesOf, entityOf, type Catalog } from './loader.js';
+import { entitiesOf, entityOf } from './loader.js';
+import type { Catalog } from './loader.js';
 
 const DAYS_PER_MONTH = 30;
 
@@ -24,12 +25,14 @@ const breakdown = (input: number, output: number): CostBreakdown => ({
   total: round(input + output),
 });
 
-const round = (n: number): number => Math.round(n * 10000) / 10000;
+const round = (n: number): number => Math.round(n * 10_000) / 10_000;
 
 export const estimateAgentCost = (cat: Catalog, agentId: string): AgentCost => {
   const agent = entityOf(cat, 'agent', agentId);
 
-  if (!agent) throw new Error(`Unknown agent: ${agentId}`);
+  if (!agent) {
+    throw new Error(`Unknown agent: ${agentId}`);
+  }
   const model = entityOf(cat, 'model', agent.model);
   const traffic = agent.expected_traffic;
 
@@ -43,7 +46,9 @@ export const estimateAgentCost = (cat: Catalog, agentId: string): AgentCost => {
     monthly: null,
   });
 
-  if (!model) return empty(`Model "${agent.model}" not found`);
+  if (!model) {
+    return empty(`Model "${agent.model}" not found`);
+  }
   const inputRate = model.cost_per_million_input_tokens;
   const outputRate = model.cost_per_million_output_tokens;
 
@@ -51,7 +56,9 @@ export const estimateAgentCost = (cat: Catalog, agentId: string): AgentCost => {
     return empty(`Model "${agent.model}" has no cost data`);
   }
 
-  if (!traffic) return empty('Agent has no expected_traffic declared');
+  if (!traffic) {
+    return empty('Agent has no expected_traffic declared');
+  }
 
   const inputCostPerInvocation = (traffic.avg_input_tokens * inputRate) / 1_000_000;
   const outputCostPerInvocation = (traffic.avg_output_tokens * outputRate) / 1_000_000;
@@ -81,11 +88,11 @@ export type RollupRow = {
   monthlyTotal: number;
   agentCount: number;
   estimatedCount: number;
-  unestimatedAgents: string[];
+  unestimatedAgents: Array<string>;
 };
 
-export const rollupCost = (cat: Catalog, by: RollupKey): RollupRow[] => {
-  type Acc = { monthly: number; agents: number; estimated: number; unestimated: string[] };
+export const rollupCost = (cat: Catalog, by: RollupKey): Array<RollupRow> => {
+  type Acc = { monthly: number; agents: number; estimated: number; unestimated: Array<string> };
 
   const buckets = new Map<string, Acc>();
 
@@ -122,7 +129,7 @@ export type WorkflowCost = {
   workflowId: string;
   agentCount: number;
   estimatedCount: number;
-  unestimatedAgents: string[];
+  unestimatedAgents: Array<string>;
   monthlyTotal: number;
   perAgent: Array<{ agentId: string; monthly: number | null; reason?: string }>;
 };
@@ -130,9 +137,11 @@ export type WorkflowCost = {
 export const estimateWorkflowCost = (cat: Catalog, workflowId: string): WorkflowCost => {
   const workflow = entityOf(cat, 'workflow', workflowId);
 
-  if (!workflow) throw new Error(`Unknown workflow: ${workflowId}`);
+  if (!workflow) {
+    throw new Error(`Unknown workflow: ${workflowId}`);
+  }
   const perAgent: WorkflowCost['perAgent'] = [];
-  const unestimated: string[] = [];
+  const unestimated: Array<string> = [];
   let total = 0;
   let estimated = 0;
 

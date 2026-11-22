@@ -5,10 +5,10 @@ interface Entry {
   depth: number;
   slug: string;
   text: string;
-  children: Entry[];
+  children: Array<Entry>;
 }
 
-const entry = (slug: string, text: string, children: Entry[] = []): Entry => ({
+const entry = (slug: string, text: string, children: Array<Entry> = []): Entry => ({
   depth: 2,
   slug,
   text,

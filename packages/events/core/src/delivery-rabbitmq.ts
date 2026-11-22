@@ -1,16 +1,10 @@
 import { z } from 'zod';
 import type { SourceLocation } from './adapter-event';
 import { rabbitPatternMatches } from './delivery-match';
-import {
-  brokerResource,
-  deadLetterEdge,
-  named,
-  nodeRef,
-  routeEdge,
-  type BrokerNode,
-  type DeliveryBinding,
-} from './delivery-model';
-import { isJsonObject, jsonValueSchema, type JsonValue } from './json';
+import { brokerResource, deadLetterEdge, named, nodeRef, routeEdge } from './delivery-model';
+import type { BrokerNode, DeliveryBinding } from './delivery-model';
+import { isJsonObject, jsonValueSchema } from './json';
+import type { JsonValue } from './json';
 import { emptyResourceGraph } from './architecture';
 import type { ResourceGraph, ResourceRef } from './resource-graph';
 import { resourceKey } from './resource-graph';
@@ -132,7 +126,7 @@ interface PolicyLookup {
 /** Who may publish and consume, with what was left unevaluated. */
 interface GrantLookup {
   grants?: BrokerNode['grants'];
-  notes: string[];
+  notes: Array<string>;
 }
 
 /**
@@ -140,15 +134,17 @@ interface GrantLookup {
  * whose pattern matches. A pattern not evaluated, or a tie, leaves it unknown.
  */
 function effectivePolicy(
-  policies: Policy[],
+  policies: Array<Policy>,
   entity: 'queues' | 'exchanges',
   vhost: string,
   name: string,
 ): PolicyLookup {
-  const candidates: Policy[] = [];
+  const candidates: Array<Policy> = [];
 
   for (const policy of policies) {
-    if (policy.vhost !== vhost) continue;
+    if (policy.vhost !== vhost) {
+      continue;
+    }
 
     const applyTo = policy['apply-to'];
 
@@ -156,26 +152,31 @@ function effectivePolicy(
       applyTo !== 'all' &&
       applyTo !== entity &&
       !(entity === 'queues' && applyTo.endsWith('queues'))
-    )
+    ) {
       continue;
+    }
 
     const matches = rabbitPatternMatches(policy.pattern, name);
 
-    if (matches === undefined)
+    if (matches === undefined) {
       return {
         unknown: `policy ${named(policy.name)} uses a pattern that is not evaluated (${named(policy.pattern)})`,
       };
+    }
 
-    if (matches) candidates.push(policy);
+    if (matches) {
+      candidates.push(policy);
+    }
   }
 
   candidates.sort((a, b) => b.priority - a.priority);
   const [top, next] = candidates;
 
-  if (top && next && top.priority === next.priority)
+  if (top && next && top.priority === next.priority) {
     return {
       unknown: `policies ${named(top.name)} and ${named(next.name)} match with the same priority`,
     };
+  }
 
   return top ? { policy: top } : {};
 }
@@ -191,14 +192,18 @@ function grantsFor(
   name: string,
   entity: 'exchange' | 'queue',
 ): GrantLookup {
-  if (!defs.permissions) return { notes: [] };
+  if (!defs.permissions) {
+    return { notes: [] };
+  }
 
-  const notes: string[] = [];
-  const publish: string[] = [];
-  const consume: string[] = [];
+  const notes: Array<string> = [];
+  const publish: Array<string> = [];
+  const consume: Array<string> = [];
 
   for (const permission of defs.permissions) {
-    if (permission.vhost !== vhost) continue;
+    if (permission.vhost !== vhost) {
+      continue;
+    }
 
     const pattern = entity === 'exchange' ? permission.write : permission.read;
 
@@ -217,7 +222,9 @@ function grantsFor(
       continue;
     }
 
-    if (allowed) (entity === 'exchange' ? publish : consume).push(permission.user);
+    if (allowed) {
+      (entity === 'exchange' ? publish : consume).push(permission.user);
+    }
   }
 
   return {
@@ -234,7 +241,7 @@ export function rabbitMqGraph(
   const defs = definitionsFile.parse(raw);
   const lineOf = options.text ? sourceLines(options.text) : () => undefined;
 
-  const at = (steps: string[]): SourceLocation => {
+  const at = (steps: Array<string>): SourceLocation => {
     const line = lineOf(steps);
 
     return { type: 'code', file: options.file, ...(line && { line }) };
@@ -252,10 +259,11 @@ export function rabbitMqGraph(
   const policies = [...defs.policies];
 
   defs.exchanges.forEach((exchange, index) => {
-    const notes: string[] = [];
+    const notes: Array<string> = [];
 
-    if (!['direct', 'fanout', 'topic', 'headers'].includes(exchange.type))
+    if (!['direct', 'fanout', 'topic', 'headers'].includes(exchange.type)) {
       notes.push(`exchange type ${named(exchange.type)} is not evaluated`);
+    }
 
     const { policy, unknown } = effectivePolicy(
       policies,
@@ -264,7 +272,9 @@ export function rabbitMqGraph(
       exchange.name,
     );
 
-    if (unknown) notes.push(unknown);
+    if (unknown) {
+      notes.push(unknown);
+    }
 
     const alternate =
       optionalString.parse(exchange.arguments['alternate-exchange']) ??
@@ -299,7 +309,7 @@ export function rabbitMqGraph(
       }),
     );
 
-    if (alternate && exchanges.has(`${exchange.vhost}\0${alternate}`))
+    if (alternate && exchanges.has(`${exchange.vhost}\0${alternate}`)) {
       graph.relationships.push(
         routeEdge(
           exchangeRef(exchange.vhost, exchange.name),
@@ -311,16 +321,21 @@ export function rabbitMqGraph(
           },
         ),
       );
+    }
   });
 
   defs.queues.forEach((queue, index) => {
-    const notes: string[] = [];
+    const notes: Array<string> = [];
     const { policy, unknown } = effectivePolicy(policies, 'queues', queue.vhost, queue.name);
     const operator = effectivePolicy(defs.operator_policies, 'queues', queue.vhost, queue.name);
 
-    if (unknown) notes.push(unknown);
+    if (unknown) {
+      notes.push(unknown);
+    }
 
-    if (operator.unknown) notes.push(operator.unknown);
+    if (operator.unknown) {
+      notes.push(operator.unknown);
+    }
 
     const fromArgs = (key: string) => queue.arguments[`x-${key}`];
     const fromPolicy = (key: string) => policy?.definition[key];
@@ -370,19 +385,20 @@ export function rabbitMqGraph(
       }),
     );
 
-    if (dlx && exchanges.has(`${queue.vhost}\0${dlx}`))
+    if (dlx && exchanges.has(`${queue.vhost}\0${dlx}`)) {
       graph.relationships.push(
         deadLetterEdge(queueRef(queue.vhost, queue.name), exchangeRef(queue.vhost, dlx), source, {
           ...(dlrk && { routingKey: dlrk }),
           ...(environment && { environment }),
         }),
       );
+    }
   });
 
   // Every binding between one exchange and one destination rides on a single edge.
   const routes = new Map<
     string,
-    { from: ResourceRef; to: ResourceRef; source: SourceLocation; bindings: DeliveryBinding[] }
+    { from: ResourceRef; to: ResourceRef; source: SourceLocation; bindings: Array<DeliveryBinding> }
   >();
 
   defs.bindings.forEach((binding, index) => {
@@ -390,9 +406,13 @@ export function rabbitMqGraph(
 
     // A binding to something the file does not declare has nowhere to draw to;
     // the analysis reports the missing end when a route depends on it.
-    if (!exchanges.has(`${binding.vhost}\0${binding.source}`)) return;
+    if (!exchanges.has(`${binding.vhost}\0${binding.source}`)) {
+      return;
+    }
 
-    if (!known.has(`${binding.vhost}\0${binding.destination}`)) return;
+    if (!known.has(`${binding.vhost}\0${binding.destination}`)) {
+      return;
+    }
 
     const from = exchangeRef(binding.vhost, binding.source);
 
@@ -412,12 +432,16 @@ export function rabbitMqGraph(
 
     const existing = routes.get(key);
 
-    if (existing) existing.bindings.push(entry);
-    else routes.set(key, { from, to, source: at(['bindings', String(index)]), bindings: [entry] });
+    if (existing) {
+      existing.bindings.push(entry);
+    } else {
+      routes.set(key, { from, to, source: at(['bindings', String(index)]), bindings: [entry] });
+    }
   });
 
-  for (const { from, to, source, bindings } of routes.values())
+  for (const { from, to, source, bindings } of routes.values()) {
     graph.relationships.push(routeEdge(from, to, source, { bindings, environment }));
+  }
 
   return graph;
 }

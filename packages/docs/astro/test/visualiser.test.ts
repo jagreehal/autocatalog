@@ -1,4 +1,5 @@
-import { AUTOCATALOG_GRAPH_SPEC, eventFrontmatter, type ResourceGraph } from 'autocatalog-core';
+import { AUTOCATALOG_GRAPH_SPEC, eventFrontmatter } from 'autocatalog-core';
+import type { ResourceGraph } from 'autocatalog-core';
 import { describe, expect, it } from 'vitest';
 import type { z } from 'zod';
 import type { CatalogEvent } from '../src/catalog';
@@ -213,7 +214,7 @@ describe('catalogGraph', () => {
 });
 
 describe('commands, queries and datastores', () => {
-  const resource = (kind: string, id: string, namespace?: string, tags: string[] = []) => ({
+  const resource = (kind: string, id: string, namespace?: string, tags: Array<string> = []) => ({
     ...facts,
     ref: { kind, id, ...(namespace && { namespace }) },
     title: id,
@@ -298,6 +299,81 @@ describe('commands, queries and datastores', () => {
       'service:web',
       'table:payments',
     ]);
+  });
+
+  it('folds the whole map into services, then into domains, and opens where it is asked', () => {
+    const inDomain = (name: string, domain: string) => ({
+      ...resource('service', name),
+      attributes: { domains: [domain] },
+    });
+
+    // SAFETY: the same fixtures as `graph` above, each service given a domain.
+    const placed = {
+      ...graph,
+      resources: [
+        inDomain('web', 'shop'),
+        inDomain('billing', 'pay'),
+        inDomain('ledger', 'books'),
+        inDomain('unrelated', 'ship'),
+        ...graph.resources.filter(({ ref }) => ref.kind !== 'service'),
+        // Titled like `charged`: still a second message crossing to books.
+        { ...event('charged-v2', 'pay'), title: 'charged' },
+      ],
+      relationships: [
+        ...graph.relationships,
+        {
+          ...edge('consumes', ['event', 'charged-v2'], ['service', 'ledger']),
+          from: { kind: 'event', namespace: 'repo/pay', id: 'charged-v2' },
+        },
+      ],
+    } as ResourceGraph;
+
+    const map = catalogGraph(placed, '/', {
+      levels: {
+        open: 1,
+        domainHref: (name) => `/domains/${name}/`,
+        domainTitle: (name) => name.toUpperCase(),
+      },
+    });
+
+    expect(map?.initialLevel).toBe(1);
+    expect(map?.levels?.[1]?.nodes.map(({ id, label }) => [id, label])).toEqual([
+      ['domain:books', 'BOOKS'],
+      ['domain:pay', 'PAY'],
+      ['domain:ship', 'SHIP'],
+      ['domain:shop', 'SHOP'],
+    ]);
+    // A data store sits in the domain of the service that writes it, so no edge leaves pay for it.
+    expect(
+      map?.levels?.[1]?.edges.map(({ source, target, label }) => [source, target, label]),
+    ).toEqual(
+      expect.arrayContaining([
+        ['domain:shop', 'domain:pay', '2 messages'],
+        ['domain:pay', 'domain:books', '2 messages'],
+      ]),
+    );
+    expect(map?.levels?.[1]?.edges).toHaveLength(2);
+    expect(map?.hrefs['domain:pay']).toBe('/domains/pay/');
+    expect(map?.levels?.[2]?.nodes.some(({ type }) => type === 'event' || type === 'command')).toBe(
+      false,
+    );
+    expect(
+      map?.levels?.[2]?.edges.map(({ source, target, label }) => [source, target, label]),
+    ).toEqual(
+      expect.arrayContaining([
+        ['service:web', 'service:billing', 'charge'],
+        ['service:billing', 'service:ledger', 'charged'],
+      ]),
+    );
+  });
+
+  it('keeps a part of the map as it is', () => {
+    const map = catalogGraph(graph, '/', {
+      only: new Set(['service:billing']),
+      levels: { open: 1, domainHref: (name) => name, domainTitle: (name) => name },
+    });
+
+    expect(map?.levels).toBeUndefined();
   });
 
   it('gathers a domain’s events and commands and the services one edge away', () => {

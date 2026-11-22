@@ -6,7 +6,7 @@ import { runAgents } from '../index';
 export interface McpSweepOptions {
   owner?: string | undefined;
   topic?: string | undefined;
-  repos?: string[] | undefined;
+  repos?: Array<string> | undefined;
   root: string;
   internal?: string | undefined;
   prune?: boolean | undefined;
@@ -69,7 +69,9 @@ export async function runMcpSweep(opts: McpSweepOptions): Promise<number> {
       );
     }
 
-    if (cloned.length === 0) return 1;
+    if (cloned.length === 0) {
+      return 1;
+    }
 
     const shared = [
       opts.cache,

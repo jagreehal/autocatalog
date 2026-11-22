@@ -33,7 +33,7 @@ export interface CatalogRule {
   description?: string;
   /** How a violation gates: `breaking` (the default), `suspicious` or `info`. */
   severity?: RuleSeverity;
-  run(context: RuleContext): RuleViolation[] | Promise<RuleViolation[]>;
+  run(context: RuleContext): Array<RuleViolation> | Promise<Array<RuleViolation>>;
 }
 
 const RULE_ID = /^[a-z0-9][a-z0-9-]{0,63}$/;
@@ -81,7 +81,7 @@ const pattern = (glob: string): RegExp =>
   new RegExp(
     `^${glob
       .split('*')
-      .map((part) => part.replaceAll(/[.+?^${}()|[\]\\]/g, '\\$&'))
+      .map((part) => part.replaceAll(/[.+?^${}()|[\]\\]/g, String.raw`\$&`))
       .join('.*')}$`,
   );
 
@@ -96,8 +96,11 @@ const printable = (text: string): string => text.replaceAll(/[\p{Cc}`|<>[\]!@]/g
  * gate cover them. A rule that could not run is breaking whatever its
  * severity: a gate that skipped a check has not passed it.
  */
-export function ruleFindings(outcomes: RuleOutcome[], config: RulesConfig = {}): DriftFinding[] {
-  return outcomes.flatMap((outcome): DriftFinding[] => {
+export function ruleFindings(
+  outcomes: Array<RuleOutcome>,
+  config: RulesConfig = {},
+): Array<DriftFinding> {
+  return outcomes.flatMap((outcome): Array<DriftFinding> => {
     if ('error' in outcome) {
       return [
         {
@@ -115,14 +118,18 @@ export function ruleFindings(outcomes: RuleOutcome[], config: RulesConfig = {}):
     const { id, name, violations } = outcome.result;
     const severity = config.severity?.[id] ?? outcome.result.severity ?? 'breaking';
 
-    if (severity === 'off') return [];
+    if (severity === 'off') {
+      return [];
+    }
 
     const except = (config.except?.[id] ?? []).map(pattern);
 
-    return violations.flatMap((violation): DriftFinding[] => {
+    return violations.flatMap((violation): Array<DriftFinding> => {
       const { resource } = violation;
 
-      if (resource && except.some((skip) => skip.test(refLabel(resource)))) return [];
+      if (resource && except.some((skip) => skip.test(refLabel(resource)))) {
+        return [];
+      }
 
       const label = resource && isSafeName(refLabel(resource).replace(':', '/'));
       const suggestion = violation.suggestion ? `. ${printable(violation.suggestion)}` : '';

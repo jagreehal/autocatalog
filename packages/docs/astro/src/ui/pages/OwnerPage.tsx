@@ -40,7 +40,7 @@ export interface OwnerProfile {
   teams?: string | undefined;
   members: Array<{ name: string; role?: string | undefined }>;
   /** The teams a person is a member of, by name. */
-  memberOf: string[];
+  memberOf: Array<string>;
 }
 
 export interface OwnerPageProps {
@@ -48,7 +48,7 @@ export interface OwnerPageProps {
   contact?: string | undefined;
   profile?: OwnerProfile | undefined;
   /** Everything the owner owns, by kind. */
-  sections: Array<{ kind: string; heading: string; resources: OwnedResource[] }>;
+  sections: Array<{ kind: string; heading: string; resources: Array<OwnedResource> }>;
 }
 
 const linkClass = 'text-foreground underline underline-offset-4 hover:text-primary';

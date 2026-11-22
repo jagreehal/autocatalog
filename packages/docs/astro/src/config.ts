@@ -1,14 +1,11 @@
 import path from 'node:path';
 import {
-  type SiteAccessConfig,
-  type SiteChat,
-  type SiteConfig,
   siteConfigSchema,
   siteAccessSchema,
   siteChatSchema,
-  type SiteNavigation,
   siteNavigationSchema,
 } from 'autocatalog-docs-core';
+import type { SiteAccessConfig, SiteChat, SiteConfig, SiteNavigation } from 'autocatalog-docs-core';
 import { z } from 'zod';
 /**
  * What the integration decided, read back by the parts Astro loads on their own.
@@ -33,11 +30,11 @@ export interface DocsSiteConfig {
    * Repositories outside the root, each read as one: EventCatalog projects
    * `ac site` imported into its own cache, so nobody's checkout is written to.
    */
-  sources: string[];
+  sources: Array<string>;
   /** Other sites' composed graphs (their `/catalog.json`), joined without pages. */
-  indexes: string[];
+  indexes: Array<string>;
   /** Repositories whose documents are left out because one breaks the contract. */
-  exclude: string[];
+  exclude: Array<string>;
   /** The release each catalog is locked at, as `platform v1.0.0`, by its directory. */
   releases: Record<string, string | undefined>;
   /** Sources `ac site` could not read before the build, such as a repository it could not clone. */
@@ -61,7 +58,7 @@ export interface DocsSiteConfig {
   /** The sidebar's label for the link to an API's reference under its service. */
   apiReferenceLabel: string;
   /** The kinds the home page counts, in order; unset, six chosen for it. */
-  homeCounts: string[] | undefined;
+  homeCounts: Array<string> | undefined;
   /** Pages composed from blocks: `home`, in order. */
   layouts: SiteConfig['layouts'];
   /**

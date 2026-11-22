@@ -18,7 +18,9 @@ const CORRELATION_NAMES = new Set([
 export function correlationPath(event: Pick<LoadedEvent, 'frontmatter' | 'schema'>) {
   const declared = event.frontmatter.delivery?.correlationKey;
 
-  if (declared) return declared;
+  if (declared) {
+    return declared;
+  }
 
   const depth = (path: string) => path.split('.').length;
 
@@ -30,7 +32,7 @@ export function correlationPath(event: Pick<LoadedEvent, 'frontmatter' | 'schema
           path
             .slice(path.lastIndexOf('.') + 1)
             .toLowerCase()
-            .replace(/[_-]/g, ''),
+            .replaceAll(/[_-]/g, ''),
         ),
     )
     .sort((a, b) => depth(a) - depth(b) || a.localeCompare(b))[0];

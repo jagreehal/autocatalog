@@ -5,7 +5,8 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import type { JsonValue } from 'autocatalog-core';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { buildDocsCatalog, type DocsCatalog } from '../src/catalog';
+import { buildDocsCatalog } from '../src/catalog';
+import type { DocsCatalog } from '../src/catalog';
 import {
   homePageProps,
   serviceBasis,
@@ -26,7 +27,7 @@ const write = async (file: string, body: string) => {
 
 const writeJson = (file: string, body: JsonValue) => write(file, JSON.stringify(body, null, 2));
 
-const spec = (service: string, title: string, paths: string[]) => ({
+const spec = (service: string, title: string, paths: Array<string>) => ({
   openapi: '3.1.0',
   'x-autocatalog': { service },
   info: { title, version: '1.0.0' },
@@ -131,14 +132,17 @@ describe('a catalog whose services come only from OpenAPI specs', () => {
     ]);
   });
 
-  it('draws a row per service that a reader can filter', () => {
+  it('draws a line per service that a reader can filter, with what it calls behind an expand', () => {
     const html = renderToStaticMarkup(createElement(ServicesPage, servicesPageProps(catalog, '/')));
 
     expect(html).toContain('2 services, each with an owner.');
-    expect(html).toContain('Calls users-api');
-    expect(html).toContain('Called by orders-api');
     expect(html).toContain('href="/services/users-api/"');
     expect(html).toContain('aria-label="Filter services"');
+    expect(html).toContain('aria-label="Details of orders-api"');
+    // The names behind the counts wait for the row to open.
+    expect(html).not.toContain('Calls users-api');
+    // Two services fit on one page, so there is nothing to turn.
+    expect(html).not.toContain('aria-label="Service pages"');
   });
 });
 

@@ -60,7 +60,7 @@ const distance = (a: string, b: string): number => {
 
 /** The candidate a mistyped reference most likely meant, for a "did you mean" hint. */
 // Edit distance over every candidate, which suits catalogs in the thousands.
-export function closestMatch(ref: string, candidates: string[]): string | undefined {
+export function closestMatch(ref: string, candidates: Array<string>): string | undefined {
   const best = candidates
     .map((candidate) => ({ candidate, d: distance(ref, candidate) }))
     .sort((a, b) => a.d - b.d || a.candidate.localeCompare(b.candidate))[0];
@@ -87,7 +87,9 @@ export function assertPathSegment(where: string, field: string, value: string): 
  * this machine, and its content would surface in the build.
  */
 export function isRealFileInside(repository: string, file: string): boolean {
-  if (!fs.lstatSync(file, { throwIfNoEntry: false })?.isFile()) return false;
+  if (!fs.lstatSync(file, { throwIfNoEntry: false })?.isFile()) {
+    return false;
+  }
 
   return fs.realpathSync(file).startsWith(`${fs.realpathSync(repository)}${path.sep}`);
 }

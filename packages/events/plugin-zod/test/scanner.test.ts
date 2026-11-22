@@ -7,7 +7,7 @@ import type { z } from 'zod';
 import type { eventFrontmatter } from 'autocatalog-core/plugin';
 import { domainForFile, idFromSymbol, scanRepo } from '../src/scanner';
 
-const here = path.dirname(fileURLToPath(import.meta.url));
+const here = import.meta.dirname;
 
 const demoRepo = path.resolve(here, '../../../../fixtures/demo-repo');
 

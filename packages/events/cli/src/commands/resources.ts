@@ -1,7 +1,8 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { z } from 'zod';
-import { Option, type Command } from 'commander';
+import { Option } from 'commander';
+import type { Command } from 'commander';
 import {
   scanArchitecture,
   architectureConfig,
@@ -26,9 +27,6 @@ import {
   importGlueRegistry,
   saveResourceImport,
   jsonValueSchema,
-  type JsonValue,
-  type OwnershipImport,
-  type ResourceGraph,
   validateCommands,
   validateResourceDocuments,
   documentObservations,
@@ -36,8 +34,13 @@ import {
   resourceKey,
   validateCloudEvent,
   cloudEventsEnvelope,
-  type CatalogResource,
-  type CloudEventsEnvelope,
+} from 'autocatalog-core';
+import type {
+  JsonValue,
+  OwnershipImport,
+  ResourceGraph,
+  CatalogResource,
+  CloudEventsEnvelope,
 } from 'autocatalog-core';
 
 /** Identities a scan applies to what it discovers; explicit ones are remembered in config.json. */
@@ -91,7 +94,9 @@ export async function readJsonInput<T>(
 
   const parsed = schema.safeParse(value);
 
-  if (!parsed.success) throw new Error(`${file}: not ${what} (${firstIssue(parsed.error)})`);
+  if (!parsed.success) {
+    throw new Error(`${file}: not ${what} (${firstIssue(parsed.error)})`);
+  }
 
   return parsed.data;
 }
@@ -101,7 +106,9 @@ export async function readGraph(root: string): Promise<ResourceGraph | undefined
   try {
     return await readResourceGraph(root);
   } catch (error) {
-    if (!(error instanceof ResourceReadError)) throw error;
+    if (!(error instanceof ResourceReadError)) {
+      throw error;
+    }
 
     throw new Error(`${error.message}. Delete it and run ac resources scan to regenerate it.`, {
       cause: error,
@@ -112,7 +119,9 @@ export async function readGraph(root: string): Promise<ResourceGraph | undefined
 async function requireGraph(root: string): Promise<ResourceGraph> {
   const graph = await readGraph(root);
 
-  if (!graph) throw new Error(`No resource graph in ${root}; run ac resources scan first`);
+  if (!graph) {
+    throw new Error(`No resource graph in ${root}; run ac resources scan first`);
+  }
 
   return graph;
 }
@@ -131,7 +140,9 @@ async function readConfig(root: string): Promise<z.infer<typeof architectureConf
 
   const parsed = architectureConfig.safeParse(value ?? {});
 
-  if (!parsed.success) throw new Error(`${CONFIG_FILE}: ${firstIssue(parsed.error)}. ${fix}`);
+  if (!parsed.success) {
+    throw new Error(`${CONFIG_FILE}: ${firstIssue(parsed.error)}. ${fix}`);
+  }
 
   return parsed.data;
 }
@@ -163,7 +174,9 @@ export async function scanResources(
     ...Object.fromEntries(given.map((name) => [name, options[name]])),
   });
 
-  if (result.errors.length) throw new Error(result.errors.join('\n'));
+  if (result.errors.length) {
+    throw new Error(result.errors.join('\n'));
+  }
   const saved = given.filter((name) => options[name] !== config[name]);
 
   if (saved.length) {
@@ -198,7 +211,9 @@ export async function publishResources(
 
   const file = path.join(root, RESOURCE_GRAPH_FILE);
 
-  if (!(await fs.lstat(file).catch(() => undefined))) return 'none';
+  if (!(await fs.lstat(file).catch(() => undefined))) {
+    return 'none';
+  }
   await fs.rm(file);
 
   return 'removed';
@@ -215,18 +230,23 @@ const readable = (key: string) => {
 };
 
 /** Find by exact key, or by the readable form `ac resources list` prints. */
-function byKey<T>(entries: T[], keyOf: (entry: T) => string, wanted: string, what: string): T {
+function byKey<T>(entries: Array<T>, keyOf: (entry: T) => string, wanted: string, what: string): T {
   const exact = entries.find((entry) => keyOf(entry) === wanted);
 
-  if (exact) return exact;
+  if (exact) {
+    return exact;
+  }
   const matches = entries.filter((entry) => readable(keyOf(entry)) === wanted);
 
-  if (matches.length === 1) return matches[0]!;
+  if (matches.length === 1) {
+    return matches[0]!;
+  }
 
-  if (matches.length > 1)
+  if (matches.length > 1) {
     throw new Error(
       `${what} ${wanted} is ambiguous; use its exact key from ac resources list --json`,
     );
+  }
 
   throw new Error(`Unknown ${what}: ${wanted}. Run ac resources list to see the keys.`);
 }
@@ -260,14 +280,19 @@ export async function runResourceScan(options: RunResourceScanOptions): Promise<
             : `Found no resources; ${RESOURCE_GRAPH_FILE} was not written`,
       );
 
-      if (result.saved) console.log(result.saved);
+      if (result.saved) {
+        console.log(result.saved);
+      }
 
-      for (const skipped of result.skipped) console.warn(skipped);
+      for (const skipped of result.skipped) {
+        console.warn(skipped);
+      }
 
-      for (const conflict of result.conflicts)
+      for (const conflict of result.conflicts) {
         console.warn(
           `Ownership conflict for ${conflict.resource.id}: selected ${conflict.selected}; alternatives ${conflict.alternatives.join(', ')}`,
         );
+      }
     }
 
     return 0;
@@ -288,8 +313,9 @@ export async function runResourcePromote(options: {
     const edge = byKey(graph.relationships, relationshipKey, options.relationship, 'relationship');
     await writeResourceGraph(options.root, promoteRelationship(graph, edge));
 
-    if (!options.quiet)
+    if (!options.quiet) {
       console.log(`Declared ${readable(relationshipKey(edge))}; runtime evidence retained`);
+    }
 
     return 0;
   } catch (error) {
@@ -316,15 +342,19 @@ export async function runResourceList(options: { root: string; json?: boolean })
       provenance: edge.provenance,
     }));
 
-    if (options.json) console.log(JSON.stringify({ resources, relationships }, null, 2));
-    else {
+    if (options.json) {
+      console.log(JSON.stringify({ resources, relationships }, null, 2));
+    } else {
       console.log('Resources');
 
-      for (const entry of resources) console.log(`  ${readable(entry.key)}  ${entry.provenance}`);
+      for (const entry of resources) {
+        console.log(`  ${readable(entry.key)}  ${entry.provenance}`);
+      }
       console.log('Relationships');
 
-      for (const entry of relationships)
+      for (const entry of relationships) {
         console.log(`  ${readable(entry.key)}  ${entry.provenance}`);
+      }
     }
 
     return 0;
@@ -342,16 +372,19 @@ export async function runResourceOwnership(options: {
   try {
     const ownership = datastoreOwnership(await requireGraph(options.root));
 
-    if (options.json) console.log(JSON.stringify(ownership, null, 2));
-    else {
+    if (options.json) {
+      console.log(JSON.stringify(ownership, null, 2));
+    } else {
       console.log('| Datastore resource | Owner | Writers | Readers |');
       console.log('| --- | --- | --- | --- |');
-      const cell = (value: string) => value.replaceAll('|', '\\|').replaceAll(/[\r\n]/g, ' ');
+      const cell = (value: string) =>
+        value.replaceAll('|', String.raw`\|`).replaceAll(/[\r\n]/g, ' ');
 
-      for (const row of ownership)
+      for (const row of ownership) {
         console.log(
           `| ${cell(`${row.ref.namespace}/${row.ref.id}`)} | ${cell(row.owner ?? 'Unassigned')} | ${cell(row.writers.join(', '))} | ${cell(row.readers.join(', '))} |`,
         );
+      }
     }
 
     return 0;
@@ -375,12 +408,14 @@ export async function runResourceDrift(options: {
     const findings = driftResources(baseline, current);
 
     if (!options.quiet) {
-      if (options.format === 'json') console.log(JSON.stringify({ findings }, null, 2));
-      else
+      if (options.format === 'json') {
+        console.log(JSON.stringify({ findings }, null, 2));
+      } else {
         for (const finding of findings)
           console.log(
             `${finding.severity.toUpperCase()} ${finding.resource.kind}/${finding.resource.id}: ${finding.message}${finding.affectedServices.length ? `; affects ${finding.affectedServices.join(', ')}` : ''}${finding.advice ? `. ${finding.advice}` : ''}`,
           );
+      }
     }
 
     const failOn = options.failOn ?? 'breaking';
@@ -409,7 +444,7 @@ export interface ResourceImportOptions {
   url?: string;
   registry?: string;
   region?: string;
-  subjects?: string[];
+  subjects?: Array<string>;
   quiet?: boolean;
 }
 
@@ -417,30 +452,34 @@ export async function runResourceImport(options: ResourceImportOptions): Promise
   try {
     let imported: OwnershipImport;
     // A registry subject that does not translate is left out and named; the rest import.
-    const skippedSubjects: string[] = [];
+    const skippedSubjects: Array<string> = [];
 
     if (options.provider === 'backstage') {
-      if (options.source)
+      if (options.source) {
         imported = importBackstageYaml(await fs.readFile(options.source, 'utf8'), options.source);
-      else if (options.url)
+      } else if (options.url) {
         imported = await syncBackstageOwnership(
           backstageHttpClient(options.url, process.env.BACKSTAGE_TOKEN),
           options.url,
         );
-      else
+      } else {
         throw new Error(
           'Backstage import requires a YAML path or --url pointing to the catalog API',
         );
+      }
     } else if (options.provider === 'datadog') {
       const apiKey = process.env.DD_API_KEY;
       const applicationKey = process.env.DD_APP_KEY;
 
-      if (!apiKey || !applicationKey)
+      if (!apiKey || !applicationKey) {
         throw new Error('Datadog import requires DD_API_KEY and DD_APP_KEY');
+      }
       const url = options.url ?? 'https://api.datadoghq.com';
       imported = await syncDatadogOwnership(datadogHttpClient(url, apiKey, applicationKey), url);
     } else if (options.provider === 'confluent') {
-      if (!options.url || !options.id) throw new Error('Confluent import requires --url and --id');
+      if (!options.url || !options.id) {
+        throw new Error('Confluent import requires --url and --id');
+      }
       imported = {
         graph: await importConfluentRegistry(
           confluentHttpClient(options.url, process.env.CONFLUENT_AUTHORIZATION),
@@ -454,8 +493,9 @@ export async function runResourceImport(options: ResourceImportOptions): Promise
         claims: [],
       };
     } else if (options.provider === 'glue') {
-      if (!options.registry || !options.id)
+      if (!options.registry || !options.id) {
         throw new Error('Glue import requires --registry and --id');
+      }
 
       const {
         GlueClient,
@@ -529,7 +569,9 @@ export async function runResourceImport(options: ResourceImportOptions): Promise
       } finally {
         client.destroy();
       }
-    } else throw new Error(`Unknown resource import provider: ${options.provider}`);
+    } else {
+      throw new Error(`Unknown resource import provider: ${options.provider}`);
+    }
     const root = path.resolve(options.root);
     const id = options.id ?? options.provider;
     await saveResourceImport(root, id, imported);
@@ -539,7 +581,9 @@ export async function runResourceImport(options: ResourceImportOptions): Promise
     await publishResources(root, result.graph);
 
     if (!options.quiet) {
-      for (const skipped of skippedSubjects) console.warn(`Skipped ${skipped}`);
+      for (const skipped of skippedSubjects) {
+        console.warn(`Skipped ${skipped}`);
+      }
 
       console.log(
         `Imported ${imported.graph.resources.length} resources from ${options.provider} into .autocatalog/imports/${id}.json and ${RESOURCE_GRAPH_FILE}. ${COMMIT_RESOURCES_ADVICE}`,
@@ -563,8 +607,9 @@ export async function runResourceValidate(options: {
   quiet?: boolean;
 }): Promise<number> {
   try {
-    if ((options.headers || options.resource) && !options.cloudEvent)
+    if ((options.headers || options.resource) && !options.cloudEvent) {
       throw new Error('--headers and --resource only apply with --cloud-event <file>');
+    }
 
     const graph = await requireGraph(options.root);
     const commandFindings = validateCommands(graph);
@@ -583,8 +628,9 @@ export async function runResourceValidate(options: {
     let cloudFindings: ReturnType<typeof validateCloudEvent> = [];
 
     if (options.cloudEvent) {
-      if (!options.resource)
+      if (!options.resource) {
         throw new Error('--cloud-event needs --resource <key> naming its payload contract');
+      }
 
       const resource = byKey(
         graph.resources,
@@ -595,7 +641,9 @@ export async function runResourceValidate(options: {
 
       const schema = resourceSchema(resource);
 
-      if (!schema) throw new Error(`${options.resource} has no payload schema to validate against`);
+      if (!schema) {
+        throw new Error(`${options.resource} has no payload schema to validate against`);
+      }
 
       const headers = options.headers
         ? await readJsonInput(
@@ -613,7 +661,7 @@ export async function runResourceValidate(options: {
       );
     }
 
-    if (!options.quiet)
+    if (!options.quiet) {
       console.log(
         JSON.stringify(
           { commands: commandFindings, documents, cloudevents: cloudFindings },
@@ -621,6 +669,7 @@ export async function runResourceValidate(options: {
           2,
         ),
       );
+    }
 
     return commandFindings.length ||
       documents?.findings.some((finding) => finding.severity !== 'info') ||

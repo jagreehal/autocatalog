@@ -52,9 +52,13 @@ const schemaNode = z
 type SchemaNode = z.infer<typeof schemaNode>;
 
 function typeOf(s: SchemaNode): string {
-  if (s.const !== undefined) return `const ${JSON.stringify(s.const)}`;
+  if (s.const !== undefined) {
+    return `const ${JSON.stringify(s.const)}`;
+  }
 
-  if (s.enum) return 'enum';
+  if (s.enum) {
+    return 'enum';
+  }
 
   const type = Array.isArray(s.type) ? s.type.join(' | ') : (s.type ?? '');
 
@@ -62,9 +66,13 @@ function typeOf(s: SchemaNode): string {
     return `${typeOf(schemaNode.parse(s.items))}[]`;
   }
 
-  if (s.oneOf || s.anyOf) return 'one of';
+  if (s.oneOf || s.anyOf) {
+    return 'one of';
+  }
 
-  if (s.$ref) return s.$ref.split('/').pop() ?? 'ref';
+  if (s.$ref) {
+    return s.$ref.split('/').pop() ?? 'ref';
+  }
 
   return type || 'any';
 }
@@ -73,31 +81,52 @@ function typeOf(s: SchemaNode): string {
 // JavaScript integer, so showing it is noise a reader has to skip past.
 const SAFE = Number.MAX_SAFE_INTEGER;
 
-function constraints(s: SchemaNode): string[] {
-  const out: string[] = [];
+function constraints(s: SchemaNode): Array<string> {
+  const out: Array<string> = [];
 
-  if (s.format !== undefined) out.push(s.format);
-
-  if (s.minimum !== undefined && s.minimum !== -SAFE) out.push(`≥ ${s.minimum}`);
-
-  if (s.exclusiveMinimum !== undefined) out.push(`> ${s.exclusiveMinimum}`);
-
-  if (s.maximum !== undefined && s.maximum !== SAFE) out.push(`≤ ${s.maximum}`);
-
-  if (s.exclusiveMaximum !== undefined) out.push(`< ${s.exclusiveMaximum}`);
-
-  if (s.minLength !== undefined && s.minLength === s.maxLength) out.push(`length ${s.minLength}`);
-  else {
-    if (s.minLength !== undefined) out.push(`min length ${s.minLength}`);
-
-    if (s.maxLength !== undefined) out.push(`max length ${s.maxLength}`);
+  if (s.format !== undefined) {
+    out.push(s.format);
   }
 
-  if (s.pattern !== undefined && s.format === undefined) out.push(`pattern ${s.pattern}`);
+  if (s.minimum !== undefined && s.minimum !== -SAFE) {
+    out.push(`≥ ${s.minimum}`);
+  }
 
-  if (s.enum) out.push(s.enum.map((value) => JSON.stringify(value)).join(' | '));
+  if (s.exclusiveMinimum !== undefined) {
+    out.push(`> ${s.exclusiveMinimum}`);
+  }
 
-  if (s.default !== undefined) out.push(`default ${JSON.stringify(s.default)}`);
+  if (s.maximum !== undefined && s.maximum !== SAFE) {
+    out.push(`≤ ${s.maximum}`);
+  }
+
+  if (s.exclusiveMaximum !== undefined) {
+    out.push(`< ${s.exclusiveMaximum}`);
+  }
+
+  if (s.minLength !== undefined && s.minLength === s.maxLength) {
+    out.push(`length ${s.minLength}`);
+  } else {
+    if (s.minLength !== undefined) {
+      out.push(`min length ${s.minLength}`);
+    }
+
+    if (s.maxLength !== undefined) {
+      out.push(`max length ${s.maxLength}`);
+    }
+  }
+
+  if (s.pattern !== undefined && s.format === undefined) {
+    out.push(`pattern ${s.pattern}`);
+  }
+
+  if (s.enum) {
+    out.push(s.enum.map((value) => JSON.stringify(value)).join(' | '));
+  }
+
+  if (s.default !== undefined) {
+    out.push(`default ${JSON.stringify(s.default)}`);
+  }
 
   return out;
 }
@@ -105,12 +134,16 @@ function constraints(s: SchemaNode): string[] {
 // What tells one variant from another: its title, else the first `const`
 // property, which is the discriminator Zod writes into every branch.
 function variantLabel(variant: SchemaNode, index: number): string {
-  if (variant.title) return variant.title;
+  if (variant.title) {
+    return variant.title;
+  }
 
   for (const [key, value] of Object.entries(variant.properties ?? {})) {
     const fixed = schemaNode.parse(value).const;
 
-    if (fixed !== undefined) return `${key} = ${JSON.stringify(fixed)}`;
+    if (fixed !== undefined) {
+      return `${key} = ${JSON.stringify(fixed)}`;
+    }
   }
 
   return `option ${index + 1}`;
@@ -118,7 +151,7 @@ function variantLabel(variant: SchemaNode, index: number): string {
 
 interface Children {
   entries: Array<[string, SchemaNode]>;
-  required: string[];
+  required: Array<string>;
 }
 
 // A variant usually leans on the fields declared beside `oneOf`, so each one is
@@ -167,14 +200,14 @@ export interface PropNode {
   type: string;
   required: boolean;
   description: string | null;
-  facts: string[];
+  facts: Array<string>;
   depth: number;
-  children: PropNode[] | null;
+  children: Array<PropNode> | null;
   /** Who carries and consumes this field, when the page joined the field index. */
   lineage?: {
     carriers: number;
-    consumers: string[];
-    producers: string[];
+    consumers: Array<string>;
+    producers: Array<string>;
     conflict?: string | undefined;
   };
 }
@@ -185,12 +218,14 @@ function buildChildren(
   depth: number,
   pathPrefix: string,
   underArray: boolean,
-): PropNode[] | null {
+): Array<PropNode> | null {
   const items = node.type === 'array' && node.items ? schemaNode.parse(node.items) : null;
 
   const own = childrenOf(node) ?? (items ? childrenOf(items) : null);
 
-  if (!own) return null;
+  if (!own) {
+    return null;
+  }
 
   const required = new Set(own.required);
   const childPrefix = underArray ? (pathPrefix ? `${pathPrefix}[]` : '') : pathPrefix;
@@ -225,6 +260,6 @@ function buildNode(
 }
 
 /** A JSON Schema's properties as the tree draws them, nested and numbered. */
-export function schemaTree(schema: JsonValue): PropNode[] {
+export function schemaTree(schema: JsonValue): Array<PropNode> {
   return buildChildren(schemaNode.parse(schema), '', 1, '', false) ?? [];
 }

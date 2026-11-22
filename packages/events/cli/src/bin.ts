@@ -9,13 +9,17 @@ import { buildProgramWithAdapters } from './index';
  * else here. Only an existing directory qualifies, so a mistyped command still
  * gets commander's "unknown command" instead of a surprise scan.
  */
-export function withImpliedScan(argv: string[], commands: string[]): string[] {
+export function withImpliedScan(argv: Array<string>, commands: Array<string>): Array<string> {
   const [node, entry, first, ...rest] = argv;
 
-  if (!first || first.startsWith('-') || commands.includes(first)) return argv;
+  if (!first || first.startsWith('-') || commands.includes(first)) {
+    return argv;
+  }
 
   try {
-    if (!fs.statSync(first).isDirectory()) return argv;
+    if (!fs.statSync(first).isDirectory()) {
+      return argv;
+    }
   } catch {
     return argv;
   }
@@ -27,7 +31,7 @@ export function withImpliedScan(argv: string[], commands: string[]): string[] {
   const program = await buildProgramWithAdapters(process.cwd());
   const names = program.commands.flatMap((command) => [command.name(), ...command.aliases()]);
   await program.parseAsync(withImpliedScan(process.argv, names));
-})().catch((err) => {
-  console.error(err instanceof Error ? err.message : err);
+})().catch((error) => {
+  console.error(error instanceof Error ? error.message : error);
   process.exit(1);
 });

@@ -1,11 +1,13 @@
 import path from 'node:path';
 import { apiPath, apiTitle } from './apis';
-import { changedAt, eventChangedAt, repositoryFileChangedAt, type DocsCatalog } from './catalog';
+import { changedAt, eventChangedAt, repositoryFileChangedAt } from './catalog';
+import type { DocsCatalog } from './catalog';
 import { modelPath, modelTitle } from './data-models';
 import { eventPath } from './event-path';
 import { dataProductPath, entityPath } from './model';
 import { specificationPath } from './specifications';
-import { docHref, type DocListItem } from './ui/lib/docs';
+import { docHref } from './ui/lib/docs';
+import type { DocListItem } from './ui/lib/docs';
 import type { RecentChange } from './ui/pages/HomeBlock';
 
 /** Enough to see what moved lately; each page says when it changed. */
@@ -21,11 +23,11 @@ export function recentChanges(
     DocsCatalog,
     'events' | 'apis' | 'specifications' | 'model' | 'models' | 'graph' | 'repositoryRoots'
   >,
-  documents: DocListItem[],
+  documents: Array<DocListItem>,
   base: string,
   changed: (absolute: string) => string | null = changedAt,
   limit = RECENT_SIZE,
-): RecentChange[] {
+): Array<RecentChange> {
   const inRepository = (repository: string, file: string) =>
     repositoryFileChangedAt(catalog, repository, file, changed);
 

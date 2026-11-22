@@ -92,7 +92,7 @@ describe('headCommit', () => {
     try {
       expect(headCommit(root)).toBeNull();
 
-      const git = (...args: string[]) =>
+      const git = (...args: Array<string>) =>
         execFileSync('git', args, { cwd: root, encoding: 'utf8' }).trim();
 
       git('init', '-q');

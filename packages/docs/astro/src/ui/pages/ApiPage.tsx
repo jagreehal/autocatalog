@@ -28,7 +28,7 @@ export interface ApiPageProps {
   specHref: string;
   /** Services this API is matched to by its title or the events it defines. */
   services: Array<{ name: string; href: string }>;
-  operations: ApiOperation[];
+  operations: Array<ApiOperation>;
   /**
    * Read outside the company: the page leaves out where the spec lives and who
    * serves it, and readers can send requests from the reference.
@@ -145,7 +145,9 @@ function useScalar(
 
   useEffect(() => {
     // Framed, the reference loads in the frame, not on this page.
-    if (!enabled) return undefined;
+    if (!enabled) {
+      return undefined;
+    }
 
     const configuration = {
       url: specHref,
@@ -170,7 +172,9 @@ function useScalar(
     let instance: ScalarInstance | undefined;
 
     const mount = () => {
-      if (!window.Scalar || !target.current) return;
+      if (!window.Scalar || !target.current) {
+        return;
+      }
 
       const mode = () => ({
         ...configuration,
@@ -195,8 +199,9 @@ function useScalar(
 
     let script = document.querySelector<HTMLScriptElement>(`script[src="${SCALAR}"]`);
 
-    if (window.Scalar) mount();
-    else {
+    if (window.Scalar) {
+      mount();
+    } else {
       script ??= Object.assign(document.createElement('script'), { src: SCALAR });
       script.addEventListener('load', mount);
       document.head.append(script);
@@ -223,7 +228,9 @@ function ReferenceFrame({ href, title }: { href: string; title: string }) {
   useEffect(() => {
     const target = frame.current;
 
-    if (!target) return;
+    if (!target) {
+      return;
+    }
 
     const follow = () => {
       const inner = target.contentWindow;

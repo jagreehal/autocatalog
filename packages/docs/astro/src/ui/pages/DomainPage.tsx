@@ -26,13 +26,13 @@ export interface DomainPageProps {
   /** What the domain is for, when a record of it says. */
   summary?: string | undefined;
   /** Domains whose overview names this one as `parent`. */
-  subdomains?: Linked[] | undefined;
+  subdomains?: Array<Linked> | undefined;
   /** Systems with at least one of the domain's services in them. */
   systems?: Array<Linked & { members: number }> | undefined;
   /** The APIs the domain's services serve. */
-  contracts?: Linked[] | undefined;
-  entities?: Linked[] | undefined;
-  flows?: Linked[] | undefined;
+  contracts?: Array<Linked> | undefined;
+  entities?: Array<Linked> | undefined;
+  flows?: Array<Linked> | undefined;
   /** Documents whose `about:` names the domain. */
   documents?: Array<{ name: string; href: string; kind?: string | undefined }> | undefined;
   events: Array<{
@@ -78,9 +78,11 @@ function Section({
   id: string;
   heading: string;
   total: string;
-  rows: Row[];
+  rows: Array<Row>;
 }) {
-  if (rows.length === 0) return null;
+  if (rows.length === 0) {
+    return null;
+  }
 
   return (
     <Card id={id}>
@@ -122,7 +124,7 @@ function Section({
   );
 }
 
-const linkedRows = (items: Linked[] | undefined, kind: IconName): Row[] =>
+const linkedRows = (items: Array<Linked> | undefined, kind: IconName): Array<Row> =>
   (items ?? []).map((item) => ({
     key: item.href,
     title: item.name,

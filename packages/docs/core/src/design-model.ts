@@ -1,19 +1,10 @@
-import {
-  isEventCatalogResource,
-  resourceKey,
-  type CatalogRelationship,
-  type CatalogResource,
-} from 'autocatalog-core';
+import { isEventCatalogResource, resourceKey } from 'autocatalog-core';
+import type { CatalogRelationship, CatalogResource } from 'autocatalog-core';
 import { z } from 'zod';
-import { edgeEvidence, type EdgeEvidence, type EventRuntime } from './diagram';
-import {
-  designChanges,
-  layoutSchema,
-  noteSchema,
-  type Design,
-  type DesignInput,
-  type DesignRelation,
-} from './designs';
+import { edgeEvidence } from './diagram';
+import type { EdgeEvidence, EventRuntime } from './diagram';
+import { designChanges, layoutSchema, noteSchema } from './designs';
+import type { Design, DesignInput, DesignRelation } from './designs';
 
 /**
  * A design as EventCatalog Studio's canvas holds one (`@eventcatalog/visualiser/model`'s
@@ -67,7 +58,7 @@ export function designModel(authored: DesignInput, design: Design): StudioModel 
       ...(resource.summary && { summary: resource.summary }),
       ...(resource.parent && { parent: resource.parent }),
       ...(resource.technology && { technology: resource.technology }),
-      ...(authored.resources[index]?.ref && { ref: authored.resources[index]!.ref }),
+      ...(authored.resources[index]?.ref && { ref: authored.resources[index].ref }),
     })),
     relations: design.relations.map(({ from, to, kind, label }) => ({
       from,
@@ -88,8 +79,8 @@ const WITHOUT_SUMMARY = new Set(['domain', 'system']);
 const slug = (name: string) =>
   name
     .toLowerCase()
-    .replace(/[^a-z0-9.]+/g, '-')
-    .replace(/^-|-$/g, '');
+    .replaceAll(/[^a-z0-9.]+/g, '-')
+    .replaceAll(/^-|-$/g, '');
 
 /**
  * The id the file gives each resource the canvas made. The canvas gives one an
@@ -103,16 +94,22 @@ export function fileIds(model: StudioModel, resolved: Design): Map<string, strin
   const ids = new Map<string, string>();
 
   for (const resource of model.resources) {
-    if (known.has(resource.id) || resource.ref) continue;
+    if (known.has(resource.id) || resource.ref) {
+      continue;
+    }
 
     const name = resource.name.trim();
     const base = /\s/.test(name) ? slug(name) : name;
 
-    if (!base || base === resource.id) continue;
+    if (!base || base === resource.id) {
+      continue;
+    }
 
     let id = base;
 
-    for (let n = 2; taken.has(id); n++) id = `${base}-${n}`;
+    for (let n = 2; taken.has(id); n++) {
+      id = `${base}-${n}`;
+    }
 
     taken.add(id);
     ids.set(resource.id, id);
@@ -133,7 +130,7 @@ export function designFromModel(
   model: StudioModel,
   previous: DesignInput,
   resolved: Design,
-  order: string[][] = previous.resources.map((resource) => Object.keys(resource)),
+  order: Array<string>[] = previous.resources.map((resource) => Object.keys(resource)),
 ) {
   const before = new Map(
     resolved.resources.map((resource, index) => [
@@ -231,9 +228,9 @@ export interface DesignImpact {
   kind: string;
   owner?: string | undefined;
   /** What the design does to it, in a line each: "RefundService receives it". */
-  changes: string[];
+  changes: Array<string>;
   /** Who depends on it today, from the catalog: its producers and consumers. */
-  dependents: string[];
+  dependents: Array<string>;
 }
 
 export interface DesignReview {
@@ -242,7 +239,7 @@ export interface DesignReview {
   /** Resources the catalog does not have yet. */
   added: Array<{ id: string; name: string; type: string }>;
   /** Catalog resources a new relation touches, with their owners: who reviews the change. */
-  impact: DesignImpact[];
+  impact: Array<DesignImpact>;
   /** What a runtime snapshot saw of it, when one covers anything it draws. */
   runtime?: DesignEvidence | undefined;
 }
@@ -259,7 +256,7 @@ const VERBS: Partial<Record<DesignRelation['kind'], string>> = {
  */
 export function designReview(
   design: Design,
-  catalog: { resources: CatalogResource[]; relationships: CatalogRelationship[] },
+  catalog: { resources: Array<CatalogResource>; relationships: Array<CatalogRelationship> },
   runtime: Map<string, EventRuntime> = new Map(),
 ): DesignReview {
   const byKey = new Map(catalog.resources.map((resource) => [resourceKey(resource.ref), resource]));
@@ -276,7 +273,9 @@ export function designReview(
     ] as const) {
       const part = parts.get(end);
 
-      if (!part?.ref) continue;
+      if (!part?.ref) {
+        continue;
+      }
 
       const key = resourceKey(part.ref);
       const resource = byKey.get(key);
@@ -307,22 +306,28 @@ export function designReview(
 /** Who produces or consumes an event, or what a service produces and consumes, by title. */
 function dependentsOf(
   key: string,
-  catalog: { relationships: CatalogRelationship[] },
+  catalog: { relationships: Array<CatalogRelationship> },
   byKey: Map<string, CatalogResource>,
-): string[] {
+): Array<string> {
   const title = (ref: CatalogRelationship['from']) => byKey.get(resourceKey(ref))?.title ?? ref.id;
   const resource = byKey.get(key);
 
   const names = catalog.relationships.flatMap((relationship) => {
-    if (!['produces', 'consumes', 'sends', 'handles'].includes(relationship.type)) return [];
+    if (!['produces', 'consumes', 'sends', 'handles'].includes(relationship.type)) {
+      return [];
+    }
 
     const from = resourceKey(relationship.from);
     const to = resourceKey(relationship.to);
 
     if (resource && isEventCatalogResource(resource)) {
-      if (to === key) return [title(relationship.from)];
+      if (to === key) {
+        return [title(relationship.from)];
+      }
 
-      if (from === key) return [title(relationship.to)];
+      if (from === key) {
+        return [title(relationship.to)];
+      }
 
       return [];
     }
@@ -366,9 +371,13 @@ export function designEvidence(
     const seen = runtimeOf(relation.to);
     const role = relation.kind === 'sends' ? 'produces' : 'consumes';
 
-    if (!seen || !event || service?.kind !== 'service') return [];
+    if (!seen || !event || service?.kind !== 'service') {
+      return [];
+    }
 
-    if (relation.kind !== 'sends' && relation.kind !== 'receives') return [];
+    if (relation.kind !== 'sends' && relation.kind !== 'receives') {
+      return [];
+    }
 
     const evidence = edgeEvidence(role, event.id, service.id, seen);
 
@@ -388,7 +397,9 @@ export function designEvidence(
   const undrawn = design.resources.flatMap((part) => {
     const seen = runtimeOf(part.id)?.observed;
 
-    if (!seen) return [];
+    if (!seen) {
+      return [];
+    }
 
     return (['produces', 'consumes'] as const).flatMap((role) =>
       (role === 'produces' ? seen.producers : seen.consumers)
@@ -397,7 +408,9 @@ export function designEvidence(
     );
   });
 
-  if (relations.length === 0 && undrawn.length === 0) return undefined;
+  if (relations.length === 0 && undrawn.length === 0) {
+    return undefined;
+  }
 
   return { relations, undrawn };
 }

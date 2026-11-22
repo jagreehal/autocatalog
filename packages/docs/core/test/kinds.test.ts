@@ -3,7 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { checkDocs } from '../src/check';
-import { DEFAULT_FRONTMATTER_SCHEMA } from '../src/frontmatter';
+import { DEFAULT_FRONTMATTER_SCHEMA, frontmatterValidator } from '../src/frontmatter';
 import {
   defaultConventionsFile,
   docKind,
@@ -14,7 +14,6 @@ import {
 import { buildDocsManifest } from '../src/manifest';
 import { createDocsResourceGraph } from '../src/resource-graph';
 import { readDocs } from '../src/read-docs';
-import { frontmatterValidator } from '../src/frontmatter';
 
 let root: string;
 

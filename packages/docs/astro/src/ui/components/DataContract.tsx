@@ -43,7 +43,7 @@ export function contractAnchor(
   contract: Pick<OdcsContract, 'id' | 'version'>,
   expectation = false,
 ) {
-  const slug = (v: string) => v.replace(/[^A-Za-z0-9_-]+/g, '-');
+  const slug = (v: string) => v.replaceAll(/[^A-Za-z0-9_-]+/g, '-');
 
   return `${expectation ? 'expects' : 'contract'}-${slug(contract.id)}-v${slug(contract.version)}`;
 }
@@ -70,7 +70,7 @@ export function DataContract({
     <Card id={contractAnchor(contract, expectation)}>
       <CardHeader>
         <CardTitle role="heading" aria-level={2}>
-          {expectation ? `What it expects of ${about}` : `${contract.name ?? contract.id}`}{' '}
+          {expectation ? `What it expects of ${about}` : (contract.name ?? contract.id)}{' '}
           <span className="font-normal text-muted-foreground">{contract.version}</span>
         </CardTitle>
         <CardAction>

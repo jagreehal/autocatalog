@@ -12,7 +12,11 @@ export function eventPath({ repository, event }: CatalogEvent): string {
 }
 
 /** Every published event with this id in this domain, from any repository. */
-export function eventsNamed(events: CatalogEvent[], domain: string, id: string): CatalogEvent[] {
+export function eventsNamed(
+  events: Array<CatalogEvent>,
+  domain: string,
+  id: string,
+): Array<CatalogEvent> {
   return events.filter(
     ({ event }) => event.frontmatter.domain === domain && event.frontmatter.id === id,
   );
@@ -25,10 +29,10 @@ export function eventsNamed(events: CatalogEvent[], domain: string, id: string):
  * with its own name.
  */
 export function eventsForService(
-  events: CatalogEvent[],
+  events: Array<CatalogEvent>,
   service: string,
   role: 'producers' | 'consumers',
-): CatalogEvent[] {
+): Array<CatalogEvent> {
   return events.filter(({ event }) => event.frontmatter[role].includes(service));
 }
 
@@ -37,14 +41,16 @@ export function eventsForService(
  * order indexFields lists them. indexFields keeps event order within a field,
  * so indexing each event alone lines up with the combined index.
  */
-export function fieldCarriers(events: CatalogEvent[]): Map<string, CatalogEvent[]> {
-  const carriers = new Map<string, CatalogEvent[]>();
+export function fieldCarriers(events: Array<CatalogEvent>): Map<string, Array<CatalogEvent>> {
+  const carriers = new Map<string, Array<CatalogEvent>>();
 
   for (const entry of events) {
     for (const field of indexFields([entry.event])) {
       const list = carriers.get(field.path) ?? [];
 
-      for (const _ of field.occurrences) list.push(entry);
+      for (const _ of field.occurrences) {
+        list.push(entry);
+      }
       carriers.set(field.path, list);
     }
   }

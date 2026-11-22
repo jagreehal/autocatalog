@@ -1,18 +1,12 @@
-import {
-  AgentSchema,
-  McpServerSchema,
-  ToolSchema,
-  type Catalog,
-  type Entity,
-  type EntityKind,
-} from 'autocatalog-agents-core';
+import { AgentSchema, McpServerSchema, ToolSchema } from 'autocatalog-agents-core';
+import type { Catalog, Entity, EntityKind } from 'autocatalog-agents-core';
 import { describe, expect, it } from 'vitest';
 import { computeDrift, GATEWAY_CALLER } from './diff.js';
 import { parseOtlpJson } from './parse.js';
 
 const text = (key: string, stringValue: string) => ({ key, value: { stringValue } });
 
-const trace = (service: string, ...spans: Array<ReturnType<typeof text>[]>) =>
+const trace = (service: string, ...spans: Array<Array<ReturnType<typeof text>>>) =>
   JSON.stringify({
     resourceSpans: [
       {

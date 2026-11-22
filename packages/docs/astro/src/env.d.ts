@@ -26,7 +26,7 @@ declare module 'virtual:autocatalog-docs-own-markdown' {
 // The assistant's model and the pages it answers from, fixed at build time. See chat.ts.
 declare module 'virtual:autocatalog-chat' {
   export const options: import('./chat').SiteChatOptions;
-  export const pages: import('autocatalog-chatbot').ChatPage[];
+  export const pages: Array<import('autocatalog-chatbot').ChatPage>;
 }
 
 // What a site's middleware can set for the page being rendered.
@@ -40,7 +40,7 @@ declare namespace App {
      */
     canRead?: (doc: { id: string }) => boolean;
     /** In `ac site dev`, the sample readers to view the site as, and which one it is. */
-    viewAs?: { names: string[]; current: string | undefined };
+    viewAs?: { names: Array<string>; current: string | undefined };
     /** The closed document a `teaser` names. */
     denied?: { id: string; title: string; description?: string | undefined };
   }
@@ -73,6 +73,6 @@ declare module 'virtual:autocatalog-docs-blocks' {
 }
 
 declare module 'virtual:autocatalog-docs-nav' {
-  const links: import('autocatalog-docs-core').SiteNavLink[];
+  const links: Array<import('autocatalog-docs-core').SiteNavLink>;
   export default links;
 }

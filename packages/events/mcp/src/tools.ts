@@ -4,14 +4,12 @@ import { promisify } from 'node:util';
 import {
   assessEventChange,
   eventRuntimeEvidence,
-  type EventRuntimeEvidence,
   readCatalogFreshness,
   summariseDrift,
   composeResourceGraphs,
   createCatalogProjection,
   createEventResourceGraph,
   isEventCatalogResource,
-  type ResourceGraph,
   loadCatalogSnapshot as loadCatalogSnapshotCore,
   eventToLlmText,
   catalogToLlmText,
@@ -19,18 +17,22 @@ import {
   queryFields,
   hasFieldConflict,
   describeFieldConflict,
-  type LoadedEvent,
-  type LlmEventInput,
-  type CatalogProjection,
-  type CatalogFreshness,
-  type DriftReport,
-  type FieldSummary,
-  type JsonObject,
   readCompanyIndex,
   taskContext,
-  type CompanyIndexOptions,
-  type TaskContext,
-  type TaskContextOptions,
+} from 'autocatalog-core';
+import type {
+  EventRuntimeEvidence,
+  ResourceGraph,
+  LoadedEvent,
+  LlmEventInput,
+  CatalogProjection,
+  CatalogFreshness,
+  DriftReport,
+  FieldSummary,
+  JsonObject,
+  CompanyIndexOptions,
+  TaskContext,
+  TaskContextOptions,
 } from 'autocatalog-core';
 import { glossaryGraph } from 'autocatalog-docs-core';
 import { domainModel } from './model.js';
@@ -45,7 +47,7 @@ import {
 const execFileAsync = promisify(execFile);
 
 /** Core stays free of child_process; the server supplies the git it needs. */
-const git = async (args: string[], cwd: string): Promise<string> =>
+const git = async (args: Array<string>, cwd: string): Promise<string> =>
   (await execFileAsync('git', args, { cwd })).stdout;
 
 export interface EventSummary {
@@ -55,9 +57,9 @@ export interface EventSummary {
   summary: string;
   domain: string;
   status: string;
-  producers: string[];
-  consumers: string[];
-  tags: string[];
+  producers: Array<string>;
+  consumers: Array<string>;
+  tags: Array<string>;
   provenance: { default: string; fields: Record<string, string> };
   confidence?: number;
   needsReview: boolean;
@@ -171,7 +173,9 @@ export function catalogStatus(catalog: CatalogSnapshot) {
 export function resolveEvent(catalog: CatalogSnapshot, ref: string): LoadedEvent {
   const event = catalog.eventMap.get(ref);
 
-  if (event) return event;
+  if (event) {
+    return event;
+  }
 
   const matches = catalog.currentEvents.filter((candidate) => candidate.frontmatter.id === ref);
 
@@ -184,12 +188,14 @@ export function resolveEvent(catalog: CatalogSnapshot, ref: string): LoadedEvent
     );
   }
 
-  if (matches.length === 1) return matches[0]!;
+  if (matches.length === 1) {
+    return matches[0]!;
+  }
 
   throw new Error(`event not found: ${ref}`);
 }
 
-export function listEvents(catalog: CatalogSnapshot, domain?: string): EventSummary[] {
+export function listEvents(catalog: CatalogSnapshot, domain?: string): Array<EventSummary> {
   const filtered = domain
     ? catalog.events.filter((e) => e.frontmatter.domain === domain)
     : catalog.events;
@@ -231,7 +237,7 @@ export function getExamples(catalog: CatalogSnapshot, ref: string, name?: string
   };
 }
 
-export function searchEvents(catalog: CatalogSnapshot, query: string): EventSummary[] {
+export function searchEvents(catalog: CatalogSnapshot, query: string): Array<EventSummary> {
   const q = query.toLowerCase();
 
   return catalog.searchRecords
@@ -243,13 +249,15 @@ export function findEventsBy(
   catalog: CatalogSnapshot,
   attribute: string,
   value: string,
-): EventSummary[] {
-  const results: EventSummary[] = [];
+): Array<EventSummary> {
+  const results: Array<EventSummary> = [];
 
   for (const e of catalog.events) {
     const raw = Object.entries(e.frontmatter).find(([key]) => key === attribute)?.[1];
 
-    if (raw === undefined || raw === null) continue;
+    if (raw === undefined || raw === null) {
+      continue;
+    }
 
     if (Array.isArray(raw) && raw.some((v) => String(v) === value)) {
       results.push(summarise(e));
@@ -363,7 +371,7 @@ export function searchFieldsInCatalog(
   catalog: CatalogSnapshot,
   query?: string,
   conflictsOnly?: boolean,
-): FieldSummary[] {
+): Array<FieldSummary> {
   return queryFields(indexFields(catalog.events), { query, conflictsOnly });
 }
 
@@ -371,8 +379,8 @@ export interface ImpactReport {
   event: string;
   version: string;
   /** Who receives this event today, and therefore who a change reaches. */
-  consumers: string[];
-  producers: string[];
+  consumers: Array<string>;
+  producers: Array<string>;
   /** Where the contract is defined, when the scanner traced it back to code. */
   source?: { type?: string; file?: string; symbol?: string; line?: number };
   /** Never let an agent act on a guess without knowing it is one. */
@@ -383,10 +391,10 @@ export interface ImpactReport {
   sharedFields: Array<{
     path: string;
     conflict: string | null;
-    events: Array<{ event: string; consumers: string[] }>;
+    events: Array<{ event: string; consumers: Array<string> }>;
   }>;
   /** Deduplicated consumers across this event and every event sharing the field. */
-  notify: string[];
+  notify: Array<string>;
   /** Whether this answer still describes the working tree. */
   freshness: CatalogFreshness;
   /**
@@ -435,7 +443,9 @@ export function assessImpact(catalog: CatalogSnapshot, ref: string, field?: stri
       const events = summary.occurrences.map((occurrence) => {
         // A field that travels through someone else's event reaches their
         // consumers too. That second hop is the part a human forgets.
-        if (occurrence.eventId !== id) occurrence.consumers.forEach((c) => notify.add(c));
+        if (occurrence.eventId !== id) {
+          occurrence.consumers.forEach((c) => notify.add(c));
+        }
 
         return {
           event: `${occurrence.domain}/${occurrence.eventId}`,
@@ -479,7 +489,7 @@ export function checkChange(
   catalog: CatalogSnapshot,
   ref: string,
   proposed: JsonObject,
-): DriftReport & { event: string; notify: string[]; freshness: CatalogFreshness } {
+): DriftReport & { event: string; notify: Array<string>; freshness: CatalogFreshness } {
   const event = resolveEvent(catalog, ref);
   const { id, domain, consumers, consumerFields, source } = event.frontmatter;
 
@@ -506,7 +516,9 @@ export function checkChange(
 function eventRuntimeEvidenceWithSnapshot(event: LoadedEvent['frontmatter']) {
   const evidence = eventRuntimeEvidence(event);
 
-  if (evidence.status !== 'snapshot') throw new Error('Event has no snapshot evidence');
+  if (evidence.status !== 'snapshot') {
+    throw new Error('Event has no snapshot evidence');
+  }
 
   return evidence;
 }

@@ -3,12 +3,12 @@ import { Item } from '#ui/components/ui/item.tsx';
 
 export interface TransportEntry {
   address?: string | undefined;
-  protocols: string[];
+  protocols: Array<string>;
   deliveryMode?: string | undefined;
 }
 
 export interface TransportFactsProps {
-  transport?: TransportEntry[] | undefined;
+  transport?: Array<TransportEntry> | undefined;
 }
 
 /** "kafka and amqp, at-least-once delivery": how one channel carries the event. */
@@ -29,7 +29,9 @@ function carriage({ protocols, deliveryMode }: TransportEntry): string {
  * of the facts list, or nothing when no spec said.
  */
 export function TransportFacts({ transport = [] }: TransportFactsProps) {
-  if (transport.length === 0) return null;
+  if (transport.length === 0) {
+    return null;
+  }
 
   return (
     <Item size="xs" className="items-start">

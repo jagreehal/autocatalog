@@ -143,7 +143,7 @@ const pageBlocks: Array<{
 const steps: Array<{
   title: string;
   body: ReactNode;
-  tree: ReactNode[];
+  tree: Array<ReactNode>;
   treeLabel: string;
   yields: Array<{ provenance: 'extracted' | 'declared'; what: string; how: ReactNode }>;
 }> = [
@@ -439,7 +439,7 @@ function ServicePage() {
           </div>
           <div className="grid gap-3.5 md:grid-cols-2">
             {[pageBlocks.slice(0, 3), pageBlocks.slice(3)].map((column) => (
-              <div className="flex flex-col gap-3" key={column[0]!.title}>
+              <div className="flex flex-col gap-3" key={column[0].title}>
                 {column.map((block) => (
                   <div className="overflow-hidden rounded-lg border" key={block.title}>
                     <div className="flex justify-between gap-2 border-b bg-muted px-3 py-1.5 text-xs font-bold">

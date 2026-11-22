@@ -20,11 +20,11 @@ export interface EventMetadata {
   summary?: string;
   domain?: string;
   team?: string;
-  producers?: string[];
-  consumers?: string[];
+  producers?: Array<string>;
+  consumers?: Array<string>;
   /** Payload paths each consumer reads, by consumer name (`items[].sku`). */
-  consumerFields?: Record<string, string[]>;
-  tags?: string[];
+  consumerFields?: Record<string, Array<string>>;
+  tags?: Array<string>;
   status?: 'active' | 'deprecated' | 'draft';
   deprecation?: EventDeprecation;
   /** What consumers may rely on about arrival: guarantee, ordering, idempotency, lateness. */
@@ -59,7 +59,9 @@ export function mergeMetadata(
   explicit: Partial<EventMetadata> | undefined,
   schemaMeta: EventMetadata | undefined,
 ): EventMetadata | undefined {
-  if (!explicit && !schemaMeta) return undefined;
+  if (!explicit && !schemaMeta) {
+    return undefined;
+  }
 
   const merged: EventMetadata = {
     id: explicit?.id ?? schemaMeta?.id,

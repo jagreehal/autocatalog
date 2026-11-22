@@ -45,7 +45,7 @@ const findings = async (graph: ResourceGraph) => {
     }),
   );
 
-  const said: string[] = [];
+  const said: Array<string> = [];
 
   await withNetworkPolicies(graph, [{ repository: 'cluster', dir: root }], (message) =>
     said.push(message),
@@ -84,22 +84,24 @@ it('says a service a gateway exposes can be reached around it', async () => {
         attributes: {},
       },
     ],
-    relationships: (['reports', 'users-api'] as const).flatMap((service): CatalogRelationship[] => [
-      {
-        type: 'exposedBy',
-        from: { kind: 'endpoint', namespace: service, id: 'GET /a' },
-        to: { kind: 'service', id: service },
-        provenance: 'declared',
-        needsReview: false,
-      },
-      {
-        type: 'exposedBy',
-        from: { kind: 'endpoint', namespace: service, id: 'GET /a' },
-        to: { kind: 'gateway', namespace: 'gw', id: 'kong' },
-        provenance: 'extracted',
-        needsReview: false,
-      },
-    ]),
+    relationships: (['reports', 'users-api'] as const).flatMap(
+      (service): Array<CatalogRelationship> => [
+        {
+          type: 'exposedBy',
+          from: { kind: 'endpoint', namespace: service, id: 'GET /a' },
+          to: { kind: 'service', id: service },
+          provenance: 'declared',
+          needsReview: false,
+        },
+        {
+          type: 'exposedBy',
+          from: { kind: 'endpoint', namespace: service, id: 'GET /a' },
+          to: { kind: 'gateway', namespace: 'gw', id: 'kong' },
+          provenance: 'extracted',
+          needsReview: false,
+        },
+      ],
+    ),
   };
 
   expect(await findings(graph)).toEqual([
@@ -125,7 +127,7 @@ it('checks every description of a workload, so a looser copy hides nothing', asy
     }),
   );
 
-  const said: string[] = [];
+  const said: Array<string> = [];
 
   await withNetworkPolicies(
     { ...emptyResourceGraph(), relationships: [call('reports', 'users-api', 'observed')] },
@@ -160,7 +162,7 @@ it('judges no call from a namespace a policy lets only some of in', async () => 
     }),
   );
 
-  const said: string[] = [];
+  const said: Array<string> = [];
 
   await withNetworkPolicies(
     {

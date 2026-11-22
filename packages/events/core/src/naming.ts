@@ -43,7 +43,7 @@ const NOT_PAST = new Set([
 ]);
 
 /** The words in an id or a name: `order.placed`, `OrderPlaced` and `Order placed` give the same. */
-export const nameWords = (name: string): string[] =>
+export const nameWords = (name: string): Array<string> =>
   name
     .replaceAll(/([a-z0-9])([A-Z])/g, '$1 $2')
     .toLowerCase()
@@ -54,7 +54,7 @@ export const nameWords = (name: string): string[] =>
  * Whether a message's id or name says something happened: `order.placed`,
  * `PaymentSucceeded`, `invoice.sent`. A heuristic, so it only ever informs.
  */
-export function readsAsPastTense(...names: string[]): boolean {
+export function readsAsPastTense(...names: Array<string>): boolean {
   return names
     .flatMap(nameWords)
     .some(

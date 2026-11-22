@@ -13,7 +13,7 @@ export interface HealthScore {
   domain: string;
   eventId: string;
   score: number; // 0–100
-  checks: HealthCheck[];
+  checks: Array<HealthCheck>;
 }
 
 // EventCatalog also accepts a bare integer version, conventionally "V1".
@@ -30,7 +30,7 @@ export function scoreEvent(event: LoadedEvent): HealthScore {
   // At-least-once means consumers will see repeats, so the repeat is the case to show.
   const needsDuplicate = fm.delivery?.guarantee === 'at-least-once';
 
-  const checks: HealthCheck[] = [
+  const checks: Array<HealthCheck> = [
     {
       name: 'summary',
       points: 10,

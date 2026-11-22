@@ -6,15 +6,13 @@
 
 import { z } from 'zod';
 
-import { isJsonObject, jsonValueSchema, type JsonObject, type JsonValue } from './json';
-import {
-  CLASSIFICATION_VALUES,
-  type Classification,
-  type EventFrontmatter,
-  type ProvenanceValue,
-} from './schema';
+import { isJsonObject, jsonValueSchema } from './json';
+import type { JsonObject, JsonValue } from './json';
+import { CLASSIFICATION_VALUES } from './schema';
+import type { Classification, EventFrontmatter, ProvenanceValue } from './schema';
 import type { ExampleCase, LoadedEvent } from './load';
-import { cloudEventsEnvelope, type CloudEventsEnvelope } from './cloudevents';
+import { cloudEventsEnvelope } from './cloudevents';
+import type { CloudEventsEnvelope } from './cloudevents';
 
 export type { ProvenanceValue };
 
@@ -44,21 +42,21 @@ export interface AdapterEventMeta {
   domain?: string;
   team?: string;
   owner?: { team: string; name?: string; contact?: string };
-  producers?: string[];
-  consumers?: string[];
+  producers?: Array<string>;
+  consumers?: Array<string>;
   /** Payload paths each consumer reads, by consumer name. */
-  consumerFields?: Record<string, string[]>;
-  tags?: string[];
+  consumerFields?: Record<string, Array<string>>;
+  tags?: Array<string>;
   status?: 'active' | 'deprecated' | 'draft';
   classification?: Classification;
   badges?: Array<{ content: string; backgroundColor?: string; textColor?: string }>;
   deprecation?: AdapterEventDeprecation;
   transport?: Array<{
     address?: string;
-    protocols?: string[];
+    protocols?: Array<string>;
     deliveryMode?: 'push' | 'pull' | 'push-pull';
     routingKey?: string;
-    headers?: string[];
+    headers?: Array<string>;
     identity?: string;
     source?: string;
     detailType?: string;
@@ -82,7 +80,9 @@ export function readVendorMeta(schema: JsonObject): AdapterEventMeta | undefined
   for (const key of VENDOR_META_KEYS) {
     const value = schema[key];
 
-    if (isJsonObject(value)) return parseAdapterEventMeta(value);
+    if (isJsonObject(value)) {
+      return parseAdapterEventMeta(value);
+    }
   }
 
   return undefined;
@@ -143,7 +143,9 @@ export function parseAdapterEventMeta(raw: JsonObject): AdapterEventMeta {
   // field here would publish `status: retired` as an active event, silently.
   const meta = parsed.success ? parsed.data : (fields as AdapterEventMeta);
 
-  if (meta.owner) return meta;
+  if (meta.owner) {
+    return meta;
+  }
   const team = ownersSchema.parse(owners ?? []).find((value) => value !== null);
 
   return team ? { ...meta, owner: { team } } : meta;

@@ -2,19 +2,18 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import {
-  AUTOCATALOG_ARTIFACT_FILE,
-  readCatalogFreshness,
-  type ArtifactRepository,
-} from '../src/index';
+import { AUTOCATALOG_ARTIFACT_FILE, readCatalogFreshness } from '../src/index';
+import type { ArtifactRepository } from '../src/index';
 
 // The whole value of this signal is that it refuses to say "fine" when it does
 // not know, so every branch is worth pinning.
 const fakeGit =
   (revision?: string, status = '') =>
-  async (args: string[]): Promise<string> => {
+  async (args: Array<string>): Promise<string> => {
     if (args[0] === 'rev-parse') {
-      if (!revision) throw new Error('not a git repository');
+      if (!revision) {
+        throw new Error('not a git repository');
+      }
 
       return `${revision}\n`;
     }

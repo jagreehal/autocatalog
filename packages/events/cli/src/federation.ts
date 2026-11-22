@@ -22,10 +22,8 @@ import {
   withGateways,
   withNetworkPolicies,
   scanArchitecture,
-  type JsonValue,
-  type RepositoryReferences,
-  type ResourceGraph,
 } from 'autocatalog-core';
+import type { JsonValue, RepositoryReferences, ResourceGraph } from 'autocatalog-core';
 import { runFromEventCatalog } from './commands/from-eventcatalog';
 import {
   cloneRepositories,
@@ -34,8 +32,8 @@ import {
   listRepositories,
   repositoryName,
   tokenHeader,
-  type EnrolledRepository,
 } from './enrol';
+import type { EnrolledRepository } from './enrol';
 import type { FailOn } from './federation-fail-on';
 
 /**
@@ -91,7 +89,7 @@ const lockFile = z
   );
 
 export interface Lock {
-  repositories: LockEntry[];
+  repositories: Array<LockEntry>;
   services: Record<string, string>;
 }
 
@@ -105,7 +103,7 @@ export type LockEntry = z.infer<typeof lockEntry>;
 export async function readLock(
   file: string,
   options: { required?: boolean } = {},
-): Promise<LockEntry[] | undefined> {
+): Promise<Array<LockEntry> | undefined> {
   return (await readLockFile(file, options))?.repositories;
 }
 
@@ -121,7 +119,9 @@ export async function readLockFile(
   } catch (error) {
     const missing = error instanceof Error && 'code' in error && error.code === 'ENOENT';
 
-    if (missing && !required) return undefined;
+    if (missing && !required) {
+      return undefined;
+    }
 
     throw new Error(`${file}: ${missing ? 'no lock here' : String(error)}`, { cause: error });
   }
@@ -141,14 +141,16 @@ export async function readLockFile(
 
   const parsed = lockFile.safeParse(json);
 
-  if (!parsed.success) throw new Error(`${file}: ${z.prettifyError(parsed.error)}`);
+  if (!parsed.success) {
+    throw new Error(`${file}: ${z.prettifyError(parsed.error)}`);
+  }
 
   return { repositories: parsed.data.repositories, services: parsed.data.services ?? {} };
 }
 
 async function writeLock(
   file: string,
-  entries: LockEntry[],
+  entries: Array<LockEntry>,
   services: Record<string, string>,
 ): Promise<void> {
   const repositories = [...entries].sort((a, b) => a.name.localeCompare(b.name));
@@ -170,7 +172,7 @@ async function writeLock(
 /** git, sending the token only where {@link tokenHeader} allows, for the repository at `url`. */
 async function git(
   dir: string,
-  args: string[],
+  args: Array<string>,
   auth?: { url: string; token?: string },
 ): Promise<string> {
   try {
@@ -215,7 +217,9 @@ async function resolveRef(dir: string, ref: string): Promise<{ commit: string; t
     git(dir, ['rev-parse', '--verify', '--quiet', `${name}^{commit}`]).catch(() => undefined);
 
   if (/^[0-9a-f]{40,64}$/.test(ref)) {
-    if ((await commitOf(ref)) === ref) return { commit: ref };
+    if ((await commitOf(ref)) === ref) {
+      return { commit: ref };
+    }
 
     throw new Error(`no commit ${ref}`);
   }
@@ -223,12 +227,17 @@ async function resolveRef(dir: string, ref: string): Promise<{ commit: string; t
   const tagged = await commitOf(`refs/tags/${ref}`);
   const branch = await commitOf(`refs/remotes/origin/${ref}`);
 
-  if (tagged && branch && tagged !== branch)
+  if (tagged && branch && tagged !== branch) {
     throw new Error(`${ref} is a tag and a branch at different commits`);
+  }
 
-  if (tagged) return { commit: tagged, tag: ref };
+  if (tagged) {
+    return { commit: tagged, tag: ref };
+  }
 
-  if (branch) return { commit: branch };
+  if (branch) {
+    return { commit: branch };
+  }
 
   throw new Error(`no tag or branch ${ref}`);
 }
@@ -243,9 +252,9 @@ const holdingRepository = (root: string, origins: Map<string, string>, dir: stri
 
 /** Each catalog's release, as `platform v1.0.0`, by the directory it is read from. */
 export function catalogReleases(
-  pins: LockEntry[],
+  pins: Array<LockEntry>,
   root: string,
-  imported: { sources: string[]; origins: Map<string, string> },
+  imported: { sources: Array<string>; origins: Map<string, string> },
 ): Record<string, string> {
   const pinned = new Map(pins.map((pin) => [pin.name, pin]));
   const dirs = [...findCatalogRoots(root).map(({ dir }) => dir), ...imported.sources];
@@ -262,15 +271,16 @@ export function catalogReleases(
 export interface EnrolmentFlags {
   topic?: string;
   owner?: string;
-  repos?: string[];
+  repos?: Array<string>;
 }
 
 export async function enrolled(
   flags: EnrolmentFlags,
   token?: string,
-): Promise<EnrolledRepository[]> {
-  if (Boolean(flags.topic) !== Boolean(flags.owner))
+): Promise<Array<EnrolledRepository>> {
+  if (Boolean(flags.topic) !== Boolean(flags.owner)) {
     throw new Error('--topic and --owner go together: whose repositories, with which topic.');
+  }
 
   return [
     ...(flags.topic && flags.owner
@@ -284,7 +294,7 @@ export interface PreparedSources {
   /** The aggregation root the site reads. */
   root: string;
   /** EventCatalog projects, imported into folders the command owns, each one repository. */
-  sources: string[];
+  sources: Array<string>;
   /** Where each source was imported from, by source folder. */
   origins: Map<string, string>;
   /** What each repository was pinned to, by name, when a lock was used. */
@@ -300,7 +310,7 @@ export interface PreparedSources {
  * refusing one whose tree is not the tree that was locked.
  */
 export async function clonePinned(
-  entries: LockEntry[],
+  entries: Array<LockEntry>,
   opts: { cache: string; token?: string },
 ): Promise<{ root: string; failures: PreparedSources['failures'] }> {
   const cloned = await cloneRepositories(
@@ -311,7 +321,9 @@ export async function clonePinned(
   const failures = [...cloned.failed];
 
   for (const entry of entries) {
-    if (!cloned.cloned.includes(entry.name)) continue;
+    if (!cloned.cloned.includes(entry.name)) {
+      continue;
+    }
 
     const dir = path.join(cloned.root, entry.name);
 
@@ -323,7 +335,9 @@ export async function clonePinned(
 
       const tree = await git(dir, ['rev-parse', 'HEAD^{tree}']);
 
-      if (tree !== entry.tree) throw new Error(`its tree is ${tree}, not the ${entry.tree} locked`);
+      if (tree !== entry.tree) {
+        throw new Error(`its tree is ${tree}, not the ${entry.tree} locked`);
+      }
     } catch (error) {
       await fs.rm(dir, { recursive: true, force: true });
       failures.push({
@@ -345,18 +359,20 @@ export async function importEventCatalogSources(
   root: string,
   into: string,
 ): Promise<{
-  sources: string[];
+  sources: Array<string>;
   origins: Map<string, string>;
   failures: PreparedSources['failures'];
 }> {
   const projects = findEventCatalogProjects(root);
-  const sources: string[] = [];
+  const sources: Array<string> = [];
   const origins = new Map<string, string>();
   const failures: PreparedSources['failures'] = [];
 
   await fs.rm(into, { recursive: true, force: true });
 
-  if (projects.length === 0) return { sources, origins, failures };
+  if (projects.length === 0) {
+    return { sources, origins, failures };
+  }
 
   await ignoredDirectory(into);
 
@@ -389,7 +405,9 @@ export async function importEventCatalogSources(
     if (code === 0) {
       sources.push(target);
       origins.set(target, project);
-    } else failures.push({ name, reason: 'its EventCatalog project could not be read' });
+    } else {
+      failures.push({ name, reason: 'its EventCatalog project could not be read' });
+    }
   }
 
   return { sources, origins, failures };
@@ -402,13 +420,13 @@ export async function runFederationLock(
   opts: EnrolmentFlags & {
     lock: string;
     cache: string;
-    only?: string[];
+    only?: Array<string>;
     /** A tag, branch or commit to pin instead of the latest commit. */
     ref?: string;
     /** Pin each repository's newest release tag. */
     latestTag?: boolean;
     /** `service=repository`: who owns a service several repositories claim, or a pin to move. */
-    service?: string[];
+    service?: Array<string>;
   },
 ): Promise<number> {
   if (opts.ref && opts.latestTag) {
@@ -466,8 +484,9 @@ export async function runFederationLock(
     ...(token && { token }),
   });
 
-  for (const failure of cloned.failed)
+  for (const failure of cloned.failed) {
     console.warn(kleur.yellow(`Left out ${failure.name}: ${failure.reason}`));
+  }
 
   // Nothing could be read: the lock stays as it was rather than pinning nothing.
   if (cloned.cloned.length === 0) {
@@ -481,9 +500,9 @@ export async function runFederationLock(
   }
 
   const now = new Date().toISOString();
-  const entries: LockEntry[] = [];
+  const entries: Array<LockEntry> = [];
   // What each repository read this time claims, at the commit it is pinned to.
-  const claims = new Map<string, string[]>();
+  const claims = new Map<string, Array<string>>();
   let found = false;
 
   for (const repo of repositories) {
@@ -496,15 +515,18 @@ export async function runFederationLock(
     }
 
     if (!cloned.cloned.includes(repo.name)) {
-      if (kept) entries.push(kept);
+      if (kept) {
+        entries.push(kept);
+      }
       continue;
     }
 
     const dir = path.join(cloned.root, repo.name);
     const wanted = opts.ref ?? (opts.latestTag ? await latestReleaseTag(dir) : undefined);
 
-    if (opts.latestTag && !wanted)
+    if (opts.latestTag && !wanted) {
       console.warn(kleur.yellow(`${repo.name} has no release tag: pinned at its latest commit`));
+    }
 
     const pin = wanted
       ? await resolveRef(dir, wanted).catch((error: Error) => error)
@@ -515,7 +537,9 @@ export async function runFederationLock(
         kleur.yellow(`${repo.name}: ${pin.message}, so ${kept ? 'its pin stays' : 'left out'}`),
       );
 
-      if (kept) entries.push(kept);
+      if (kept) {
+        entries.push(kept);
+      }
       continue;
     }
 
@@ -586,12 +610,16 @@ export async function runFederationLock(
     chosen,
   });
 
-  for (const line of owners.contested) console.warn(kleur.yellow(`! ${line}`));
+  for (const line of owners.contested) {
+    console.warn(kleur.yellow(`! ${line}`));
+  }
 
   if (owners.conflicts.length) {
     console.error(kleur.red('Services more than one repository claims:'));
 
-    for (const line of owners.conflicts) console.error(`  ${line}`);
+    for (const line of owners.conflicts) {
+      console.error(`  ${line}`);
+    }
 
     console.error(kleur.red(`\n${path.basename(lock)} was left as it was.`));
 
@@ -614,24 +642,27 @@ export async function runFederationLock(
     );
   }
 
-  for (const gone of previous.filter((p) => !entries.some((e) => e.name === p.name)))
+  for (const gone of previous.filter((p) => !entries.some((e) => e.name === p.name))) {
     console.log(`${gone.name.padEnd(28)} ${kleur.red('removed: no longer enrolled')}`);
+  }
 
   const before = locked?.services ?? {};
 
   for (const [service, repository] of Object.entries(owners.services)) {
     const was = before[service];
 
-    if (was !== repository)
+    if (was !== repository) {
       console.log(
         `${`service ${service}`.padEnd(28)} ${was ? kleur.yellow(`${was} → ${repository}`) : kleur.green(`owned by ${repository}`)}`,
       );
+    }
   }
 
-  for (const service of Object.keys(before).filter((name) => !owners.services[name]))
+  for (const service of Object.keys(before).filter((name) => !owners.services[name])) {
     console.log(
       `${`service ${service}`.padEnd(28)} ${kleur.red('removed: no repository claims it')}`,
     );
+  }
 
   console.log(
     kleur.dim(
@@ -655,22 +686,22 @@ interface SourceStatus {
   commands: number;
   services: number;
   references: number;
-  unresolved: string[];
+  unresolved: Array<string>;
 }
 
 export interface FederationStatus {
-  sources: SourceStatus[];
+  sources: Array<SourceStatus>;
   /** Resources more than one repository defines: each id has one owner. */
-  duplicates: string[];
-  unresolved: string[];
+  duplicates: Array<string>;
+  unresolved: Array<string>;
   /** Where a gateway's routes and the contracts behind them disagree. */
-  gateway: string[];
+  gateway: Array<string>;
   /** Fields a caller declares that wait for the lock to pin its owner. */
-  unpinned: string[];
+  unpinned: Array<string>;
   /** Calls and gateway exposure the network policy does not bear out. */
-  network: string[];
+  network: Array<string>;
   /** Services reading an earlier release than the newest their publisher has. */
-  behind: string[];
+  behind: Array<string>;
   failures: PreparedSources['failures'];
 }
 
@@ -692,10 +723,10 @@ export async function federationStatus(prepared: PreparedSources): Promise<Feder
     })),
   ];
 
-  const graphs: ResourceGraph[] = [];
-  const earlier: ResourceGraph[] = [];
-  const references: RepositoryReferences[] = [];
-  const sources: SourceStatus[] = [];
+  const graphs: Array<ResourceGraph> = [];
+  const earlier: Array<ResourceGraph> = [];
+  const references: Array<RepositoryReferences> = [];
+  const sources: Array<SourceStatus> = [];
   const owners = new Map<string, Set<string>>();
 
   const failures = [...prepared.failures];
@@ -783,9 +814,9 @@ export async function federationStatus(prepared: PreparedSources): Promise<Feder
 
   const unresolved = [...resolved.unresolved];
 
-  const gateway: string[] = [];
-  const unpinned: string[] = [];
-  const network: string[] = [];
+  const gateway: Array<string> = [];
+  const unpinned: Array<string> = [];
+  const network: Array<string> = [];
 
   const withApis = await withGateways(
     await withEndpoints(
@@ -825,9 +856,11 @@ export async function federationStatus(prepared: PreparedSources): Promise<Feder
 }
 
 const age = (iso: string | undefined) => {
-  if (!iso) return '';
+  if (!iso) {
+    return '';
+  }
 
-  const days = Math.floor((Date.now() - Date.parse(iso)) / 86400000);
+  const days = Math.floor((Date.now() - Date.parse(iso)) / 86_400_000);
 
   return days === 0 ? 'today' : days === 1 ? '1 day ago' : `${days} days ago`;
 };
@@ -837,55 +870,71 @@ export function renderFederationStatus(status: FederationStatus): string {
     `${'source'.padEnd(26)} ${'kind'.padEnd(13)} ${'pinned'.padEnd(22)} events commands services references`,
   ];
 
-  for (const s of status.sources)
+  for (const s of status.sources) {
     lines.push(
       `${s.repository.padEnd(26)} ${s.kind.padEnd(13)} ${(s.commit ? `${s.tag ?? s.commit.slice(0, 7)} ${age(s.lockedAt)}` : 'not locked').padEnd(22)} ${String(s.events).padStart(6)} ${String(s.commands).padStart(8)} ${String(s.services).padStart(8)} ${`${s.references - s.unresolved.length}/${s.references}`.padStart(10)}`,
     );
+  }
 
   if (status.failures.length) {
     lines.push('', kleur.red('Left out:'));
 
-    for (const f of status.failures) lines.push(`  ${f.name}: ${f.reason}`);
+    for (const f of status.failures) {
+      lines.push(`  ${f.name}: ${f.reason}`);
+    }
   }
 
   if (status.duplicates.length) {
     lines.push('', kleur.red('Defined more than once (each id has one owner):'));
 
-    for (const d of status.duplicates) lines.push(`  ${d}`);
+    for (const d of status.duplicates) {
+      lines.push(`  ${d}`);
+    }
   }
 
   if (status.unresolved.length) {
     lines.push('', kleur.yellow('References that do not resolve:'));
 
-    for (const u of status.unresolved) lines.push(`  ${u}`);
+    for (const u of status.unresolved) {
+      lines.push(`  ${u}`);
+    }
   }
 
   if (status.unpinned.length) {
     lines.push('', kleur.yellow('Fields that count once the lock pins their owner:'));
 
-    for (const u of status.unpinned) lines.push(`  ${u}`);
+    for (const u of status.unpinned) {
+      lines.push(`  ${u}`);
+    }
   }
 
   if (status.network.length) {
     lines.push('', kleur.yellow('Where the network policy and the calls disagree:'));
 
-    for (const n of status.network) lines.push(`  ${n}`);
+    for (const n of status.network) {
+      lines.push(`  ${n}`);
+    }
   }
 
   if (status.gateway.length) {
     lines.push('', kleur.yellow('Where a gateway and the contracts disagree:'));
 
-    for (const g of status.gateway) lines.push(`  ${g}`);
+    for (const g of status.gateway) {
+      lines.push(`  ${g}`);
+    }
   }
 
   if (status.behind.length) {
     lines.push('', kleur.yellow('Behind the newest release:'));
 
-    for (const b of status.behind) lines.push(`  ${b}`);
+    for (const b of status.behind) {
+      lines.push(`  ${b}`);
+    }
   }
 
-  if (!status.failures.length && !status.duplicates.length && !status.unresolved.length)
+  if (!status.failures.length && !status.duplicates.length && !status.unresolved.length) {
     lines.push('', kleur.green('Every source composed, and every reference resolves.'));
+  }
 
   return lines.join('\n');
 }
@@ -893,11 +942,13 @@ export function renderFederationStatus(status: FederationStatus): string {
 /** Repositories enrolled since the lock was written: said, and left out until it is locked. */
 export async function enrolledSinceLock(
   flags: EnrolmentFlags,
-  pins: LockEntry[],
+  pins: Array<LockEntry>,
   lockPath: string,
   token?: string,
 ): Promise<PreparedSources['failures']> {
-  if (!flags.topic && !flags.owner && !flags.repos?.length) return [];
+  if (!flags.topic && !flags.owner && !flags.repos?.length) {
+    return [];
+  }
 
   const locked = new Set(pins.map((pin) => pin.name));
 
@@ -942,7 +993,9 @@ export async function prepareSources(
     failures.push(...cloned.failures);
     root = cloned.root;
 
-    for (const pin of pins) pinned.set(pin.name, pin);
+    for (const pin of pins) {
+      pinned.set(pin.name, pin);
+    }
 
     failures.push(...(await enrolledSinceLock(opts, pins, lockPath, token)));
   } else if (opts.topic || opts.owner || opts.repos?.length) {
@@ -973,7 +1026,10 @@ export async function prepareSources(
 }
 
 /** The findings a status holds of the kinds named, each under its kind. */
-export function failingFindings(status: FederationStatus, failOn: readonly FailOn[]): string[] {
+export function failingFindings(
+  status: FederationStatus,
+  failOn: ReadonlyArray<FailOn>,
+): Array<string> {
   return failOn.flatMap((kind) => status[kind].map((finding) => `${kind}: ${finding}`));
 }
 
@@ -984,7 +1040,7 @@ export async function runFederationStatus(
     lock?: string;
     format: 'text' | 'json';
     /** Findings that fail the run as well as being said. */
-    failOn?: FailOn[];
+    failOn?: Array<FailOn>;
   },
 ): Promise<number> {
   const prepared = await prepareSources(opts).catch((error: Error) => error);

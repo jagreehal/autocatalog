@@ -1,13 +1,5 @@
-import {
-  convertToModelMessages,
-  stepCountIs,
-  streamText,
-  tool,
-  validateUIMessages,
-  type InferUITools,
-  type LanguageModel,
-  type UIMessage,
-} from 'ai';
+import { convertToModelMessages, stepCountIs, streamText, tool, validateUIMessages } from 'ai';
+import type { InferUITools, LanguageModel, UIMessage } from 'ai';
 import { z } from 'zod';
 
 /** A page a search found, for the assistant to choose from. */
@@ -19,7 +11,8 @@ export interface ChatFound {
 }
 
 /** A value in a page's frontmatter, which is JSON. */
-export type ChatData = string | number | boolean | null | ChatData[] | { [key: string]: ChatData };
+export type ChatData =
+  string | number | boolean | null | Array<ChatData> | { [key: string]: ChatData };
 
 /** A page read whole. */
 export interface ChatPage {
@@ -39,7 +32,7 @@ export interface ChatPage {
  * so the assistant can search and read exactly the pages that reader can open.
  */
 export interface ChatSource {
-  search(query: string): ChatFound[] | Promise<ChatFound[]>;
+  search(query: string): Array<ChatFound> | Promise<Array<ChatFound>>;
   read(href: string): ChatPage | undefined | Promise<ChatPage | undefined>;
 }
 
@@ -48,8 +41,8 @@ export interface ChatTurn {
   question: string;
   /** The page it was asked on. */
   path?: string | undefined;
-  searches: string[];
-  read: string[];
+  searches: Array<string>;
+  read: Array<string>;
   /** It read a page and reported no gap. */
   answered: boolean;
   /** What the assistant said is missing, when the pages do not answer. */
@@ -130,7 +123,9 @@ function chatTools(
         const page = await source.read(href);
 
         // The same rule as the site: a page the reader cannot open, the assistant cannot read.
-        if (!page) return { error: 'No such page' };
+        if (!page) {
+          return { error: 'No such page' };
+        }
 
         turn.read.push(page.href);
 
@@ -198,13 +193,17 @@ export function createChat(options: ChatOptions) {
     ): Promise<Response> {
       const parsed = body.safeParse(await request.json().catch(() => undefined));
 
-      if (!parsed.success) return new Response('Send a conversation', { status: 400 });
+      if (!parsed.success) {
+        return new Response('Send a conversation', { status: 400 });
+      }
 
       const messages = await validateUIMessages<ChatMessage>({
         messages: parsed.data.messages,
       }).catch(() => undefined);
 
-      if (!messages) return new Response('That conversation does not read', { status: 400 });
+      if (!messages) {
+        return new Response('That conversation does not read', { status: 400 });
+      }
 
       const question = textOf(messages.at(-1));
       const path = parsed.data.path;
@@ -274,7 +273,7 @@ const FILLER = new Set(
 );
 
 /** A query's words to look for: lower case, three letters or more, without the filler. */
-export function queryWords(query: string): string[] {
+export function queryWords(query: string): Array<string> {
   return [
     ...new Set(
       query
@@ -286,7 +285,7 @@ export function queryWords(query: string): string[] {
 }
 
 /** How well a page fits: the words it has, a title's counting ten times. */
-function fit(page: ChatPage, words: string[]): { matched: number; score: number } {
+function fit(page: ChatPage, words: Array<string>): { matched: number; score: number } {
   const title = page.title.toLowerCase();
   const text = page.text.toLowerCase();
 
@@ -305,7 +304,11 @@ function fit(page: ChatPage, words: string[]): { matched: number; score: number 
 }
 
 /** Each page that fits by `keep`, with how well. */
-const fitting = (pages: readonly ChatPage[], words: string[], keep: (matched: number) => boolean) =>
+const fitting = (
+  pages: ReadonlyArray<ChatPage>,
+  words: Array<string>,
+  keep: (matched: number) => boolean,
+) =>
   pages.flatMap((page) => {
     const how = fit(page, words);
 
@@ -324,19 +327,21 @@ const ENTITIES = new Map([
 /** Markdown or HTML as a reader sees it: no tags, link targets, emphasis or entities. */
 export function plainText(text: string): string {
   return text
-    .replace(/<\/?[a-z!][^>]*>/gi, ' ')
-    .replace(/!?\[([^\]]*)\]\((?:[^()]|\([^()]*\))*\)/g, '$1')
-    .replace(/^\s{0,3}(#{1,6}|>|[-*+]|\d+\.)\s+/gm, '')
-    .replace(/\*+|`+|~~/g, '')
-    .replace(/(^|[^\p{L}\p{N}_])_{1,2}([^_\n]+?)_{1,2}(?![\p{L}\p{N}_])/gu, '$1$2')
-    .replace(/&(#\d+|#x[\da-f]+|[a-z]+);/gi, (entity, name: string) => {
-      if (!name.startsWith('#')) return ENTITIES.get(name.toLowerCase()) ?? entity;
+    .replaceAll(/<\/?[a-z!][^>]*>/gi, ' ')
+    .replaceAll(/!?\[([^\]]*)\]\((?:[^()]|\([^()]*\))*\)/g, '$1')
+    .replaceAll(/^\s{0,3}(#{1,6}|>|[-*+]|\d+\.)\s+/gm, '')
+    .replaceAll(/\*+|`+|~~/g, '')
+    .replaceAll(/(^|[^\p{L}\p{N}_])_{1,2}([^_\n]+?)_{1,2}(?![\p{L}\p{N}_])/gu, '$1$2')
+    .replaceAll(/&(#\d+|#x[\da-f]+|[a-z]+);/gi, (entity, name: string) => {
+      if (!name.startsWith('#')) {
+        return ENTITIES.get(name.toLowerCase()) ?? entity;
+      }
 
       const code = Number(name[1]?.toLowerCase() === 'x' ? `0${name.slice(1)}` : name.slice(1));
 
-      return code <= 0x10ffff ? String.fromCodePoint(code) : entity;
+      return code <= 0x10_ff_ff ? String.fromCodePoint(code) : entity;
     })
-    .replace(/\s+/g, ' ')
+    .replaceAll(/\s+/g, ' ')
     .trim();
 }
 
@@ -357,10 +362,16 @@ const found = (page: ChatPage): ChatFound => {
  * question nothing covers comes back empty, which the assistant reports as a
  * gap rather than answering from a page about something else.
  */
-export function searchPages(pages: readonly ChatPage[], query: string, limit = 6): ChatFound[] {
+export function searchPages(
+  pages: ReadonlyArray<ChatPage>,
+  query: string,
+  limit = 6,
+): Array<ChatFound> {
   const words = queryWords(query);
 
-  if (words.length === 0) return [];
+  if (words.length === 0) {
+    return [];
+  }
 
   return fitting(pages, words, (matched) => matched === words.length)
     .sort((a, b) => b.score - a.score)
@@ -373,7 +384,11 @@ export function searchPages(pages: readonly ChatPage[], query: string, limit = 6
  * reader typing into a search box expects, where `searchPages` would find
  * nothing for one word no page has.
  */
-export function rankPages(pages: readonly ChatPage[], query: string, limit = 20): ChatFound[] {
+export function rankPages(
+  pages: ReadonlyArray<ChatPage>,
+  query: string,
+  limit = 20,
+): Array<ChatFound> {
   const words = queryWords(query);
 
   return fitting(pages, words, (matched) => matched > 0)
@@ -383,14 +398,13 @@ export function rankPages(pages: readonly ChatPage[], query: string, limit = 20)
 }
 
 /** A source over pages held in memory, read by their address. */
-export function pagesSource(pages: readonly ChatPage[]): ChatSource {
+export function pagesSource(pages: ReadonlyArray<ChatPage>): ChatSource {
   const byHref = new Map(pages.map((page) => [page.href, page]));
 
   return {
     search: (query) => searchPages(pages, query),
     // An address with or without its trailing slash, or the reader's query string, is the same page.
-    read: (href) =>
-      byHref.get(`${href.split(/[?#]/)[0]!.replace(/\/?$/, '/')}`) ?? byHref.get(href),
+    read: (href) => byHref.get(href.split(/[?#]/)[0]!.replace(/\/?$/, '/')) ?? byHref.get(href),
   };
 }
 

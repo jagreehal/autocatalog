@@ -22,10 +22,8 @@ import {
   resourceKey,
   parseResourceGraph,
   saveResourceImport,
-  type CatalogResource,
-  type AdapterEvent,
-  type AdapterEventMeta,
 } from 'autocatalog-core';
+import type { CatalogResource, AdapterEvent, AdapterEventMeta } from 'autocatalog-core';
 import { z } from 'zod';
 import { CLASSIFICATION_BADGE_PREFIX, EVENTCATALOG_NAMESPACE, webAddress } from '../eventcatalog';
 
@@ -52,7 +50,7 @@ type AdapterEventGuarantee = NonNullable<AdapterEventMeta['delivery']>['guarante
 async function readExamples(
   root: string,
   folder: string,
-  warnings: string[],
+  warnings: Array<string>,
 ): Promise<AdapterEvent['examples']> {
   const dir = path.join(folder, 'examples');
   const files = await fs.readdir(dir, { recursive: true }).catch(() => []);
@@ -110,9 +108,13 @@ const badge = z
   .transform(({ content, backgroundColor, textColor }) => {
     const out: Badge = { content };
 
-    if (backgroundColor !== undefined) out.backgroundColor = backgroundColor;
+    if (backgroundColor !== undefined) {
+      out.backgroundColor = backgroundColor;
+    }
 
-    if (textColor !== undefined) out.textColor = textColor;
+    if (textColor !== undefined) {
+      out.textColor = textColor;
+    }
 
     return out;
   });
@@ -149,14 +151,16 @@ function delivery(
   where: string,
   fm: { 'x-autocatalog'?: { delivery?: unknown } | undefined },
   guarantee: AdapterEventGuarantee | undefined,
-  warnings: string[],
+  warnings: Array<string>,
 ): Pick<AdapterEventMeta, 'delivery'> {
   const kept = fm['x-autocatalog']?.delivery;
 
   if (kept !== undefined) {
     const parsed = eventFrontmatter.shape.delivery.safeParse(kept);
 
-    if (parsed.success) return { delivery: parsed.data };
+    if (parsed.success) {
+      return { delivery: parsed.data };
+    }
 
     warnings.push(`${where}: x-autocatalog.delivery ignored: ${z.prettifyError(parsed.error)}`);
   }
@@ -243,7 +247,7 @@ async function fileExists(p: string): Promise<boolean> {
 async function readIndexMd(
   root: string,
   dir: string,
-  skipped: string[],
+  skipped: Array<string>,
 ): Promise<{ fm: EcFrontmatter; body: string } | null> {
   for (const name of ['index.mdx', 'index.md']) {
     const p = path.join(dir, name);
@@ -277,7 +281,7 @@ async function readIndexMd(
 // other catalogs; walking either would import every event twice.
 const SKIP_DIRS = new Set(['node_modules', 'dist', 'federated']);
 
-async function walkDirs(root: string, out: string[]): Promise<void> {
+async function walkDirs(root: string, out: Array<string>): Promise<void> {
   let entries;
 
   try {
@@ -287,7 +291,9 @@ async function walkDirs(root: string, out: string[]): Promise<void> {
   }
 
   for (const entry of entries) {
-    if (!entry.isDirectory() || SKIP_DIRS.has(entry.name) || entry.name.startsWith('.')) continue;
+    if (!entry.isDirectory() || SKIP_DIRS.has(entry.name) || entry.name.startsWith('.')) {
+      continue;
+    }
     const full = path.join(root, entry.name);
     out.push(full);
     await walkDirs(full, out);
@@ -332,7 +338,7 @@ const ownerPage = z.object({
 /** EventCatalog's teams and users, by id, as owners. */
 async function readOwners(
   root: string,
-  skipped: string[],
+  skipped: Array<string>,
 ): Promise<Map<string, { owner: Owner; collection: string }>> {
   const owners = new Map<string, { owner: Owner; collection: string }>();
 
@@ -364,11 +370,12 @@ async function readOwners(
       const contact =
         slackDirectMessageUrl ?? msTeamsDirectMessageUrl ?? (email && `mailto:${email}`);
 
-      if (!owners.has(id))
+      if (!owners.has(id)) {
         owners.set(id, {
           owner: { team: id, ...(name && { name }), ...(contact && { contact }) },
           collection,
         });
+      }
     }
   }
 
@@ -411,10 +418,11 @@ async function contractOf(
   const declared = fm.schemaPath;
   const schemaFile = path.resolve(folder, declared ?? 'schema.json');
 
-  if (!schemaFile.startsWith(root + path.sep))
+  if (!schemaFile.startsWith(root + path.sep)) {
     return { skip: `schemaPath ${declared} points outside the catalog` };
+  }
 
-  if (!declared && !(await fileExists(schemaFile)))
+  if (!declared && !(await fileExists(schemaFile))) {
     return {
       schema: {
         $schema: 'https://json-schema.org/draft/2020-12/schema',
@@ -424,14 +432,18 @@ async function contractOf(
       note: ' (placeholder schema)',
       placeholder: true,
     };
+  }
 
   // A catalog from elsewhere must not copy this machine's files into ours.
-  if ((await fileExists(schemaFile)) && !isRealFileInside(root, schemaFile))
+  if ((await fileExists(schemaFile)) && !isRealFileInside(root, schemaFile)) {
     return { skip: 'its schema is a link to outside the catalog' };
+  }
 
   const contract = await readContractFile(schemaFile, name);
 
-  if (!contract.ok) return { skip: contract.reason };
+  if (!contract.ok) {
+    return { skip: contract.reason };
+  }
 
   return {
     schema: contract.schema,
@@ -460,7 +472,7 @@ async function writeReferences(
     id: string;
     version?: string;
   }>,
-  skipped: string[],
+  skipped: Array<string>,
 ): Promise<number> {
   const file = path.join(project, CONSUMES_FILE);
   let existing: Awaited<ReturnType<typeof readDeclarationsFile>>;
@@ -497,7 +509,9 @@ async function writeReferences(
     pointers.map((p) => `${p.direction}\0${p.service}\0${p.id}\0${p.version ?? ''}`),
   ).size;
 
-  if (receives.length + sends.length === 0 && existing.consumes.length === 0) return 0;
+  if (receives.length + sends.length === 0 && existing.consumes.length === 0) {
+    return 0;
+  }
 
   await fs.writeFile(
     file,
@@ -533,17 +547,17 @@ export async function runFromEventCatalog(opts: RunFromEventCatalogOptions): Pro
     return 1;
   }
 
-  const dirs: string[] = [root];
+  const dirs: Array<string> = [root];
   await walkDirs(root, dirs);
 
   // Every reason a document did not make it, reported at the end rather than
   // thrown: a migration that dies on file 300 of 400 helps nobody.
-  const skipped: string[] = [];
+  const skipped: Array<string> = [];
 
   let commandUnreadable = false;
 
   let graphUnreadable = false;
-  const events: EcEvent[] = [];
+  const events: Array<EcEvent> = [];
   const leftBehind = new Map<string, number>();
 
   const commands: Array<{
@@ -557,12 +571,12 @@ export async function runFromEventCatalog(opts: RunFromEventCatalogOptions): Pro
   const producersByEvent = new Map<string, Set<string>>();
   const consumersByEvent = new Map<string, Set<string>>();
   // What each consumer says it reads, as EventCatalog's `receives[].fields`.
-  const consumerFieldsByEvent = new Map<string, Record<string, string[]>>();
+  const consumerFieldsByEvent = new Map<string, Record<string, Array<string>>>();
 
   // Channels by id, and the channels each event is said to travel on.
   const channels = new Map<
     string,
-    { address?: string; protocols: string[]; guarantee?: AdapterEventGuarantee }
+    { address?: string; protocols: Array<string>; guarantee?: AdapterEventGuarantee }
   >();
 
   const channelsByEvent = new Map<string, Map<string, Transport['deliveryMode']>>();
@@ -584,20 +598,22 @@ export async function runFromEventCatalog(opts: RunFromEventCatalogOptions): Pro
   const onChannels = (eventId: string, refs: Array<z.infer<typeof channelRefs>[number]>) => {
     const byChannel = channelsByEvent.get(eventId) ?? new Map();
 
-    for (const ref of refs) byChannel.set(ref.id, ref.delivery_mode ?? byChannel.get(ref.id));
+    for (const ref of refs) {
+      byChannel.set(ref.id, ref.delivery_mode ?? byChannel.get(ref.id));
+    }
     channelsByEvent.set(eventId, byChannel);
   };
 
   for (const dir of dirs) {
     const parts = dir.split(path.sep);
-    const parent = parts[parts.length - 2];
+    const parent = parts.at(-2);
 
     // A resource's type is the collection folder that owns it: events/<Name>/,
     // or events/<Name>/versioned/<v>/ for its history. Services, domains,
     // commands, queries and flows keep their own history the same way, and
     // none of it is event history.
     const isVersioned = parent === 'versioned';
-    const collection = isVersioned ? parts[parts.length - 4] : parent;
+    const collection = isVersioned ? parts.at(-4) : parent;
     const inEvents = collection === 'events';
     const inServices = !isVersioned && parent === 'services';
     const inChannels = !isVersioned && parent === 'channels';
@@ -608,12 +624,17 @@ export async function runFromEventCatalog(opts: RunFromEventCatalogOptions): Pro
     const doc = await readIndexMd(root, dir, skipped);
 
     // Which command an unreadable page held is unknown, so none is dropped.
-    if (!doc && inCommands && skipped.length > before) commandUnreadable = true;
+    if (!doc && inCommands && skipped.length > before) {
+      commandUnreadable = true;
+    }
 
-    if (!doc && (inServices || parent === 'containers') && skipped.length > before)
+    if (!doc && (inServices || parent === 'containers') && skipped.length > before) {
       graphUnreadable = true;
+    }
 
-    if (!doc) continue;
+    if (!doc) {
+      continue;
+    }
 
     const { id, version } = doc.fm;
 
@@ -624,8 +645,9 @@ export async function runFromEventCatalog(opts: RunFromEventCatalogOptions): Pro
 
     // A domain that lists its services files them, wherever their folders are.
     if (parent === 'domains' || parent === 'subdomains') {
-      for (const ref of doc.fm.services)
+      for (const ref of doc.fm.services) {
         domainByService.set(ref.id, path.basename(dir).toLowerCase());
+      }
       continue;
     }
 
@@ -633,21 +655,23 @@ export async function runFromEventCatalog(opts: RunFromEventCatalogOptions): Pro
       const serviceName = doc.fm.name ?? id;
       services.push({ folder: dir, id, fm: doc.fm });
 
-      for (const ref of doc.fm.sends)
+      for (const ref of doc.fm.sends) {
         pointers.push({
           direction: 'sends',
           service: serviceName,
           id: ref.id,
           ...(ref.version && { version: ref.version }),
         });
+      }
 
-      for (const ref of doc.fm.receives)
+      for (const ref of doc.fm.receives) {
         pointers.push({
           direction: 'receives',
           service: serviceName,
           id: ref.id,
           ...(ref.version && { version: ref.version }),
         });
+      }
 
       for (const ref of doc.fm.sends) {
         producersByEvent.set(ref.id, (producersByEvent.get(ref.id) ?? new Set()).add(serviceName));
@@ -685,7 +709,9 @@ export async function runFromEventCatalog(opts: RunFromEventCatalogOptions): Pro
     }
 
     if (inEvents && id !== undefined && version !== undefined) {
-      if (!isVersioned) onChannels(id, doc.fm.channels);
+      if (!isVersioned) {
+        onChannels(id, doc.fm.channels);
+      }
       events.push({ folder: dir, id, version, fm: doc.fm, body: doc.body, isVersioned });
       continue;
     }
@@ -698,8 +724,9 @@ export async function runFromEventCatalog(opts: RunFromEventCatalogOptions): Pro
 
     // Entities, flows and the rest have no autocatalog counterpart.
     // Their history goes with them, so only the current documents are counted.
-    if (!isVersioned && parent !== undefined && id !== undefined)
+    if (!isVersioned && parent !== undefined && id !== undefined) {
       leftBehind.set(parent, (leftBehind.get(parent) ?? 0) + 1);
+    }
   }
 
   // Teams and people are single files, not folders. Each comes across as the
@@ -710,7 +737,9 @@ export async function runFromEventCatalog(opts: RunFromEventCatalogOptions): Pro
   const ownerOf = (fm: EcFrontmatter): Owner | undefined => {
     const [id] = fm.owners;
 
-    if (id === undefined) return undefined;
+    if (id === undefined) {
+      return undefined;
+    }
     owning.add(id);
 
     return owners.get(id)?.owner ?? { team: id };
@@ -718,10 +747,12 @@ export async function runFromEventCatalog(opts: RunFromEventCatalogOptions): Pro
 
   // A channel the catalog names but never defines is still where the event
   // goes, so its id stands in for the address rather than losing it.
-  const transportOf = (eventId: string): Transport[] | undefined => {
+  const transportOf = (eventId: string): Array<Transport> | undefined => {
     const byChannel = [...(channelsByEvent.get(eventId) ?? [])];
 
-    if (byChannel.length === 0) return undefined;
+    if (byChannel.length === 0) {
+      return undefined;
+    }
 
     return byChannel.map(([channelId, mode]) => ({
       address: channels.get(channelId)?.address ?? channelId,
@@ -742,10 +773,10 @@ export async function runFromEventCatalog(opts: RunFromEventCatalogOptions): Pro
   };
 
   let written = 0;
-  const warnings: string[] = [];
+  const warnings: Array<string> = [];
   // Reasons an event was dropped, kept apart from `warnings`, which are things
   // that were imported with a caveat.
-  const currentEvents: AdapterEvent[] = [];
+  const currentEvents: Array<AdapterEvent> = [];
   const history: Array<{ event: AdapterEvent; parentFolderName: string }> = [];
 
   const narratives: Array<{
@@ -781,8 +812,9 @@ export async function runFromEventCatalog(opts: RunFromEventCatalogOptions): Pro
 
     const { schema, note: schemaNote } = contract;
 
-    if (contract.placeholder)
+    if (contract.placeholder) {
       warnings.push(`${domain}/${id}@${version}: no schema declared — wrote a placeholder`);
+    }
 
     const event: AdapterEvent = {
       id,
@@ -808,8 +840,11 @@ export async function runFromEventCatalog(opts: RunFromEventCatalogOptions): Pro
       provenance: { default: 'declared', fields: {} },
     };
 
-    if (evt.isVersioned) history.push({ event, parentFolderName: folderName });
-    else currentEvents.push(event);
+    if (evt.isVersioned) {
+      history.push({ event, parentFolderName: folderName });
+    } else {
+      currentEvents.push(event);
+    }
 
     // A page the export wrote carries its provenance line and schema viewer
     // around the narrative; they are the export's, and it adds them again.
@@ -827,7 +862,9 @@ export async function runFromEventCatalog(opts: RunFromEventCatalogOptions): Pro
         body: `${body.replace(/^\n+/, '').trimEnd()}\n`,
       };
 
-      if (evt.isVersioned) narrative.version = version;
+      if (evt.isVersioned) {
+        narrative.version = version;
+      }
       narratives.push(narrative);
     }
 
@@ -901,7 +938,9 @@ export async function runFromEventCatalog(opts: RunFromEventCatalogOptions): Pro
 
       skipped.push(`${where}: ${reason}${kept ? '; kept the version imported before' : ''}`);
 
-      if (kept) commandsKept++;
+      if (kept) {
+        commandsKept++;
+      }
     };
 
     const contract = await contractOf(root, cmd.folder, fm, name);
@@ -911,14 +950,17 @@ export async function runFromEventCatalog(opts: RunFromEventCatalogOptions): Pro
       continue;
     }
 
-    if (contract.placeholder) warnings.push(`${where}: no schema declared — wrote a placeholder`);
+    if (contract.placeholder) {
+      warnings.push(`${where}: no schema declared — wrote a placeholder`);
+    }
 
     const receivers = [...(consumersByEvent.get(id) ?? [])].sort();
 
-    if (receivers.length > 1)
+    if (receivers.length > 1) {
       warnings.push(
         `${where}: ${receivers.join(', ')} receive it; a command has one handler, so none is set`,
       );
+    }
 
     const [handler] = receivers.length === 1 ? receivers : [];
 
@@ -955,15 +997,16 @@ export async function runFromEventCatalog(opts: RunFromEventCatalogOptions): Pro
     );
     commandsWritten++;
 
-    if (!opts.quiet)
+    if (!opts.quiet) {
       console.log(
         `${kleur.green('✓')} ${where} (${cmd.query ? 'query' : 'command'})${contract.note}`,
       );
+    }
   }
 
   // A command page that could not be read may be any command imported before,
   // so each of those this import did not write again is kept.
-  if (commandUnreadable)
+  if (commandUnreadable) {
     for (const folder of await fs
       .readdir(path.resolve(commandsDir), { recursive: true })
       .catch(() => []))
@@ -978,6 +1021,7 @@ export async function runFromEventCatalog(opts: RunFromEventCatalogOptions): Pro
           warnings.push(`${command}: a command page could not be read; kept as imported before`);
         }
       }
+  }
 
   // Services, the datastores they read and write, and who owns each: an
   // import ac scan applies, so drift sees one team reaching into another's data.
@@ -991,7 +1035,7 @@ export async function runFromEventCatalog(opts: RunFromEventCatalogOptions): Pro
     id,
   });
 
-  for (const [id, fm] of containers)
+  for (const [id, fm] of containers) {
     graph.resources.push({
       ...architectureResource(containerRef(id), {
         ...(fm.technology && { technology: fm.technology }),
@@ -999,6 +1043,7 @@ export async function runFromEventCatalog(opts: RunFromEventCatalogOptions): Pro
       }),
       ...declared(fm, ownerOf),
     });
+  }
 
   // Events name a service by its name, so two services sharing one are one
   // service here: the first keeps its details, and both keep their access.
@@ -1018,7 +1063,9 @@ export async function runFromEventCatalog(opts: RunFromEventCatalogOptions): Pro
         fm.services.some((ref) => ref.id === service.id),
     );
 
-    if (system) grouping.add(system.id);
+    if (system) {
+      grouping.add(system.id);
+    }
 
     if (first === undefined) {
       serviceIds.set(name, service.id);
@@ -1034,15 +1081,16 @@ export async function runFromEventCatalog(opts: RunFromEventCatalogOptions): Pro
           }),
         },
       });
-    } else
+    } else {
       warnings.push(
         `${[first, service.id].sort().join(' and ')} are both named ${name}; autocatalog has them as one service`,
       );
+    }
 
     for (const [type, refs] of [
       ['writes', service.fm.writesTo],
       ['reads', service.fm.readsFrom],
-    ] as const)
+    ] as const) {
       for (const ref of refs) {
         // A datastore the catalog names but never describes is still one it uses.
         if (!containers.has(ref.id)) {
@@ -1061,6 +1109,7 @@ export async function runFromEventCatalog(opts: RunFromEventCatalogOptions): Pro
           needsReview: false,
         });
       }
+    }
   }
 
   const importFile = path.join(projectRoot, '.autocatalog', 'imports', 'eventcatalog.json');
@@ -1085,14 +1134,17 @@ export async function runFromEventCatalog(opts: RunFromEventCatalogOptions): Pro
       ...(previous?.relationships ?? []).filter((edge) => keptKeys.has(resourceKey(edge.from))),
     );
 
-    for (const r of kept)
+    for (const r of kept) {
       warnings.push(`${r.ref.kind} ${r.ref.id}: a page could not be read; kept as imported before`);
+    }
   }
 
   if (written === 0 && commandsWritten === 0 && graph.resources.length === 0) {
     console.error(kleur.red('✗ nothing to import'));
 
-    for (const reason of skipped) console.error(kleur.yellow(`  ! ${reason}`));
+    for (const reason of skipped) {
+      console.error(kleur.yellow(`  ! ${reason}`));
+    }
     console.error(
       skipped.length > 0
         ? '  Every document found was skipped for the reasons above.'
@@ -1108,11 +1160,14 @@ export async function runFromEventCatalog(opts: RunFromEventCatalogOptions): Pro
   if (commandsWritten + commandsKept > 0) {
     await fs.mkdir(path.dirname(path.resolve(commandsDir)), { recursive: true });
     await fs.rename(staging, path.resolve(commandsDir));
-  } else await fs.rm(staging, { recursive: true, force: true });
+  } else {
+    await fs.rm(staging, { recursive: true, force: true });
+  }
 
   // With nothing left, the last import goes, or scans would keep what it had.
-  if (graph.resources.length === 0) await fs.rm(importFile, { force: true });
-  else {
+  if (graph.resources.length === 0) {
+    await fs.rm(importFile, { force: true });
+  } else {
     // In one order whatever order the catalog listed things in, so importing
     // an unchanged catalog again changes nothing to commit.
     const byKey = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
@@ -1141,19 +1196,25 @@ export async function runFromEventCatalog(opts: RunFromEventCatalogOptions): Pro
 
   // A skip is always said out loud, quiet or not: a document that silently
   // failed to migrate is the loss a migration must never hide.
-  for (const reason of skipped) console.warn(kleur.yellow(`  ! skipped ${reason}`));
+  for (const reason of skipped) {
+    console.warn(kleur.yellow(`  ! skipped ${reason}`));
+  }
 
-  for (const { id } of systems)
+  for (const { id } of systems) {
     if (!grouping.has(id)) leftBehind.set('systems', (leftBehind.get('systems') ?? 0) + 1);
+  }
 
   // A team or person that owns nothing has nowhere to go.
-  for (const [id, { collection }] of owners)
+  for (const [id, { collection }] of owners) {
     if (!owning.has(id)) leftBehind.set(collection, (leftBehind.get(collection) ?? 0) + 1);
+  }
 
   if (!opts.quiet) {
-    for (const w of warnings) console.warn(kleur.yellow(`  ! ${w}`));
+    for (const w of warnings) {
+      console.warn(kleur.yellow(`  ! ${w}`));
+    }
 
-    if (leftBehind.size > 0)
+    if (leftBehind.size > 0) {
       console.warn(
         kleur.yellow(
           `  ! Not imported: ${[...leftBehind]
@@ -1162,17 +1223,20 @@ export async function runFromEventCatalog(opts: RunFromEventCatalogOptions): Pro
             .join(', ')}`,
         ),
       );
+    }
     console.log(kleur.bold(`\n${written} event(s) imported to ${opts.out}`));
 
-    if (commandsWritten > 0)
+    if (commandsWritten > 0) {
       console.log(kleur.bold(`${commandsWritten} command(s) and queries to ${commandsDir}`));
+    }
 
-    if (references > 0)
+    if (references > 0) {
       console.log(
         kleur.bold(
           `${references} reference(s) to what other catalogs own, kept in ${path.join(project, CONSUMES_FILE)}`,
         ),
       );
+    }
 
     if (skipped.length > 0) {
       console.log(kleur.yellow(`${skipped.length} skipped — the catalog is incomplete.`));

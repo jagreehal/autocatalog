@@ -12,7 +12,7 @@ export async function runChangelog(opts: RunChangelogOptions): Promise<number> {
   const all = await loadCatalog(eventsRoot);
 
   const currents = all.filter((e) => !e.folder.isVersioned);
-  const sections: string[] = [];
+  const sections: Array<string> = [];
 
   for (const current of currents) {
     const versions = all
@@ -24,7 +24,9 @@ export async function runChangelog(opts: RunChangelogOptions): Promise<number> {
       )
       .sort((a, b) => compareSemverish(a.frontmatter.version, b.frontmatter.version));
 
-    if (versions.length === 0) continue;
+    if (versions.length === 0) {
+      continue;
+    }
 
     const chain = [...versions, current];
 

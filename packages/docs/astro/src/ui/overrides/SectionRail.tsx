@@ -5,7 +5,7 @@ import { Icon } from '../components/Icon';
 
 export interface SectionRailProps {
   /** The site's sections, as `navLinks` reads them for this page. */
-  links: NavLinkView[];
+  links: Array<NavLinkView>;
 }
 
 /**
@@ -15,7 +15,9 @@ export interface SectionRailProps {
  * current section's name.
  */
 export function SectionRail({ links }: SectionRailProps) {
-  if (links.length === 0) return null;
+  if (links.length === 0) {
+    return null;
+  }
 
   return (
     <nav aria-label="Sections" data-icon-rail="">

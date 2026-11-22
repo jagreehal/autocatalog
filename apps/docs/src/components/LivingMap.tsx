@@ -9,12 +9,9 @@ import {
 import { Badge } from 'autocatalog-docs-astro/ui/components/ui/badge.tsx';
 import { Toggle } from 'autocatalog-docs-astro/ui/components/ui/toggle.tsx';
 import { cn } from 'cn';
-import { type KeyboardEvent, type ReactNode, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import type { KeyboardEvent, ReactNode } from 'react';
 import {
-  type Fact,
-  type MapEdge,
-  type MapNode,
-  type Provenance,
   VIEW,
   edges,
   facts,
@@ -25,6 +22,7 @@ import {
   regions,
   spines,
 } from './living-map-data';
+import type { Fact, MapEdge, MapNode, Provenance } from './living-map-data';
 
 const said: Record<Provenance, string> = {
   extracted: 'Extracted',
@@ -169,13 +167,21 @@ function outline(id: string, node: MapNode) {
   const y2 = y + h;
   const c = 9;
 
-  if (node.kind === 'service') return { rect: { x, y, width: node.w, height: h, rx: 4 } };
+  if (node.kind === 'service') {
+    return { rect: { x, y, width: node.w, height: h, rx: 4 } };
+  }
 
-  if (node.kind === 'event') return { rect: { x, y, width: node.w, height: h, rx: h / 2 } };
+  if (node.kind === 'event') {
+    return { rect: { x, y, width: node.w, height: h, rx: h / 2 } };
+  }
 
-  if (node.kind === 'table') return { rect: { x, y, width: node.w, height: h, rx: 0 } };
+  if (node.kind === 'table') {
+    return { rect: { x, y, width: node.w, height: h, rx: 0 } };
+  }
 
-  if (node.kind === 'doc') return { d: `M${x} ${y}H${x2 - 12}L${x2} ${y + 12}V${y2}H${x}Z` };
+  if (node.kind === 'doc') {
+    return { d: `M${x} ${y}H${x2 - 12}L${x2} ${y + 12}V${y2}H${x}Z` };
+  }
 
   return {
     d: `M${x + c} ${y}H${x2 - c}L${x2} ${y + c}V${y2 - c}L${x2 - c} ${y2}H${x + c}L${x} ${y2 - c}V${y + c}Z`,
@@ -275,7 +281,9 @@ export function LivingMap() {
   const preview = (on: boolean) => {
     setPr(on);
 
-    if (on) setCurrent('payment.completed');
+    if (on) {
+      setCurrent('payment.completed');
+    }
     // On a narrow screen the map scrolls inside its frame: bring the break into view.
     const scroller = canvas.current;
 
@@ -288,7 +296,9 @@ export function LivingMap() {
   // "Preview it on the map", further down the page, is static markup.
   useEffect(() => {
     const onClick = (event: MouseEvent) => {
-      if (!(event.target instanceof Element) || !event.target.closest('[data-preview-pr]')) return;
+      if (!(event.target instanceof Element) || !event.target.closest('[data-preview-pr]')) {
+        return;
+      }
       preview(true);
       frame.current?.scrollIntoView({
         behavior: reducedMotion() ? 'auto' : 'smooth',
@@ -307,7 +317,9 @@ export function LivingMap() {
   const ref = pr ? PR_REF : MAIN_REF;
 
   const onKey = (id: string) => (event: KeyboardEvent) => {
-    if (event.key !== 'Enter' && event.key !== ' ') return;
+    if (event.key !== 'Enter' && event.key !== ' ') {
+      return;
+    }
     event.preventDefault();
     setCurrent(id);
   };

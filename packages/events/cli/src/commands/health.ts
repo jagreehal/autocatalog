@@ -12,7 +12,9 @@ export async function runHealth(opts: RunHealthOptions): Promise<number> {
   const events = await loadCatalog(path.join(opts.cwd, 'events'), { skipVersioned: true });
 
   if (events.length === 0) {
-    if (!opts.quiet) console.log('No events found.');
+    if (!opts.quiet) {
+      console.log('No events found.');
+    }
 
     return 1;
   }
@@ -35,7 +37,9 @@ export async function runHealth(opts: RunHealthOptions): Promise<number> {
 
   const min = opts.min;
 
-  if (min !== undefined && scores.some((s) => s.score < min)) return 1;
+  if (min !== undefined && scores.some((s) => s.score < min)) {
+    return 1;
+  }
 
   return 0;
 }

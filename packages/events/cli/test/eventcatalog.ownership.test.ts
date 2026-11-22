@@ -12,12 +12,12 @@ const exportRoots = async ({
   roots,
   ...rest
 }: {
-  roots: string[];
+  roots: Array<string>;
   catalogDir: string;
   narrative?: boolean;
 }) => exportToEventCatalog({ catalogs: await loadEventCatalogSources(roots), ...rest });
 
-const here = path.dirname(fileURLToPath(import.meta.url));
+const here = import.meta.dirname;
 
 // payment.completed 1.0.0, with 0.9.0 in its history, in the payments domain.
 const starter = path.resolve(here, '../../../../fixtures/event-starter/events');
@@ -339,7 +339,7 @@ describe('to-eventcatalog upgrades and recovers without losing ownership', () =>
 });
 
 describe('to-eventcatalog migration keeps what it cannot prove it wrote', () => {
-  const legacyDomain = (services: string[]) =>
+  const legacyDomain = (services: Array<string>) =>
     writeFile(
       'domains/payments/index.mdx',
       `---\nid: payments\nname: payments\nversion: 1.0.0\nservices:\n${services

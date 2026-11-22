@@ -2,9 +2,11 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { readFlows, stormWarnings, type Flow } from '../src/flows';
+import { readFlows, stormWarnings } from '../src/flows';
+import type { Flow } from '../src/flows';
 import type { FlowNote } from '../src/lifecycles';
-import { bigPicture, stormBoard, type StormRow } from '../src/storm';
+import { bigPicture, stormBoard } from '../src/storm';
+import type { StormRow } from '../src/storm';
 
 let root: string;
 

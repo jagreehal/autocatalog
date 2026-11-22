@@ -1,5 +1,6 @@
 import path from 'node:path';
-import { test as base, type Locator } from '@playwright/test';
+import { test as base } from '@playwright/test';
+import type { Locator } from '@playwright/test';
 import { story } from 'executable-stories-playwright';
 import { showCursor } from 'executable-stories-showcase/playwright';
 
@@ -32,7 +33,9 @@ export const test = base.extend<Fixtures>({
   demo: [false, { option: true }],
 
   page: async ({ page, demo }, use) => {
-    if (demo) await showCursor(page, { pointer: 'arrow', color: '#171717', glide: 450 });
+    if (demo) {
+      await showCursor(page, { pointer: 'arrow', color: '#171717', glide: 450 });
+    }
 
     await use(page);
   },
@@ -41,7 +44,9 @@ export const test = base.extend<Fixtures>({
     use(async (alt, { highlight, still } = {}) => {
       await story.screenshot({ page, alt, ...(highlight && { highlight }) });
 
-      if (!demo || !still) return;
+      if (!demo || !still) {
+        return;
+      }
 
       const root = page.locator('html');
 
@@ -55,7 +60,9 @@ export const test = base.extend<Fixtures>({
       }
 
       await root.evaluate((element, previous) => {
-        if (previous) element.dataset.theme = previous;
+        if (previous) {
+          element.dataset.theme = previous;
+        }
       }, theme);
     }),
 });

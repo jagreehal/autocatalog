@@ -11,9 +11,8 @@ import {
   createConsumerResourceGraph,
   mergeConsumerGraph,
   readConsumerDeclarations,
-  type EventCatalogResource,
-  type ResourceGraph,
 } from '../src';
+import type { EventCatalogResource, ResourceGraph } from '../src';
 
 // A consumer says what it consumes from its own repository, so a producer in
 // another repository learns who it would break.
@@ -28,7 +27,7 @@ afterEach(async () => {
   await fs.rm(root, { recursive: true, force: true });
 });
 
-const declare = (body: { consumes: Array<Record<string, string | string[]>> }) =>
+const declare = (body: { consumes: Array<Record<string, string | Array<string>>> }) =>
   fs.writeFile(path.join(root, CONSUMES_FILE), JSON.stringify(body));
 
 const event = (repository: string, domain: string, id: string) => ({
@@ -129,7 +128,7 @@ describe('createConsumerResourceGraph', () => {
   });
 
   it('keeps every field when one service declares the same event twice', () => {
-    const declared = (fields?: string[]) => ({
+    const declared = (fields?: Array<string>) => ({
       service: 'Ledger',
       event: 'payments/paid',
       ...(fields && { fields }),
@@ -158,7 +157,7 @@ describe('createConsumerResourceGraph', () => {
   });
 
   it('consumes every copy when two repositories publish the event, and says so', () => {
-    const warnings: string[] = [];
+    const warnings: Array<string> = [];
 
     const graph = createConsumerResourceGraph([{ service: 'Ledger', event: 'payments/paid' }], {
       repository: 'ledger',
@@ -236,7 +235,7 @@ describe('mergeConsumerGraph', () => {
 
 describe('mergeConsumerGraph across consumer repositories', () => {
   it('keeps "may read anything" when another declaration of the consumer names no fields', () => {
-    const declared = (fields?: string[]) =>
+    const declared = (fields?: Array<string>) =>
       createConsumerResourceGraph(
         [{ service: 'Fraud', event: 'payments/paid', ...(fields && { fields }) }],
         { repository: 'fraud', events: [event('payments', 'payments', 'paid')] },
@@ -264,7 +263,7 @@ describe('mergeConsumerGraph, declaration after declaration', () => {
     ],
   });
 
-  const declared = (fields?: string[]) =>
+  const declared = (fields?: Array<string>) =>
     createConsumerResourceGraph(
       [{ service: 'Ledger', event: 'payments/paid', ...(fields && { fields }) }],
       { repository: 'ledger', events: [event('payments', 'payments', 'paid')] },
@@ -311,7 +310,7 @@ describe('mergeConsumerGraph, declaration after declaration', () => {
 });
 
 describe('consumersFromGraph', () => {
-  const published = (...repositories: string[]): ResourceGraph => ({
+  const published = (...repositories: Array<string>): ResourceGraph => ({
     spec: AUTOCATALOG_GRAPH_SPEC,
     resources: repositories.map((repository): EventCatalogResource => ({
       ref: event(repository, 'payments', 'paid').ref,
@@ -360,7 +359,9 @@ describe('consumersFromGraph', () => {
     const graph = published('payments');
     const [edge] = graph.relationships;
 
-    if (!edge) throw new Error('no edge');
+    if (!edge) {
+      throw new Error('no edge');
+    }
     // An index can carry the same consumer twice: first with no fields.
     graph.relationships = [{ ...edge, attributes: {} }, edge];
 
@@ -400,7 +401,7 @@ describe('consumersFromGraph', () => {
 
     // Still counted, so the gate does not pass because a name was hostile.
     expect(consumers.get('payments/paid')?.consumers).toEqual([UNSAFE_CONSUMER]);
-    expect(rejected).toEqual(['x\\n::error::pwned']);
+    expect(rejected).toEqual([String.raw`x\n::error::pwned`]);
   });
 
   it('counts the consumers of every copy when it cannot tell which is its own', () => {
@@ -415,7 +416,9 @@ describe('consumersFromGraph', () => {
     const graph = published('payments');
     const [edge] = graph.relationships;
 
-    if (!edge) throw new Error('no edge');
+    if (!edge) {
+      throw new Error('no edge');
+    }
     const slashed = { ...event('payments', 'payments', 'paid').ref, id: 'paid/extra' };
 
     const resource: EventCatalogResource = {
@@ -435,7 +438,7 @@ describe('consumersFromGraph', () => {
 });
 
 describe('checkConsumerDeclarations', () => {
-  const graph = (...repositories: string[]): ResourceGraph => ({
+  const graph = (...repositories: Array<string>): ResourceGraph => ({
     spec: AUTOCATALOG_GRAPH_SPEC,
     resources: (repositories.length ? repositories : ['payments-service']).map(
       (repository): EventCatalogResource => ({
@@ -458,7 +461,7 @@ describe('checkConsumerDeclarations', () => {
     },
   };
 
-  const asked: string[] = [];
+  const asked: Array<string> = [];
 
   const load = async (published: { repository: string; domain: string; id: string }) => {
     asked.push(`${published.repository}/${published.domain}/${published.id}`);
@@ -535,6 +538,6 @@ describe('checkConsumerDeclarations', () => {
     );
 
     expect(problem).not.toContain('\n');
-    expect(problem).toContain('Not Found\\n::error::injected');
+    expect(problem).toContain(String.raw`Not Found\n::error::injected`);
   });
 });

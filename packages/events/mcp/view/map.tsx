@@ -2,9 +2,11 @@ import './jitless';
 import '@eventcatalog/visualiser/styles.css';
 import './map.css';
 import { layoutGraph, NodeGraph } from '@eventcatalog/visualiser';
-import { App, applyDocumentTheme, type McpUiHostContext } from '@modelcontextprotocol/ext-apps';
+import { App, applyDocumentTheme } from '@modelcontextprotocol/ext-apps';
+import type { McpUiHostContext } from '@modelcontextprotocol/ext-apps';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { type CSSProperties, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
+import type { CSSProperties } from 'react';
 import { createRoot } from 'react-dom/client';
 import type { CatalogMap } from '../src/map';
 
@@ -22,7 +24,9 @@ let hostChanged: (context: McpUiHostContext) => void = () => {};
 const adopt = (changed: McpUiHostContext) => {
   host = { ...host, ...changed };
 
-  if (host.theme) applyDocumentTheme(host.theme);
+  if (host.theme) {
+    applyDocumentTheme(host.theme);
+  }
   hostChanged(host);
 };
 
@@ -34,7 +38,9 @@ const isMap = (
 ): content is CatalogMap & typeof content => Array.isArray(content.nodes);
 
 app.ontoolresult = ({ structuredContent }) => {
-  if (!structuredContent || !isMap(structuredContent)) return;
+  if (!structuredContent || !isMap(structuredContent)) {
+    return;
+  }
 
   latest = structuredContent;
   show(latest);
@@ -53,7 +59,9 @@ type Laid = Awaited<ReturnType<typeof layoutGraph>>;
 function asGroupCard(node: Laid['nodes'][number], source: CatalogMap['nodes'][number] | undefined) {
   const group = source?.metadata.group;
 
-  if (group !== 'domain' && group !== 'system') return node;
+  if (group !== 'domain' && group !== 'system') {
+    return node;
+  }
 
   const card = { id: node.id, name: source!.label, summary: source!.metadata.summary };
 
@@ -63,7 +71,11 @@ function asGroupCard(node: Laid['nodes'][number], source: CatalogMap['nodes'][nu
 }
 
 /** A design's proposed parts drawn in outline, and level 1's groups as cards. */
-const mark = (laid: Laid, proposed: string[] = [], source?: Pick<CatalogMap, 'nodes'>): Laid => {
+const mark = (
+  laid: Laid,
+  proposed: Array<string> = [],
+  source?: Pick<CatalogMap, 'nodes'>,
+): Laid => {
   const sources = new Map(source?.nodes.map((node) => [node.id, node]));
 
   return {
@@ -91,7 +103,9 @@ function MapView() {
   }, []);
 
   useEffect(() => {
-    if (!map) return;
+    if (!map) {
+      return;
+    }
 
     let current = true;
 
@@ -118,11 +132,15 @@ function MapView() {
         ] as const;
       }),
     ).then((entries) => {
-      if (current) setLevels(Object.fromEntries(entries.filter(([, laid]) => laid)));
+      if (current) {
+        setLevels(Object.fromEntries(entries.filter(([, laid]) => laid)));
+      }
     });
 
     void layoutGraph(map.nodes, map.edges).then(({ nodes, edges }) => {
-      if (!current) return;
+      if (!current) {
+        return;
+      }
 
       setLaid(
         mark(

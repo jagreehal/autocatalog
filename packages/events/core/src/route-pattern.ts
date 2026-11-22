@@ -16,7 +16,7 @@ interface Token {
 }
 
 export interface RoutePattern {
-  tokens: Token[];
+  tokens: Array<Token>;
   /** Whether the whole path must be consumed. */
   anchored: boolean;
 }
@@ -49,9 +49,11 @@ function readClass(pattern: string, start: number): { atom: Atom; end: number } 
   let at = start;
   const negated = pattern[at] === '^';
 
-  if (negated) at += 1;
+  if (negated) {
+    at += 1;
+  }
 
-  const tests: Atom[] = [];
+  const tests: Array<Atom> = [];
 
   while (at < pattern.length && pattern[at] !== ']') {
     const char = pattern[at] ?? '';
@@ -59,7 +61,9 @@ function readClass(pattern: string, start: number): { atom: Atom; end: number } 
     if (char === '\\') {
       const atom = escaped(pattern[at + 1] ?? '');
 
-      if (!atom) return undefined;
+      if (!atom) {
+        return undefined;
+      }
 
       tests.push(atom);
       at += 2;
@@ -79,7 +83,9 @@ function readClass(pattern: string, start: number): { atom: Atom; end: number } 
     at += 1;
   }
 
-  if (pattern[at] !== ']') return undefined;
+  if (pattern[at] !== ']') {
+    return undefined;
+  }
 
   const inClass: Atom = (char) => tests.some((test) => test(char));
 
@@ -88,7 +94,7 @@ function readClass(pattern: string, start: number): { atom: Atom; end: number } 
 
 /** The pattern as tokens, or nothing when it uses what this does not match. */
 export function compileRoutePattern(pattern: string): RoutePattern | undefined {
-  const tokens: Token[] = [];
+  const tokens: Array<Token> = [];
   let anchored = false;
   let at = 0;
 
@@ -101,19 +107,25 @@ export function compileRoutePattern(pattern: string): RoutePattern | undefined {
       break;
     }
 
-    if ('()|{}^$*+?'.includes(char)) return undefined;
+    if ('()|{}^$*+?'.includes(char)) {
+      return undefined;
+    }
 
     if (char === '[') {
       const read = readClass(pattern, at + 1);
 
-      if (!read) return undefined;
+      if (!read) {
+        return undefined;
+      }
 
       atom = read.atom;
       at = read.end;
     } else if (char === '\\') {
       const read = escaped(pattern[at + 1] ?? '');
 
-      if (!read) return undefined;
+      if (!read) {
+        return undefined;
+      }
 
       atom = read;
       at += 2;
@@ -127,7 +139,9 @@ export function compileRoutePattern(pattern: string): RoutePattern | undefined {
     if (quantifier === '?' || quantifier === '*' || quantifier === '+') {
       tokens.push({ atom, min: quantifier === '+' ? 1 : 0, many: quantifier !== '?' });
       at += 1;
-    } else tokens.push({ atom, min: 1, many: false });
+    } else {
+      tokens.push({ atom, min: 1, many: false });
+    }
   }
 
   return { tokens, anchored };
@@ -156,24 +170,32 @@ export function matchesRoutePattern({ tokens, anchored }: RoutePattern, path: st
   let states = close(new Set([0]));
 
   for (const char of path) {
-    if (!anchored && states.has(tokens.length)) return true;
+    if (!anchored && states.has(tokens.length)) {
+      return true;
+    }
 
     const after = new Set<number>();
 
     for (const state of states) {
       const token = tokens[state];
 
-      if (!token?.atom(char)) continue;
+      if (!token?.atom(char)) {
+        continue;
+      }
 
       after.add(state + 1);
 
-      if (token.many) after.add(state);
+      if (token.many) {
+        after.add(state);
+      }
     }
 
     // A repeating token that matched once stays satisfied with more.
     states = close(after);
 
-    if (states.size === 0) return false;
+    if (states.size === 0) {
+      return false;
+    }
   }
 
   return states.has(tokens.length);

@@ -1,6 +1,7 @@
 /** @jsxImportSource react */
 import { RepeatIcon, ZoomInIcon } from 'lucide-react';
-import { useState, type ReactNode } from 'react';
+import { useState } from 'react';
+import type { ReactNode } from 'react';
 import { Badge } from '#ui/components/ui/badge.tsx';
 import { Checkbox } from '#ui/components/ui/checkbox.tsx';
 import { Field, FieldLabel } from '#ui/components/ui/field.tsx';
@@ -34,7 +35,7 @@ export type StickyKind =
   | 'hotspot';
 
 /** Every kind, in the order the legend shows them. */
-export const STICKY_KINDS: StickyKind[] = [
+export const STICKY_KINDS: Array<StickyKind> = [
   'actor',
   'system',
   'command',
@@ -166,7 +167,7 @@ export function InlineSticky(props: Omit<StickyProps, 'inline'>) {
 }
 
 /** Every kind of sticky, with what it means. */
-export function StormLegend({ kinds }: { kinds?: StickyKind[] | undefined }) {
+export function StormLegend({ kinds }: { kinds?: Array<StickyKind> | undefined }) {
   const shown = kinds ?? STICKY_KINDS;
 
   return (
@@ -208,11 +209,11 @@ export interface StormColumnView {
   repeats?: string | undefined;
   /** The board this stage zooms into. */
   subflow?: { title: string; href: string } | undefined;
-  rows: Record<StormRowName, StormStickyView[]>;
+  rows: Record<StormRowName, Array<StormStickyView>>;
 }
 
 export interface StormBoardProps {
-  columns: StormColumnView[];
+  columns: Array<StormColumnView>;
   /** What a screen reader calls the board. */
   label?: string | undefined;
   /** Offer a switch to show the code behind each sticky, when any has some. */
@@ -223,7 +224,7 @@ function RowLabel({ children }: { children: ReactNode }) {
   return <span className="text-xs font-semibold text-muted-foreground">{children}</span>;
 }
 
-const ROWS: StormRowName[] = ['who', 'command', 'decidedBy', 'happy', 'failure', 'policy'];
+const ROWS: Array<StormRowName> = ['who', 'command', 'decidedBy', 'happy', 'failure', 'policy'];
 
 /**
  * A process-level EventStorming board: a column per stage, read left to
@@ -348,8 +349,10 @@ export interface StormHotspotView {
 }
 
 /** The problems and open questions a board holds, each linked to what raised it. */
-export function StormHotspots({ hotspots }: { hotspots: StormHotspotView[] }) {
-  if (hotspots.length === 0) return null;
+export function StormHotspots({ hotspots }: { hotspots: Array<StormHotspotView> }) {
+  if (hotspots.length === 0) {
+    return null;
+  }
 
   return (
     <ul className="not-content m-0 flex list-none flex-col gap-2 p-0" aria-label="Hotspots">
@@ -383,12 +386,14 @@ export interface StormEndingView {
   track: 'happy' | 'failure';
   summary?: string | undefined;
   status: string;
-  policies: string[];
+  policies: Array<string>;
 }
 
 /** Each way a run can end: the fact, when it happens, the status left, and what follows. */
-export function StormEndings({ endings }: { endings: StormEndingView[] }) {
-  if (endings.length === 0) return null;
+export function StormEndings({ endings }: { endings: Array<StormEndingView> }) {
+  if (endings.length === 0) {
+    return null;
+  }
 
   return (
     <Table aria-label="How it can end">
@@ -442,8 +447,10 @@ export interface StormScenarioView {
  * Cases worth testing, read as Given, When, Then. Where what happens today is
  * not what should, both are shown.
  */
-export function StormScenarios({ scenarios }: { scenarios: StormScenarioView[] }) {
-  if (scenarios.length === 0) return null;
+export function StormScenarios({ scenarios }: { scenarios: Array<StormScenarioView> }) {
+  if (scenarios.length === 0) {
+    return null;
+  }
 
   return (
     <Table aria-label="Scenarios">
@@ -510,7 +517,7 @@ export interface BigPictureLaneView {
   href: string;
   repository: string;
   summary?: string | undefined;
-  events: string[];
+  events: Array<string>;
   failures: number;
   hotspots: number;
 }
@@ -519,8 +526,10 @@ export interface BigPictureLaneView {
  * Every flow as one lane of facts, left to right: the big picture, where a
  * reader sees what the business does before opening any one process.
  */
-export function BigPicture({ lanes }: { lanes: BigPictureLaneView[] }) {
-  if (lanes.length === 0) return null;
+export function BigPicture({ lanes }: { lanes: Array<BigPictureLaneView> }) {
+  if (lanes.length === 0) {
+    return null;
+  }
 
   return (
     <ul className="not-content m-0 flex list-none flex-col gap-4 p-0" aria-label="Big picture">

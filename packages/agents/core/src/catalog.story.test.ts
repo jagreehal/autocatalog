@@ -10,7 +10,7 @@ import { computeImpact } from './impact.js';
 import { loadCatalog } from './loader.js';
 import { validateEdges } from './validator.js';
 
-const roots: string[] = [];
+const roots: Array<string> = [];
 
 const write = async (path: string, content: string): Promise<void> => {
   await mkdir(join(path, '..'), { recursive: true });

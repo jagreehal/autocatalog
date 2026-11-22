@@ -1,8 +1,10 @@
 /** @jsxImportSource react */
 import { Card, CardContent, CardHeader, CardTitle } from '#ui/components/ui/card.tsx';
 import type { PropNode } from '../lib/schema-tree';
-import { EventVersions, type EventVersionsProps } from '../components/EventVersions';
-import { Examples, type ExampleView } from '../components/Examples';
+import { EventVersions } from '../components/EventVersions';
+import type { EventVersionsProps } from '../components/EventVersions';
+import { Examples } from '../components/Examples';
+import type { ExampleView } from '../components/Examples';
 import { SchemaSection } from '../components/SchemaTree';
 import { StatusBanners } from '../components/StatusBanners';
 import type { StatusBanner } from '../../resource-status';
@@ -15,11 +17,11 @@ export interface EventVersionPageProps {
   /** What changed since the previous version, as HTML from the changelog. */
   changesHtml?: string | null | undefined;
   /** Banners for earlier version / newer available. */
-  banners?: StatusBanner[] | undefined;
+  banners?: Array<StatusBanner> | undefined;
   /** The schema's properties, built by `schemaTree`. */
-  schema: PropNode[];
+  schema: Array<PropNode>;
   schemaHref: string;
-  examples: ExampleView[];
+  examples: Array<ExampleView>;
   versions: EventVersionsProps['versions'];
 }
 

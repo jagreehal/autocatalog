@@ -1,16 +1,11 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import {
-  type CatalogRoot,
-  findCatalogRoots,
-  type JsonObject,
-  type JsonValue,
-  parseFrontmatter,
-  stringifyFrontmatter,
-} from 'autocatalog-core';
+import { findCatalogRoots, parseFrontmatter, stringifyFrontmatter } from 'autocatalog-core';
+import type { CatalogRoot, JsonObject, JsonValue } from 'autocatalog-core';
 import { z } from 'zod';
 import { inside } from './inside';
-import { readRepositoryMeta, REPOSITORY_META, type RepositoryMeta } from './repository-meta';
+import { readRepositoryMeta, REPOSITORY_META } from './repository-meta';
+import type { RepositoryMeta } from './repository-meta';
 
 /**
  * One authored document, addressed by its path rather than a declared id.
@@ -47,7 +42,7 @@ export interface ReadDocsOptions {
    */
   repository?: string;
   /** Repositories whose documents are left out, such as one with a document that breaks the contract. */
-  exclude?: readonly string[];
+  exclude?: ReadonlyArray<string>;
   /**
    * Told about a document whose frontmatter does not parse, which is then left
    * out. Without it, such a document throws.
@@ -58,7 +53,7 @@ export interface ReadDocsOptions {
    * these is in it, so a reader that says nothing sees only what is open to all.
    * `'all'` is for checks, which validate what they would not publish.
    */
-  audience?: readonly string[] | 'all';
+  audience?: ReadonlyArray<string> | 'all';
   /**
    * Leave out a document that names no `audience:` as well, for a site read
    * outside the company: there, a document is published only by opting in.
@@ -71,7 +66,7 @@ export interface DocsLayout {
   /** Absolute aggregation root. Every path is relative to it. */
   root: string;
   /** Each repository or package with a `docs/` folder, one per name. */
-  roots: CatalogRoot[];
+  roots: Array<CatalogRoot>;
   /** Glob pattern, relative to the root and always forward-slashed. */
   pattern: string;
   /** The repository whose `docs/` holds a path, or undefined for none. */
@@ -113,7 +108,9 @@ export function resolveDocsLayout(root: string, options: ReadDocsOptions = {}): 
   const ownerOf = (file: string): CatalogRoot => {
     const owner = rootFor(file);
 
-    if (!owner) throw new Error(`${file} is not in any repository's docs/`);
+    if (!owner) {
+      throw new Error(`${file} is not in any repository's docs/`);
+    }
 
     return owner;
   };
@@ -140,11 +137,13 @@ export function resolveDocsLayout(root: string, options: ReadDocsOptions = {}): 
  * Works in every shape without being told which: sibling checkouts, packages
  * inside a monorepo, or one repository running its own CI check.
  */
-export function readDocs(root: string, options: ReadDocsOptions = {}): Doc[] {
+export function readDocs(root: string, options: ReadDocsOptions = {}): Array<Doc> {
   const layout = resolveDocsLayout(root, options);
 
   // Nothing publishes documents, every repository excluded included.
-  if (layout.roots.length === 0) return [];
+  if (layout.roots.length === 0) {
+    return [];
+  }
 
   const metas = new Map(layout.roots.map((root) => [root.name, readRepositoryMeta(root.dir)]));
 
@@ -173,7 +172,9 @@ export function readDocs(root: string, options: ReadDocsOptions = {}): Doc[] {
       if (read?.problem) {
         const message = `${REPOSITORY_META} is not valid, so its documents are left out (${read.problem.split('\n')[0]})`;
 
-        if (!options.onUnreadable) throw new Error(`${repo}/${message}`);
+        if (!options.onUnreadable) {
+          throw new Error(`${repo}/${message}`);
+        }
 
         options.onUnreadable({ file, repo }, message);
 
@@ -185,7 +186,9 @@ export function readDocs(root: string, options: ReadDocsOptions = {}): Doc[] {
       try {
         parsed = parseFrontmatter(fs.readFileSync(path.join(layout.root, file), 'utf8'));
       } catch (error) {
-        if (!options.onUnreadable) throw error;
+        if (!options.onUnreadable) {
+          throw error;
+        }
 
         options.onUnreadable(
           { file, repo },
@@ -208,7 +211,9 @@ export function readDocs(root: string, options: ReadDocsOptions = {}): Doc[] {
         ...parsed.data,
       };
 
-      if (!mayRead(data.audience, options)) return [];
+      if (!mayRead(data.audience, options)) {
+        return [];
+      }
 
       return [{ id, repo, file, data, body: parsed.content }];
     });
@@ -222,14 +227,16 @@ function fromMeta(
   meta: RepositoryMeta | undefined,
   page: string,
   key: 'access' | 'audience',
-): string[] | undefined {
+): Array<string> | undefined {
   const folders = page.split('/').slice(0, -1);
 
   for (let depth = folders.length; depth > 0; depth--) {
     const directory = folders.slice(0, depth).join('/');
     const value = meta?.sidebar?.find((entry) => entry.directory === directory)?.[key];
 
-    if (value) return value;
+    if (value) {
+      return value;
+    }
   }
 
   return meta?.[key];
@@ -241,9 +248,13 @@ function mayRead(
   named: JsonValue | undefined,
   { audience: reader = [], audienceRequired }: ReadDocsOptions,
 ): boolean {
-  if (reader === 'all') return true;
+  if (reader === 'all') {
+    return true;
+  }
 
-  if (named === undefined) return !audienceRequired;
+  if (named === undefined) {
+    return !audienceRequired;
+  }
 
   const parsed = audienceOf.safeParse(named);
 
@@ -255,10 +266,12 @@ function mayRead(
  * Files the docs glob matches that a reader must not get: restricted, or a link
  * out of the repository. A loader that globs for itself has to leave these out.
  */
-export function unreadableDocs(root: string, options: ReadDocsOptions = {}): string[] {
+export function unreadableDocs(root: string, options: ReadDocsOptions = {}): Array<string> {
   const layout = resolveDocsLayout(root, options);
 
-  if (layout.roots.length === 0) return [];
+  if (layout.roots.length === 0) {
+    return [];
+  }
 
   const kept = new Set(
     readDocs(root, { ...options, onUnreadable: () => undefined }).map((doc) => doc.file),

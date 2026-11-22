@@ -11,11 +11,13 @@ import {
   pactEvidence,
   readSnapshot,
   renderRetirement,
-  type DeclaredConsumers,
-  type JsonValue,
-  type LoadedEvent,
-  type PactEvidence,
-  type RetirementInput,
+} from 'autocatalog-core';
+import type {
+  DeclaredConsumers,
+  JsonValue,
+  LoadedEvent,
+  PactEvidence,
+  RetirementInput,
 } from 'autocatalog-core';
 import { z } from 'zod';
 import { publishedLine, readCompanyIndex, repositoryName } from '../company-index';
@@ -47,8 +49,8 @@ const PACT_CONCURRENCY = 8;
 
 /** Pacts read, and what could not be: a gap blocks the verdict. */
 interface PactsRead {
-  pacts: PactEvidence[];
-  gaps: string[];
+  pacts: Array<PactEvidence>;
+  gaps: Array<string>;
 }
 
 const brokerPacts = z.object({
@@ -74,33 +76,39 @@ async function getJson(url: string, token: string | undefined): Promise<JsonValu
     signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
   });
 
-  if (!response.ok) throw new Error(`${url}: ${response.status} ${response.statusText}`);
+  if (!response.ok) {
+    throw new Error(`${url}: ${response.status} ${response.statusText}`);
+  }
 
   if (Number(response.headers.get('content-length') ?? 0) > MAX_PACT_BYTES) {
     throw new Error(`${url}: larger than a pact`);
   }
 
   // Counted as it arrives, so an oversized body is dropped before it is held.
-  const chunks: Uint8Array[] = [];
+  const chunks: Array<Uint8Array> = [];
   let bytes = 0;
 
   // Leaving the loop early cancels the stream.
   for await (const chunk of response.body ?? []) {
     bytes += chunk.byteLength;
 
-    if (bytes > MAX_PACT_BYTES) break;
+    if (bytes > MAX_PACT_BYTES) {
+      break;
+    }
 
     chunks.push(chunk);
   }
 
-  if (bytes > MAX_PACT_BYTES) throw new Error(`${url}: larger than a pact`);
+  if (bytes > MAX_PACT_BYTES) {
+    throw new Error(`${url}: larger than a pact`);
+  }
 
   return jsonValueSchema.parse(JSON.parse(Buffer.concat(chunks).toString('utf8')));
 }
 
 /** Each item through `work`, a few at a time, in order. */
-async function few<T, R>(items: T[], work: (item: T) => Promise<R>): Promise<R[]> {
-  const out: R[] = [];
+async function few<T, R>(items: Array<T>, work: (item: T) => Promise<R>): Promise<Array<R>> {
+  const out: Array<R> = [];
 
   for (let i = 0; i < items.length; i += PACT_CONCURRENCY) {
     out.push(...(await Promise.all(items.slice(i, i + PACT_CONCURRENCY).map(work))));
@@ -129,56 +137,61 @@ async function fromBroker(
       ? [`${links.length - MAX_PACTS} pact(s) past the first ${MAX_PACTS}`]
       : [];
 
-  const found = await few(links.slice(0, MAX_PACTS), async ({ href }): Promise<PactEvidence[]> => {
-    // Only links on the broker itself are followed, so a pact cannot send the token elsewhere.
-    if (new URL(href, base).origin !== new URL(base).origin) {
-      gaps.push(`a pact linked off the broker (${new URL(href, base).origin})`);
+  const found = await few(
+    links.slice(0, MAX_PACTS),
+    async ({ href }): Promise<Array<PactEvidence>> => {
+      // Only links on the broker itself are followed, so a pact cannot send the token elsewhere.
+      if (new URL(href, base).origin !== new URL(base).origin) {
+        gaps.push(`a pact linked off the broker (${new URL(href, base).origin})`);
 
-      return [];
-    }
+        return [];
+      }
 
-    let pact: JsonValue | undefined;
+      let pact: JsonValue | undefined;
 
-    try {
-      pact = await getJson(new URL(href, base).href, token);
-    } catch (error) {
-      gaps.push(`${href}: ${error instanceof Error ? error.message : String(error)}`);
-    }
+      try {
+        pact = await getJson(new URL(href, base).href, token);
+      } catch (error) {
+        gaps.push(`${href}: ${error instanceof Error ? error.message : String(error)}`);
+      }
 
-    let evidence: Omit<PactEvidence, 'verified'> | undefined;
+      let evidence: Omit<PactEvidence, 'verified'> | undefined;
 
-    try {
-      evidence =
-        pact === undefined ? undefined : pactEvidence(pact, { ...event, source: 'Pact Broker' });
-    } catch (error) {
-      gaps.push(`${href}: ${error instanceof Error ? error.message : String(error)}`);
-    }
+      try {
+        evidence =
+          pact === undefined ? undefined : pactEvidence(pact, { ...event, source: 'Pact Broker' });
+      } catch (error) {
+        gaps.push(`${href}: ${error instanceof Error ? error.message : String(error)}`);
+      }
 
-    if (!pact || !evidence) return [];
+      if (!pact || !evidence) {
+        return [];
+      }
 
-    const link = brokerLinks.parse(pact)._links['pb:latest-verification-results'];
+      const link = brokerLinks.parse(pact)._links['pb:latest-verification-results'];
 
-    const result =
-      link && new URL(link.href, base).origin === new URL(base).origin
-        ? verification.safeParse(
-            await getJson(new URL(link.href, base).href, token).catch(() => null),
-          )
-        : undefined;
+      const result =
+        link && new URL(link.href, base).origin === new URL(base).origin
+          ? verification.safeParse(
+              await getJson(new URL(link.href, base).href, token).catch(() => null),
+            )
+          : undefined;
 
-    return [
-      {
-        ...evidence,
-        ...(result?.success && {
-          verified: {
-            success: result.data.success,
-            ...(result.data.providerApplicationVersion && {
-              version: result.data.providerApplicationVersion,
-            }),
-          },
-        }),
-      },
-    ];
-  });
+      return [
+        {
+          ...evidence,
+          ...(result?.success && {
+            verified: {
+              success: result.data.success,
+              ...(result.data.providerApplicationVersion && {
+                version: result.data.providerApplicationVersion,
+              }),
+            },
+          }),
+        },
+      ];
+    },
+  );
 
   return { pacts: found.flat(), gaps };
 }
@@ -210,7 +223,7 @@ async function fromFiles(
       ? [`${files.length - MAX_PACTS} pact file(s) past the first ${MAX_PACTS}`]
       : [];
 
-  const found = await few(files.slice(0, MAX_PACTS), async (file): Promise<PactEvidence[]> => {
+  const found = await few(files.slice(0, MAX_PACTS), async (file): Promise<Array<PactEvidence>> => {
     // Sized before it is read, so an oversized file is never held.
     const { size } = await fs.stat(file);
 
@@ -238,14 +251,16 @@ async function fromFiles(
   return { pacts: found.flat(), gaps };
 }
 
-function findEvent(events: LoadedEvent[], name: string): LoadedEvent {
+function findEvent(events: Array<LoadedEvent>, name: string): LoadedEvent {
   const matches = events.filter((e) =>
     name.includes('/')
       ? `${e.frontmatter.domain}/${e.frontmatter.id}` === name
       : e.frontmatter.id === name,
   );
 
-  if (matches.length === 1) return matches[0]!;
+  if (matches.length === 1) {
+    return matches[0]!;
+  }
 
   throw new Error(
     matches.length === 0
@@ -260,7 +275,9 @@ function findEvent(events: LoadedEvent[], name: string): LoadedEvent {
  */
 export async function runRetire(opts: RunRetireOptions): Promise<number> {
   const say = (line: string) => {
-    if (!opts.quiet) console.warn(line);
+    if (!opts.quiet) {
+      console.warn(line);
+    }
   };
 
   let event: LoadedEvent;
@@ -286,7 +303,7 @@ export async function runRetire(opts: RunRetireOptions): Promise<number> {
 
   const repository = opts.repository ?? (await repositoryName(path.resolve(opts.events)));
 
-  const declared: DeclaredConsumers[] = [
+  const declared: Array<DeclaredConsumers> = [
     {
       source: repository ?? 'this repository',
       consumers: fm.consumers,
@@ -330,19 +347,23 @@ export async function runRetire(opts: RunRetireOptions): Promise<number> {
     };
   }
 
-  let pacts: PactEvidence[] | undefined;
-  const gaps: string[] = [];
+  let pacts: Array<PactEvidence> | undefined;
+  const gaps: Array<string> = [];
 
   if (opts.pacts) {
     try {
       if (/^https?:\/\//i.test(opts.pacts)) {
         const provider = opts.pactProvider ?? fm.producers[0];
 
-        if (!provider) throw new Error(`${key} names no producer; pass --pact-provider`);
+        if (!provider) {
+          throw new Error(`${key} names no producer; pass --pact-provider`);
+        }
 
         const token = opts.pactTokenEnv ? process.env[opts.pactTokenEnv] : undefined;
 
-        if (opts.pactTokenEnv && !token) throw new Error(`${opts.pactTokenEnv} is not set`);
+        if (opts.pactTokenEnv && !token) {
+          throw new Error(`${opts.pactTokenEnv} is not set`);
+        }
 
         const read = await fromBroker(opts.pacts, provider, token, subject);
 

@@ -4,7 +4,8 @@ import type { AttentionSnapshot } from '../../attention';
 import type { DocListItem } from '../components/DocList';
 import type { Stat } from '../components/Stats';
 import type { VisualiserGraph } from '../lib/visualiser';
-import { blockIds, CardGrid, HomeBlock, type HomeBlockData, type RecentChange } from './HomeBlock';
+import { blockIds, CardGrid, HomeBlock } from './HomeBlock';
+import type { CatalogProvenance, HomeBlockData, RecentChange } from './HomeBlock';
 
 /** One way into the catalog this build actually made. */
 export interface ExploreCard {
@@ -16,61 +17,54 @@ export interface ExploreCard {
 }
 
 export interface HomePageProps {
-  stats: Stat[];
-  explore: ExploreCard[];
+  stats: Array<Stat>;
+  explore: Array<ExploreCard>;
   /** Repositories in name order, each with the documents it publishes. */
   repos: Array<{
     name: string;
     label: string;
     description?: string | undefined;
     href?: string | undefined;
-    docs: DocListItem[];
+    docs: Array<DocListItem>;
   }>;
   /** Tags in name order; empty when no document is tagged. */
-  tags: Array<[string, DocListItem[]]>;
+  tags: Array<[string, Array<DocListItem>]>;
   /** What changed most recently, newest first; empty when git cannot date anything. */
-  recent?: RecentChange[] | undefined;
+  recent?: Array<RecentChange> | undefined;
   /** Dark spots: review work, quarantine, orphans. */
   attention?: AttentionSnapshot | undefined;
+  /** Where the catalog's facts come from, by source. */
+  provenance?: CatalogProvenance | undefined;
   /** Architecture canvas; omitted when the graph has nothing to draw. */
   map?: VisualiserGraph | undefined;
   /** Fullscreen / dedicated catalog map. */
   catalogHref?: string | undefined;
 }
 
+/** Enough to see what moves; the rest is a search away. */
+export const RECENT_SHOWN = 5;
+
 /**
  * The built-in home page's blocks, in order: `DEFAULT_HOME_LAYOUT` in
  * autocatalog-docs-core names the same, and a test holds the two together.
  */
-export const HOME_PAGE_ORDER = [
-  'countCards',
-  'graph',
-  'recent',
-  'docs',
-  'attention',
-  'explore',
-  'tags',
-] as const;
+export const HOME_PAGE_ORDER = ['search', 'provenance', 'browse', 'graph', 'recent'] as const;
 
 /** The built-in home page: its default blocks, filled from the catalog. */
 export function homePageBlocks({
   stats,
-  explore,
-  repos,
-  tags,
   recent,
   attention,
+  provenance,
   map,
   catalogHref,
-}: HomePageProps): HomeBlockData[] {
+}: HomePageProps): Array<HomeBlockData> {
   const data: Record<(typeof HOME_PAGE_ORDER)[number], HomeBlockData> = {
-    countCards: { block: 'countCards', stats },
+    search: { block: 'search' },
+    provenance: { block: 'provenance', provenance, attention },
+    browse: { block: 'browse', stats },
     graph: { block: 'graph', map, catalogHref },
-    recent: { block: 'recent', items: recent ?? [] },
-    docs: { block: 'docs', repos },
-    attention: { block: 'attention', attention },
-    explore: { block: 'explore', cards: explore },
-    tags: { block: 'tags', tags },
+    recent: { block: 'recent', items: (recent ?? []).slice(0, RECENT_SHOWN) },
   };
 
   return HOME_PAGE_ORDER.map((name) => data[name]);

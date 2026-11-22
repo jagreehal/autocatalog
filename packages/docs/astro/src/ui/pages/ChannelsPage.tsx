@@ -19,7 +19,7 @@ import { Icon } from '../components/Icon';
 import type { ChannelRow } from '../../channels';
 
 export interface ChannelsPageProps {
-  channels: ChannelRow[];
+  channels: Array<ChannelRow>;
 }
 
 export function ChannelsPage({ channels }: ChannelsPageProps) {

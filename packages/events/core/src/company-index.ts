@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { jsonObjectSchema, jsonValueSchema, type JsonObject } from './json';
+import { jsonObjectSchema, jsonValueSchema } from './json';
+import type { JsonObject } from './json';
 import type { ResourceGraph } from './resource-graph';
 import { parseResourceGraph } from './resource-store';
 import { isRealFileInside } from './utils';
@@ -23,7 +24,9 @@ export interface CompanyIndex {
  * which build it read.
  */
 export function publishedLine(what: string, source: string, publishedAt?: Date): string {
-  if (!publishedAt) return `${what} from ${source}, publish time unknown`;
+  if (!publishedAt) {
+    return `${what} from ${source}, publish time unknown`;
+  }
 
   const minutes = Math.max(0, Math.round((Date.now() - publishedAt.getTime()) / 60_000));
 
@@ -60,7 +63,9 @@ export async function readCompanyIndex(
         publishedAt: (await fs.stat(path.resolve(source))).mtime,
       };
 
-  if (text.length > MAX_INDEX_BYTES) throw new Error(`${source}: larger than a catalog index`);
+  if (text.length > MAX_INDEX_BYTES) {
+    throw new Error(`${source}: larger than a catalog index`);
+  }
 
   let value;
 
@@ -105,10 +110,13 @@ export async function readEventSchema(
     const site = path.dirname(path.resolve(index));
     const file = path.join(site, 'events', ...segments, 'schema.json');
 
-    if (segments.some((segment) => !/^[^/\\]+$/.test(segment) || /^\.\.?$/.test(segment)))
+    if (segments.some((segment) => !/^[^/\\]+$/.test(segment) || /^\.\.?$/.test(segment))) {
       throw new Error(`${event.repository}/${event.domain}/${event.id}: not a published event`);
+    }
 
-    if (!isRealFileInside(site, file)) throw new Error(`${file}: not inside ${site}`);
+    if (!isRealFileInside(site, file)) {
+      throw new Error(`${file}: not inside ${site}`);
+    }
 
     text = await fs.readFile(file, 'utf8');
   }
@@ -125,19 +133,25 @@ interface FetchedIndex {
 async function fetchIndex(url: string, options: CompanyIndexOptions): Promise<FetchedIndex> {
   const token = options.tokenEnv ? process.env[options.tokenEnv] : undefined;
 
-  if (options.tokenEnv && !token) throw new Error(`${options.tokenEnv} is not set`);
+  if (options.tokenEnv && !token) {
+    throw new Error(`${options.tokenEnv} is not set`);
+  }
 
   const response = await fetch(url, {
     headers: token ? { authorization: `Bearer ${token}` } : {},
     signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
   });
 
-  if (!response.ok) throw new Error(`${url}: ${response.status} ${response.statusText}`);
+  if (!response.ok) {
+    throw new Error(`${url}: ${response.status} ${response.statusText}`);
+  }
 
   const modified = new Date(response.headers.get('last-modified') ?? '');
   const fetched: FetchedIndex = { text: await response.text() };
 
-  if (!Number.isNaN(modified.getTime())) fetched.publishedAt = modified;
+  if (!Number.isNaN(modified.getTime())) {
+    fetched.publishedAt = modified;
+  }
 
   return fetched;
 }

@@ -1,16 +1,16 @@
-import type { DomainModel, FlowNote } from 'autocatalog-docs-core';
-import type { DataProductPort } from 'autocatalog-docs-core';
+import type { DomainModel, FlowNote, DataProductPort } from 'autocatalog-docs-core';
 import { dataProductPath, entityPath } from './model';
 import { twinPath } from './twins';
 import { docPage } from './ui/lib/docs';
-import { groupByRepo, type DocListItem } from './view';
+import { groupByRepo } from './view';
+import type { DocListItem } from './view';
 
 export interface LlmsTxtInput {
   title: string;
   description: string;
   /** Site origin without a trailing slash. Empty when no `site` is configured. */
   base: string;
-  items: DocListItem[];
+  items: Array<DocListItem>;
   /** The site's MCP endpoint, for an agent that can connect rather than read. */
   mcp?: string | undefined;
   /** OpenAPI references, each linked to its spec as JSON. */
@@ -18,7 +18,7 @@ export interface LlmsTxtInput {
   /** Current events, each linked to its Markdown twin. */
   events?: Array<{ path: string; name: string; summary: string; owner?: string }>;
   /** Documents attached to flows, which an agent must not read as settled fact. */
-  notes?: FlowNote[];
+  notes?: Array<FlowNote>;
   /** Components, each linked to its Markdown twin. */
   components?: Array<{
     path: string;
@@ -117,7 +117,7 @@ export function renderLlmsTxt({
 
     for (const { path, name, description, repository, owner } of components) {
       const notes = [
-        description?.replace(/\s+/g, ' ').replace(/\.$/, ''),
+        description?.replaceAll(/\s+/g, ' ').replace(/\.$/, ''),
         `in ${repository}`,
         owner && `owned by ${owner.team}`,
       ];
@@ -156,7 +156,9 @@ export function renderLlmsTxt({
       model?.dataProducts.map((product) => [product, dataProductPath(product)] as const) ?? [],
     ],
   ] as const) {
-    if (resources.length === 0) continue;
+    if (resources.length === 0) {
+      continue;
+    }
 
     lines.push(`## ${heading}`, '');
 
@@ -165,15 +167,21 @@ export function renderLlmsTxt({
         `- [${resource.name}](${base}/${page})${resource.summary ? `: ${resource.summary}` : ''}`,
       );
 
-      if ('outputs' in resource) lines.push(...contractLines(resource.outputs));
+      if ('outputs' in resource) {
+        lines.push(...contractLines(resource.outputs));
+      }
     }
 
     lines.push('');
   }
 
   if (notes.length > 0) {
-    lines.push('## Notes on flows', '');
-    lines.push('A draft or a question is a hypothesis, not established behaviour.', '');
+    lines.push(
+      '## Notes on flows',
+      '',
+      'A draft or a question is a hypothesis, not established behaviour.',
+      '',
+    );
 
     for (const note of notes) {
       const facts = [note.nature, note.status, note.hotspot && 'open'].filter(Boolean).join(', ');
@@ -202,7 +210,7 @@ export function renderLlmsFullTxt({
   title: string;
   description: string;
   /** Each page's Markdown twin, documents first, then events, then data models. */
-  twins: string[];
+  twins: Array<string>;
 }): string {
   return `${[`# ${title}`, `> ${description}`, ...twins.map((twin) => twin.trim())].join('\n\n')}\n`;
 }
@@ -212,11 +220,13 @@ export function renderLlmsFullTxt({
  * data: what it promises and how well it kept it, the AI context's
  * instructions and constraints, and the questions the provider answers.
  */
-function contractLines(outputs: DataProductPort[]): string[] {
-  const lines: string[] = [];
+function contractLines(outputs: Array<DataProductPort>): Array<string> {
+  const lines: Array<string> = [];
 
   for (const { odcs, trackRecord, contract } of outputs) {
-    if (!odcs) continue;
+    if (!odcs) {
+      continue;
+    }
 
     const slas = odcs.slas.map((sla) => {
       const record = trackRecord?.slas.find(
@@ -231,14 +241,21 @@ function contractLines(outputs: DataProductPort[]): string[] {
       `  - Contract ${odcs.id} ${odcs.version}${odcs.status ? ` (${odcs.status})` : ''}, \`${contract}\`${slas.length ? `: ${slas.join('; ')}` : ''}`,
     );
 
-    if (odcs.terms.limitations) lines.push(`  - Limitations: ${odcs.terms.limitations}`);
+    if (odcs.terms.limitations) {
+      lines.push(`  - Limitations: ${odcs.terms.limitations}`);
+    }
 
-    if (odcs.ai.instructions) lines.push(`  - Instructions: ${odcs.ai.instructions}`);
+    if (odcs.ai.instructions) {
+      lines.push(`  - Instructions: ${odcs.ai.instructions}`);
+    }
 
-    for (const constraint of odcs.ai.constraints) lines.push(`  - Must not: ${constraint}`);
+    for (const constraint of odcs.ai.constraints) {
+      lines.push(`  - Must not: ${constraint}`);
+    }
 
-    for (const statement of odcs.ai.verifiedStatements)
+    for (const statement of odcs.ai.verifiedStatements) {
       lines.push(`  - Verified answer to "${statement.question}"`);
+    }
   }
 
   return lines;

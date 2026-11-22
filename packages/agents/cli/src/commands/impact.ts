@@ -10,21 +10,25 @@ import {
   loadCatalog,
   loadEventKeys,
   resolveEventRef,
-  type EntityRef,
 } from 'autocatalog-agents-core';
+import type { EntityRef } from 'autocatalog-agents-core';
 
 const parseRef = (s: string): EntityRef | null => {
   const idx = s.indexOf('/');
 
-  if (idx <= 0 || idx === s.length - 1) return null;
+  if (idx <= 0 || idx === s.length - 1) {
+    return null;
+  }
   const kind = EntityKindSchema.safeParse(s.slice(0, idx));
 
-  if (!kind.success) return null;
+  if (!kind.success) {
+    return null;
+  }
 
   return { kind: kind.data, id: s.slice(idx + 1) };
 };
 
-export const runImpact = async (args: string[]): Promise<number> => {
+export const runImpact = async (args: Array<string>): Promise<number> => {
   let root = '.';
   let events: string | undefined;
   let target: string | null = null;
@@ -98,11 +102,13 @@ export const runImpact = async (args: string[]): Promise<number> => {
   if (report.events) {
     process.stdout.write(kleur.dim('\nevents:\n'));
 
-    for (const e of report.events.produces)
+    for (const e of report.events.produces) {
       process.stdout.write(`  ${kleur.green('↑')} produces ${e}\n`);
+    }
 
-    for (const e of report.events.consumes)
+    for (const e of report.events.consumes) {
       process.stdout.write(`  ${kleur.magenta('↓')} consumes ${e}\n`);
+    }
   }
 
   process.stdout.write('\n');
@@ -142,12 +148,16 @@ const runEventImpact = async (ref: string, root: string, events?: string): Promi
     `${kleur.bold('impact:')} ${kleur.cyan('event')}/${kleur.bold(report.event)}\n\n`,
   );
 
-  const section = (title: string, refs: EntityRef[], arrow: string) => {
+  const section = (title: string, refs: Array<EntityRef>, arrow: string) => {
     process.stdout.write(kleur.dim(`${title}:\n`));
 
-    if (refs.length === 0) process.stdout.write(`  ${kleur.dim('(nothing)')}\n`);
+    if (refs.length === 0) {
+      process.stdout.write(`  ${kleur.dim('(nothing)')}\n`);
+    }
 
-    for (const r of refs) process.stdout.write(`  ${arrow} ${r.kind}/${r.id}\n`);
+    for (const r of refs) {
+      process.stdout.write(`  ${arrow} ${r.kind}/${r.id}\n`);
+    }
   };
 
   section('produced by', report.producers, kleur.green('↑'));

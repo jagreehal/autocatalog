@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { loadCatalog, refKey } from './loader.js';
 
-const roots: string[] = [];
+const roots: Array<string> = [];
 
 const write = async (path: string, content: string): Promise<void> => {
   await mkdir(join(path, '..'), { recursive: true });

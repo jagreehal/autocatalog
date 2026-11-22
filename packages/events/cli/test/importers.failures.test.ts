@@ -14,7 +14,7 @@ let dir: string;
 
 let out: string;
 
-let said: string[];
+let said: Array<string>;
 
 beforeEach(async () => {
   dir = await fs.mkdtemp(path.join(os.tmpdir(), 'ac-import-src-'));
@@ -22,7 +22,7 @@ beforeEach(async () => {
   said = [];
 
   for (const stream of ['log', 'warn', 'error'] as const) {
-    vi.spyOn(console, stream).mockImplementation((...args: unknown[]) => {
+    vi.spyOn(console, stream).mockImplementation((...args: Array<unknown>) => {
       said.push(args.map(String).join(' '));
     });
   }
@@ -331,8 +331,9 @@ describe('ac from-eventcatalog: a broken document never costs the whole import',
       for (const file of written) {
         const full = path.join(out, file);
 
-        if ((await fs.stat(full)).isFile())
+        if ((await fs.stat(full)).isFile()) {
           expect(await fs.readFile(full, 'utf8'), file).not.toContain('TOPSECRET');
+        }
       }
 
       expect(output()).toContain('outside the catalog');

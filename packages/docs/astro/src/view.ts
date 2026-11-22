@@ -1,13 +1,15 @@
 import type { DocsManifest } from 'autocatalog-docs-core';
-import { resourceKey, type ResourceRef } from 'autocatalog-core';
-import { catalogId, day, docHref, type DocListItem } from './ui/lib/docs';
+import { resourceKey } from 'autocatalog-core';
+import type { ResourceRef } from 'autocatalog-core';
+import { catalogId, day, docHref } from './ui/lib/docs';
+import type { DocListItem } from './ui/lib/docs';
 
 export { day, docHref, type DocListItem };
 
 /** The shape a content-collection entry has to satisfy to be listed. */
 export interface DocEntry {
   id: string;
-  data: { title: string; owner?: string; tags?: string[]; related?: string[] };
+  data: { title: string; owner?: string; tags?: Array<string>; related?: Array<string> };
 }
 
 /**
@@ -17,7 +19,7 @@ export interface DocEntry {
  * the llms.txt route and the tests, and so none of them import `astro:content`
  * to be exercised.
  */
-export function listItems(entries: DocEntry[], manifest: DocsManifest): DocListItem[] {
+export function listItems(entries: Array<DocEntry>, manifest: DocsManifest): Array<DocListItem> {
   return entries
     .map((entry) => {
       const id = catalogId(entry.id);
@@ -39,27 +41,30 @@ export function listItems(entries: DocEntry[], manifest: DocsManifest): DocListI
 }
 
 /** Repositories in name order, each with the documents it publishes. */
-export function groupByRepo(items: DocListItem[]): Array<[string, DocListItem[]]> {
+export function groupByRepo(items: Array<DocListItem>): Array<[string, Array<DocListItem>]> {
   return group(items, (item) => [item.repo]);
 }
 
 /** Tags in name order. Documents without tags simply do not appear. */
-export function groupByTag(items: DocListItem[]): Array<[string, DocListItem[]]> {
+export function groupByTag(items: Array<DocListItem>): Array<[string, Array<DocListItem>]> {
   return group(items, (item) => item.tags);
 }
 
 function group(
-  items: DocListItem[],
-  keysOf: (item: DocListItem) => string[],
-): Array<[string, DocListItem[]]> {
-  const grouped = new Map<string, DocListItem[]>();
+  items: Array<DocListItem>,
+  keysOf: (item: DocListItem) => Array<string>,
+): Array<[string, Array<DocListItem>]> {
+  const grouped = new Map<string, Array<DocListItem>>();
 
   for (const item of items) {
     for (const key of keysOf(item)) {
       const bucket = grouped.get(key);
 
-      if (bucket) bucket.push(item);
-      else grouped.set(key, [item]);
+      if (bucket) {
+        bucket.push(item);
+      } else {
+        grouped.set(key, [item]);
+      }
     }
   }
 
@@ -89,7 +94,7 @@ export interface DocLink {
   resolved: boolean;
 }
 
-export function toLinks(ids: string[], manifest: DocsManifest): DocLink[] {
+export function toLinks(ids: Array<string>, manifest: DocsManifest): Array<DocLink> {
   return ids.map((id) => ({
     id,
     // An unpublished target still shows: hiding it would make a broken edge

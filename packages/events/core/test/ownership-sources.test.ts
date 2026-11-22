@@ -109,7 +109,7 @@ spec:
 
     expect(cursors).toEqual([undefined, 'next-page']);
     expect(backstage.claims[0]?.team).toBe('group:default/ledger');
-    const pages: number[] = [];
+    const pages: Array<number> = [];
 
     const datadog = await syncDatadogOwnership(
       {
@@ -228,10 +228,11 @@ spec:
 
       vi.stubGlobal('fetch', fetch);
 
-      for (const url of ['http://localhost:7007/x', 'http://127.0.0.1/x', 'http://[::1]/x'])
+      for (const url of ['http://localhost:7007/x', 'http://127.0.0.1/x', 'http://[::1]/x']) {
         await expect(getCatalogJson(new URL(url), { Authorization: 'Bearer t' })).resolves.toEqual({
           ok: true,
         });
+      }
 
       await expect(getCatalogJson(new URL('http://catalog.example.com/x'))).resolves.toEqual({
         ok: true,
@@ -247,8 +248,11 @@ spec:
         pull(controller) {
           sent++;
 
-          if (sent > 64) controller.close();
-          else controller.enqueue(chunk);
+          if (sent > 64) {
+            controller.close();
+          } else {
+            controller.enqueue(chunk);
+          }
         },
       });
 

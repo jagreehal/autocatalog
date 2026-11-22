@@ -65,7 +65,9 @@ export function ArchitecturePage({ base, defaultPath }: ArchitecturePageProps) {
 
     const path = eventCatalogPath(inner.startsWith(base) ? inner.slice(base.length) : null);
 
-    if (!path) return;
+    if (!path) {
+      return;
+    }
 
     const url = new URL(location.href);
 

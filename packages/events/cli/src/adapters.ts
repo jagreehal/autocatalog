@@ -3,13 +3,12 @@ import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 import type { Command } from 'commander';
-import {
-  jsonValueSchema,
-  validateDiscoveryResult,
-  type JsonValue,
-  type DiscoverResult,
-  type DiscoveryAdapter,
-  type DiscoveryContext,
+import { jsonValueSchema, validateDiscoveryResult } from 'autocatalog-core';
+import type {
+  JsonValue,
+  DiscoverResult,
+  DiscoveryAdapter,
+  DiscoveryContext,
 } from 'autocatalog-core';
 import { z } from 'zod';
 
@@ -48,7 +47,7 @@ export class AdapterExecutionError extends Error {
       | 'adapter_protocol_invalid',
     message: string,
     /** The adapter packages involved, by name. */
-    public readonly packages: string[] = [],
+    public readonly packages: Array<string> = [],
   ) {
     super(`[${code}] ${message}`);
     this.name = 'AdapterExecutionError';
@@ -109,18 +108,26 @@ const renamed = (name: string) => name.replace('autocatalog-adapter-', 'autocata
 async function loadAdapterManifest(packageDir: string): Promise<AdapterManifest | null> {
   const pkg = await readAdapterPackage(path.join(packageDir, 'package.json'));
 
-  if (!pkg) return null;
+  if (!pkg) {
+    return null;
+  }
 
   const meta = pkg.autocatalog?.plugin ?? pkg.autocatalog?.adapter;
   const packageName = pkg.name ?? null;
 
-  if (!packageName || !ADAPTER_NAME.test(packageName)) return null;
+  if (!packageName || !ADAPTER_NAME.test(packageName)) {
+    return null;
+  }
 
-  if (!meta) return null;
+  if (!meta) {
+    return null;
+  }
   const commandValid = Boolean(meta.command && meta.entry);
   const discoveryValid = Boolean(meta.discovery?.entry && meta.discovery.export);
 
-  if (!commandValid && !discoveryValid) return null;
+  if (!commandValid && !discoveryValid) {
+    return null;
+  }
 
   return {
     packageName,
@@ -134,7 +141,7 @@ async function loadAdapterManifest(packageDir: string): Promise<AdapterManifest 
   };
 }
 
-export async function discoverAdapters(cwd: string): Promise<AdapterManifest[]> {
+export async function discoverAdapters(cwd: string): Promise<Array<AdapterManifest>> {
   const nm = path.join(cwd, 'node_modules');
   const entries = await fs.readdir(nm).catch(() => []);
 
@@ -153,12 +160,14 @@ export async function discoverAdapters(cwd: string): Promise<AdapterManifest[]> 
     (name) => renamed(name) === name || !installed.includes(renamed(name)),
   );
 
-  const results: AdapterManifest[] = [];
+  const results: Array<AdapterManifest> = [];
 
   for (const name of candidates) {
     const m = await loadAdapterManifest(path.join(nm, name));
 
-    if (m) results.push(m);
+    if (m) {
+      results.push(m);
+    }
   }
 
   return results;
@@ -167,7 +176,9 @@ export async function discoverAdapters(cwd: string): Promise<AdapterManifest[]> 
 export function registerAdapterCommand(program: Command, manifest: AdapterManifest): void {
   const entry = manifest.entryAbs;
 
-  if (!manifest.command || !entry) return;
+  if (!manifest.command || !entry) {
+    return;
+  }
   program
     .command(manifest.command)
     .description(`${manifest.description} (via ${manifest.packageName})`)
@@ -175,7 +186,7 @@ export function registerAdapterCommand(program: Command, manifest: AdapterManife
     .allowUnknownOption(true)
     .allowExcessArguments(true)
     .helpOption(false)
-    .action(async (args: string[] = []) => {
+    .action(async (args: Array<string> = []) => {
       const code: number = await new Promise((resolve) => {
         const child = spawn(process.execPath, [entry, ...(args ?? [])], {
           stdio: 'inherit',
@@ -188,7 +199,7 @@ export function registerAdapterCommand(program: Command, manifest: AdapterManife
     });
 }
 
-async function dependencyRoots(entry: string, sourceRoot: string): Promise<string[]> {
+async function dependencyRoots(entry: string, sourceRoot: string): Promise<Array<string>> {
   const roots = new Set([sourceRoot, path.dirname(await fs.realpath(entry))]);
 
   for (const start of [entry, sourceRoot]) {
@@ -233,10 +244,10 @@ export async function runIsolated(input: {
   entry: string;
   root: string;
   /** Exactly what the code may read, in place of its own dependency roots. */
-  readOnly?: string[];
+  readOnly?: Array<string>;
   host: string;
   protocol: string;
-  args: string[];
+  args: Array<string>;
   /** Sent on stdin, for input too large for an argument. */
   stdin?: string;
   signal?: AbortSignal;
@@ -281,19 +292,24 @@ export async function runIsolated(input: {
       windowsHide: true,
     });
 
-    const protocol: Buffer[] = [];
-    const stderr: Buffer[] = [];
+    const protocol: Array<Buffer> = [];
+    const stderr: Array<Buffer> = [];
     let bytes = 0;
     let settled = false;
 
     const finish = (error?: Error, result?: JsonValue) => {
-      if (settled) return;
+      if (settled) {
+        return;
+      }
       settled = true;
       clearTimeout(timer);
       input.signal?.removeEventListener('abort', abort);
 
-      if (error) reject(error);
-      else resolve(result);
+      if (error) {
+        reject(error);
+      } else {
+        resolve(result);
+      }
     };
 
     const abort = () => {
@@ -325,16 +341,22 @@ export async function runIsolated(input: {
             `${input.name} exceeded ${maxOutputBytes} output bytes`,
           ),
         );
-      } else protocol.push(chunk);
+      } else {
+        protocol.push(chunk);
+      }
     });
     child.stderr?.on('data', (chunk: Buffer) => {
-      if (Buffer.concat(stderr).length < 64 * 1024) stderr.push(chunk);
+      if (Buffer.concat(stderr).length < 64 * 1024) {
+        stderr.push(chunk);
+      }
     });
     child.on('error', (error) =>
       finish(new AdapterExecutionError('adapter_crashed', `${input.name}: ${error.message}`)),
     );
     child.on('exit', (code) => {
-      if (settled) return;
+      if (settled) {
+        return;
+      }
 
       if (code !== 0) {
         finish(
@@ -432,7 +454,7 @@ export function createIsolatedDiscoveryAdapter(
 export async function discoverDiscoveryAdapters(
   cwd: string,
   options: { allowCodeExecution?: boolean } = {},
-): Promise<DiscoveryAdapter[]> {
+): Promise<Array<DiscoveryAdapter>> {
   const manifests = await discoverAdapters(cwd);
 
   const discovery = manifests.filter(

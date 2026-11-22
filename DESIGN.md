@@ -10,7 +10,7 @@ hand-maintained portal, and not a copy of EventCatalog.
 
 The one idea a reader should take away: **you can see how sure the catalog is.**
 
-## 2. Colour
+## 2. Colour (colors)
 
 The neutrals are pure greys with no hue, so the only colour on a page is
 provenance. Light mode is near-white paper and black ink; dark mode is
@@ -31,10 +31,14 @@ is the `extracted` teal.
 | `destructive` | `oklch(0.53 0.19 27)`   | `oklch(0.73 0.16 25)`  | A break: a failing check, a consumer it breaks      |
 
 Every text colour meets WCAG 2.1 AA (4.5:1) on the background in its theme;
-the measured ratios sit beside the tokens in `src/ui/styles/tailwind.css`.
+the measured ratios sit beside the tokens in `packages/docs/astro/src/ui/styles/tailwind.css`.
 
-Resource kinds (event, service, document, agent…) have **no colour**. The kind
-is in the key (`event:payments/payment.captured`) and in the icon.
+Resource kinds have **one hue each**, the map legend's, on the icon tile only:
+events orange, commands blue, queries green, services pink, data cyan, domains
+amber, flows teal, endpoints indigo, entities lime, documents grey
+(`--ac-kind-*`, through `IconTile kind`). The hue never stands alone: the kind
+is still in the key (`event:payments/payment.captured`) and in the icon, and
+text, badges and borders stay neutral.
 
 The one exception is an EventStorming board. Its stickies keep the method's
 colours (orange facts, blue commands, lilac policies, red hotspots), because a
@@ -45,7 +49,7 @@ sticky also names its kind in words, so the board reads without colour.
 ## 3. Components
 
 - **shadcn/ui, stock.** React Aria base, stock variants only; `@shadcn/lint`
-  enforces it in `src/ui`. No look-alikes, no custom variants.
+  enforces it in `packages/docs/astro/src/ui`. No look-alikes, no custom variants.
 - **The evidence rule** is the signature element: a 2px rule on the leading edge
   of a fact, coloured by provenance. Extracted and declared are solid; inferred
   is **dashed**, so certainty reads without colour.
@@ -112,7 +116,7 @@ sticky also names its kind in words, so the board reads without colour.
   Vega, not Lyra: 24px card padding, `text-sm` body and rounded cards carry the
   weight a reference site needs; Lyra's `text-xs`, square cards read unfinished.
   Change the look by applying another preset with the shadcn CLI, then fold its
-  dark values into `[data-theme='dark']` in `src/ui/styles/tailwind.css`.
+  dark values into `[data-theme='dark']` in `packages/docs/astro/src/ui/styles/tailwind.css`.
 
 ### The product site home
 
@@ -139,15 +143,21 @@ the rest is static.
 
 ### The catalog home
 
-A generated catalog opens with `CountCards` (what it holds) and an Architecture
-canvas (the catalog map), then documents and attention. Architecture is the
-primary surface after the counts, not a link buried in explore cards.
+A generated catalog opens with one search field, then where the catalog's
+facts come from (extracted, declared, inferred, for resources and for
+relationships) beside what needs attention. Then every kind with its count, the
+map, and the five latest changes. How sure the catalog is comes first, because
+no other catalog can say it. Documents, explore cards and tags are blocks a
+site's `layouts.home` can add back.
 
 ### The catalog map
 
 The map is EventCatalog's visualiser. Its node backgrounds follow the theme, but
 it draws each kind's border and tag in its own colours, which this design does
-not control.
+not control; the kind hues in section 2 are taken from them. The whole
+catalog's map opens on its domains (level 1) at a readable zoom, and the reader
+pans or goes a level deeper; a map of every node at once is never the first
+view.
 
 ## 6. Do and don't
 

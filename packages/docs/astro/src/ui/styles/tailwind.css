@@ -179,6 +179,16 @@
   --color-storm-system: var(--ac-storm-system);
   --color-storm-actor: var(--ac-storm-actor);
   --color-storm-hotspot: var(--ac-storm-hotspot);
+  --color-kind-event: var(--ac-kind-event);
+  --color-kind-command: var(--ac-kind-command);
+  --color-kind-query: var(--ac-kind-query);
+  --color-kind-service: var(--ac-kind-service);
+  --color-kind-data: var(--ac-kind-data);
+  --color-kind-domain: var(--ac-kind-domain);
+  --color-kind-flow: var(--ac-kind-flow);
+  --color-kind-endpoint: var(--ac-kind-endpoint);
+  --color-kind-entity: var(--ac-kind-entity);
+  --color-kind-document: var(--ac-kind-document);
 }
 
 /*

@@ -17,7 +17,7 @@ const fullReload = z.object({ type: z.literal('full-reload') });
 // A design file in a repository: `<repository>/designs/<id>.md`.
 const DESIGN_FILE = /[\\/]designs[\\/][^\\/]+\.md$/;
 
-const here = path.dirname(fileURLToPath(import.meta.url));
+const here = import.meta.dirname;
 
 /** The routes a site for an audience outside the company keeps. */
 const OUTSIDE_ROUTES = new Set([
@@ -60,13 +60,13 @@ export function autocatalogDocsRoutes(
    * On a site with `access`, the kind pages' paths: each reader's lists are
    * their own, so these and the home page render per request.
    */
-  perReaderKinds?: string[],
+  perReaderKinds?: Array<string>,
   /** A repository published at the root has `docs/index.md`, which is the home page. */
   docsHome = false,
 ): AstroIntegration {
   let base = '/';
   let output = 'static';
-  let perRequest: string[] = [];
+  let perRequest: Array<string> = [];
   let projectRoot: string | undefined;
 
   return {
@@ -259,11 +259,15 @@ export function autocatalogDocsRoutes(
       // The catalog is built once, so its pages are prerendered even when the
       // site renders documents per request. A page exporting `prerender` keeps it.
       'astro:route:setup': ({ route }) => {
-        if (!projectRoot) return;
+        if (!projectRoot) {
+          return;
+        }
 
         const file = path.resolve(projectRoot, route.component);
 
-        if (!file.startsWith(path.join(here, 'pages')) || PRERENDER_EXPORT.test(read(file))) return;
+        if (!file.startsWith(path.join(here, 'pages')) || PRERENDER_EXPORT.test(read(file))) {
+          return;
+        }
 
         const name = path.basename(file);
 
@@ -285,7 +289,9 @@ export function autocatalogDocsRoutes(
 
         // Told once the file has settled: a writer that empties it first fires a change mid-write.
         const onDesign = (file: string) => {
-          if (!DESIGN_FILE.test(file)) return;
+          if (!DESIGN_FILE.test(file)) {
+            return;
+          }
 
           designChangedAt = Date.now();
           markDesignsChanged();
@@ -320,8 +326,9 @@ export function autocatalogDocsRoutes(
 
           // SAFETY: the same function, passing every call it does not skip to the original.
           channel.send = ((...args: Parameters<typeof send>) => {
-            if (fullReload.safeParse(args[0]).success && Date.now() - designChangedAt < 1500)
+            if (fullReload.safeParse(args[0]).success && Date.now() - designChangedAt < 1500) {
               return;
+            }
 
             send(...args);
           }) as typeof channel.send;
@@ -351,7 +358,9 @@ export function autocatalogDocsRoutes(
 
         const broken = await brokenLinks(fileURLToPath(dir), base, served);
 
-        if (broken.length === 0) return;
+        if (broken.length === 0) {
+          return;
+        }
 
         if (process.env.AUTOCATALOG_DOCS_LINKS === 'error') {
           throw new Error(formatBrokenLinks(broken));

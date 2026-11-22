@@ -44,7 +44,9 @@ const svgUrl = (icon: string) =>
 export function renderIcon(icon: ChatIcon): ReactNode {
   const svg = z.string().safeParse(icon);
 
-  if (!svg.success) return icon;
+  if (!svg.success) {
+    return icon;
+  }
 
   const mask = svgUrl(svg.data);
 

@@ -3,7 +3,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { buildDocsCatalog, type DocsCatalog } from '../src/catalog';
+import { buildDocsCatalog } from '../src/catalog';
+import type { DocsCatalog } from '../src/catalog';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { deliveryPathView, servicePages } from '../src/page-models';
@@ -19,8 +20,9 @@ beforeAll(async () => {
   root = await fs.mkdtemp(path.join(os.tmpdir(), 'autocatalog-delivery-path-'));
 
   // The broker, the event and the consumer from three repositories.
-  for (const team of ['infra', 'payments', 'ledger'])
+  for (const team of ['infra', 'payments', 'ledger']) {
     await fs.cp(path.join(example, team), path.join(root, team), { recursive: true });
+  }
 
   catalog = await buildDocsCatalog(root, { includeDates: false });
 });

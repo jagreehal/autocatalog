@@ -1,8 +1,11 @@
 import { z } from 'zod';
 import { lastChanged, sourceUrl } from './git';
-import { type Doc, readDocs, type ReadDocsOptions } from './read-docs';
-import { type Frontmatter, frontmatterSchema, resolveFrontmatterContract } from './frontmatter';
-import { type DocKind, kindFailure, kindValidator, resolveDocKinds, textField } from './kinds';
+import { readDocs } from './read-docs';
+import type { Doc, ReadDocsOptions } from './read-docs';
+import { frontmatterSchema, resolveFrontmatterContract } from './frontmatter';
+import type { Frontmatter } from './frontmatter';
+import { kindFailure, kindValidator, resolveDocKinds, textField } from './kinds';
+import type { DocKind } from './kinds';
 
 /** The published path the convention reserves for the aggregated index. */
 export const DOCS_MANIFEST_PATH = 'contracts/docs-manifest.json';
@@ -49,7 +52,7 @@ export interface BuildDocsManifestOptions extends ReadDocsOptions {
 }
 
 export class DocsManifestError extends Error {
-  constructor(readonly failures: string[]) {
+  constructor(readonly failures: Array<string>) {
     super(`refusing to publish a manifest for ${failures.length} invalid document(s)`);
     this.name = 'DocsManifestError';
   }
@@ -70,7 +73,9 @@ export function buildDocsManifest(
 ): DocsManifest {
   const { valid, invalid } = validateDocs(root, options);
 
-  if (invalid.size > 0) throw new DocsManifestError([...invalid.values()].flat());
+  if (invalid.size > 0) {
+    throw new DocsManifestError([...invalid.values()].flat());
+  }
 
   const manifest: DocsManifest = {};
 
@@ -96,7 +101,9 @@ export function buildDocsManifest(
     }
   }
 
-  for (const entry of Object.values(manifest)) entry.linkedFrom.sort();
+  for (const entry of Object.values(manifest)) {
+    entry.linkedFrom.sort();
+  }
 
   return manifest;
 }
@@ -110,7 +117,7 @@ export function buildDocsManifest(
 export function invalidDocuments(
   root: string,
   options: BuildDocsManifestOptions = {},
-): Map<string, string[]> {
+): Map<string, Array<string>> {
   return validateDocs(root, options).invalid;
 }
 
@@ -125,12 +132,12 @@ type ValidDoc = Doc & { front: Frontmatter; kind: DocKind | null };
 
 /** The documents that keep to the contract, and what is wrong with the rest, by repository. */
 interface ValidatedDocs {
-  valid: ValidDoc[];
-  invalid: Map<string, string[]>;
+  valid: Array<ValidDoc>;
+  invalid: Map<string, Array<string>>;
 }
 
 function validateDocs(root: string, options: BuildDocsManifestOptions): ValidatedDocs {
-  const invalid = new Map<string, string[]>();
+  const invalid = new Map<string, Array<string>>();
 
   const fail = (doc: Pick<Doc, 'file' | 'repo'>, message: string) =>
     invalid.set(doc.repo, [...(invalid.get(doc.repo) ?? []), message]);
@@ -146,13 +153,15 @@ function validateDocs(root: string, options: BuildDocsManifestOptions): Validate
     resolveDocKinds(root, options.conventionsPath).kinds,
   );
 
-  const valid: ValidDoc[] = [];
+  const valid: Array<ValidDoc> = [];
 
   for (const doc of docs) {
     const { kind, issues } = validate(doc);
 
     if (issues.length > 0) {
-      for (const issue of issues) fail(doc, kindFailure(doc.file, kind, issue));
+      for (const issue of issues) {
+        fail(doc, kindFailure(doc.file, kind, issue));
+      }
       continue;
     }
 

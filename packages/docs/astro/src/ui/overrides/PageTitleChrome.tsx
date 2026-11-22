@@ -1,9 +1,18 @@
 /** @jsxImportSource react */
-import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
 import { Badge } from '#ui/components/ui/badge.tsx';
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+} from '#ui/components/ui/breadcrumb.tsx';
 import { Button, LinkButton } from '#ui/components/ui/button.tsx';
 import { Separator } from '#ui/components/ui/separator.tsx';
-import { COPY_MARKDOWN_LABEL, type PageAction, type PillTone } from '../../shell';
+import { COPY_MARKDOWN_LABEL } from '../../shell';
+import type { PageAction, PillTone } from '../../shell';
 import { Icon } from '../components/Icon';
 import { statusVariant } from '../lib/status';
 
@@ -14,6 +23,10 @@ export interface PageTitleChromeProps {
   kindLabel?: string;
   /** The resource's key in the catalog, such as `event:payments/payment.captured`. */
   catalogKey?: string;
+  /** The pages above this one, outermost first; shown above the title when there are any. */
+  crumbs?: Array<{ label: string; href: string }> | undefined;
+  /** The page's title, the last crumb. */
+  title?: string | undefined;
   /** A call to action level with the title, such as "Explore catalog". */
   primary?: { label: string; href: string };
   /** The sentence that says what the page is for. */
@@ -23,8 +36,8 @@ export interface PageTitleChromeProps {
   /** A decision's, runbook's or incident's state, such as `accepted`. */
   status?: string | undefined;
   /** What a document of a kind records about itself: its kind, date, what it applies to. */
-  facts?: TitleFact[] | undefined;
-  actions: PageAction[];
+  facts?: Array<TitleFact> | undefined;
+  actions: Array<PageAction>;
   /** Whether the page offers to copy itself, beside `actions`. */
   markdownActions?: boolean;
   /** Starlight's own `<h1>`, rendered by the Astro shell. */
@@ -63,13 +76,19 @@ export function pageAsMarkdown(root: ParentNode = document): string {
 
   const lines = [`# ${title}`, ''];
 
-  if (key) lines.push(`\`${key}\``, '');
+  if (key) {
+    lines.push(`\`${key}\``, '');
+  }
 
-  if (summary) lines.push(summary, '');
+  if (summary) {
+    lines.push(summary, '');
+  }
 
-  const text = body?.textContent?.replace(/\n{3,}/g, '\n\n').trim();
+  const text = body?.textContent?.replaceAll(/\n{3,}/g, '\n\n').trim();
 
-  if (text && text !== title && text !== summary) lines.push(text, '');
+  if (text && text !== title && text !== summary) {
+    lines.push(text, '');
+  }
 
   return lines.join('\n');
 }
@@ -94,7 +113,9 @@ function CopyAction({
     try {
       const response = await fetch(action.href);
 
-      if (!response.ok) throw new Error(String(response.status));
+      if (!response.ok) {
+        throw new Error(String(response.status));
+      }
 
       await navigator.clipboard.writeText(await response.text());
     } catch {
@@ -144,7 +165,9 @@ function CopyMarkdownButton({
         ? await (async () => {
             const response = await fetch(href);
 
-            if (!response.ok) throw new Error(String(response.status));
+            if (!response.ok) {
+              throw new Error(String(response.status));
+            }
 
             return response.text();
           })()
@@ -192,6 +215,8 @@ export function PageTitleChrome({
   kind,
   kindLabel,
   catalogKey,
+  crumbs = [],
+  title,
   primary,
   summary,
   pills,
@@ -209,6 +234,20 @@ export function PageTitleChrome({
 
   return (
     <div className="mt-6 flex flex-col gap-4" data-page-title>
+      {crumbs.length > 0 && (
+        <Breadcrumb data-pagefind-ignore="">
+          <BreadcrumbList>
+            {crumbs.map((crumb) => (
+              <BreadcrumbItem key={crumb.href} id={crumb.href}>
+                <BreadcrumbLink href={crumb.href}>{crumb.label}</BreadcrumbLink>
+              </BreadcrumbItem>
+            ))}
+            <BreadcrumbItem id="current">
+              <BreadcrumbPage>{title}</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+      )}
       <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
         <div className="flex min-w-0 flex-col gap-2.5">
           {children}

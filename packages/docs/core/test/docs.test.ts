@@ -69,7 +69,7 @@ describe('readDocs', () => {
     await write('help/docs/paid.md', doc('Paid'));
     await write('open/docs/start.md', doc('Start'));
 
-    const unreadable: string[] = [];
+    const unreadable: Array<string> = [];
 
     const ids = readDocs(root, {
       onUnreadable: (d, message) => unreadable.push(`${d.repo} ${message}`),

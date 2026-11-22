@@ -25,7 +25,7 @@ export interface EntitiesPageProps {
     name: string;
     summary?: string | undefined;
     repository: string;
-    domains: string[];
+    domains: Array<string>;
     aggregateRoot: boolean;
     properties: number;
     href: string;

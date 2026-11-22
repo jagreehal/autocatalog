@@ -67,7 +67,7 @@ interface RuntimeEvidenceBase {
   /** `domain/id`, named in the prompt offered to a coding agent. */
   ref: string;
   caveat: string;
-  deadLetters: DeadLetterView[];
+  deadLetters: Array<DeadLetterView>;
 }
 
 export interface RuntimeEvidenceSnapshot extends RuntimeEvidenceBase {
@@ -75,14 +75,14 @@ export interface RuntimeEvidenceSnapshot extends RuntimeEvidenceBase {
   count: number;
   observedRange: { firstSeen?: string | undefined; lastSeen?: string | undefined };
   snapshot: { generatedAt?: string | undefined };
-  declaredConsumers: string[];
-  observedConsumers: string[];
-  additionalConsumers: string[];
-  neverObserved: string[];
+  declaredConsumers: Array<string>;
+  observedConsumers: Array<string>;
+  additionalConsumers: Array<string>;
+  neverObserved: Array<string>;
   consumerEvidence: 'reported' | 'observed' | 'unknown';
-  sources: RuntimeEvidenceSource[];
-  consumerOutcomes: ConsumerOutcomeView[];
-  sampleTraceIds: string[];
+  sources: Array<RuntimeEvidenceSource>;
+  consumerOutcomes: Array<ConsumerOutcomeView>;
+  sampleTraceIds: Array<string>;
 }
 
 export interface RuntimeEvidenceNone extends RuntimeEvidenceBase {
@@ -114,7 +114,9 @@ function outcomeLine(outcome: ConsumerOutcomeView): string {
 }
 
 /** Each consumer's outcomes summed across every channel it receives on. */
-function outcomesByConsumer(outcomes: ConsumerOutcomeView[]): Map<string, ConsumerOutcomeView> {
+function outcomesByConsumer(
+  outcomes: Array<ConsumerOutcomeView>,
+): Map<string, ConsumerOutcomeView> {
   const totals = new Map<string, ConsumerOutcomeView>();
 
   for (const outcome of outcomes) {
@@ -148,7 +150,7 @@ function outcomesByConsumer(outcomes: ConsumerOutcomeView[]): Map<string, Consum
 type DeadLetterReasonView = NonNullable<ConsumerOutcomeView['deadLetterReasons']>[number];
 
 /** One entry per reason, category and queue, its counts summed, most frequent first. */
-function mergeReasons(reasons: DeadLetterReasonView[]): DeadLetterReasonView[] {
+function mergeReasons(reasons: Array<DeadLetterReasonView>): Array<DeadLetterReasonView> {
   const merged = new Map<string, DeadLetterReasonView>();
 
   for (const reason of reasons) {
@@ -165,7 +167,7 @@ function mergeReasons(reasons: DeadLetterReasonView[]): DeadLetterReasonView[] {
 const deadLetterLine = ({ queue, maxAttempts }: DeadLetterView) =>
   `Dead letters go to ${queue}${maxAttempts ? ` after ${counted(maxAttempts, 'attempt')}` : ''}.`;
 
-function DeadLetters({ deadLetters }: { deadLetters: DeadLetterView[] }) {
+function DeadLetters({ deadLetters }: { deadLetters: Array<DeadLetterView> }) {
   return (
     <section className="flex flex-col gap-3" aria-labelledby="runtime-dead-letters">
       <h3 className="m-0 text-sm font-medium" id="runtime-dead-letters">
@@ -212,11 +214,17 @@ function seen(evidence: RuntimeEvidenceSnapshot): string {
 
   const times = `${number(evidence.count)} ${evidence.count === 1 ? 'time' : 'times'}`;
 
-  if (firstSeen && lastSeen) return `${times} between ${when(firstSeen)} and ${when(lastSeen)}`;
+  if (firstSeen && lastSeen) {
+    return `${times} between ${when(firstSeen)} and ${when(lastSeen)}`;
+  }
 
-  if (firstSeen) return `${times}, first on ${when(firstSeen)}`;
+  if (firstSeen) {
+    return `${times}, first on ${when(firstSeen)}`;
+  }
 
-  if (lastSeen) return `${times}, last on ${when(lastSeen)}`;
+  if (lastSeen) {
+    return `${times}, last on ${when(lastSeen)}`;
+  }
 
   return times;
 }
@@ -290,7 +298,7 @@ interface ConsumerRow {
 }
 
 /** Every consumer either side knows of, and what each side says about it. */
-function consumerRows(evidence: RuntimeEvidenceSnapshot): ConsumerRow[] {
+function consumerRows(evidence: RuntimeEvidenceSnapshot): Array<ConsumerRow> {
   const seenAs =
     evidence.consumerEvidence === 'observed' ? 'observed receiving' : 'reported in snapshot';
 

@@ -1,4 +1,5 @@
-import { type ChangeEvent, useLayoutEffect, useRef, useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
+import type { ChangeEvent } from 'react';
 
 /**
  * A text field's value that keeps what the reader typed before the page's
@@ -14,7 +15,9 @@ export function useFieldValue(initial = '') {
   useLayoutEffect(() => {
     const typed = ref.current?.value;
 
-    if (typed && typed !== initial) setValue(typed);
+    if (typed && typed !== initial) {
+      setValue(typed);
+    }
   }, [initial]);
 
   return {

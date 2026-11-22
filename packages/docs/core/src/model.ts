@@ -8,27 +8,26 @@ import {
   isServiceCatalogResource,
   parseFrontmatter,
   AUTOCATALOG_GRAPH_SPEC,
-  type CatalogRelationship,
-  type CatalogResource,
-  type JsonObject,
   resourceKey,
-  type ResourceGraph,
-  type ResourceRef,
+} from 'autocatalog-core';
+import type {
+  CatalogRelationship,
+  CatalogResource,
+  JsonObject,
+  ResourceGraph,
+  ResourceRef,
 } from 'autocatalog-core';
 import { z } from 'zod';
 import { resolveAbout } from './about';
-import { DIAGRAM_NODE_TYPES, type Diagram, type DiagramNode } from './diagram';
+import { DIAGRAM_NODE_TYPES } from './diagram';
+import type { Diagram, DiagramNode } from './diagram';
 import { inside } from './inside';
-import {
-  ODCS_FILE,
-  type OdcsContract,
-  readOdcs,
-  readTrackRecord,
-  type TrackRecord,
-  trackRecordFile,
-} from './odcs';
-import { type Lifecycle, lifecyclesSchema } from './lifecycles';
-import { ODPS_FILE, type OdpsProduct, readOdps } from './odps';
+import { ODCS_FILE, readOdcs, readTrackRecord, trackRecordFile } from './odcs';
+import type { OdcsContract, TrackRecord } from './odcs';
+import { lifecyclesSchema } from './lifecycles';
+import type { Lifecycle } from './lifecycles';
+import { ODPS_FILE, readOdps } from './odps';
+import type { OdpsProduct } from './odps';
 
 /**
  * The rest of a domain model, one Markdown file per resource in the repository
@@ -72,14 +71,14 @@ const term = z.object({
 });
 
 /** A term, with what its `about:` resolved to in the composed catalog. */
-export type Term = z.output<typeof term> & { refs: ResourceRef[] };
+export type Term = z.output<typeof term> & { refs: Array<ResourceRef> };
 
 const glossarySchema = z.object({ dictionary: z.array(term).min(1) });
 
 /** One domain's ubiquitous language: `glossary/<domain>.md`. */
 export interface Glossary extends Authored {
   domain: string;
-  terms: Term[];
+  terms: Array<Term>;
 }
 
 export interface EntityProperty {
@@ -90,8 +89,8 @@ export interface EntityProperty {
   /** Another entity's id. */
   references?: string | undefined;
   relationType?: string | undefined;
-  enum?: string[] | undefined;
-  properties?: EntityProperty[] | undefined;
+  enum?: Array<string> | undefined;
+  properties?: Array<EntityProperty> | undefined;
 }
 
 const entityProperty: z.ZodType<EntityProperty> = z.lazy(() =>
@@ -128,14 +127,14 @@ const entitySchema = z
 export interface Entity extends Authored {
   name: string;
   summary?: string | undefined;
-  domains: string[];
+  domains: Array<string>;
   /** The services that hold it, resolved where the catalog has them. */
   services: Array<{ name: string; ref?: ResourceRef }>;
   aggregateRoot: boolean;
   identifier?: string | undefined;
-  properties: EntityProperty[];
+  properties: Array<EntityProperty>;
   /** The events whose schema carries the identifier, so a reader sees where it travels. */
-  carriedBy: ResourceRef[];
+  carriedBy: Array<ResourceRef>;
   /** The states each lifecycle field moves through, by field. */
   lifecycles: Record<string, Lifecycle>;
 }
@@ -188,8 +187,8 @@ export interface DataProduct extends Authored {
   name: string;
   summary?: string | undefined;
   domain?: string | undefined;
-  inputs: DataProductPort[];
-  outputs: DataProductPort[];
+  inputs: Array<DataProductPort>;
+  outputs: Array<DataProductPort>;
 }
 
 const contactFields = {
@@ -223,21 +222,21 @@ export interface Person extends Authored {
   slackDirectMessageUrl?: string | undefined;
   msTeamsDirectMessageUrl?: string | undefined;
   /** A team's members, by user id. */
-  members: string[];
+  members: Array<string>;
 }
 
 export interface DomainModel {
-  glossaries: Glossary[];
-  entities: Entity[];
-  dataProducts: DataProduct[];
-  people: Person[];
+  glossaries: Array<Glossary>;
+  entities: Array<Entity>;
+  dataProducts: Array<DataProduct>;
+  people: Array<Person>;
 }
 
 export interface ReadDomainModelResult extends DomainModel {
   /** One line per file left out, naming it and the check it fails. */
-  failures: string[];
+  failures: Array<string>;
   /** One line per file kept that reads as a mistake. */
-  warnings: string[];
+  warnings: Array<string>;
 }
 
 const ID = /^[a-z0-9][a-z0-9._-]*$/i;
@@ -249,7 +248,7 @@ export function readFolder<T extends z.ZodType>(
   repositories: Array<{ repository: string; dir: string }>,
   folder: string,
   schema: T,
-  failures: string[],
+  failures: Array<string>,
 ): Array<{ data: z.output<T>; where: Authored; dir: string }> {
   const found: Array<{ data: z.output<T>; where: Authored; dir: string }> = [];
 
@@ -257,14 +256,18 @@ export function readFolder<T extends z.ZodType>(
     const full = path.join(dir, folder);
 
     // A real directory only: a symlink could point anywhere on the build machine.
-    if (!fs.lstatSync(full, { throwIfNoEntry: false })?.isDirectory()) continue;
+    if (!fs.lstatSync(full, { throwIfNoEntry: false })?.isDirectory()) {
+      continue;
+    }
 
     const entries = fs
       .readdirSync(full, { withFileTypes: true })
       .sort((a, b) => a.name.localeCompare(b.name));
 
     for (const entry of entries) {
-      if (!entry.isFile() || !entry.name.endsWith('.md')) continue;
+      if (!entry.isFile() || !entry.name.endsWith('.md')) {
+        continue;
+      }
 
       const file = `${folder}/${entry.name}`;
       const id = entry.name.slice(0, -'.md'.length);
@@ -282,7 +285,9 @@ export function readFolder<T extends z.ZodType>(
 
         const parsed = schema.safeParse(data);
 
-        if (!parsed.success) throw new Error(z.prettifyError(parsed.error).replace(/\n+/g, '; '));
+        if (!parsed.success) {
+          throw new Error(z.prettifyError(parsed.error).replace(/\n+/g, '; '));
+        }
 
         found.push({
           data: parsed.data,
@@ -304,17 +309,23 @@ export function readFolder<T extends z.ZodType>(
 }
 
 /** The domains events, services and agents name. */
-function knownDomains(resources: CatalogResource[]): Set<string> {
+function knownDomains(resources: Array<CatalogResource>): Set<string> {
   const domains = new Set<string>();
 
   for (const resource of resources) {
-    if (isEventCatalogResource(resource)) domains.add(resource.attributes.domain);
-
-    if (isServiceCatalogResource(resource)) {
-      for (const domain of resource.attributes.domains) domains.add(domain);
+    if (isEventCatalogResource(resource)) {
+      domains.add(resource.attributes.domain);
     }
 
-    if (resource.ref.kind === 'domain') domains.add(resource.ref.id);
+    if (isServiceCatalogResource(resource)) {
+      for (const domain of resource.attributes.domains) {
+        domains.add(domain);
+      }
+    }
+
+    if (resource.ref.kind === 'domain') {
+      domains.add(resource.ref.id);
+    }
   }
 
   return domains;
@@ -329,14 +340,16 @@ const schemaField = z.looseObject({
 });
 
 /** A JSON Schema's properties, as an entity lists them. */
-function schemaProperties(schema: JsonObject): EntityProperty[] {
+function schemaProperties(schema: JsonObject): Array<EntityProperty> {
   const properties = isJsonObject(schema.properties) ? schema.properties : {};
   const required = new Set(Array.isArray(schema.required) ? schema.required : []);
 
-  return Object.entries(properties).flatMap(([name, value]): EntityProperty[] => {
+  return Object.entries(properties).flatMap(([name, value]): Array<EntityProperty> => {
     const parsed = schemaField.safeParse(value);
 
-    if (!parsed.success || !isJsonObject(value)) return [];
+    if (!parsed.success || !isJsonObject(value)) {
+      return [];
+    }
 
     const field = parsed.data;
 
@@ -357,10 +370,12 @@ function schemaProperties(schema: JsonObject): EntityProperty[] {
 const jsonValue = z.json();
 
 /** The properties of the JSON Schema an entity names. */
-function readSchema(dir: string, file: string): EntityProperty[] {
+function readSchema(dir: string, file: string): Array<EntityProperty> {
   const schema = jsonValue.parse(JSON.parse(fs.readFileSync(inside(dir, file), 'utf8')));
 
-  if (!isJsonObject(schema)) throw new Error(`'${file}' is not a JSON Schema object`);
+  if (!isJsonObject(schema)) {
+    throw new Error(`'${file}' is not a JSON Schema object`);
+  }
 
   return schemaProperties(schema);
 }
@@ -390,11 +405,11 @@ export interface ReadDomainModelOptions {
  */
 export function readDomainModel(
   repositories: Array<{ repository: string; dir: string }>,
-  catalog: { resources: CatalogResource[] },
+  catalog: { resources: Array<CatalogResource> },
   options: ReadDomainModelOptions = {},
 ): ReadDomainModelResult {
-  const failures: string[] = [];
-  const warnings: string[] = [];
+  const failures: Array<string> = [];
+  const warnings: Array<string> = [];
   const domains = knownDomains(catalog.resources);
 
   const unknownDomain = (where: Authored, domain: string) => {
@@ -405,7 +420,7 @@ export function readDomainModel(
     }
   };
 
-  const glossaries: Glossary[] = [];
+  const glossaries: Array<Glossary> = [];
   const termOwners = new Map<string, string>();
 
   for (const { data, where } of readFolder(
@@ -435,7 +450,9 @@ export function readDomainModel(
       continue;
     }
 
-    for (const entry of data.dictionary) termOwners.set(`${where.id}/${entry.id}`, at);
+    for (const entry of data.dictionary) {
+      termOwners.set(`${where.id}/${entry.id}`, at);
+    }
 
     unknownDomain(where, where.id);
     glossaries.push({
@@ -446,7 +463,9 @@ export function readDomainModel(
         refs: (entry.about ?? []).flatMap((reference) => {
           const resolved = resolveAbout(reference, catalog.resources, where.repository);
 
-          if ('ref' in resolved) return [resolved.ref];
+          if ('ref' in resolved) {
+            return [resolved.ref];
+          }
           warnings.push(`${at}: term '${entry.id}' ${resolved.failure}`);
 
           return [];
@@ -457,7 +476,7 @@ export function readDomainModel(
 
   const services = catalog.resources.filter(isServiceCatalogResource);
   const events = catalog.resources.filter(isEventCatalogResource);
-  const entities: Entity[] = [];
+  const entities: Array<Entity> = [];
 
   const entityDefinedIn = new Map<string, string>();
 
@@ -497,7 +516,9 @@ export function readDomainModel(
 
       const identifier = data.identifier;
 
-      for (const domain of data.domains) unknownDomain(where, domain);
+      for (const domain of data.domains) {
+        unknownDomain(where, domain);
+      }
 
       entities.push({
         ...where,
@@ -546,7 +567,7 @@ export function readDomainModel(
 
   const odpsReads = readOdpsFolder(repositories, failures);
   const productIds = new Set([...productReads, ...odpsReads].map(({ where }) => where.id));
-  const candidates: DataProduct[] = [];
+  const candidates: Array<DataProduct> = [];
   const definedIn = new Map<string, string>();
 
   for (const { data, where, dir } of productReads) {
@@ -568,9 +589,13 @@ export function readDomainModel(
         if (reference.startsWith('data-product/')) {
           const id = reference.slice('data-product/'.length);
 
-          if (!productIds.has(id)) throw new Error(`no data product '${id}' under data-products/`);
+          if (!productIds.has(id)) {
+            throw new Error(`no data product '${id}' under data-products/`);
+          }
 
-          if (id === where.id) throw new Error('a data product cannot feed itself');
+          if (id === where.id) {
+            throw new Error('a data product cannot feed itself');
+          }
 
           return { reference, contract, ...contractFacts };
         }
@@ -588,7 +613,9 @@ export function readDomainModel(
         return { reference, ref: resolution.ref, contract, ...contractFacts };
       };
 
-      if (data.domain) unknownDomain(where, data.domain);
+      if (data.domain) {
+        unknownDomain(where, data.domain);
+      }
 
       candidates.push({
         ...where,
@@ -607,7 +634,7 @@ export function readDomainModel(
 
   const contracts = odpsReads.length
     ? contractIndex(repositories)
-    : new Map<string, IndexedContract[]>();
+    : new Map<string, Array<IndexedContract>>();
 
   for (const { data, where } of odpsReads) {
     const at = `${where.repository}/${where.file}`;
@@ -627,7 +654,9 @@ export function readDomainModel(
       ): DataProductPort => {
         const at = version ? `@${version}` : '';
 
-        if (!contractId) return { reference: `port/${name}${at}`, name };
+        if (!contractId) {
+          return { reference: `port/${name}${at}`, name };
+        }
 
         const reference = `contract/${contractId}${at}`;
         const pin = { contractId, version };
@@ -640,7 +669,9 @@ export function readDomainModel(
         );
 
         if (!found) {
-          if (!output && options.deferMissing) return { reference, name, pin };
+          if (!output && options.deferMissing) {
+            return { reference, name, pin };
+          }
 
           throw new Error(
             `${output ? 'output' : 'input'} port '${name}' names contract ${contractId}${version ? ` ${version}` : ''}, which no *.odcs.yaml in ${output ? 'this repository' : 'the repositories read'} declares`,
@@ -657,7 +688,9 @@ export function readDomainModel(
         };
       };
 
-      if (data.domain) unknownDomain(where, data.domain);
+      if (data.domain) {
+        unknownDomain(where, data.domain);
+      }
 
       candidates.push({
         ...where,
@@ -726,10 +759,12 @@ export function readDomainModel(
       );
     }
 
-    const failing: string[] = [];
+    const failing: Array<string> = [];
 
     for (const product of candidates) {
-      if (!valid.has(product.id)) continue;
+      if (!valid.has(product.id)) {
+        continue;
+      }
 
       // A pinned input no data product publishes promises nothing; `ac docs check`
       // reads one repository, so it defers what the others may publish.
@@ -756,18 +791,22 @@ export function readDomainModel(
         failures.push(
           `${product.repository}/${product.file}: data product '${broken}' fails its own checks`,
         );
-      } else continue;
+      } else {
+        continue;
+      }
 
       failing.push(product.id);
     }
 
-    for (const id of failing) valid.delete(id);
+    for (const id of failing) {
+      valid.delete(id);
+    }
     changed = failing.length > 0;
   }
 
   const dataProducts = candidates.filter((product) => valid.has(product.id));
 
-  const people: Person[] = [];
+  const people: Array<Person> = [];
   const seen = new Map<string, string>();
 
   const directory = [
@@ -834,11 +873,15 @@ function readContract(
 ): Pick<DataProductPort, 'odcs' | 'trackRecord'> {
   const full = inside(dir, contract);
 
-  if (!ODCS_FILE.test(contract)) return {};
+  if (!ODCS_FILE.test(contract)) {
+    return {};
+  }
   const odcs = readOdcs(fs.readFileSync(full, 'utf8'));
   const results = trackRecordFile(full);
 
-  if (!output || !fs.lstatSync(results, { throwIfNoEntry: false })?.isFile()) return { odcs };
+  if (!output || !fs.lstatSync(results, { throwIfNoEntry: false })?.isFile()) {
+    return { odcs };
+  }
 
   const { unreadable: _unreadable, ...trackRecord } = readTrackRecord(
     fs.readFileSync(inside(dir, path.relative(dir, results)), 'utf8'),
@@ -851,11 +894,11 @@ function readContract(
 /** `*.odps.yaml` at each repository's root and in `data-products/`; the file name is the product's id. */
 function readOdpsFolder(
   repositories: Array<{ repository: string; dir: string }>,
-  failures: string[],
+  failures: Array<string>,
 ): Array<{ data: OdpsProduct; where: Authored; dir: string }> {
   const found: Array<{ data: OdpsProduct; where: Authored; dir: string }> = [];
 
-  for (const { repository, dir } of repositories)
+  for (const { repository, dir } of repositories) {
     for (const folder of ['', MODEL_DIRS.dataProducts]) {
       const full = path.join(dir, folder);
 
@@ -886,6 +929,7 @@ function readOdpsFolder(
         }
       }
     }
+  }
 
   return found.sort(
     (a, b) =>
@@ -906,17 +950,21 @@ const SKIP = new Set(['node_modules', '.git', 'dist', 'build', '.turbo', 'covera
 /** Every ODCS contract each repository keeps, by contract id. A file that does not read is left out. */
 function contractIndex(
   repositories: Array<{ repository: string; dir: string }>,
-): Map<string, IndexedContract[]> {
-  const index = new Map<string, IndexedContract[]>();
+): Map<string, Array<IndexedContract>> {
+  const index = new Map<string, Array<IndexedContract>>();
 
   for (const { repository, dir } of repositories) {
     const walk = (at: string) => {
       for (const entry of fs.readdirSync(path.join(dir, at), { withFileTypes: true })) {
         const file = at ? `${at}/${entry.name}` : entry.name;
 
-        if (entry.isDirectory() && !SKIP.has(entry.name)) walk(file);
+        if (entry.isDirectory() && !SKIP.has(entry.name)) {
+          walk(file);
+        }
 
-        if (!entry.isFile() || !ODCS_FILE.test(entry.name)) continue;
+        if (!entry.isFile() || !ODCS_FILE.test(entry.name)) {
+          continue;
+        }
 
         try {
           const odcs = readOdcs(fs.readFileSync(path.join(dir, file), 'utf8'));
@@ -927,7 +975,9 @@ function contractIndex(
       }
     };
 
-    if (fs.lstatSync(dir, { throwIfNoEntry: false })?.isDirectory()) walk('');
+    if (fs.lstatSync(dir, { throwIfNoEntry: false })?.isDirectory()) {
+      walk('');
+    }
   }
 
   return index;
@@ -935,7 +985,7 @@ function contractIndex(
 
 /** The contract a port names: exactly its version when it gives one, else the newest. */
 function findContract(
-  index: Map<string, IndexedContract[]>,
+  index: Map<string, Array<IndexedContract>>,
   id: string,
   version: string | undefined,
   repository: string | undefined,
@@ -946,13 +996,18 @@ function findContract(
     (c) => repository === undefined || c.repository === repository,
   );
 
-  if (version !== undefined) return candidates.find((c) => bare(c.odcs.version) === bare(version));
+  if (version !== undefined) {
+    return candidates.find((c) => bare(c.odcs.version) === bare(version));
+  }
 
   return candidates.sort((a, b) => compareSemverish(b.odcs.version, a.odcs.version))[0];
 }
 
 /** What a data product's port is called on its page: the resource's own name when it has one. */
-export function portName(port: DataProductPort, catalog: { resources: CatalogResource[] }): string {
+export function portName(
+  port: DataProductPort,
+  catalog: { resources: Array<CatalogResource> },
+): string {
   const key = port.ref ? resourceKey(port.ref) : undefined;
 
   const found = key
@@ -964,7 +1019,7 @@ export function portName(port: DataProductPort, catalog: { resources: CatalogRes
 
 /** Every term a reader might look up, by id, name or alias, with the domain that defines it. */
 export function lookupTerm(
-  glossaries: Glossary[],
+  glossaries: Array<Glossary>,
   query: string,
 ): Array<Term & { domain: string; repository: string }> {
   const wanted = query.trim().toLowerCase();
@@ -987,12 +1042,12 @@ export function lookupTerm(
  * to the services and events behind them.
  */
 export function glossaryGraph(
-  glossaries: Glossary[],
+  glossaries: Array<Glossary>,
   /** Where a term is defined on the site, when there is one. */
   urlOf?: (domain: string, term: string) => string,
 ): ResourceGraph {
-  const resources: CatalogResource[] = [];
-  const relationships: CatalogRelationship[] = [];
+  const resources: Array<CatalogResource> = [];
+  const relationships: Array<CatalogRelationship> = [];
 
   for (const glossary of glossaries) {
     for (const entry of glossary.terms) {
@@ -1033,8 +1088,8 @@ export function glossaryGraph(
 }
 
 /** The entity ids an entity's properties reference, nested ones included. */
-export function entityReferences(entity: Pick<Entity, 'properties'>): string[] {
-  const walk = (properties: EntityProperty[]): string[] =>
+export function entityReferences(entity: Pick<Entity, 'properties'>): Array<string> {
+  const walk = (properties: Array<EntityProperty>): Array<string> =>
     properties.flatMap((property) => [
       ...(property.references ? [property.references] : []),
       ...walk(property.properties ?? []),
@@ -1044,14 +1099,14 @@ export function entityReferences(entity: Pick<Entity, 'properties'>): string[] {
 }
 
 /** An entity's relationships as a Mermaid ER diagram: what references what. */
-export function entityDiagram(entities: Entity[]): string | null {
+export function entityDiagram(entities: Array<Entity>): string | null {
   const ids = new Set(entities.map((entity) => entity.id));
-  const name = (id: string) => id.replace(/[^\w-]/g, '_');
-  const lines: string[] = [];
+  const name = (id: string) => id.replaceAll(/[^\w-]/g, '_');
+  const lines: Array<string> = [];
   const drawn = new Set<string>();
 
   for (const entity of entities) {
-    const walk = (properties: EntityProperty[]) => {
+    const walk = (properties: Array<EntityProperty>) => {
       for (const property of properties) {
         if (property.references && ids.has(property.references)) {
           const many = property.type === 'array' || /many/i.test(property.relationType ?? '');
@@ -1069,11 +1124,13 @@ export function entityDiagram(entities: Entity[]): string | null {
     walk(entity.properties);
   }
 
-  if (lines.length === 0) return null;
+  if (lines.length === 0) {
+    return null;
+  }
 
   // Each entity under its own name, which may hold spaces an id cannot.
   const labels = entities.flatMap((entity) =>
-    drawn.has(entity.id) ? [`  ${name(entity.id)}["${entity.name.replace(/"/g, "'")}"]`] : [],
+    drawn.has(entity.id) ? [`  ${name(entity.id)}["${entity.name.replaceAll('"', "'")}"]`] : [],
   );
 
   return ['erDiagram', ...labels, ...lines].join('\n');
@@ -1086,7 +1143,7 @@ export function entityDiagram(entities: Entity[]): string | null {
  */
 export function dataProductDiagram(
   product: DataProduct,
-  catalog: { resources: CatalogResource[] },
+  catalog: { resources: Array<CatalogResource> },
 ): Pick<Diagram, 'nodes' | 'edges'> {
   const self = `data-product/${product.id}`;
 

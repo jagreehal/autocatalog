@@ -8,17 +8,15 @@ import {
   AUTOCATALOG_ARTIFACT_SPEC,
   hashTree,
   sha256,
-  type ArtifactRepository,
-  type CatalogArtifact,
-  type CatalogArtifactEntry,
 } from './catalog-artifact';
+import type { ArtifactRepository, CatalogArtifact, CatalogArtifactEntry } from './catalog-artifact';
 import { discoverEventFolders } from './discover';
 import { validateCatalog } from './validate';
 import { writeEventFolder } from './write-event-folder';
 
 export interface PublishCatalogOptions {
   outRoot: string;
-  events: AdapterEvent[];
+  events: Array<AdapterEvent>;
   repository?: ArtifactRepository;
   history?: Array<{ event: AdapterEvent; parentFolderName: string }>;
   historyOwnership?: 'preserve' | 'replace';
@@ -33,7 +31,7 @@ export interface PublishCatalogOptions {
 
 export interface PublishCatalogResult {
   eventsWritten: number;
-  eventsRemoved: string[];
+  eventsRemoved: Array<string>;
   artifactPath: string;
 }
 
@@ -70,14 +68,18 @@ async function preserveAuthoredOverlay(
 async function syncPath(target: string): Promise<void> {
   const handle = await fs.open(target, 'r').catch(() => undefined);
 
-  if (!handle) return;
+  if (!handle) {
+    return;
+  }
 
   try {
     await handle.sync().catch((error: NodeJS.ErrnoException) => {
       // Flushing is best effort and platform dependent. Windows rejects fsync on
       // a directory handle with EPERM, and syncPath is called on the stage and
       // parent directories; the rename itself is still atomic there.
-      if (!['EINVAL', 'ENOTSUP', 'EBADF', 'EPERM'].includes(error.code ?? '')) throw error;
+      if (!['EINVAL', 'ENOTSUP', 'EBADF', 'EPERM'].includes(error.code ?? '')) {
+        throw error;
+      }
     });
   } finally {
     await handle.close();
@@ -167,19 +169,22 @@ export async function publishCatalog(opts: PublishCatalogOptions): Promise<Publi
     }
 
     for (const file of opts.files ?? []) {
-      if (file.name !== path.basename(file.name) || file.name.startsWith('.'))
+      if (file.name !== path.basename(file.name) || file.name.startsWith('.')) {
         throw new Error(`Artifact file must be a plain name at the artifact's root: ${file.name}`);
+      }
 
       await fs.writeFile(path.join(stage, file.name), file.content);
     }
 
     const existingFolders = await discoverEventFolders(outRoot);
-    const removed: string[] = [];
+    const removed: Array<string> = [];
 
     for (const folder of existingFolders.filter((candidate) => !candidate.isVersioned)) {
       const relative = path.relative(outRoot, folder.path);
 
-      if (paths.has(relative)) continue;
+      if (paths.has(relative)) {
+        continue;
+      }
 
       const hasAuthoredContent =
         (await exists(path.join(folder.path, 'index.mdx'))) ||
@@ -202,7 +207,7 @@ export async function publishCatalog(opts: PublishCatalogOptions): Promise<Publi
       );
     }
 
-    const entries: CatalogArtifactEntry[] = [];
+    const entries: Array<CatalogArtifactEntry> = [];
 
     for (const loaded of [...validation.events].sort((a, b) =>
       a.folder.path.localeCompare(b.folder.path),
@@ -243,7 +248,9 @@ export async function publishCatalog(opts: PublishCatalogOptions): Promise<Publi
     await fs.rename(stage, outRoot);
     await syncPath(parent);
 
-    if (oldMoved) await fs.rm(backup, { recursive: true, force: true });
+    if (oldMoved) {
+      await fs.rm(backup, { recursive: true, force: true });
+    }
 
     return {
       eventsWritten: opts.events.length,
@@ -255,7 +262,9 @@ export async function publishCatalog(opts: PublishCatalogOptions): Promise<Publi
       await fs.rename(backup, outRoot);
     }
 
-    if (stage) await fs.rm(stage, { recursive: true, force: true });
+    if (stage) {
+      await fs.rm(stage, { recursive: true, force: true });
+    }
     throw error;
   } finally {
     await lock.release();

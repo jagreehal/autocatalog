@@ -13,16 +13,16 @@ import {
   readResourceSource,
   ResourceReadError,
   resourceFiles,
-  type ResourceScanOptions,
 } from './resource-files';
-import { jsonObjectSchema, jsonValueSchema, type JsonObject, type JsonValue } from './json';
-import {
-  resourceKey,
-  isArchitectureCatalogResource,
-  type CatalogRelationship,
-  type CatalogResource,
-  type ResourceGraph,
-  type ResourceRef,
+import type { ResourceScanOptions } from './resource-files';
+import { jsonObjectSchema, jsonValueSchema } from './json';
+import type { JsonObject, JsonValue } from './json';
+import { resourceKey, isArchitectureCatalogResource } from './resource-graph';
+import type {
+  CatalogRelationship,
+  CatalogResource,
+  ResourceGraph,
+  ResourceRef,
 } from './resource-graph';
 
 export interface ModelScanOptions extends ResourceScanOptions {
@@ -33,8 +33,8 @@ export interface ModelScanOptions extends ResourceScanOptions {
 
 export interface ResourceDiscoveryResult {
   graph: ResourceGraph;
-  errors: string[];
-  skipped: string[];
+  errors: Array<string>;
+  skipped: Array<string>;
 }
 
 export const modelExports = z.array(
@@ -64,9 +64,9 @@ export interface ModelExportOptions {
 
 /** Called by an explicitly run application exporter, never by the passive scanner. */
 export function exportMongooseModels(
-  models: MongooseModelContract[],
+  models: Array<MongooseModelContract>,
   options: ModelExportOptions,
-): ModelExport[] {
+): Array<ModelExport> {
   return modelExports.parse(
     models.map((model) => ({
       kind: 'collection',
@@ -88,57 +88,76 @@ function propertyName(node: ts.PropertyName): string | undefined {
 function objectFields(node: ts.Node | undefined): Map<string, ts.Expression> {
   const fields = new Map<string, ts.Expression>();
 
-  if (!node || !ts.isObjectLiteralExpression(node)) return fields;
+  if (!node || !ts.isObjectLiteralExpression(node)) {
+    return fields;
+  }
 
-  for (const item of node.properties)
+  for (const item of node.properties) {
     if (ts.isPropertyAssignment(item)) {
       const name = propertyName(item.name);
 
       if (name) fields.set(name, item.initializer);
     }
+  }
 
   return fields;
 }
 
 /** An object literal's properties, or undefined when a spread or computed name could add others. */
 function staticObject(node: ts.Node | undefined): Map<string, ts.Expression> | undefined {
-  if (!node || !ts.isObjectLiteralExpression(node)) return undefined;
+  if (!node || !ts.isObjectLiteralExpression(node)) {
+    return undefined;
+  }
 
   if (
     !node.properties.every(
       (item) => ts.isPropertyAssignment(item) && propertyName(item.name) !== undefined,
     )
-  )
+  ) {
     return undefined;
+  }
 
   return objectFields(node);
 }
 
 /** Fields named by an inclusion projection; empty (every field) for anything else. */
-function includedProjection(node: ts.Node | undefined): string[] {
+function includedProjection(node: ts.Node | undefined): Array<string> {
   const projection = staticObject(node);
 
   if (
     !projection ||
     ![...projection.values()].every((value) => literal(value) === 1 || literal(value) === true)
-  )
+  ) {
     return [];
+  }
 
   return [...projection.keys()];
 }
 
 function literal(node: ts.Node | undefined): JsonValue | undefined {
-  if (!node) return undefined;
+  if (!node) {
+    return undefined;
+  }
 
-  if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) return node.text;
+  if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) {
+    return node.text;
+  }
 
-  if (ts.isNumericLiteral(node)) return Number(node.text);
+  if (ts.isNumericLiteral(node)) {
+    return Number(node.text);
+  }
 
-  if (node.kind === ts.SyntaxKind.TrueKeyword) return true;
+  if (node.kind === ts.SyntaxKind.TrueKeyword) {
+    return true;
+  }
 
-  if (node.kind === ts.SyntaxKind.FalseKeyword) return false;
+  if (node.kind === ts.SyntaxKind.FalseKeyword) {
+    return false;
+  }
 
-  if (node.kind === ts.SyntaxKind.NullKeyword) return null;
+  if (node.kind === ts.SyntaxKind.NullKeyword) {
+    return null;
+  }
 
   if (ts.isArrayLiteralExpression(node)) {
     const values = node.elements.map(literal);
@@ -150,7 +169,9 @@ function literal(node: ts.Node | undefined): JsonValue | undefined {
 }
 
 function textLiteral(node: ts.Node | undefined): string | undefined {
-  if (!node) return undefined;
+  if (!node) {
+    return undefined;
+  }
 
   return ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)
     ? node.text
@@ -160,25 +181,27 @@ function textLiteral(node: ts.Node | undefined): string | undefined {
 function mongooseField(
   node: ts.Expression,
   variables: Map<string, ts.Expression>,
-  skipped: string[],
+  skipped: Array<string>,
   open = new Set<string>(),
 ): JsonObject {
-  if (ts.isIdentifier(node) && variables.has(node.text) && !open.has(node.text))
+  if (ts.isIdentifier(node) && variables.has(node.text) && !open.has(node.text)) {
     return mongooseField(
       variables.get(node.text)!,
       variables,
       skipped,
       new Set([...open, node.text]),
     );
+  }
 
   if (
     ts.isNewExpression(node) &&
     node.expression.getText().endsWith('Schema') &&
     node.arguments?.[0]
-  )
+  ) {
     return mongooseObject(node.arguments[0], variables, skipped);
+  }
 
-  if (ts.isArrayLiteralExpression(node))
+  if (ts.isArrayLiteralExpression(node)) {
     return {
       type: 'array',
       items:
@@ -186,15 +209,18 @@ function mongooseField(
           ? mongooseField(node.elements[0], variables, skipped, open)
           : {},
     };
+  }
   const fields = objectFields(node);
 
-  if (ts.isObjectLiteralExpression(node) && !fields.has('type'))
+  if (ts.isObjectLiteralExpression(node) && !fields.has('type')) {
     return mongooseObject(node, variables, skipped);
+  }
   const type = fields.get('type') ?? node;
   let schema: JsonObject;
 
-  if (type !== node) schema = mongooseField(type, variables, skipped, open);
-  else {
+  if (type !== node) {
+    schema = mongooseField(type, variables, skipped, open);
+  } else {
     const name = type.getText();
 
     const primitives = new Map(
@@ -212,13 +238,16 @@ function mongooseField(
       primitives.get(name) ??
       (name.endsWith('ObjectId') ? { type: 'string', pattern: '^[a-fA-F0-9]{24}$' } : {});
 
-    if (!Object.keys(schema).length)
+    if (!Object.keys(schema).length) {
       skipped.push(`Unsupported Mongoose type ${name}; retained as unconstrained`);
+    }
   }
 
   const values = literal(fields.get('enum'));
 
-  if (Array.isArray(values)) schema.enum = values;
+  if (Array.isArray(values)) {
+    schema.enum = values;
+  }
 
   for (const [input, output] of [
     ['min', 'minimum'],
@@ -228,7 +257,9 @@ function mongooseField(
   ] as const) {
     const value = literal(fields.get(input));
 
-    if (value !== undefined) schema[output] = value;
+    if (value !== undefined) {
+      schema[output] = value;
+    }
   }
 
   return schema;
@@ -237,10 +268,10 @@ function mongooseField(
 function mongooseObject(
   node: ts.Expression,
   variables: Map<string, ts.Expression>,
-  skipped: string[],
+  skipped: Array<string>,
 ): JsonObject {
   const properties: JsonObject = {};
-  const required: string[] = [];
+  const required: Array<string> = [];
 
   if (!ts.isObjectLiteralExpression(node)) {
     skipped.push(`Dynamic Mongoose schema ${node.getText()} requires an exported schema`);
@@ -251,12 +282,16 @@ function mongooseObject(
   for (const [name, value] of objectFields(node)) {
     properties[name] = mongooseField(value, variables, skipped);
 
-    if (literal(objectFields(value).get('required')) === true) required.push(name);
+    if (literal(objectFields(value).get('required')) === true) {
+      required.push(name);
+    }
   }
 
   const schema: JsonObject = { type: 'object', properties };
 
-  if (required.length) schema.required = required;
+  if (required.length) {
+    schema.required = required;
+  }
 
   return schema;
 }
@@ -269,8 +304,10 @@ function mongooseFields(
   node: ts.Expression,
   variables: Map<string, ts.Expression>,
   open = new Set<string>(),
-): ModelField[] {
-  if (!ts.isObjectLiteralExpression(node)) return [];
+): Array<ModelField> {
+  if (!ts.isObjectLiteralExpression(node)) {
+    return [];
+  }
 
   return [...objectFields(node)].map(([name, value]) =>
     mongooseFieldDetail(name, value, variables, open),
@@ -283,13 +320,14 @@ function mongooseFieldDetail(
   variables: Map<string, ts.Expression>,
   open: Set<string>,
 ): ModelField {
-  if (ts.isIdentifier(node) && variables.has(node.text) && !open.has(node.text))
+  if (ts.isIdentifier(node) && variables.has(node.text) && !open.has(node.text)) {
     return mongooseFieldDetail(
       name,
       variables.get(node.text)!,
       variables,
       new Set([...open, node.text]),
     );
+  }
 
   if (ts.isArrayLiteralExpression(node)) {
     const [item] = node.elements;
@@ -306,23 +344,26 @@ function mongooseFieldDetail(
     };
   }
 
-  if (ts.isNewExpression(node) && node.expression.getText().endsWith('Schema'))
+  if (ts.isNewExpression(node) && node.expression.getText().endsWith('Schema')) {
     return {
       name,
       type: 'Object',
       fields: node.arguments?.[0] ? mongooseFields(node.arguments[0], variables, open) : [],
     };
+  }
   const options = objectFields(node);
 
-  if (ts.isObjectLiteralExpression(node) && !options.has('type'))
+  if (ts.isObjectLiteralExpression(node) && !options.has('type')) {
     return { name, type: 'Object', fields: mongooseFields(node, variables, open) };
+  }
   const type = options.get('type');
 
-  if (type && (ts.isArrayLiteralExpression(type) || ts.isNewExpression(type)))
+  if (type && (ts.isArrayLiteralExpression(type) || ts.isNewExpression(type))) {
     return {
       ...mongooseFieldDetail(name, type, variables, open),
       ...mongooseOptions(name, options),
     };
+  }
 
   return {
     name,
@@ -394,19 +435,25 @@ function withoutPrismaComments(content: string) {
         continue;
       }
 
-      if (char === '"' || char === '\n') quoted = false;
-    } else if (char === '"') quoted = true;
-    else if (char === '/' && content[index + 1] === '/') {
+      if (char === '"' || char === '\n') {
+        quoted = false;
+      }
+    } else if (char === '"') {
+      quoted = true;
+    } else if (char === '/' && content[index + 1] === '/') {
       const end = content.indexOf('\n', index);
       const comment = content.slice(index, end === -1 ? undefined : end);
 
-      if (comment.startsWith('///'))
+      if (comment.startsWith('///')) {
         docs.set(line, {
           text: comment.slice(3).trim(),
           own: content.slice(lineStart, index).trim() === '',
         });
+      }
 
-      if (end === -1) break;
+      if (end === -1) {
+        break;
+      }
       index = end - 1;
       continue;
     }
@@ -422,10 +469,11 @@ const MAX_DOC_LINES = 50;
 
 /** The `///` lines directly above a line, as one paragraph: the last 50 at most. */
 function docAbove(docs: Map<number, PrismaDoc>, line: number): string | undefined {
-  const lines: string[] = [];
+  const lines: Array<string> = [];
 
-  for (let above = line - 1; docs.get(above)?.own && lines.length < MAX_DOC_LINES; above--)
+  for (let above = line - 1; docs.get(above)?.own && lines.length < MAX_DOC_LINES; above--) {
     lines.unshift(docs.get(above)!.text);
+  }
 
   return lines.join('\n').trim() || undefined;
 }
@@ -434,7 +482,7 @@ interface PrismaBlock {
   keyword: string;
   name: string;
   line: number;
-  lines: string[];
+  lines: Array<string>;
   /** Its `///` documentation. */
   doc?: string | undefined;
   /** Each line's `///` documentation, trailing it or directly above it. */
@@ -445,9 +493,9 @@ interface PrismaBlock {
  * The top-level `keyword Name { ... }` blocks of a schema file. One pass over
  * the text; a brace inside a string does not open or close a block.
  */
-function prismaBlocks(content: string, file: string, skipped: string[]): PrismaBlock[] {
+function prismaBlocks(content: string, file: string, skipped: Array<string>): Array<PrismaBlock> {
   const { code, docs } = withoutPrismaComments(content);
-  const blocks: PrismaBlock[] = [];
+  const blocks: Array<PrismaBlock> = [];
   let depth = 0;
   let quoted = false;
   let line = 1;
@@ -458,16 +506,22 @@ function prismaBlocks(content: string, file: string, skipped: string[]): PrismaB
   for (let index = 0; index < code.length; index++) {
     const char = code[index];
 
-    if (char === '\n') line++;
+    if (char === '\n') {
+      line++;
+    }
 
     if (quoted) {
-      if (char === '\\') index++;
-      else if (char === '"' || char === '\n') quoted = false;
+      if (char === '\\') {
+        index++;
+      } else if (char === '"' || char === '\n') {
+        quoted = false;
+      }
       continue;
     }
 
-    if (char === '"') quoted = true;
-    else if (char === '{') {
+    if (char === '"') {
+      quoted = true;
+    } else if (char === '{') {
       if (depth === 0) {
         const [keyword = '', name = ''] = code
           .slice(headerStart, index)
@@ -505,7 +559,9 @@ function prismaBlocks(content: string, file: string, skipped: string[]): PrismaB
     }
   }
 
-  if (depth > 0 && open) skipped.push(`${file}: ${open.keyword} ${open.name} is never closed`);
+  if (depth > 0 && open) {
+    skipped.push(`${file}: ${open.keyword} ${open.name} is never closed`);
+  }
 
   return blocks;
 }
@@ -517,7 +573,9 @@ const mappedName = (text: string, attribute: '@map' | '@@map' | '@@schema') =>
 function attributeArguments(text: string, attribute: string): string | undefined {
   const start = new RegExp(`(?:^|\\s)${attribute}\\(`).exec(text);
 
-  if (!start) return undefined;
+  if (!start) {
+    return undefined;
+  }
   const from = start.index + start[0].length;
   let depth = 1;
   let quoted = false;
@@ -526,32 +584,45 @@ function attributeArguments(text: string, attribute: string): string | undefined
     const char = text[index];
 
     if (quoted) {
-      if (char === '\\') index++;
-      else if (char === '"') quoted = false;
-    } else if (char === '"') quoted = true;
-    else if (char === '(') depth++;
-    else if (char === ')' && --depth === 0) return text.slice(from, index).trim();
+      if (char === '\\') {
+        index++;
+      } else if (char === '"') {
+        quoted = false;
+      }
+    } else if (char === '"') {
+      quoted = true;
+    } else if (char === '(') {
+      depth++;
+    } else if (char === ')' && --depth === 0) {
+      return text.slice(from, index).trim();
+    }
   }
 
   return undefined;
 }
 
 /** `fields: [a, b(sort: Desc)]` as `['a', 'b']`. */
-function namedList(text: string, name?: string): string[] | undefined {
-  const list = new RegExp(name ? `${name}:\\s*\\[([^\\]]*)\\]` : '^\\s*\\[([^\\]]*)\\]').exec(
+function namedList(text: string, name?: string): Array<string> | undefined {
+  const list = new RegExp(name ? `${name}:\\s*\\[([^\\]]*)\\]` : String.raw`^\s*\[([^\]]*)\]`).exec(
     text,
   )?.[1];
 
-  if (list === undefined) return undefined;
+  if (list === undefined) {
+    return undefined;
+  }
 
   // An item's arguments may hold commas of their own: `email(sort: Desc, length: 10)`.
   let depth = 0;
   let names = '';
 
   for (const char of list) {
-    if (char === '(') depth++;
-    else if (char === ')') depth = Math.max(0, depth - 1);
-    else if (depth === 0) names += char;
+    if (char === '(') {
+      depth++;
+    } else if (char === ')') {
+      depth = Math.max(0, depth - 1);
+    } else if (depth === 0) {
+      names += char;
+    }
   }
 
   return names
@@ -571,9 +642,9 @@ export interface ModelRelation {
   /** Prisma's relation name, which pairs the two sides of one relation. */
   name?: string;
   /** This model's columns that hold the related key: present on the side that owns the foreign key. */
-  fields?: string[];
+  fields?: Array<string>;
   /** The related model's columns those hold. */
-  references?: string[];
+  references?: Array<string>;
 }
 
 /** One field of a model as its page shows it, beside the JSON Schema drift compares. */
@@ -592,15 +663,15 @@ export interface ModelField {
   default?: string;
   /** Set by the ORM on every update. */
   updatedAt?: boolean;
-  enum?: string[];
+  enum?: Array<string>;
   doc?: string;
   relation?: ModelRelation;
   /** An embedded type's own fields. */
-  fields?: ModelField[];
+  fields?: Array<ModelField>;
 }
 
 export interface ModelIndex {
-  fields: string[];
+  fields: Array<string>;
   unique: boolean;
   /** A composite primary key, as `@@id` declares one. */
   primary?: boolean;
@@ -614,7 +685,7 @@ const relationRef = z.object({
   version: z.string().optional(),
 });
 
-export const modelFields: z.ZodType<ModelField[]> = z.array(
+export const modelFields: z.ZodType<Array<ModelField>> = z.array(
   z.object({
     name: z.string(),
     column: z.string().optional(),
@@ -668,8 +739,8 @@ const PRISMA_PRIMITIVES = new Map(
 
 interface PrismaContext {
   file: string;
-  skipped: string[];
-  enums: Map<string, string[]>;
+  skipped: Array<string>;
+  enums: Map<string, Array<string>>;
   /** MongoDB's embedded `type` blocks. */
   composites: Map<string, PrismaBlock>;
   models: Map<string, ResourceRef<'collection' | 'table'>>;
@@ -678,16 +749,18 @@ interface PrismaContext {
 /** A model's or embedded type's fields, its JSON Schema, and each field's column. */
 function prismaFields(block: PrismaBlock, context: PrismaContext, open: Set<string>) {
   const { file, skipped, enums, composites, models } = context;
-  const fields: ModelField[] = [];
+  const fields: Array<ModelField> = [];
   const properties: JsonObject = {};
-  const required: string[] = [];
+  const required: Array<string> = [];
   const aliases = new Map<string, string>();
 
   for (const [index, line] of block.lines.entries()) {
     // `Unsupported("geometry(Point, 4326)")?`: the type's argument comes before its modifier.
     const match = /^\s*(\w+)\s+(\w+)(?:\("[^"]*"\))?(\[\]|\?)?(.*)$/.exec(line);
 
-    if (!match) continue;
+    if (!match) {
+      continue;
+    }
     const [, name = '', type = '', modifier, options = ''] = match;
     const column = mappedName(options, '@map') ?? name;
     const fallback = attributeArguments(options, '@default');
@@ -738,7 +811,9 @@ function prismaFields(block: PrismaBlock, context: PrismaContext, open: Set<stri
     const composite = composites.get(type);
     let schema = PRISMA_PRIMITIVES.get(type) ?? (values && { type: 'string', enum: values });
 
-    if (values) field.enum = values;
+    if (values) {
+      field.enum = values;
+    }
 
     if (!schema && composite && !open.has(type)) {
       const embedded = prismaFields(composite, context, new Set([...open, type]));
@@ -751,9 +826,13 @@ function prismaFields(block: PrismaBlock, context: PrismaContext, open: Set<stri
       schema = {};
     }
 
-    if (modifier === '[]') schema = { type: 'array', items: schema };
+    if (modifier === '[]') {
+      schema = { type: 'array', items: schema };
+    }
 
-    if (modifier === '?') schema = { anyOf: [schema, { type: 'null' }] };
+    if (modifier === '?') {
+      schema = { anyOf: [schema, { type: 'null' }] };
+    }
     properties[column] = schema;
     aliases.set(name, column);
     required.push(column);
@@ -764,13 +843,15 @@ function prismaFields(block: PrismaBlock, context: PrismaContext, open: Set<stri
 }
 
 /** `@@index`, `@@unique` and `@@id`, by the fields each covers. */
-function prismaIndexes(block: PrismaBlock): ModelIndex[] {
+function prismaIndexes(block: PrismaBlock): Array<ModelIndex> {
   return block.lines.flatMap((line) => {
     const kind = /^\s*@@(index|unique|id)\s*\(/.exec(line)?.[1];
     const args = kind && attributeArguments(line.trim(), `@@${kind}`);
     const fields = args ? (namedList(args) ?? namedList(args, 'fields')) : undefined;
 
-    if (!fields) return [];
+    if (!fields) {
+      return [];
+    }
     const name = args && /(?:name|map):\s*"([^"]*)"/.exec(args)?.[1];
 
     return [
@@ -788,13 +869,13 @@ function prismaIndexes(block: PrismaBlock): ModelIndex[] {
 interface ParsedModel {
   resource: CatalogResource;
   ref: ResourceRef;
-  fields: ModelField[];
+  fields: Array<ModelField>;
   file: string;
   line: number;
 }
 
 /** Record a model's fields on its resource, once each relation's target is resolved. */
-function describeModel({ resource, fields }: ParsedModel, indexes: ModelIndex[] = []): void {
+function describeModel({ resource, fields }: ParsedModel, indexes: Array<ModelIndex> = []): void {
   resource.attributes = {
     ...resource.attributes,
     fields: jsonValueSchema.parse(fields),
@@ -815,7 +896,7 @@ interface PrismaModel {
 function prismaResources(
   files: Array<{ relative: string; content: string }>,
   namespace: string,
-  skipped: string[],
+  skipped: Array<string>,
 ) {
   const graph = emptyResourceGraph();
   const models = new Map<string, PrismaModel>();
@@ -826,9 +907,9 @@ function prismaResources(
   }));
 
   const all = blocks.flatMap((file) => file.blocks);
-  const enums = new Map<string, string[]>();
+  const enums = new Map<string, Array<string>>();
 
-  for (const block of all.filter((item) => item.keyword === 'enum'))
+  for (const block of all.filter((item) => item.keyword === 'enum')) {
     enums.set(
       block.name,
       block.lines.flatMap((line) => {
@@ -837,6 +918,7 @@ function prismaResources(
         return name ? [mappedName(line, '@map') ?? name] : [];
       }),
     );
+  }
 
   const kind = all.some(
     (block) =>
@@ -850,7 +932,9 @@ function prismaResources(
   const refs = new Map<string, ResourceRef<'collection' | 'table'>>();
 
   for (const block of all) {
-    if (block.keyword !== 'model') continue;
+    if (block.keyword !== 'model') {
+      continue;
+    }
     const body = block.lines.join('\n');
     const table = mappedName(body, '@@map') ?? block.name;
     const sqlSchema = mappedName(body, '@@schema');
@@ -868,9 +952,9 @@ function prismaResources(
     models: refs,
   };
 
-  const parsed: ParsedModel[] = [];
+  const parsed: Array<ParsedModel> = [];
 
-  for (const { relative: file, blocks: fileBlocks } of blocks)
+  for (const { relative: file, blocks: fileBlocks } of blocks) {
     for (const block of fileBlocks) {
       if (block.keyword !== 'model') continue;
       const symbol = block.name;
@@ -889,6 +973,7 @@ function prismaResources(
       describeModel(model, indexes);
       parsed.push(model);
     }
+  }
 
   graph.relationships.push(...modelReferences(parsed));
 
@@ -901,11 +986,11 @@ function prismaResources(
  * is drawn once, from the model whose name sorts first. A model's relation to
  * itself is on its page rather than on the map.
  */
-function modelReferences(models: ParsedModel[]): CatalogRelationship[] {
+function modelReferences(models: Array<ParsedModel>): Array<CatalogRelationship> {
   const edges = new Map<string, CatalogRelationship>();
   const byKey = new Map(models.map((model) => [resourceKey(model.ref), model]));
 
-  for (const model of models)
+  for (const model of models) {
     for (const field of model.fields) {
       const to = field.relation?.to;
 
@@ -941,6 +1026,7 @@ function modelReferences(models: ParsedModel[]): CatalogRelationship[] {
         attributes: { fields: [...names, field.name] },
       });
     }
+  }
 
   return [...edges.values()];
 }
@@ -963,7 +1049,7 @@ interface ModuleInfo {
   /** Exported name → local name. */
   exports: Map<string, string>;
   reexports: Map<string, ImportedName>;
-  stars: string[];
+  stars: Array<string>;
   /** Mentions `.query.`, so it may use Drizzle's relational queries without importing a table. */
   queries: boolean;
 }
@@ -980,11 +1066,12 @@ function moduleLinks(ast: ts.SourceFile) {
   const imports = new Map<string, ImportedName>();
   const exports = new Map<string, string>();
   const reexports = new Map<string, ImportedName>();
-  const stars: string[] = [];
+  const stars: Array<string> = [];
 
   const exportValue = (name: string, value: ts.Expression) => {
-    if (ts.isIdentifier(value)) exports.set(name, value.text);
-    else {
+    if (ts.isIdentifier(value)) {
+      exports.set(name, value.text);
+    } else {
       const local = name === 'default' ? DEFAULT_EXPORT : `exports.${name}`;
       values.set(local, value);
       exports.set(name, local);
@@ -996,33 +1083,43 @@ function moduleLinks(ast: ts.SourceFile) {
       const module = textLiteral(statement.moduleSpecifier);
       const clause = statement.importClause;
 
-      if (!module || !clause) continue;
+      if (!module || !clause) {
+        continue;
+      }
 
-      if (clause.name) imports.set(clause.name.text, { module, name: 'default' });
+      if (clause.name) {
+        imports.set(clause.name.text, { module, name: 'default' });
+      }
 
-      if (clause.namedBindings && ts.isNamedImports(clause.namedBindings))
+      if (clause.namedBindings && ts.isNamedImports(clause.namedBindings)) {
         for (const item of clause.namedBindings.elements)
           imports.set(item.name.text, { module, name: item.propertyName?.text ?? item.name.text });
+      }
     } else if (ts.isExportDeclaration(statement)) {
       const module = textLiteral(statement.moduleSpecifier);
 
       if (!statement.exportClause) {
-        if (module) stars.push(module);
-      } else if (ts.isNamedExports(statement.exportClause))
+        if (module) {
+          stars.push(module);
+        }
+      } else if (ts.isNamedExports(statement.exportClause)) {
         for (const item of statement.exportClause.elements) {
           const local = item.propertyName?.text ?? item.name.text;
 
           if (module) reexports.set(item.name.text, { module, name: local });
           else exports.set(item.name.text, local);
         }
-    } else if (ts.isExportAssignment(statement)) exportValue('default', statement.expression);
-    else if (
+      }
+    } else if (ts.isExportAssignment(statement)) {
+      exportValue('default', statement.expression);
+    } else if (
       ts.isVariableStatement(statement) &&
       statement.modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword)
     ) {
-      for (const declaration of statement.declarationList.declarations)
+      for (const declaration of statement.declarationList.declarations) {
         if (ts.isIdentifier(declaration.name))
           exports.set(declaration.name.text, declaration.name.text);
+      }
     } else if (
       ts.isExpressionStatement(statement) &&
       ts.isBinaryExpression(statement.expression) &&
@@ -1032,19 +1129,22 @@ function moduleLinks(ast: ts.SourceFile) {
       const target = left.getText();
 
       if (target === 'module.exports' && ts.isObjectLiteralExpression(right)) {
-        for (const item of right.properties)
+        for (const item of right.properties) {
           if (ts.isShorthandPropertyAssignment(item)) exports.set(item.name.text, item.name.text);
           else if (ts.isPropertyAssignment(item)) {
             const name = propertyName(item.name);
 
             if (name) exportValue(name, item.initializer);
           }
-      } else if (target === 'module.exports') exportValue('default', right);
-      else if (
+        }
+      } else if (target === 'module.exports') {
+        exportValue('default', right);
+      } else if (
         ts.isPropertyAccessExpression(left) &&
         /^(module\.)?exports$/.test(left.expression.getText())
-      )
+      ) {
         exportValue(left.name.text, right);
+      }
     }
   }
 
@@ -1060,14 +1160,17 @@ function moduleLinks(ast: ts.SourceFile) {
       if (ts.isIdentifier(node.name)) {
         values.set(node.name.text, node.initializer);
 
-        if (required) imports.set(node.name.text, { module: required, name: 'default' });
-      } else if (required && ts.isObjectBindingPattern(node.name))
+        if (required) {
+          imports.set(node.name.text, { module: required, name: 'default' });
+        }
+      } else if (required && ts.isObjectBindingPattern(node.name)) {
         for (const item of node.name.elements)
           if (ts.isIdentifier(item.name))
             imports.set(item.name.text, {
               module: required,
               name: item.propertyName ? (propertyName(item.propertyName) ?? '') : item.name.text,
             });
+      }
     }
 
     ts.forEachChild(node, visit);
@@ -1083,9 +1186,13 @@ function findWithin<T extends ts.Node>(
   node: ts.Node,
   match: (node: ts.Node) => node is T,
 ): T | undefined {
-  if (match(node)) return node;
+  if (match(node)) {
+    return node;
+  }
 
-  if (ts.isFunctionLike(node)) return undefined;
+  if (ts.isFunctionLike(node)) {
+    return undefined;
+  }
 
   return ts.forEachChild(node, (child) => findWithin(child, match));
 }
@@ -1151,7 +1258,9 @@ const MONGOOSE_PLURALS: Array<[RegExp, string]> = [
 export function mongooseCollectionName(model: string): string {
   const name = model.toLowerCase();
 
-  if (MONGOOSE_UNCOUNTABLE.has(name)) return name;
+  if (MONGOOSE_UNCOUNTABLE.has(name)) {
+    return name;
+  }
   const rule = MONGOOSE_PLURALS.find(([pattern]) => name.match(pattern));
 
   return rule ? name.replace(rule[0], rule[1]) : name;
@@ -1159,10 +1268,10 @@ export function mongooseCollectionName(model: string): string {
 
 function mongooseModels(
   values: Map<string, ts.Expression>,
-  context: { ast: ts.SourceFile; relative: string; namespace: string; skipped: string[] },
+  context: { ast: ts.SourceFile; relative: string; namespace: string; skipped: Array<string> },
 ) {
   const { ast, relative, namespace, skipped } = context;
-  const resources: CatalogResource[] = [];
+  const resources: Array<CatalogResource> = [];
   const locals = new Map<string, Binding>();
   const models: Array<ParsedModel & { model: string }> = [];
 
@@ -1177,7 +1286,9 @@ function mongooseModels(
   for (const [local, value] of values) {
     const call = findWithin(value, isModelCall);
 
-    if (!call) continue;
+    if (!call) {
+      continue;
+    }
     const model = textLiteral(call.arguments[0])!;
     const schemaArg = call.arguments[1]!;
     const symbol = /^\w+$/.test(local) ? local : model;
@@ -1234,9 +1345,14 @@ function mongooseModels(
   return { resources, locals, models };
 }
 
-function drizzleResources(ast: ts.SourceFile, namespace: string, file: string, skipped: string[]) {
-  const resources: CatalogResource[] = [];
-  const models: ParsedModel[] = [];
+function drizzleResources(
+  ast: ts.SourceFile,
+  namespace: string,
+  file: string,
+  skipped: Array<string>,
+) {
+  const resources: Array<CatalogResource> = [];
+  const models: Array<ParsedModel> = [];
   const tables = new Map<string, ResourceRef<'table'>>();
   const constructors = new Map<string, string>();
 
@@ -1244,13 +1360,15 @@ function drizzleResources(ast: ts.SourceFile, namespace: string, file: string, s
     if (
       !ts.isImportDeclaration(statement) ||
       !textLiteral(statement.moduleSpecifier)?.startsWith('drizzle-orm/')
-    )
+    ) {
       continue;
+    }
     const bindings = statement.importClause?.namedBindings;
 
-    if (bindings && ts.isNamedImports(bindings))
+    if (bindings && ts.isNamedImports(bindings)) {
       for (const item of bindings.elements)
         constructors.set(item.name.text, item.propertyName?.text ?? item.name.text);
+    }
   }
 
   const visit = (node: ts.Node) => {
@@ -1275,9 +1393,9 @@ function drizzleResources(ast: ts.SourceFile, namespace: string, file: string, s
         call.arguments[1]
       ) {
         const properties: JsonObject = {};
-        const required: string[] = [];
+        const required: Array<string> = [];
         const aliases: JsonObject = {};
-        const fields: ModelField[] = [];
+        const fields: Array<ModelField> = [];
 
         for (const [name, expression] of objectFields(call.arguments[1])) {
           let base = expression;
@@ -1289,15 +1407,25 @@ function drizzleResources(ast: ts.SourceFile, namespace: string, file: string, s
             const modifier = base.expression.name.text;
             const [argument] = base.arguments;
 
-            if (modifier === 'notNull' || modifier === 'primaryKey') nonNullable = true;
+            if (modifier === 'notNull' || modifier === 'primaryKey') {
+              nonNullable = true;
+            }
 
-            if (modifier === 'primaryKey') field.id = true;
+            if (modifier === 'primaryKey') {
+              field.id = true;
+            }
 
-            if (modifier === 'unique') field.unique = true;
+            if (modifier === 'unique') {
+              field.unique = true;
+            }
 
-            if (modifier === 'default' && argument) field.default = argument.getText();
+            if (modifier === 'default' && argument) {
+              field.default = argument.getText();
+            }
 
-            if (modifier === 'defaultNow') field.default = 'now()';
+            if (modifier === 'defaultNow') {
+              field.default = 'now()';
+            }
 
             // `.references(() => users.id)`: the table is resolved once every file is read.
             const target =
@@ -1309,15 +1437,18 @@ function drizzleResources(ast: ts.SourceFile, namespace: string, file: string, s
               target &&
               ts.isPropertyAccessExpression(target) &&
               ts.isIdentifier(target.expression)
-            )
+            ) {
               field.relation = {
                 model: target.expression.text,
                 many: false,
                 fields: [name],
                 references: [target.name.text],
               };
+            }
 
-            if (modifier === 'array') array = true;
+            if (modifier === 'array') {
+              array = true;
+            }
             base = base.expression.expression;
           }
 
@@ -1356,16 +1487,22 @@ function drizzleResources(ast: ts.SourceFile, namespace: string, file: string, s
 
           let schema = primitives.get(type) ?? {};
 
-          if (!primitives.has(type))
+          if (!primitives.has(type)) {
             skipped.push(`${file}: unsupported Drizzle column ${name} (${type})`);
+          }
           const values = literal(objectFields(base.arguments[1]).get('enum'));
 
-          if (Array.isArray(values)) schema = { ...schema, enum: values };
+          if (Array.isArray(values)) {
+            schema = { ...schema, enum: values };
+          }
 
-          if (array) schema = { type: 'array', items: schema };
+          if (array) {
+            schema = { type: 'array', items: schema };
+          }
 
-          if (!nonNullable && !['serial'].includes(type))
+          if (!nonNullable && !['serial'].includes(type)) {
             schema = { anyOf: [schema, { type: 'null' }] };
+          }
           properties[column] = schema;
           aliases[name] = column;
           required.push(column);
@@ -1454,12 +1591,17 @@ const PRISMA_WRITES = new Set([
  * the query to be chained, awaited or returned.
  */
 function drizzleAccess(call: ts.CallExpression, method: string): 'reads' | 'writes' | undefined {
-  if (!ts.isPropertyAccessExpression(call.expression)) return undefined;
+  if (!ts.isPropertyAccessExpression(call.expression)) {
+    return undefined;
+  }
 
-  if (DRIZZLE_READS.has(method))
+  if (DRIZZLE_READS.has(method)) {
     return ts.isCallExpression(call.expression.expression) ? 'reads' : undefined;
+  }
 
-  if (method !== 'insert' && method !== 'update' && method !== 'delete') return undefined;
+  if (method !== 'insert' && method !== 'update' && method !== 'delete') {
+    return undefined;
+  }
   const parent = call.parent;
 
   // Read from syntax: `cache.delete(users)` as a statement is not a query, and
@@ -1472,23 +1614,31 @@ function drizzleAccess(call: ts.CallExpression, method: string): 'reads' | 'writ
 }
 
 /** Fields named by a Prisma `select`; empty (every field) unless it is a plain literal. */
-function prismaSelection(args: ts.Node | undefined, aliases: Map<string, string>): string[] {
+function prismaSelection(args: ts.Node | undefined, aliases: Map<string, string>): Array<string> {
   const select = staticObject(args)?.get('select');
   const fields = select ? staticObject(select) : undefined;
 
-  if (!fields) return [];
-  const columns: string[] = [];
+  if (!fields) {
+    return [];
+  }
+  const columns: Array<string> = [];
 
   for (const [name, value] of fields) {
     const column = aliases.get(name);
 
     // A relation: its own columns are not this table's.
-    if (!column) continue;
+    if (!column) {
+      continue;
+    }
     const chosen = literal(value);
 
-    if (chosen !== true && chosen !== false) return [];
+    if (chosen !== true && chosen !== false) {
+      return [];
+    }
 
-    if (chosen) columns.push(column);
+    if (chosen) {
+      columns.push(column);
+    }
   }
 
   return columns;
@@ -1511,11 +1661,16 @@ async function packageName(root: string): Promise<string | undefined> {
  * pick one, so the resource is kept for its edges but without a schema, and the
  * scan reports it rather than failing.
  */
-function withoutCompetingSchemas(graphs: ResourceGraph[], skipped: string[]): ResourceGraph[] {
+function withoutCompetingSchemas(
+  graphs: Array<ResourceGraph>,
+  skipped: Array<string>,
+): Array<ResourceGraph> {
   const definitions = new Map<string, Array<{ ref: ResourceRef; file: string; schema: string }>>();
 
   for (const resource of graphs.flatMap((graph) => graph.resources)) {
-    if (!isArchitectureCatalogResource(resource) || !resource.attributes.schema) continue;
+    if (!isArchitectureCatalogResource(resource) || !resource.attributes.schema) {
+      continue;
+    }
     const key = resourceKey(resource.ref);
 
     definitions.set(key, [
@@ -1531,7 +1686,9 @@ function withoutCompetingSchemas(graphs: ResourceGraph[], skipped: string[]): Re
   const competing = new Set<string>();
 
   for (const [key, found] of definitions) {
-    if (new Set(found.map((item) => item.schema)).size < 2) continue;
+    if (new Set(found.map((item) => item.schema)).size < 2) {
+      continue;
+    }
     competing.add(key);
     const files = [...new Set(found.map((item) => item.file))].sort();
     const ref = found[0]!.ref;
@@ -1544,13 +1701,16 @@ function withoutCompetingSchemas(graphs: ResourceGraph[], skipped: string[]): Re
     );
   }
 
-  if (!competing.size) return graphs;
+  if (!competing.size) {
+    return graphs;
+  }
 
   return graphs.map((graph) => ({
     ...graph,
     resources: graph.resources.map((resource) => {
-      if (!competing.has(resourceKey(resource.ref)) || !isArchitectureCatalogResource(resource))
+      if (!competing.has(resourceKey(resource.ref)) || !isArchitectureCatalogResource(resource)) {
         return resource;
+      }
 
       const {
         schema: _schema,
@@ -1581,9 +1741,9 @@ export async function scanModelResources(
   // collide are reported by withoutCompetingSchemas instead of failing the scan.
   const namespace = `${options.datastore ?? 'default'}/${options.database ?? 'default'}`;
   const service = options.service ?? (await packageName(root)) ?? 'default';
-  const graphs: ResourceGraph[] = [];
-  const errors: string[] = [];
-  const skipped: string[] = [];
+  const graphs: Array<ResourceGraph> = [];
+  const errors: Array<string> = [];
+  const skipped: Array<string> = [];
 
   const files = await resourceFiles(options, {
     include: (file) => isSourceFile(file) || file.endsWith('.prisma'),
@@ -1594,7 +1754,9 @@ export async function scanModelResources(
     try {
       return await readResourceSource(file, options);
     } catch (error) {
-      if (!(error instanceof ResourceReadError)) throw error;
+      if (!(error instanceof ResourceReadError)) {
+        throw error;
+      }
       skipped.push(error.message);
 
       return undefined;
@@ -1607,7 +1769,9 @@ export async function scanModelResources(
   for (const file of files.filter((item) => item.endsWith('.prisma'))) {
     const content = await read(file);
 
-    if (content !== undefined) schemaFiles.push({ relative: relativeTo(file), content });
+    if (content !== undefined) {
+      schemaFiles.push({ relative: relativeTo(file), content });
+    }
   }
 
   // Each schema is read on its own, with its own datasource: a multi-file
@@ -1628,7 +1792,9 @@ export async function scanModelResources(
 
     graphs.push(graph);
 
-    for (const [name, model] of models) prisma.models.set(name, model);
+    for (const [name, model] of models) {
+      prisma.models.set(name, model);
+    }
   }
 
   // First pass: what each file defines, imports and exports. Its syntax tree
@@ -1641,7 +1807,9 @@ export async function scanModelResources(
   for (const file of files.filter(isSourceFile)) {
     const content = await read(file);
 
-    if (content === undefined) continue;
+    if (content === undefined) {
+      continue;
+    }
     const relative = relativeTo(file);
     const ast = ts.createSourceFile(file, content, ts.ScriptTarget.Latest, true);
     const { values, ...links } = moduleLinks(ast);
@@ -1659,9 +1827,10 @@ export async function scanModelResources(
       ts.isIdentifier(node.expression) &&
       constructors.has(node.expression.text);
 
-    if (constructors.size)
+    if (constructors.size) {
       for (const [local, value] of values)
         if (findWithin(value, isClient)) locals.set(local, { kind: 'prisma' });
+    }
 
     if (content.includes('drizzle-orm')) {
       const drizzle = drizzleResources(ast, namespace, relative, skipped);
@@ -1678,9 +1847,13 @@ export async function scanModelResources(
       const mongoose = mongooseModels(values, { ast, relative, namespace, skipped });
       graph.resources.push(...mongoose.resources);
 
-      for (const model of mongoose.models) mongooseModelsByName.set(model.model, model);
+      for (const model of mongoose.models) {
+        mongooseModelsByName.set(model.model, model);
+      }
 
-      for (const [local, binding] of mongoose.locals) locals.set(local, binding);
+      for (const [local, binding] of mongoose.locals) {
+        locals.set(local, binding);
+      }
     }
 
     if (graph.resources.length) {
@@ -1692,7 +1865,9 @@ export async function scanModelResources(
   }
 
   const resolveModule = (file: string, specifier: string) => {
-    if (!specifier.startsWith('.')) return undefined;
+    if (!specifier.startsWith('.')) {
+      return undefined;
+    }
     const base = path.resolve(path.dirname(file), specifier);
     const extension = path.extname(base);
     const stem = base.slice(0, base.length - extension.length);
@@ -1710,11 +1885,15 @@ export async function scanModelResources(
     const key = `${file}\0${name}`;
     const info = modules.get(file);
 
-    if (!info || seen.has(key)) return undefined;
+    if (!info || seen.has(key)) {
+      return undefined;
+    }
     seen.add(key);
     const local = info.exports.get(name);
 
-    if (local !== undefined) return bound(file, local, seen);
+    if (local !== undefined) {
+      return bound(file, local, seen);
+    }
     const reexport = info.reexports.get(name);
 
     if (reexport) {
@@ -1723,13 +1902,17 @@ export async function scanModelResources(
       return target ? exported(target, reexport.name, seen) : undefined;
     }
 
-    if (name === 'default') return undefined;
+    if (name === 'default') {
+      return undefined;
+    }
 
     for (const star of info.stars) {
       const target = resolveModule(file, star);
       const binding = target ? exported(target, name, seen) : undefined;
 
-      if (binding) return binding;
+      if (binding) {
+        return binding;
+      }
     }
 
     return undefined;
@@ -1739,7 +1922,9 @@ export async function scanModelResources(
     const info = modules.get(file);
     const own = info?.locals.get(local);
 
-    if (own) return own;
+    if (own) {
+      return own;
+    }
     const imported = info?.imports.get(local);
     const target = imported ? resolveModule(file, imported.module) : undefined;
 
@@ -1748,24 +1933,28 @@ export async function scanModelResources(
 
   // A Drizzle reference names a table's variable as its own file sees it: one
   // of its own tables, else an import. A Mongoose ref names a registered model.
-  for (const { file, model } of drizzleModels)
+  for (const { file, model } of drizzleModels) {
     for (const { relation } of model.fields) {
       const binding = relation && bound(file, relation.model, new Set());
 
       if (relation && binding?.kind === 'model' && binding.ref.kind === 'table')
         relation.to = binding.ref;
     }
+  }
 
-  for (const model of mongooseModelsByName.values())
+  for (const model of mongooseModelsByName.values()) {
     for (const { relation } of model.fields) {
       const to = relation && mongooseModelsByName.get(relation.model)?.ref;
 
       if (relation && to) relation.to = to;
     }
+  }
 
   const related = [...drizzleModels.map(({ model }) => model), ...mongooseModelsByName.values()];
 
-  for (const model of related) describeModel(model);
+  for (const model of related) {
+    describeModel(model);
+  }
 
   graphs.push({ ...emptyResourceGraph(), relationships: modelReferences(related) });
 
@@ -1776,13 +1965,19 @@ export async function scanModelResources(
     for (const local of new Set([...info.locals.keys(), ...info.imports.keys()])) {
       const binding = bound(file, local, new Set());
 
-      if (binding) bindings.set(local, binding);
+      if (binding) {
+        bindings.set(local, binding);
+      }
     }
 
-    if (!bindings.size && !(info.queries && drizzleTables.size)) continue;
+    if (!bindings.size && !(info.queries && drizzleTables.size)) {
+      continue;
+    }
     const content = await read(file);
 
-    if (content === undefined) continue;
+    if (content === undefined) {
+      continue;
+    }
     const relative = relativeTo(file);
     const ast = ts.createSourceFile(file, content, ts.ScriptTarget.Latest, true);
     const graph = emptyResourceGraph();
@@ -1796,7 +1991,7 @@ export async function scanModelResources(
       type: 'reads' | 'writes',
       ref: ResourceRef<'collection' | 'table'>,
       inferred: boolean,
-      fields: string[] = [],
+      fields: Array<string> = [],
     ) =>
       graph.relationships.push({
         type,
@@ -1825,7 +2020,7 @@ export async function scanModelResources(
         if (model?.kind === 'model' && model.ref.kind === 'collection') {
           const type = method === 'create' ? 'writes' : databaseAccess(method);
 
-          if (type)
+          if (type) {
             access(
               node,
               type,
@@ -1833,12 +2028,15 @@ export async function scanModelResources(
               model.inferred,
               type === 'reads' ? includedProjection(node.arguments[1]) : [],
             );
+          }
         }
 
         if (table?.kind === 'model' && table.ref.kind === 'table') {
           const type = drizzleAccess(node, method);
 
-          if (type) access(node, type, table.ref, table.inferred);
+          if (type) {
+            access(node, type, table.ref, table.inferred);
+          }
         }
 
         // Drizzle's relational queries: db.query.<table>.findMany()
@@ -1850,7 +2048,9 @@ export async function scanModelResources(
         ) {
           const ref = drizzleTables.get(receiver.name.text);
 
-          if (ref) access(node, 'reads', ref, false);
+          if (ref) {
+            access(node, 'reads', ref, false);
+          }
         }
 
         if (
@@ -1866,8 +2066,9 @@ export async function scanModelResources(
               ? 'writes'
               : undefined;
 
-          if (delegate && type)
+          if (delegate && type) {
             access(node, type, delegate.ref, false, prismaSelection(argument, delegate.aliases));
+          }
         }
 
         // An interactive transaction hands its callback a client.
@@ -1882,7 +2083,9 @@ export async function scanModelResources(
         ) {
           const client = callback.parameters[0]?.name;
 
-          if (client && ts.isIdentifier(client)) clients.add(client.text);
+          if (client && ts.isIdentifier(client)) {
+            clients.add(client.text);
+          }
         }
       }
 
@@ -1898,14 +2101,14 @@ export async function scanModelResources(
   }
 
   try {
-    const exports: ModelExport[] = modelExports.parse(
+    const exports: Array<ModelExport> = modelExports.parse(
       (await readOptionalResourceJson(path.join(root, '.autocatalog', 'models.json'), { root })) ??
         [],
     );
 
     const exported = emptyResourceGraph();
 
-    for (const definition of exports)
+    for (const definition of exports) {
       exported.resources.push(
         sourceResource(
           {
@@ -1920,6 +2123,7 @@ export async function scanModelResources(
           1,
         ),
       );
+    }
     const exportedKeys = new Set(exported.resources.map((resource) => resourceKey(resource.ref)));
 
     const passive = withoutCompetingSchemas(

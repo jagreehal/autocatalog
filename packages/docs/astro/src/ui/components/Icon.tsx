@@ -1,5 +1,6 @@
 /** @jsxImportSource react */
-import { type IconName, icons } from '../../icons';
+import { icons } from '../../icons';
+import type { IconName } from '../../icons';
 
 export interface IconProps {
   name: IconName;

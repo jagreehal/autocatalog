@@ -52,9 +52,13 @@ async function event(
     await fs.writeFile(target, text);
   };
 
-  for (const [file, data] of Object.entries(examples)) await write(file, JSON.stringify(data));
+  for (const [file, data] of Object.entries(examples)) {
+    await write(file, JSON.stringify(data));
+  }
 
-  for (const [file, text] of Object.entries(files)) await write(file, text);
+  for (const [file, text] of Object.entries(files)) {
+    await write(file, text);
+  }
 }
 
 const happy = { orderId: 'o1', total: 10 };
@@ -178,7 +182,7 @@ describe('exampleCaseOf', () => {
 });
 
 describe('correlation', () => {
-  const fields = (properties: JsonObject, required: string[] = []): JsonObject => ({
+  const fields = (properties: JsonObject, required: Array<string> = []): JsonObject => ({
     type: 'object',
     required,
     properties,

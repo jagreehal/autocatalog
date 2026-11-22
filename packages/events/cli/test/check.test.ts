@@ -2,7 +2,8 @@ import { execFileSync } from 'node:child_process';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { createConsumerResourceGraph, type EventCatalogResource } from 'autocatalog-core';
+import { createConsumerResourceGraph } from 'autocatalog-core';
+import type { EventCatalogResource } from 'autocatalog-core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { githubAnnotation } from '../src/commands/annotation';
 import { runCheck } from '../src/commands/check';
@@ -78,7 +79,8 @@ describe('ac check', () => {
   });
 
   const commit = () => {
-    const git = (...args: string[]) => execFileSync('git', args, { cwd: root, stdio: 'ignore' });
+    const git = (...args: Array<string>) =>
+      execFileSync('git', args, { cwd: root, stdio: 'ignore' });
 
     git('init', '-q', '-b', 'main');
     git('add', '-A');
@@ -249,7 +251,8 @@ describe('ac check', () => {
 
   it('compares against the base branch when it is given one', async () => {
     const log = vi.spyOn(console, 'log').mockImplementation(() => undefined);
-    const git = (...args: string[]) => execFileSync('git', args, { cwd: root, stdio: 'ignore' });
+    const git = (...args: Array<string>) =>
+      execFileSync('git', args, { cwd: root, stdio: 'ignore' });
 
     await write(
       'contracts/order.json',
@@ -291,7 +294,7 @@ describe('githubAnnotation', () => {
 });
 
 describe('ac check, as the company gate', () => {
-  const git = (...args: string[]) =>
+  const git = (...args: Array<string>) =>
     execFileSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@t', ...args], {
       cwd: root,
       stdio: 'ignore',
@@ -467,7 +470,7 @@ export const adapter = {
     vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
 
-    const git = (...args: string[]) =>
+    const git = (...args: Array<string>) =>
       execFileSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@t', ...args], {
         cwd: root,
         stdio: 'ignore',
@@ -494,7 +497,7 @@ export const adapter = {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
 
-    const git = (...args: string[]) =>
+    const git = (...args: Array<string>) =>
       execFileSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@t', ...args], {
         cwd: root,
         stdio: 'ignore',

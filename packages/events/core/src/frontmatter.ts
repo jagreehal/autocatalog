@@ -1,5 +1,6 @@
 import { parse, stringify } from 'yaml';
-import { jsonObjectSchema, type JsonObject } from './json';
+import { jsonObjectSchema } from './json';
+import type { JsonObject } from './json';
 
 // Frontmatter is a YAML block fenced by `---` at the very start of the file.
 // A BOM ahead of it is common on Windows-authored documents.
@@ -28,7 +29,9 @@ export interface Frontmatter {
 export function parseFrontmatter(raw: string): Frontmatter {
   const match = FRONTMATTER.exec(raw);
 
-  if (!match) return { data: {}, content: raw };
+  if (!match) {
+    return { data: {}, content: raw };
+  }
 
   // An empty block parses to null, and a scalar one to something that is not
   // a mapping. Neither is frontmatter, and neither is an error. A YAML value

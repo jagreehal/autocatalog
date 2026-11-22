@@ -4,10 +4,12 @@
 // narrows the site narrows this too.
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { pagesSource, rankPages } from 'autocatalog-chatbot';
-import { isJsonObject, type JsonObject, type JsonValue } from 'autocatalog-core';
+import { isJsonObject } from 'autocatalog-core';
+import type { JsonObject, JsonValue } from 'autocatalog-core';
 import { z } from 'zod';
 import pkg from '../package.json' with { type: 'json' };
-import { apiTitle, type CatalogApi } from './apis';
+import { apiTitle } from './apis';
+import type { CatalogApi } from './apis';
 import { componentRef } from './audience';
 import type { DocsCatalog } from './catalog';
 import { chatPages } from './chat';
@@ -32,7 +34,7 @@ export interface McpOperation {
   path: string;
   operationId?: string | undefined;
   summary?: string | undefined;
-  tags: string[];
+  tags: Array<string>;
   deprecated: boolean;
 }
 
@@ -42,7 +44,8 @@ const strings = (value: JsonValue | undefined) => z.array(z.string()).catch([]).
 
 const objectOf = (value: JsonValue | undefined): JsonObject => (isJsonObject(value) ? value : {});
 
-const listOf = (value: JsonValue | undefined): JsonValue[] => (Array.isArray(value) ? value : []);
+const listOf = (value: JsonValue | undefined): Array<JsonValue> =>
+  Array.isArray(value) ? value : [];
 
 const apiIdOf = (api: CatalogApi) => `${api.repository}/${api.name}`;
 
@@ -63,7 +66,9 @@ function pathItemOf(
   const pointer = text($ref);
   const [kind, name] = componentRef(pointer ?? '') ?? [];
 
-  if (!pointer || kind !== 'pathItems' || !name || seen.has(pointer)) return own;
+  if (!pointer || kind !== 'pathItems' || !name || seen.has(pointer)) {
+    return own;
+  }
 
   const target = objectOf(objectOf(document.components).pathItems)[name];
 
@@ -71,13 +76,15 @@ function pathItemOf(
 }
 
 /** Every operation of every API on the site, in the order each spec lists them. */
-export function listOperations(catalog: Pick<DocsCatalog, 'apis'>): McpOperation[] {
+export function listOperations(catalog: Pick<DocsCatalog, 'apis'>): Array<McpOperation> {
   return catalog.apis.flatMap((api) =>
     Object.entries(objectOf(api.document.paths)).flatMap(([path, item]) =>
       METHODS.flatMap((method) => {
         const operation = pathItemOf(api.document, item)[method];
 
-        if (!isJsonObject(operation)) return [];
+        if (!isJsonObject(operation)) {
+          return [];
+        }
 
         return [
           {
@@ -101,9 +108,13 @@ export function referencedComponents(value: JsonValue, document: JsonObject) {
   const components: Record<string, JsonObject> = {};
 
   const visit = (node: JsonValue) => {
-    if (Array.isArray(node)) return node.forEach(visit);
+    if (Array.isArray(node)) {
+      return node.forEach(visit);
+    }
 
-    if (!isJsonObject(node)) return;
+    if (!isJsonObject(node)) {
+      return;
+    }
 
     const [kind, name] = componentRef(text(node.$ref) ?? '') ?? [];
 
@@ -141,7 +152,9 @@ export function getOperation(
   const method = query.method?.toLowerCase();
 
   const found = catalog.apis.flatMap((api) => {
-    if (query.api && apiIdOf(api) !== query.api) return [];
+    if (query.api && apiIdOf(api) !== query.api) {
+      return [];
+    }
 
     const { document } = api;
 
@@ -151,13 +164,17 @@ export function getOperation(
       return METHODS.flatMap((candidate) => {
         const operation = pathItem[candidate];
 
-        if (!isJsonObject(operation)) return [];
+        if (!isJsonObject(operation)) {
+          return [];
+        }
 
         const matches = query.operationId
           ? operation.operationId === query.operationId
           : candidate === method && path === query.path;
 
-        if (!matches) return [];
+        if (!matches) {
+          return [];
+        }
 
         const shared = listOf(pathItem.parameters);
 
@@ -218,7 +235,7 @@ const paging = {
 };
 
 /** One page of a list, and the line that says how to get the next. */
-export function pageOf<T>(items: T[], cursor?: string, limit = PAGE_SIZE) {
+export function pageOf<T>(items: Array<T>, cursor?: string, limit = PAGE_SIZE) {
   const start = Math.max(0, Number(cursor) || 0);
   const end = start + limit;
   const page = items.slice(start, end);
@@ -342,7 +359,9 @@ export function docsMcpServer(catalog: DocsCatalog, site: DocsMcpSite): McpServe
 
       const page = await source.read(path);
 
-      if (page) return reply(`# ${page.title}\n${absolute(page.href)}\n\n${page.text}`);
+      if (page) {
+        return reply(`# ${page.title}\n${absolute(page.href)}\n\n${page.text}`);
+      }
 
       // The last part of the address names the page; its words, cut to their first
       // letters so `authentication` still finds `Authenticating`, are the best guess.
@@ -406,7 +425,7 @@ export function docsMcpServer(catalog: DocsCatalog, site: DocsMcpSite): McpServe
                   (operation) =>
                     `${several ? `${operation.apiId}: ` : ''}${operation.method} ${operation.path}${operation.operationId ? ` (${operation.operationId})` : ''}` +
                     `${operation.summary ? `: ${operation.summary}` : ''}${operation.deprecated ? ' [deprecated]' : ''}` +
-                    `${operation.tags.length > 0 ? ` [${operation.tags.join(', ')}]` : ''}`,
+                    (operation.tags.length > 0 ? ` [${operation.tags.join(', ')}]` : ''),
                 ),
                 ...more,
               ].join('\n'),

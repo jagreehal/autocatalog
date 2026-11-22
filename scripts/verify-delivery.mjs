@@ -27,7 +27,9 @@ const AUTH = `Basic ${Buffer.from('guest:guest').toString('base64')}`;
 function sh(cmd, args, options = {}) {
   const result = spawnSync(cmd, args, { encoding: 'utf8', ...options });
 
-  if (result.error) throw result.error;
+  if (result.error) {
+    throw result.error;
+  }
 
   return result;
 }
@@ -44,12 +46,16 @@ async function api(base, method, pathname, body, retried = false) {
   } catch (error) {
     // The broker closes idle keep-alive connections while the CLI runs; every
     // call here is safe to repeat once.
-    if (retried) throw error;
+    if (retried) {
+      throw error;
+    }
 
     return api(base, method, pathname, body, true);
   }
 
-  if (!response.ok) throw new Error(`${method} ${pathname}: ${response.status}`);
+  if (!response.ok) {
+    throw new Error(`${method} ${pathname}: ${response.status}`);
+  }
 
   const text = await response.text();
 
@@ -79,7 +85,9 @@ function expectChecks(result, label, wanted) {
   const output = result.stdout + result.stderr;
   const missing = wanted.filter((line) => !output.includes(line));
 
-  if (missing.length) throw new Error(`${label}: missing\n  ${missing.join('\n  ')}\n\n${output}`);
+  if (missing.length) {
+    throw new Error(`${label}: missing\n  ${missing.join('\n  ')}\n\n${output}`);
+  }
 
   console.log(`✓ ${label}`);
 }
@@ -95,7 +103,9 @@ const started = sh('docker', [
   'rabbitmq:4-management',
 ]);
 
-if (started.status !== 0) throw new Error(`docker run failed: ${started.stderr}`);
+if (started.status !== 0) {
+  throw new Error(`docker run failed: ${started.stderr}`);
+}
 
 try {
   const port = sh('docker', ['port', NAME, '15672']).stdout.trim().split(':').at(-1);
@@ -107,7 +117,9 @@ try {
       await api(base, 'GET', '/api/overview');
       break;
     } catch {
-      if (Date.now() > ready) throw new Error('RabbitMQ did not start within 90s');
+      if (Date.now() > ready) {
+        throw new Error('RabbitMQ did not start within 90s');
+      }
 
       await new Promise((resolve) => setTimeout(resolve, 1000));
     }
@@ -121,8 +133,9 @@ try {
 
   const passing = verify(base, path.join(OUT, 'deployed'));
 
-  if (passing.status !== 0)
+  if (passing.status !== 0) {
     throw new Error(`verify failed on the declared deployment\n${passing.stdout}${passing.stderr}`);
+  }
 
   expectChecks(passing, 'declared deployment delivers', [
     'PASS        declared route payments → ledger.payments exists',
@@ -152,8 +165,9 @@ try {
 
   const retries = verify(base, path.join(OUT, 'quorum'), quorum);
 
-  if (retries.status !== 0)
+  if (retries.status !== 0) {
     throw new Error(`verify failed on the quorum queue\n${retries.stdout}${retries.stderr}`);
+  }
 
   expectChecks(retries, 'attempt limit dead-letters', [
     'PASS        a message that keeps failing reaches ledger.dead-letter after 4 deliveries (delivery limit 3)',
@@ -168,10 +182,11 @@ try {
 
   const drifted = verify(base, path.join(OUT, 'limit-drift'), quorum);
 
-  if (drifted.status !== 1)
+  if (drifted.status !== 1) {
     throw new Error(
       `verify should fail on a drifted delivery limit (exit ${drifted.status})\n${drifted.stdout}`,
     );
+  }
 
   expectChecks(drifted, 'drifted delivery limit is reported', [
     'FAIL        queue ledger.payments has delivery limit 1 deployed, 3 declared',
@@ -189,10 +204,11 @@ try {
 
   const failing = verify(base, path.join(OUT, 'binding-removed'), quorum);
 
-  if (failing.status !== 1)
+  if (failing.status !== 1) {
     throw new Error(
       `verify should fail without the binding (exit ${failing.status})\n${failing.stdout}`,
     );
+  }
 
   expectChecks(failing, 'removed binding is reported', [
     'FAIL        declared route payments → ledger.payments is missing from the deployment',

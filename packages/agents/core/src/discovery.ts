@@ -28,7 +28,7 @@ export type DiscoveredAgent = {
   id: string;
   name: string;
   model?: string;
-  tools: string[];
+  tools: Array<string>;
   instructions?: string;
   source: DiscoveredSource;
 };
@@ -36,10 +36,10 @@ export type DiscoveredAgent = {
 export type DiscoveryResult = {
   adapter: DiscoveryAdapter;
   root: string;
-  agents: DiscoveredAgent[];
-  tools: DiscoveredTool[];
-  models: DiscoveredModel[];
-  warnings: string[];
+  agents: Array<DiscoveredAgent>;
+  tools: Array<DiscoveredTool>;
+  models: Array<DiscoveredModel>;
+  warnings: Array<string>;
 };
 
 export type ScanFile = {
@@ -62,9 +62,9 @@ const SKIP_DIRS = new Set([
 
 export const toId = (value: string): string =>
   value
-    .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
-    .replace(/[^a-zA-Z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
+    .replaceAll(/([a-z0-9])([A-Z])/g, '$1-$2')
+    .replaceAll(/[^a-zA-Z0-9]+/g, '-')
+    .replaceAll(/^-+|-+$/g, '')
     .toLowerCase();
 
 export const toName = (id: string): string =>
@@ -88,14 +88,18 @@ export const forEachFile = async (
 
     for (const entry of entries) {
       if (entry.isDirectory()) {
-        if (!SKIP_DIRS.has(entry.name)) await walk(join(dir, entry.name));
+        if (!SKIP_DIRS.has(entry.name)) {
+          await walk(join(dir, entry.name));
+        }
         continue;
       }
 
       const absPath = join(dir, entry.name);
       const relPath = relative(root, absPath);
 
-      if (!entry.isFile() || !accept(relPath)) continue;
+      if (!entry.isFile() || !accept(relPath)) {
+        continue;
+      }
       await visit({ absPath, relPath, text: await readFile(absPath, 'utf8') });
     }
   };
@@ -106,8 +110,8 @@ export const forEachFile = async (
 export const listFiles = async (
   root: string,
   accept: (relPath: string) => boolean,
-): Promise<ScanFile[]> => {
-  const out: ScanFile[] = [];
+): Promise<Array<ScanFile>> => {
+  const out: Array<ScanFile> = [];
 
   await forEachFile(root, accept, (file) => {
     out.push(file);
@@ -146,7 +150,9 @@ const readBalancedCall = (text: string, openParen: number): string | undefined =
         continue;
       }
 
-      if (ch === quote) quote = null;
+      if (ch === quote) {
+        quote = null;
+      }
       continue;
     }
 
@@ -161,26 +167,30 @@ const readBalancedCall = (text: string, openParen: number): string | undefined =
       continue;
     }
 
-    if (ch === '(') depth += 1;
+    if (ch === '(') {
+      depth += 1;
+    }
 
     if (ch === ')') {
       depth -= 1;
 
-      if (depth === 0) return text.slice(openParen + 1, i);
+      if (depth === 0) {
+        return text.slice(openParen + 1, i);
+      }
     }
   }
 
   return undefined;
 };
 
-const stringLiterals = (text: string): string[] => {
-  const values: string[] = [];
+const stringLiterals = (text: string): Array<string> => {
+  const values: Array<string> = [];
 
   const pattern =
     /("""[\s\S]*?"""|'''[\s\S]*?'''|"[^"\\]*(?:\\.[^"\\]*)*"|'[^'\\]*(?:\\.[^'\\]*)*'|`[^`\\]*(?:\\.[^`\\]*)*`)/g;
 
   for (const match of text.matchAll(pattern)) {
-    const raw = match[0]!;
+    const raw = match[0];
     values.push(
       raw.slice(
         raw.startsWith('"""') || raw.startsWith("'''") ? 3 : 1,
@@ -195,13 +205,17 @@ const stringLiterals = (text: string): string[] => {
 const firstStringAfter = (text: string, key: string): string | undefined => {
   const idx = text.indexOf(key);
 
-  if (idx === -1) return undefined;
+  if (idx === -1) {
+    return undefined;
+  }
 
   return stringLiterals(text.slice(idx, Math.min(text.length, idx + 1500)))[0];
 };
 
 const modelFromLiteral = (literal: string | undefined): DiscoveredModel | undefined => {
-  if (!literal) return undefined;
+  if (!literal) {
+    return undefined;
+  }
 
   const [provider, modelId] = literal.includes(':')
     ? literal.split(/:(.+)/)
@@ -209,7 +223,9 @@ const modelFromLiteral = (literal: string | undefined): DiscoveredModel | undefi
       ? literal.split(/\/(.+)/)
       : ['unknown', literal];
 
-  if (!modelId) return undefined;
+  if (!modelId) {
+    return undefined;
+  }
 
   return {
     id: toId(modelId),
@@ -233,14 +249,14 @@ export const discoverPydanticAi = async (root: string): Promise<DiscoveryResult>
   const agents = new Map<string, DiscoveredAgent>();
   const tools = new Map<string, DiscoveredTool>();
   const models = new Map<string, DiscoveredModel>();
-  const warnings: string[] = [];
+  const warnings: Array<string> = [];
 
   for (const file of files) {
     const agentPattern = /(\w+)\s*=\s*Agent\s*\(/g;
 
     for (const match of file.text.matchAll(agentPattern)) {
       const symbol = match[1]!;
-      const openParen = (match.index ?? 0) + match[0]!.lastIndexOf('(');
+      const openParen = (match.index ?? 0) + match[0].lastIndexOf('(');
       const args = readBalancedCall(file.text, openParen);
 
       if (!args) {
@@ -272,7 +288,9 @@ export const discoverPydanticAi = async (root: string): Promise<DiscoveryResult>
         source: { file: file.relPath, line: lineAt(file.text, match.index ?? 0), symbol },
       };
 
-      if (model) agent.model = model.id;
+      if (model) {
+        agent.model = model.id;
+      }
       agents.set(symbol, agent);
     }
 
@@ -296,10 +314,14 @@ export const discoverPydanticAi = async (root: string): Promise<DiscoveryResult>
         },
       };
 
-      if (description) tool.description = description.trim();
+      if (description) {
+        tool.description = description.trim();
+      }
       tools.set(id, tool);
 
-      if (agent && !agent.tools.includes(id)) agent.tools.push(id);
+      if (agent && !agent.tools.includes(id)) {
+        agent.tools.push(id);
+      }
     }
   }
 
@@ -322,14 +344,14 @@ export const discoverAiSdk = async (root: string): Promise<DiscoveryResult> => {
   const agentsUsingToolsIdentifier = new Set<string>();
   const tools = new Map<string, DiscoveredTool>();
   const models = new Map<string, DiscoveredModel>();
-  const warnings: string[] = [];
+  const warnings: Array<string> = [];
 
   for (const file of files) {
     const toolPattern = /(?:export\s+)?const\s+(\w+)\s*=\s*tool\s*\(/g;
 
     for (const match of file.text.matchAll(toolPattern)) {
       const symbol = match[1]!;
-      const openParen = (match.index ?? 0) + match[0]!.lastIndexOf('(');
+      const openParen = (match.index ?? 0) + match[0].lastIndexOf('(');
       const args = readBalancedCall(file.text, openParen);
       const id = toId(symbol);
 
@@ -339,14 +361,16 @@ export const discoverAiSdk = async (root: string): Promise<DiscoveryResult> => {
         source: { file: file.relPath, line: lineAt(file.text, match.index ?? 0), symbol },
       };
 
-      if (args) tool.description = firstStringAfter(args, 'description');
+      if (args) {
+        tool.description = firstStringAfter(args, 'description');
+      }
       tools.set(id, tool);
     }
 
     const callPattern = /(generateText|streamText)\s*\(/g;
 
     for (const match of file.text.matchAll(callPattern)) {
-      const openParen = (match.index ?? 0) + match[0]!.lastIndexOf('(');
+      const openParen = (match.index ?? 0) + match[0].lastIndexOf('(');
       const args = readBalancedCall(file.text, openParen);
 
       if (!args) {
@@ -383,10 +407,14 @@ export const discoverAiSdk = async (root: string): Promise<DiscoveryResult> => {
         source: { file: file.relPath, line: lineAt(file.text, match.index ?? 0), symbol: match[1] },
       };
 
-      if (model) agent.model = model.id;
+      if (model) {
+        agent.model = model.id;
+      }
       agents.set(id, agent);
 
-      if (/\btools\b/.test(args)) agentsUsingToolsIdentifier.add(id);
+      if (/\btools\b/.test(args)) {
+        agentsUsingToolsIdentifier.add(id);
+      }
     }
 
     const exportedTools = /export\s+const\s+tools\s*=\s*{([\s\S]*?)}\s*;/m.exec(file.text);
@@ -400,7 +428,9 @@ export const discoverAiSdk = async (root: string): Promise<DiscoveryResult> => {
 
       const maybeAgent = [...agents.values()].find((agent) => agent.source.file === file.relPath);
 
-      if (maybeAgent) maybeAgent.tools = [...new Set([...maybeAgent.tools, ...ids])];
+      if (maybeAgent) {
+        maybeAgent.tools = [...new Set([...maybeAgent.tools, ...ids])];
+      }
     }
   }
 
@@ -426,7 +456,9 @@ export const discoverFramework = async (
   adapter: DiscoveryAdapter,
   root: string,
 ): Promise<DiscoveryResult> => {
-  if (adapter === 'pydantic-ai') return discoverPydanticAi(root);
+  if (adapter === 'pydantic-ai') {
+    return discoverPydanticAi(root);
+  }
 
   return discoverAiSdk(root);
 };

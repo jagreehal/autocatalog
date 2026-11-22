@@ -20,10 +20,10 @@ import { Icon } from '../components/Icon';
 import type { McpServerRow } from '../../mcp-servers';
 
 export interface McpServersPageProps {
-  servers: McpServerRow[];
+  servers: Array<McpServerRow>;
 }
 
-const count = (items: string[], one: string, many: string): string =>
+const count = (items: Array<string>, one: string, many: string): string =>
   `${items.length} ${items.length === 1 ? one : many}`;
 
 const usedBy = ({ repositories, agents }: McpServerRow): string => {

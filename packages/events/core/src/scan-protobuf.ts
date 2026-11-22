@@ -1,13 +1,10 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { Enum, Namespace, parse as parseProto, Service, Type } from 'protobufjs';
-import {
-  parseAdapterEventMeta,
-  type AdapterEvent,
-  type AdapterEventMeta,
-  type ProvenanceValue,
-} from './adapter-event';
-import { jsonObjectSchema, type JsonObject } from './json';
+import { parseAdapterEventMeta } from './adapter-event';
+import type { AdapterEvent, AdapterEventMeta, ProvenanceValue } from './adapter-event';
+import { jsonObjectSchema } from './json';
+import type { JsonObject } from './json';
 import type {
   DiscoveryOutput,
   DiscoveryAdapter,
@@ -18,7 +15,7 @@ import { DEFAULT_SCAN_EXCLUDE, pascalCase } from './utils';
 
 export interface ScanProtobufOptions {
   root: string;
-  exclude?: string[];
+  exclude?: Array<string>;
   outDir?: string;
   signal?: AbortSignal;
   maxFiles?: number;
@@ -73,13 +70,17 @@ const AUTOCATALOG_OPTION = /^\((?:autocatalog\.)?(\w+)\)$/;
 
 /** `option (autocatalog.id) = "order.placed";` → declared metadata. */
 export function metaFromOptions(options: JsonObject | undefined): AdapterEventMeta | undefined {
-  if (!options) return undefined;
+  if (!options) {
+    return undefined;
+  }
   const meta: JsonObject = {};
 
   for (const [key, value] of Object.entries(options)) {
     const match = AUTOCATALOG_OPTION.exec(key);
 
-    if (match && key.includes('autocatalog')) meta[match[1]!] = value;
+    if (match && key.includes('autocatalog')) {
+      meta[match[1]!] = value;
+    }
   }
 
   return Object.keys(meta).length > 0 ? parseAdapterEventMeta(meta) : undefined;
@@ -88,15 +89,17 @@ export function metaFromOptions(options: JsonObject | undefined): AdapterEventMe
 /** `PaymentCompleted` → `payment.completed` */
 export function idFromMessageName(name: string): string {
   return name
-    .replace(/([a-z0-9])([A-Z])/g, '$1.$2')
-    .replace(/[-_]+/g, '.')
+    .replaceAll(/([a-z0-9])([A-Z])/g, '$1.$2')
+    .replaceAll(/[-_]+/g, '.')
     .toLowerCase();
 }
 
 function resolveType(typeName: string, from: Type, open: Set<string>): JsonObject {
   const known = SCALARS.get(typeName) ?? WELL_KNOWN.get(typeName);
 
-  if (known) return { ...known };
+  if (known) {
+    return { ...known };
+  }
 
   const target = from.lookup(typeName);
 
@@ -105,7 +108,9 @@ function resolveType(typeName: string, from: Type, open: Set<string>): JsonObjec
     return { type: 'string', enum: Object.keys(target.values) };
   }
 
-  if (!(target instanceof Type)) return {};
+  if (!(target instanceof Type)) {
+    return {};
+  }
 
   if (open.has(target.fullName)) {
     return { type: 'object', description: `recursive reference to ${typeName}` };
@@ -119,7 +124,7 @@ export function messageToJsonSchema(message: Type, open: Set<string> = new Set()
   open.add(fullName);
 
   const properties: JsonObject = {};
-  const required: string[] = [];
+  const required: Array<string> = [];
 
   for (const field of Object.values(message.fields)) {
     let schema = resolveType(field.type, message, open);
@@ -130,7 +135,9 @@ export function messageToJsonSchema(message: Type, open: Set<string> = new Set()
       schema = { type: 'array', items: schema };
     }
 
-    if (field.comment) schema.description = field.comment;
+    if (field.comment) {
+      schema.description = field.comment;
+    }
     properties[field.name] = schema;
 
     // proto3 has no required fields, but a singular field without `optional`
@@ -144,16 +151,22 @@ export function messageToJsonSchema(message: Type, open: Set<string> = new Set()
     const explicitlyOptional =
       field.options?.proto3_optional === true || (field.partOf?.name ?? '').startsWith('_');
 
-    if (!explicitlyOptional && !field.repeated && !field.map) required.push(field.name);
+    if (!explicitlyOptional && !field.repeated && !field.map) {
+      required.push(field.name);
+    }
   }
 
   open.delete(fullName);
 
   const built: JsonObject = { type: 'object', properties };
 
-  if (required.length > 0) built.required = required;
+  if (required.length > 0) {
+    built.required = required;
+  }
 
-  if (message.comment) built.description = message.comment;
+  if (message.comment) {
+    built.description = message.comment;
+  }
 
   return built;
 }
@@ -166,13 +179,19 @@ export function rpcTypeNames(root: Namespace): Set<string> {
     for (const child of Object.values(node.nested ?? {})) {
       if (child instanceof Service) {
         for (const method of Object.values(child.methods)) {
-          if (method.requestType) names.add(method.requestType.replace(/^\./, ''));
+          if (method.requestType) {
+            names.add(method.requestType.replace(/^\./, ''));
+          }
 
-          if (method.responseType) names.add(method.responseType.replace(/^\./, ''));
+          if (method.responseType) {
+            names.add(method.responseType.replace(/^\./, ''));
+          }
         }
       }
 
-      if (child instanceof Namespace) visit(child);
+      if (child instanceof Namespace) {
+        visit(child);
+      }
     }
   };
 
@@ -206,10 +225,14 @@ export function eventsFromProtoRoot(
     : root;
 
   for (const message of Object.values(container?.nested ?? {})) {
-    if (!(message instanceof Type)) continue; // enums, services and sub-packages
+    if (!(message instanceof Type)) {
+      continue;
+    } // enums, services and sub-packages
     const fullName = message.fullName.replace(/^\./, '');
 
-    if (rpcTypes.has(fullName) || rpcTypes.has(message.name)) continue;
+    if (rpcTypes.has(fullName) || rpcTypes.has(message.name)) {
+      continue;
+    }
 
     const options = jsonObjectSchema.safeParse(message.options);
     const meta = metaFromOptions(options.success ? options.data : undefined);
@@ -220,13 +243,21 @@ export function eventsFromProtoRoot(
 
     const inferredFields: Record<string, ProvenanceValue> = {};
 
-    if (!meta?.id) inferredFields.id = 'inferred';
+    if (!meta?.id) {
+      inferredFields.id = 'inferred';
+    }
 
-    if (!meta?.version) inferredFields.version = 'inferred';
+    if (!meta?.version) {
+      inferredFields.version = 'inferred';
+    }
 
-    if (!meta?.domain) inferredFields.domain = 'inferred';
+    if (!meta?.domain) {
+      inferredFields.domain = 'inferred';
+    }
 
-    if (!meta?.summary) inferredFields.summary = 'inferred';
+    if (!meta?.summary) {
+      inferredFields.summary = 'inferred';
+    }
 
     found.push({
       event: {
@@ -267,13 +298,15 @@ async function walkProtoFiles(
   outAbs?: string,
   signal?: AbortSignal,
   maxFiles = 50_000,
-): Promise<string[]> {
-  const results: string[] = [];
+): Promise<Array<string>> {
+  const results: Array<string> = [];
 
   async function walk(dir: string): Promise<void> {
     signal?.throwIfAborted();
 
-    if (outAbs && (dir === outAbs || dir.startsWith(outAbs + path.sep))) return;
+    if (outAbs && (dir === outAbs || dir.startsWith(outAbs + path.sep))) {
+      return;
+    }
     let entries;
 
     try {
@@ -288,11 +321,15 @@ async function walkProtoFiles(
       // Directories are walked and regular files read. A symlink is neither: it
       // could name any file on this machine, and the catalog gets published.
       if (entry.isDirectory()) {
-        if (!exclude.has(entry.name) && !entry.name.startsWith('.')) await walk(full);
+        if (!exclude.has(entry.name) && !entry.name.startsWith('.')) {
+          await walk(full);
+        }
       } else if (entry.isFile() && /\.proto$/i.test(entry.name)) {
         results.push(full);
 
-        if (results.length > maxFiles) throw new Error(`proto file limit exceeded (${maxFiles})`);
+        if (results.length > maxFiles) {
+          throw new Error(`proto file limit exceeded (${maxFiles})`);
+        }
       }
     }
   }
@@ -313,8 +350,8 @@ export async function discoverProtobuf(opts: ScanProtobufOptions): Promise<Disco
   const outAbs = opts.outDir ? path.resolve(opts.outDir) : undefined;
   const files = await walkProtoFiles(root, exclude, outAbs, opts.signal, opts.maxFiles);
 
-  const candidates: DiscoveryCandidate[] = [];
-  const errors: string[] = [];
+  const candidates: Array<DiscoveryCandidate> = [];
+  const errors: Array<string> = [];
 
   for (const file of files) {
     opts.signal?.throwIfAborted();
@@ -331,16 +368,16 @@ export async function discoverProtobuf(opts: ScanProtobufOptions): Promise<Disco
       }
 
       source = await fs.readFile(file, 'utf8');
-    } catch (err) {
-      errors.push(`${relFile}: ${err instanceof Error ? err.message : String(err)}`);
+    } catch (error) {
+      errors.push(`${relFile}: ${error instanceof Error ? error.message : String(error)}`);
       continue;
     }
 
     try {
       const parsed = parseProto(source, { keepCase: true, alternateCommentMode: true });
       candidates.push(...eventsFromProtoRoot(parsed.root, parsed.package ?? undefined, relFile));
-    } catch (err) {
-      errors.push(`${relFile}: ${err instanceof Error ? err.message : String(err)}`);
+    } catch (error) {
+      errors.push(`${relFile}: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 

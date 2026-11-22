@@ -3,7 +3,8 @@ import path from 'node:path';
 import { z } from 'zod';
 import { readVendorMeta } from './adapter-event';
 import type { AdapterEvent, ProvenanceValue } from './adapter-event';
-import { jsonValueSchema, type JsonObject, type JsonValue } from './json';
+import { jsonValueSchema } from './json';
+import type { JsonObject, JsonValue } from './json';
 import type {
   DiscoveryOutput,
   DiscoveryAdapter,
@@ -14,7 +15,7 @@ import { DEFAULT_SCAN_EXCLUDE, pascalCase } from './utils';
 
 export interface ScanAvroOptions {
   root: string;
-  exclude?: string[];
+  exclude?: Array<string>;
   outDir?: string;
   signal?: AbortSignal;
   maxFiles?: number;
@@ -27,7 +28,7 @@ export interface AvroScanFinding extends ScanFindingBase {
 }
 
 /** An Avro schema: a type name, a union of schemas, or a complex type object. */
-type AvroType = string | AvroType[] | AvroNode;
+type AvroType = string | Array<AvroType> | AvroNode;
 
 type AvroNode = {
   type: AvroType;
@@ -35,8 +36,8 @@ type AvroNode = {
   namespace?: string;
   doc?: string;
   logicalType?: string;
-  fields?: AvroField[];
-  symbols?: string[];
+  fields?: Array<AvroField>;
+  symbols?: Array<string>;
   items?: AvroType;
   values?: AvroType;
 };
@@ -101,7 +102,10 @@ export function looksLikeAvroSchema(value: unknown): value is AvroRecord {
 }
 
 /** Registry references contribute named types before the payload is projected. */
-export function avroSchemaToJsonSchema(input: JsonValue, references: JsonValue[] = []): JsonObject {
+export function avroSchemaToJsonSchema(
+  input: JsonValue,
+  references: Array<JsonValue> = [],
+): JsonObject {
   const named = new Map<string, AvroType>();
 
   const collect = (value: AvroType) => {
@@ -113,20 +117,30 @@ export function avroSchemaToJsonSchema(input: JsonValue, references: JsonValue[]
 
     const parsed = avroNode.safeParse(value);
 
-    if (!parsed.success) return;
+    if (!parsed.success) {
+      return;
+    }
     const node = parsed.data;
 
     if (node.name) {
       named.set(node.name, node);
 
-      if (node.namespace) named.set(`${node.namespace}.${node.name}`, node);
+      if (node.namespace) {
+        named.set(`${node.namespace}.${node.name}`, node);
+      }
     }
 
-    for (const field of node.fields ?? []) collect(field.type);
+    for (const field of node.fields ?? []) {
+      collect(field.type);
+    }
 
-    if (node.items) collect(node.items);
+    if (node.items) {
+      collect(node.items);
+    }
 
-    if (node.values) collect(node.values);
+    if (node.values) {
+      collect(node.values);
+    }
   };
 
   references.map((reference) => avroType.parse(reference)).forEach(collect);
@@ -151,15 +165,21 @@ function toJsonSchema(
   open: Set<string>,
 ): JsonObject {
   // An `array` without `items` or a `map` without `values`: nothing to describe.
-  if (node === undefined) return {};
+  if (node === undefined) {
+    return {};
+  }
 
   if (isAvroName(node)) {
     const primitive = PRIMITIVES.get(node);
 
-    if (primitive) return { type: primitive };
+    if (primitive) {
+      return { type: primitive };
+    }
     const referenced = named.get(node);
 
-    if (!referenced) return {};
+    if (!referenced) {
+      return {};
+    }
 
     if (open.has(node)) {
       return { type: 'object', description: `recursive reference to ${node}` };
@@ -193,27 +213,37 @@ function toJsonSchema(
       }
 
       const properties: JsonObject = {};
-      const required: string[] = [];
+      const required: Array<string> = [];
 
       for (const field of node.fields ?? []) {
         const optional = isNullableUnion(field.type);
         const schema = toJsonSchema(stripNull(field.type), named, open);
 
-        if (field.doc !== undefined) schema.description = field.doc;
+        if (field.doc !== undefined) {
+          schema.description = field.doc;
+        }
         properties[field.name] = schema;
 
         // A field with a default can be omitted by a producer; without one it
         // is always present on the wire.
-        if (!optional && field.default === undefined) required.push(field.name);
+        if (!optional && field.default === undefined) {
+          required.push(field.name);
+        }
       }
 
-      if (name) open.delete(name);
+      if (name) {
+        open.delete(name);
+      }
 
       const built: JsonObject = { type: 'object', properties };
 
-      if (required.length > 0) built.required = required;
+      if (required.length > 0) {
+        built.required = required;
+      }
 
-      if (node.doc !== undefined) built.description = node.doc;
+      if (node.doc !== undefined) {
+        built.description = node.doc;
+      }
 
       return built;
     }
@@ -227,10 +257,14 @@ function toJsonSchema(
     case 'fixed':
       return { type: 'string' };
     default: {
-      if (!isAvroName(node.type)) return {};
+      if (!isAvroName(node.type)) {
+        return {};
+      }
       const primitive = PRIMITIVES.get(node.type);
 
-      if (primitive) return logical ? { type: primitive, format: logical } : { type: primitive };
+      if (primitive) {
+        return logical ? { type: primitive, format: logical } : { type: primitive };
+      }
       const referenced = named.get(node.type);
 
       return referenced ? toJsonSchema(referenced, named, open) : {};
@@ -248,7 +282,9 @@ function isNullableUnion(type: AvroType): boolean {
 }
 
 function stripNull(type: AvroType): AvroType {
-  if (!Array.isArray(type)) return type;
+  if (!Array.isArray(type)) {
+    return type;
+  }
   const rest = type.filter((branch) => branch !== 'null');
 
   return rest.length === 1 ? rest[0]! : rest;
@@ -259,8 +295,8 @@ export function idFromAvroName(name: string, namespace?: string): string {
   const local = String(name).split('.').pop() ?? name;
 
   const dotted = local
-    .replace(/([a-z0-9])([A-Z])/g, '$1.$2')
-    .replace(/[-_]+/g, '.')
+    .replaceAll(/([a-z0-9])([A-Z])/g, '$1.$2')
+    .replaceAll(/[-_]+/g, '.')
     .toLowerCase();
 
   // A namespace like com.acme.payments contributes the domain, not the id.
@@ -272,14 +308,18 @@ export function idFromAvroName(name: string, namespace?: string): string {
 export function avroDomain(schema: AvroRecord, relFile: string, fallbackId: string): string {
   const last = schema.namespace?.split('.').pop();
 
-  if (last && !['avro', 'schema', 'schemas'].includes(last)) return last;
+  if (last && !['avro', 'schema', 'schemas'].includes(last)) {
+    return last;
+  }
   const parts = relFile.split(/[/\\]/).filter(Boolean);
   const skip = new Set(['src', 'lib', 'avro', 'schemas', 'schema', 'events', '.']);
 
   for (let i = parts.length - 2; i >= 0; i--) {
     const seg = parts[i]!;
 
-    if (!skip.has(seg.toLowerCase())) return seg;
+    if (!skip.has(seg.toLowerCase())) {
+      return seg;
+    }
   }
 
   return fallbackId.split('.')[0]!;
@@ -298,13 +338,21 @@ export function eventFromAvroSchema(
 
   const inferredFields: Record<string, ProvenanceValue> = {};
 
-  if (!meta?.id) inferredFields.id = 'inferred';
+  if (!meta?.id) {
+    inferredFields.id = 'inferred';
+  }
 
-  if (!meta?.version) inferredFields.version = 'inferred';
+  if (!meta?.version) {
+    inferredFields.version = 'inferred';
+  }
 
-  if (!meta?.domain) inferredFields.domain = 'inferred';
+  if (!meta?.domain) {
+    inferredFields.domain = 'inferred';
+  }
 
-  if (!meta?.summary) inferredFields.summary = 'inferred';
+  if (!meta?.summary) {
+    inferredFields.summary = 'inferred';
+  }
 
   const needsReview = !meta?.id || !meta?.version;
 
@@ -348,13 +396,15 @@ async function walkAvroFiles(
   outAbs?: string,
   signal?: AbortSignal,
   maxFiles = 50_000,
-): Promise<string[]> {
-  const results: string[] = [];
+): Promise<Array<string>> {
+  const results: Array<string> = [];
 
   async function walk(dir: string): Promise<void> {
     signal?.throwIfAborted();
 
-    if (outAbs && (dir === outAbs || dir.startsWith(outAbs + path.sep))) return;
+    if (outAbs && (dir === outAbs || dir.startsWith(outAbs + path.sep))) {
+      return;
+    }
     let entries;
 
     try {
@@ -369,11 +419,15 @@ async function walkAvroFiles(
       // Directories are walked and regular files read. A symlink is neither: it
       // could name any file on this machine, and the catalog gets published.
       if (entry.isDirectory()) {
-        if (!exclude.has(entry.name) && !entry.name.startsWith('.')) await walk(full);
+        if (!exclude.has(entry.name) && !entry.name.startsWith('.')) {
+          await walk(full);
+        }
       } else if (entry.isFile() && /\.avsc$/i.test(entry.name)) {
         results.push(full);
 
-        if (results.length > maxFiles) throw new Error(`Avro file limit exceeded (${maxFiles})`);
+        if (results.length > maxFiles) {
+          throw new Error(`Avro file limit exceeded (${maxFiles})`);
+        }
       }
     }
   }
@@ -397,8 +451,8 @@ export async function discoverAvro(opts: ScanAvroOptions): Promise<DiscoveryOutp
   const outAbs = opts.outDir ? path.resolve(opts.outDir) : undefined;
   const files = await walkAvroFiles(root, exclude, outAbs, opts.signal, opts.maxFiles);
 
-  const candidates: DiscoveryCandidate[] = [];
-  const errors: string[] = [];
+  const candidates: Array<DiscoveryCandidate> = [];
+  const errors: Array<string> = [];
 
   for (const file of files) {
     opts.signal?.throwIfAborted();
@@ -415,19 +469,21 @@ export async function discoverAvro(opts: ScanAvroOptions): Promise<DiscoveryOutp
       }
 
       parsed = JSON.parse(await fs.readFile(file, 'utf8'));
-    } catch (err) {
-      errors.push(`${relFile}: ${err instanceof Error ? err.message : String(err)}`);
+    } catch (error) {
+      errors.push(`${relFile}: ${error instanceof Error ? error.message : String(error)}`);
       continue;
     }
 
     // A .avsc holding a bare union or primitive is valid Avro but has no name
     // to become an event id, so there is nothing honest to publish.
-    if (!looksLikeAvroSchema(parsed)) continue;
+    if (!looksLikeAvroSchema(parsed)) {
+      continue;
+    }
 
     try {
       candidates.push(eventFromAvroSchema(parsed, relFile));
-    } catch (err) {
-      errors.push(`${relFile}: ${err instanceof Error ? err.message : String(err)}`);
+    } catch (error) {
+      errors.push(`${relFile}: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 

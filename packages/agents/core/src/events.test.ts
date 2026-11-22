@@ -13,7 +13,8 @@ import {
 import { computeEventImpact, computeImpact } from './impact.js';
 import type { Catalog } from './loader.js';
 import { AgentsResourceGraphError, createAgentsResourceGraph } from './resource-graph.js';
-import { AgentSchema, ENTITY_KINDS, ModelSchema, ToolSchema, type Entity } from './schemas.js';
+import { AgentSchema, ENTITY_KINDS, ModelSchema, ToolSchema } from './schemas.js';
+import type { Entity } from './schemas.js';
 
 const starter = path.resolve(import.meta.dirname, '../../../../starters/agent-default');
 
@@ -25,9 +26,9 @@ const events = [
 ];
 
 function catalogOf(
-  extra: Array<{ id: string; consumes?: Array<{ event: string; fields?: string[] }> }> = [],
+  extra: Array<{ id: string; consumes?: Array<{ event: string; fields?: Array<string> }> }> = [],
 ): Catalog {
-  const input: Entity[] = [
+  const input: Array<Entity> = [
     ModelSchema.parse({ id: 'm', name: 'M', owner: 'platform', provider: 'x', model_id: 'm' }),
     ToolSchema.parse({
       id: 'issue-refund',
@@ -54,7 +55,9 @@ function catalogOf(
 
   const byKind = new Map(ENTITY_KINDS.map((kind) => [kind, new Map<string, Entity>()]));
 
-  for (const entity of input) byKind.get(entity.kind)?.set(entity.id, entity);
+  for (const entity of input) {
+    byKind.get(entity.kind)?.set(entity.id, entity);
+  }
 
   return {
     root: '/repo',

@@ -1,0 +1,7757 @@
+{
+  "apps/docs/src/components/Home.tsx": {
+    "jsx-a11y/no-noninteractive-tabindex": {
+      "count": 2
+    },
+    "react/no-unescaped-entities": {
+      "count": 8
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 2
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    }
+  },
+  "apps/docs/src/components/LivingMap.tsx": {
+    "anti-slop/require-readable-spacing": {
+      "count": 3
+    },
+    "complexity": {
+      "count": 3
+    },
+    "jsx-a11y/prefer-tag-over-role": {
+      "count": 2
+    },
+    "no-nested-ternary": {
+      "count": 5
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 2
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 2
+    },
+    "typescript/prefer-nullish-coalescing": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    }
+  },
+  "apps/docs/src/components/living-map-data.tsx": {
+    "anti-slop/require-readable-spacing": {
+      "count": 1
+    },
+    "max-params": {
+      "count": 1
+    },
+    "no-nested-ternary": {
+      "count": 1
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 2
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 8
+    }
+  },
+  "apps/media/journeys/fixtures.ts": {
+    "react-hooks/rules-of-hooks": {
+      "count": 2
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 2
+    }
+  },
+  "apps/media/playwright.config.ts": {
+    "typescript/strict-boolean-expressions": {
+      "count": 3
+    }
+  },
+  "examples/docs-demo/playwright.config.ts": {
+    "typescript/strict-boolean-expressions": {
+      "count": 4
+    }
+  },
+  "examples/docs-demo/src/DocTitle.astro": {
+    "no-undef": {
+      "count": 1
+    }
+  },
+  "examples/docs-demo/tests/docs.story.spec.ts": {
+    "typescript/no-invalid-void-type": {
+      "count": 1
+    },
+    "typescript/no-unsafe-call": {
+      "count": 2
+    },
+    "typescript/no-unsafe-type-assertion": {
+      "count": 1
+    }
+  },
+  "examples/event-storming/playwright.config.ts": {
+    "typescript/strict-boolean-expressions": {
+      "count": 4
+    }
+  },
+  "examples/event-storming/src/import.ts": {
+    "typescript/explicit-module-boundary-types": {
+      "count": 1
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 2
+    }
+  },
+  "examples/help-centre/pages/api/support.ts": {
+    "no-console": {
+      "count": 1
+    },
+    "typescript/no-unsafe-assignment": {
+      "count": 1
+    },
+    "typescript/no-unsafe-call": {
+      "count": 1
+    },
+    "typescript/no-unsafe-member-access": {
+      "count": 1
+    }
+  },
+  "examples/help-centre/pages/index.astro": {
+    "no-undef": {
+      "count": 1
+    }
+  },
+  "examples/help-centre/playwright.config.ts": {
+    "typescript/strict-boolean-expressions": {
+      "count": 4
+    }
+  },
+  "examples/help-centre/site/ChatPanel.tsx": {
+    "typescript/explicit-module-boundary-types": {
+      "count": 1
+    },
+    "typescript/no-unsafe-assignment": {
+      "count": 1
+    },
+    "typescript/no-unsafe-call": {
+      "count": 1
+    },
+    "typescript/no-unsafe-member-access": {
+      "count": 1
+    }
+  },
+  "examples/help-centre/site/ReaderSwitcher.astro": {
+    "no-undef": {
+      "count": 1
+    }
+  },
+  "examples/help-centre/site/access.ts": {
+    "typescript/no-unsafe-argument": {
+      "count": 1
+    },
+    "typescript/no-unsafe-call": {
+      "count": 1
+    },
+    "typescript/no-unsafe-member-access": {
+      "count": 2
+    }
+  },
+  "examples/help-centre/site/chat.ts": {
+    "typescript/no-unsafe-call": {
+      "count": 1
+    },
+    "typescript/no-unsafe-member-access": {
+      "count": 2
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    }
+  },
+  "examples/help-centre/site/env.d.ts": {
+    "typescript/consistent-type-imports": {
+      "count": 1
+    }
+  },
+  "examples/help-centre/site/middleware.ts": {
+    "typescript/explicit-module-boundary-types": {
+      "count": 1
+    }
+  },
+  "examples/help-centre/site/readers.ts": {
+    "typescript/explicit-module-boundary-types": {
+      "count": 1
+    }
+  },
+  "examples/help-centre/tests/access.story.spec.ts": {
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    }
+  },
+  "examples/public-api/playwright.config.ts": {
+    "typescript/strict-boolean-expressions": {
+      "count": 4
+    }
+  },
+  "examples/public-api/site/StatusBlock.astro": {
+    "no-undef": {
+      "count": 1
+    }
+  },
+  "examples/site-extension/playwright.config.ts": {
+    "typescript/strict-boolean-expressions": {
+      "count": 4
+    }
+  },
+  "examples/site-extension/site/Footer.astro": {
+    "no-undef": {
+      "count": 1
+    }
+  },
+  "examples/site-extension/site/middleware.ts": {
+    "typescript/explicit-module-boundary-types": {
+      "count": 1
+    }
+  },
+  "examples/site-extension/site/route-data.ts": {
+    "typescript/explicit-module-boundary-types": {
+      "count": 2
+    },
+    "typescript/no-explicit-any": {
+      "count": 1
+    },
+    "typescript/no-unsafe-argument": {
+      "count": 1
+    },
+    "typescript/no-unsafe-assignment": {
+      "count": 1
+    },
+    "typescript/no-unsafe-call": {
+      "count": 1
+    },
+    "typescript/no-unsafe-member-access": {
+      "count": 6
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 3
+    }
+  },
+  "examples/site-extension/site/shout.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 1
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    }
+  },
+  "examples/storefront/scripts/convert.mjs": {
+    "anti-slop/require-readable-spacing": {
+      "count": 16
+    },
+    "complexity": {
+      "count": 2
+    },
+    "max-params": {
+      "count": 3
+    },
+    "no-console": {
+      "count": 2
+    },
+    "no-nested-ternary": {
+      "count": 2
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 3
+    },
+    "unicorn/no-array-sort": {
+      "count": 2
+    },
+    "unicorn/prefer-string-replace-all": {
+      "count": 1
+    }
+  },
+  "examples/storefront/scripts/regenerate.mjs": {
+    "no-console": {
+      "count": 3
+    },
+    "unicorn/no-array-sort": {
+      "count": 1
+    },
+    "unicorn/prefer-array-find": {
+      "count": 1
+    }
+  },
+  "experiments/05-full-pipeline/drift/orders-service/src/orders.ts": {
+    "typescript/no-unsafe-call": {
+      "count": 2
+    }
+  },
+  "experiments/05-full-pipeline/repos/orders-service/src/orders.ts": {
+    "typescript/no-unsafe-call": {
+      "count": 1
+    }
+  },
+  "experiments/05-full-pipeline/repos/orders-service/test/checkout.test.ts": {
+    "typescript/no-floating-promises": {
+      "count": 2
+    },
+    "typescript/no-unsafe-call": {
+      "count": 4
+    }
+  },
+  "experiments/run.mjs": {
+    "anti-slop/require-readable-spacing": {
+      "count": 2
+    },
+    "complexity": {
+      "count": 2
+    },
+    "no-console": {
+      "count": 15
+    },
+    "no-unused-vars": {
+      "count": 1
+    },
+    "unicorn/no-array-sort": {
+      "count": 8
+    }
+  },
+  "fixtures/brownfield-repo/statements.ts": {
+    "typescript/explicit-module-boundary-types": {
+      "count": 1
+    },
+    "typescript/no-unsafe-assignment": {
+      "count": 2
+    },
+    "typescript/no-unsafe-call": {
+      "count": 3
+    },
+    "typescript/no-unsafe-member-access": {
+      "count": 3
+    },
+    "typescript/no-unsafe-return": {
+      "count": 1
+    },
+    "typescript/require-await": {
+      "count": 1
+    }
+  },
+  "packages/agents/adapter-autotel/src/diff.ts": {
+    "complexity": {
+      "count": 2
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 11
+    }
+  },
+  "packages/agents/adapter-autotel/src/parse.test.ts": {
+    "vitest/require-to-throw-message": {
+      "count": 1
+    }
+  },
+  "packages/agents/adapter-autotel/src/parse.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 1
+    },
+    "complexity": {
+      "count": 1
+    },
+    "max-depth": {
+      "count": 3
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 9
+    },
+    "unicorn/prefer-top-level-await": {
+      "count": 3
+    }
+  },
+  "packages/agents/cli/src/bin.ts": {
+    "typescript/no-floating-promises": {
+      "count": 1
+    },
+    "unicorn/prefer-top-level-await": {
+      "count": 1
+    }
+  },
+  "packages/agents/cli/src/commands/audit.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 1
+    },
+    "complexity": {
+      "count": 1
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 1
+    },
+    "typescript/no-unnecessary-condition": {
+      "count": 1
+    }
+  },
+  "packages/agents/cli/src/commands/cost.ts": {
+    "complexity": {
+      "count": 1
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 5
+    },
+    "typescript/prefer-nullish-coalescing": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 4
+    }
+  },
+  "packages/agents/cli/src/commands/discover.test.ts": {
+    "no-template-curly-in-string": {
+      "count": 3
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    },
+    "vitest/require-to-throw-message": {
+      "count": 3
+    }
+  },
+  "packages/agents/cli/src/commands/discover.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 1
+    },
+    "complexity": {
+      "count": 4
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 4
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 1
+    },
+    "typescript/no-unnecessary-type-parameters": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 13
+    }
+  },
+  "packages/agents/cli/src/commands/drift.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 1
+    },
+    "complexity": {
+      "count": 1
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 1
+    },
+    "typescript/prefer-nullish-coalescing": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 3
+    }
+  },
+  "packages/agents/cli/src/commands/impact.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 1
+    },
+    "complexity": {
+      "count": 1
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 1
+    },
+    "typescript/prefer-nullish-coalescing": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 4
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    }
+  },
+  "packages/agents/cli/src/commands/llmstxt.ts": {
+    "complexity": {
+      "count": 1
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    }
+  },
+  "packages/agents/cli/src/commands/search.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 1
+    },
+    "complexity": {
+      "count": 1
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 1
+    },
+    "typescript/prefer-nullish-coalescing": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 4
+    }
+  },
+  "packages/agents/cli/src/commands/snapshot.test.ts": {
+    "no-promise-executor-return": {
+      "count": 2
+    },
+    "no-template-curly-in-string": {
+      "count": 3
+    },
+    "typescript/no-deprecated": {
+      "count": 1
+    },
+    "typescript/no-misused-promises": {
+      "count": 3
+    },
+    "typescript/no-unsafe-type-assertion": {
+      "count": 2
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 2
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    },
+    "vitest/require-to-throw-message": {
+      "count": 1
+    }
+  },
+  "packages/agents/cli/src/commands/snapshot.ts": {
+    "complexity": {
+      "count": 2
+    },
+    "max-params": {
+      "count": 1
+    },
+    "no-console": {
+      "count": 1
+    },
+    "no-nested-ternary": {
+      "count": 1
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 2
+    },
+    "typescript/no-unsafe-return": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 10
+    },
+    "unicorn/no-array-sort": {
+      "count": 2
+    }
+  },
+  "packages/agents/cli/src/commands/validate.ts": {
+    "complexity": {
+      "count": 1
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 4
+    }
+  },
+  "packages/agents/cli/src/index.ts": {
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    }
+  },
+  "packages/agents/core/src/audit.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 10
+    },
+    "typescript/no-unnecessary-condition": {
+      "count": 2
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 7
+    },
+    "unicorn/no-array-sort": {
+      "count": 1
+    }
+  },
+  "packages/agents/core/src/contracts.test.ts": {
+    "no-unused-vars": {
+      "count": 1
+    },
+    "unicorn/prefer-structured-clone": {
+      "count": 1
+    }
+  },
+  "packages/agents/core/src/cost.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 3
+    },
+    "no-nested-ternary": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    },
+    "unicorn/no-array-sort": {
+      "count": 1
+    }
+  },
+  "packages/agents/core/src/discovery.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 7
+    },
+    "complexity": {
+      "count": 3
+    },
+    "no-nested-ternary": {
+      "count": 1
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 3
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 7
+    },
+    "typescript/no-unnecessary-condition": {
+      "count": 13
+    },
+    "typescript/prefer-nullish-coalescing": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 7
+    }
+  },
+  "packages/agents/core/src/events.test.ts": {
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 1
+    }
+  },
+  "packages/agents/core/src/events.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 1
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 2
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    },
+    "unicorn/no-array-sort": {
+      "count": 2
+    }
+  },
+  "packages/agents/core/src/impact.ts": {
+    "complexity": {
+      "count": 3
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 2
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 4
+    },
+    "unicorn/no-array-sort": {
+      "count": 2
+    }
+  },
+  "packages/agents/core/src/llmstxt.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 5
+    },
+    "complexity": {
+      "count": 2
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 2
+    },
+    "unicorn/no-array-sort": {
+      "count": 2
+    },
+    "unicorn/no-immediate-mutation": {
+      "count": 1
+    },
+    "unicorn/prefer-single-call": {
+      "count": 3
+    }
+  },
+  "packages/agents/core/src/loader.ts": {
+    "complexity": {
+      "count": 1
+    },
+    "import/no-cycle": {
+      "count": 1
+    },
+    "import/no-namespace": {
+      "count": 1
+    },
+    "max-depth": {
+      "count": 4
+    },
+    "max-params": {
+      "count": 2
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 5
+    },
+    "unicorn/no-array-sort": {
+      "count": 1
+    }
+  },
+  "packages/agents/core/src/mcp-code.ts": {
+    "complexity": {
+      "count": 2
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 5
+    },
+    "unicorn/prefer-top-level-await": {
+      "count": 5
+    }
+  },
+  "packages/agents/core/src/mcp-config.test.ts": {
+    "no-template-curly-in-string": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 4
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 3
+    },
+    "vitest/no-duplicate-hooks": {
+      "count": 1
+    }
+  },
+  "packages/agents/core/src/mcp-config.ts": {
+    "complexity": {
+      "count": 3
+    },
+    "max-params": {
+      "count": 2
+    },
+    "no-nested-ternary": {
+      "count": 1
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 2
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 1
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 6
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 29
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    },
+    "unicorn/no-array-sort": {
+      "count": 5
+    },
+    "unicorn/prefer-top-level-await": {
+      "count": 13
+    }
+  },
+  "packages/agents/core/src/mcp-snapshot.test.ts": {
+    "unicorn/consistent-function-scoping": {
+      "count": 2
+    }
+  },
+  "packages/agents/core/src/mcp-snapshot.ts": {
+    "complexity": {
+      "count": 1
+    },
+    "import/no-cycle": {
+      "count": 1
+    },
+    "max-params": {
+      "count": 1
+    },
+    "no-nested-ternary": {
+      "count": 1
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 1
+    },
+    "typescript/no-base-to-string": {
+      "count": 2
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 1
+    },
+    "unicorn/no-array-sort": {
+      "count": 5
+    },
+    "unicorn/prefer-structured-clone": {
+      "count": 1
+    }
+  },
+  "packages/agents/core/src/resource-graph.test.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 1
+    },
+    "unicorn/no-array-reverse": {
+      "count": 1
+    }
+  },
+  "packages/agents/core/src/resource-graph.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 1
+    },
+    "complexity": {
+      "count": 1
+    },
+    "max-params": {
+      "count": 2
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 2
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 18
+    },
+    "unicorn/no-array-sort": {
+      "count": 12
+    },
+    "unicorn/prefer-array-find": {
+      "count": 1
+    }
+  },
+  "packages/agents/core/src/schemas.ts": {
+    "no-template-curly-in-string": {
+      "count": 1
+    },
+    "typescript/no-deprecated": {
+      "count": 2
+    }
+  },
+  "packages/agents/core/src/skills.test.ts": {
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    }
+  },
+  "packages/agents/core/src/skills.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 2
+    },
+    "complexity": {
+      "count": 2
+    },
+    "max-params": {
+      "count": 1
+    },
+    "no-nested-ternary": {
+      "count": 1
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 2
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 12
+    },
+    "unicorn/no-array-sort": {
+      "count": 3
+    },
+    "unicorn/prefer-top-level-await": {
+      "count": 10
+    }
+  },
+  "packages/agents/core/src/validator.ts": {
+    "complexity": {
+      "count": 1
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 4
+    }
+  },
+  "packages/agents/core/src/visibility.ts": {
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    }
+  },
+  "packages/agents/mcp/src/index.ts": {
+    "no-unused-vars": {
+      "count": 1
+    },
+    "typescript/prefer-nullish-coalescing": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 2
+    },
+    "typescript/use-unknown-in-catch-callback-variable": {
+      "count": 1
+    },
+    "unicorn/prefer-top-level-await": {
+      "count": 1
+    }
+  },
+  "packages/agents/mcp/src/server.ts": {
+    "typescript/no-unnecessary-type-parameters": {
+      "count": 1
+    },
+    "typescript/require-await": {
+      "count": 7
+    }
+  },
+  "packages/agents/mcp/src/tools.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 1
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 8
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 1
+    },
+    "typescript/no-unsafe-assignment": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 5
+    }
+  },
+  "packages/docs/astro/site/src/content.config.ts": {
+    "typescript/no-unsafe-assignment": {
+      "count": 1
+    },
+    "typescript/no-unsafe-call": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/about.ts": {
+    "typescript/strict-boolean-expressions": {
+      "count": 2
+    },
+    "unicorn/prefer-top-level-await": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/access-middleware.ts": {
+    "typescript/no-redundant-type-constituents": {
+      "count": 2
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    },
+    "unicorn/prefer-top-level-await": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/access-report.ts": {
+    "typescript/no-non-null-assertion": {
+      "count": 2
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 5
+    },
+    "unicorn/prefer-top-level-await": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/access.ts": {
+    "no-console": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/apis.ts": {
+    "curly": {
+      "count": 1
+    },
+    "max-params": {
+      "count": 1
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 4
+    },
+    "typescript/prefer-nullish-coalescing": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 4
+    },
+    "unicorn/no-array-sort": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/attention.ts": {
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/audience.ts": {
+    "complexity": {
+      "count": 1
+    },
+    "react-hooks/rules-of-hooks": {
+      "count": 3
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 2
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 3
+    }
+  },
+  "packages/docs/astro/src/catalog-meta.ts": {
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/catalog.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 5
+    },
+    "complexity": {
+      "count": 2
+    },
+    "max-params": {
+      "count": 3
+    },
+    "no-multi-assign": {
+      "count": 1
+    },
+    "no-nested-ternary": {
+      "count": 5
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 2
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 1
+    },
+    "typescript/no-unsafe-argument": {
+      "count": 2
+    },
+    "typescript/no-unsafe-assignment": {
+      "count": 1
+    },
+    "typescript/no-unsafe-return": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 14
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 2
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 3
+    },
+    "unicorn/no-array-sort": {
+      "count": 4
+    }
+  },
+  "packages/docs/astro/src/channels.ts": {
+    "typescript/no-unnecessary-condition": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 2
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 1
+    },
+    "unicorn/no-array-sort": {
+      "count": 2
+    },
+    "unicorn/prefer-top-level-await": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/chat.ts": {
+    "typescript/explicit-module-boundary-types": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/codeowned.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 1
+    },
+    "max-params": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 4
+    }
+  },
+  "packages/docs/astro/src/components.ts": {
+    "typescript/strict-boolean-expressions": {
+      "count": 3
+    },
+    "unicorn/no-array-sort": {
+      "count": 2
+    }
+  },
+  "packages/docs/astro/src/config.ts": {
+    "complexity": {
+      "count": 1
+    },
+    "typescript/no-unsafe-assignment": {
+      "count": 1
+    },
+    "typescript/prefer-nullish-coalescing": {
+      "count": 8
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 16
+    }
+  },
+  "packages/docs/astro/src/content.config.ts": {
+    "typescript/no-deprecated": {
+      "count": 8
+    }
+  },
+  "packages/docs/astro/src/data-models.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 2
+    },
+    "complexity": {
+      "count": 3
+    },
+    "curly": {
+      "count": 1
+    },
+    "max-params": {
+      "count": 2
+    },
+    "no-nested-ternary": {
+      "count": 1
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 4
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 14
+    },
+    "typescript/prefer-nullish-coalescing": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 39
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 4
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 4
+    },
+    "unicorn/no-array-sort": {
+      "count": 2
+    },
+    "unicorn/prefer-array-find": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/design-editor.ts": {
+    "curly": {
+      "count": 3
+    },
+    "max-params": {
+      "count": 1
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "typescript/array-type": {
+      "count": 1
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 1
+    },
+    "typescript/restrict-template-expressions": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 3
+    },
+    "unicorn/prefer-string-replace-all": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/designs.ts": {
+    "max-params": {
+      "count": 1
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 2
+    },
+    "unicorn/no-array-sort": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/dev-signals.ts": {
+    "typescript/explicit-module-boundary-types": {
+      "count": 3
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/directory.ts": {
+    "typescript/no-unsafe-type-assertion": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/domain-sidebar.ts": {
+    "typescript/no-unnecessary-condition": {
+      "count": 4
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 3
+    },
+    "unicorn/no-array-sort": {
+      "count": 3
+    }
+  },
+  "packages/docs/astro/src/domains.ts": {
+    "complexity": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    },
+    "unicorn/no-array-sort": {
+      "count": 4
+    }
+  },
+  "packages/docs/astro/src/env.d.ts": {
+    "typescript/consistent-type-imports": {
+      "count": 11
+    }
+  },
+  "packages/docs/astro/src/event-path.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/event-versions.ts": {
+    "max-params": {
+      "count": 1
+    },
+    "typescript/no-deprecated": {
+      "count": 2
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    },
+    "unicorn/no-array-sort": {
+      "count": 2
+    }
+  },
+  "packages/docs/astro/src/eventcatalog-path.ts": {
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/eventcatalog.ts": {
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/extensions.ts": {
+    "complexity": {
+      "count": 1
+    },
+    "no-unused-vars": {
+      "count": 1
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 2
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 3
+    }
+  },
+  "packages/docs/astro/src/favicon.ts": {
+    "typescript/prefer-nullish-coalescing": {
+      "count": 2
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 2
+    }
+  },
+  "packages/docs/astro/src/flows.ts": {
+    "import/consistent-type-specifier-style": {
+      "count": 6
+    },
+    "max-params": {
+      "count": 2
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 3
+    },
+    "typescript/no-deprecated": {
+      "count": 1
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 2
+    },
+    "typescript/no-unnecessary-condition": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 9
+    }
+  },
+  "packages/docs/astro/src/home-layout.ts": {
+    "array-callback-return": {
+      "count": 1
+    },
+    "typescript/consistent-return": {
+      "count": 1
+    },
+    "typescript/no-unsafe-type-assertion": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 2
+    }
+  },
+  "packages/docs/astro/src/index.ts": {
+    "complexity": {
+      "count": 4
+    },
+    "no-nested-ternary": {
+      "count": 2
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 3
+    },
+    "typescript/no-unnecessary-condition": {
+      "count": 1
+    },
+    "typescript/prefer-nullish-coalescing": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 32
+    }
+  },
+  "packages/docs/astro/src/kinds.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 1
+    },
+    "complexity": {
+      "count": 1
+    },
+    "no-nested-ternary": {
+      "count": 2
+    },
+    "typescript/array-type": {
+      "count": 1
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 1
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 2
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 12
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 1
+    },
+    "unicorn/no-array-sort": {
+      "count": 4
+    }
+  },
+  "packages/docs/astro/src/link-check.ts": {
+    "complexity": {
+      "count": 1
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 1
+    },
+    "unicorn/no-array-sort": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/links.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 1
+    },
+    "no-nested-ternary": {
+      "count": 1
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 1
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 2
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/llms.ts": {
+    "complexity": {
+      "count": 1
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 12
+    }
+  },
+  "packages/docs/astro/src/loader.ts": {
+    "typescript/explicit-module-boundary-types": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/mcp-servers.ts": {
+    "complexity": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 3
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 1
+    },
+    "unicorn/no-array-sort": {
+      "count": 1
+    },
+    "unicorn/prefer-top-level-await": {
+      "count": 10
+    }
+  },
+  "packages/docs/astro/src/mcp.ts": {
+    "complexity": {
+      "count": 1
+    },
+    "no-nested-ternary": {
+      "count": 2
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 3
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 18
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 3
+    },
+    "unicorn/prefer-array-find": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/mdx.ts": {
+    "complexity": {
+      "count": 1
+    },
+    "max-params": {
+      "count": 2
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 5
+    },
+    "typescript/no-unnecessary-condition": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 5
+    }
+  },
+  "packages/docs/astro/src/mdx/Map.astro": {
+    "no-undef": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/mdx/Owner.astro": {
+    "no-undef": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/mdx/Schema.astro": {
+    "no-undef": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/mdx/Storm.astro": {
+    "no-undef": {
+      "count": 1
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 7
+    },
+    "unicorn/no-negation-in-equality-check": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/mdx/Term.astro": {
+    "no-undef": {
+      "count": 2
+    }
+  },
+  "packages/docs/astro/src/mermaid.ts": {
+    "typescript/explicit-module-boundary-types": {
+      "count": 1
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/model.ts": {
+    "max-params": {
+      "count": 3
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 3
+    },
+    "typescript/no-unnecessary-condition": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 3
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/nav.ts": {
+    "max-params": {
+      "count": 1
+    },
+    "no-nested-ternary": {
+      "count": 1
+    },
+    "typescript/no-unsafe-type-assertion": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 1
+    },
+    "unicorn/no-array-sort": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/overrides/DocFooter.astro": {
+    "no-undef": {
+      "count": 3
+    }
+  },
+  "packages/docs/astro/src/overrides/Header.astro": {
+    "no-undef": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/overrides/MarkdownContent.astro": {
+    "no-undef": {
+      "count": 2
+    }
+  },
+  "packages/docs/astro/src/overrides/PageTitle.astro": {
+    "no-nested-ternary": {
+      "count": 2
+    },
+    "no-undef": {
+      "count": 4
+    }
+  },
+  "packages/docs/astro/src/overrides/Sidebar.astro": {
+    "no-undef": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/overrides/ThemeSelect.astro": {
+    "no-undef": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/overrides/TopNav.astro": {
+    "no-undef": {
+      "count": 2
+    }
+  },
+  "packages/docs/astro/src/overrides/ViewAs.astro": {
+    "no-undef": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/own-pages.ts": {
+    "typescript/no-non-null-assertion": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 2
+    },
+    "unicorn/no-array-sort": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/owners.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 4
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 5
+    },
+    "unicorn/no-array-sort": {
+      "count": 5
+    }
+  },
+  "packages/docs/astro/src/page-models.ts": {
+    "complexity": {
+      "count": 3
+    },
+    "max-params": {
+      "count": 4
+    },
+    "no-nested-ternary": {
+      "count": 2
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 2
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 10
+    },
+    "typescript/no-deprecated": {
+      "count": 1
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 1
+    },
+    "typescript/prefer-nullish-coalescing": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 13
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 1
+    },
+    "unicorn/no-array-sort": {
+      "count": 4
+    },
+    "unicorn/prefer-top-level-await": {
+      "count": 3
+    }
+  },
+  "packages/docs/astro/src/pages/api-reference.astro": {
+    "anti-slop/require-readable-spacing": {
+      "count": 1
+    },
+    "no-empty": {
+      "count": 1
+    },
+    "no-undef": {
+      "count": 1
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/pages/api-spec.json.ts": {
+    "typescript/explicit-module-boundary-types": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/pages/api.astro": {
+    "no-undef": {
+      "count": 3
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/pages/architecture.astro": {
+    "typescript/no-non-null-assertion": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/pages/channel.astro": {
+    "no-undef": {
+      "count": 2
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/pages/chat.ts": {
+    "no-nested-ternary": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/pages/component.astro": {
+    "no-undef": {
+      "count": 2
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/pages/component.md.ts": {
+    "typescript/explicit-module-boundary-types": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/pages/data-model.md.ts": {
+    "typescript/explicit-module-boundary-types": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/pages/data-product.astro": {
+    "no-undef": {
+      "count": 2
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/pages/design-edit.astro": {
+    "no-undef": {
+      "count": 3
+    }
+  },
+  "packages/docs/astro/src/pages/design-edit.json.ts": {
+    "complexity": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/pages/design.astro": {
+    "no-undef": {
+      "count": 1
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/pages/domain.astro": {
+    "no-undef": {
+      "count": 2
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/pages/entity.astro": {
+    "no-undef": {
+      "count": 2
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/pages/event-schema.json.ts": {
+    "typescript/explicit-module-boundary-types": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/pages/event-version-schema.json.ts": {
+    "typescript/explicit-module-boundary-types": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/pages/event-version.astro": {
+    "no-undef": {
+      "count": 2
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/pages/event.astro": {
+    "no-undef": {
+      "count": 6
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/pages/event.md.ts": {
+    "typescript/explicit-module-boundary-types": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/pages/flow.astro": {
+    "no-undef": {
+      "count": 1
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/pages/index.astro": {
+    "no-undef": {
+      "count": 2
+    }
+  },
+  "packages/docs/astro/src/pages/kind.astro": {
+    "no-undef": {
+      "count": 4
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/pages/llms-full.txt.ts": {
+    "unicorn/no-array-sort": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/pages/llms.txt.ts": {
+    "typescript/no-unsafe-argument": {
+      "count": 1
+    },
+    "typescript/no-unsafe-call": {
+      "count": 1
+    },
+    "typescript/no-unsafe-member-access": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/pages/mcp-server.astro": {
+    "no-undef": {
+      "count": 2
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/pages/mcp.ts": {
+    "no-console": {
+      "count": 1
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/pages/no-access.astro": {
+    "no-undef": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/pages/own-markdown.astro": {
+    "no-undef": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/pages/owner.astro": {
+    "no-undef": {
+      "count": 1
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/pages/search.astro": {
+    "no-undef": {
+      "count": 3
+    }
+  },
+  "packages/docs/astro/src/pages/service.astro": {
+    "no-undef": {
+      "count": 2
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/pages/service.md.ts": {
+    "typescript/explicit-module-boundary-types": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/pages/spec-file.ts": {
+    "typescript/explicit-module-boundary-types": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/pages/spec.astro": {
+    "no-undef": {
+      "count": 3
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/pages/system.astro": {
+    "no-undef": {
+      "count": 2
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/paths.ts": {
+    "typescript/explicit-module-boundary-types": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/react-integration.ts": {
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/recent.ts": {
+    "max-params": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    },
+    "unicorn/no-array-sort": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/remark-title.ts": {
+    "typescript/explicit-module-boundary-types": {
+      "count": 2
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 3
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/resource-status.ts": {
+    "typescript/prefer-nullish-coalescing": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 6
+    }
+  },
+  "packages/docs/astro/src/route-middleware.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 1
+    },
+    "complexity": {
+      "count": 1
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "typescript/no-unsafe-assignment": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/routes.ts": {
+    "complexity": {
+      "count": 1
+    },
+    "max-params": {
+      "count": 1
+    },
+    "typescript/no-unsafe-type-assertion": {
+      "count": 1
+    },
+    "typescript/prefer-nullish-coalescing": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 7
+    }
+  },
+  "packages/docs/astro/src/shell.ts": {
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/sidebar.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 1
+    },
+    "complexity": {
+      "count": 1
+    },
+    "no-nested-ternary": {
+      "count": 1
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 2
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 2
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 2
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 1
+    },
+    "unicorn/no-array-sort": {
+      "count": 6
+    }
+  },
+  "packages/docs/astro/src/skills.ts": {
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    },
+    "unicorn/no-array-sort": {
+      "count": 3
+    },
+    "unicorn/prefer-top-level-await": {
+      "count": 6
+    }
+  },
+  "packages/docs/astro/src/specifications.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 1
+    },
+    "complexity": {
+      "count": 1
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 2
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 1
+    },
+    "typescript/no-unsafe-assignment": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 2
+    },
+    "unicorn/no-array-sort": {
+      "count": 2
+    }
+  },
+  "packages/docs/astro/src/storm-stages.ts": {
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/systems.ts": {
+    "complexity": {
+      "count": 1
+    },
+    "unicorn/no-array-sort": {
+      "count": 4
+    }
+  },
+  "packages/docs/astro/src/toc.ts": {
+    "typescript/no-unsafe-type-assertion": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/twins.ts": {
+    "typescript/strict-boolean-expressions": {
+      "count": 17
+    }
+  },
+  "packages/docs/astro/src/ui/components/Aside.stories.tsx": {
+    "jsx-a11y/anchor-is-valid": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/ui/components/Aside.tsx": {
+    "typescript/explicit-module-boundary-types": {
+      "count": 2
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/ui/components/CatalogExplorer.tsx": {
+    "complexity": {
+      "count": 1
+    },
+    "jsx-a11y/prefer-tag-over-role": {
+      "count": 1
+    },
+    "no-nested-ternary": {
+      "count": 1
+    },
+    "react-hooks/exhaustive-deps": {
+      "count": 1
+    },
+    "react/set-state-in-effect": {
+      "count": 1
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 2
+    },
+    "typescript/prefer-nullish-coalescing": {
+      "count": 2
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 8
+    }
+  },
+  "packages/docs/astro/src/ui/components/Code.tsx": {
+    "jsx-a11y/no-noninteractive-tabindex": {
+      "count": 1
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 2
+    }
+  },
+  "packages/docs/astro/src/ui/components/CountCards.tsx": {
+    "typescript/explicit-module-boundary-types": {
+      "count": 2
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 2
+    }
+  },
+  "packages/docs/astro/src/ui/components/DataContract.tsx": {
+    "complexity": {
+      "count": 1
+    },
+    "jsx-a11y/prefer-tag-over-role": {
+      "count": 1
+    },
+    "react/no-array-index-key": {
+      "count": 1
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 2
+    },
+    "typescript/prefer-nullish-coalescing": {
+      "count": 4
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 22
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    },
+    "unicorn/prefer-array-some": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/ui/components/DeliveryFacts.stories.tsx": {
+    "jsx-a11y/prefer-tag-over-role": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/ui/components/DeliveryFacts.tsx": {
+    "complexity": {
+      "count": 1
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 2
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 8
+    }
+  },
+  "packages/docs/astro/src/ui/components/DeliveryPath.tsx": {
+    "jsx-a11y/prefer-tag-over-role": {
+      "count": 1
+    },
+    "react/no-array-index-key": {
+      "count": 1
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 2
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 5
+    }
+  },
+  "packages/docs/astro/src/ui/components/DocLinks.tsx": {
+    "jsx-a11y/prefer-tag-over-role": {
+      "count": 1
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 2
+    }
+  },
+  "packages/docs/astro/src/ui/components/DocList.stories.tsx": {
+    "jsx-a11y/prefer-tag-over-role": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/ui/components/DocList.tsx": {
+    "typescript/explicit-module-boundary-types": {
+      "count": 2
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 2
+    }
+  },
+  "packages/docs/astro/src/ui/components/EventCatalogDiagram.tsx": {
+    "react/iframe-missing-sandbox": {
+      "count": 1
+    },
+    "typescript/consistent-return": {
+      "count": 1
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 2
+    }
+  },
+  "packages/docs/astro/src/ui/components/EventVersions.tsx": {
+    "jsx-a11y/prefer-tag-over-role": {
+      "count": 1
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 2
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 3
+    }
+  },
+  "packages/docs/astro/src/ui/components/Evidence.tsx": {
+    "typescript/explicit-module-boundary-types": {
+      "count": 2
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 3
+    }
+  },
+  "packages/docs/astro/src/ui/components/Examples.tsx": {
+    "jsx-a11y/prefer-tag-over-role": {
+      "count": 1
+    },
+    "react/no-array-index-key": {
+      "count": 1
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 2
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 2
+    }
+  },
+  "packages/docs/astro/src/ui/components/FlowStrip.tsx": {
+    "react/no-array-index-key": {
+      "count": 1
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 2
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 3
+    }
+  },
+  "packages/docs/astro/src/ui/components/Graph.tsx": {
+    "jsx-a11y/prefer-tag-over-role": {
+      "count": 1
+    },
+    "react/set-state-in-effect": {
+      "count": 1
+    },
+    "typescript/consistent-return": {
+      "count": 2
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 2
+    },
+    "typescript/no-unnecessary-condition": {
+      "count": 2
+    },
+    "typescript/no-unsafe-type-assertion": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/ui/components/Icon.stories.tsx": {
+    "typescript/no-unsafe-type-assertion": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/ui/components/Icon.tsx": {
+    "typescript/explicit-module-boundary-types": {
+      "count": 2
+    }
+  },
+  "packages/docs/astro/src/ui/components/IconTile.tsx": {
+    "typescript/explicit-module-boundary-types": {
+      "count": 2
+    }
+  },
+  "packages/docs/astro/src/ui/components/PagedTable.tsx": {
+    "no-nested-ternary": {
+      "count": 1
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 3
+    }
+  },
+  "packages/docs/astro/src/ui/components/ProvenanceStrip.tsx": {
+    "typescript/explicit-module-boundary-types": {
+      "count": 2
+    }
+  },
+  "packages/docs/astro/src/ui/components/ResourceLinks.tsx": {
+    "jsx-a11y/prefer-tag-over-role": {
+      "count": 1
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 2
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/ui/components/RuntimeEvidence.tsx": {
+    "jsx-a11y/prefer-tag-over-role": {
+      "count": 1
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 2
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 14
+    },
+    "unicorn/no-array-sort": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/ui/components/SchemaTree.tsx": {
+    "complexity": {
+      "count": 1
+    },
+    "jsx-a11y/prefer-tag-over-role": {
+      "count": 2
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 3
+    },
+    "typescript/prefer-nullish-coalescing": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 3
+    }
+  },
+  "packages/docs/astro/src/ui/components/SectionHeading.tsx": {
+    "eqeqeq": {
+      "count": 1
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 2
+    }
+  },
+  "packages/docs/astro/src/ui/components/SourceLinks.tsx": {
+    "typescript/explicit-module-boundary-types": {
+      "count": 2
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 2
+    }
+  },
+  "packages/docs/astro/src/ui/components/Stats.tsx": {
+    "jsx-a11y/prefer-tag-over-role": {
+      "count": 1
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 2
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 2
+    }
+  },
+  "packages/docs/astro/src/ui/components/StatusBanners.tsx": {
+    "typescript/explicit-module-boundary-types": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 2
+    }
+  },
+  "packages/docs/astro/src/ui/components/Storm.tsx": {
+    "complexity": {
+      "count": 1
+    },
+    "jsx-a11y/no-noninteractive-tabindex": {
+      "count": 1
+    },
+    "no-nested-ternary": {
+      "count": 1
+    },
+    "react/no-array-index-key": {
+      "count": 5
+    },
+    "react/no-object-type-as-default-prop": {
+      "count": 1
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 8
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 13
+    }
+  },
+  "packages/docs/astro/src/ui/components/TransportFacts.stories.tsx": {
+    "jsx-a11y/prefer-tag-over-role": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/ui/components/TransportFacts.tsx": {
+    "react/no-array-index-key": {
+      "count": 1
+    },
+    "react/no-object-type-as-default-prop": {
+      "count": 1
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 2
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 3
+    }
+  },
+  "packages/docs/astro/src/ui/components/Visualiser.tsx": {
+    "complexity": {
+      "count": 1
+    },
+    "jsx-a11y/no-noninteractive-element-interactions": {
+      "count": 1
+    },
+    "jsx-a11y/prefer-tag-over-role": {
+      "count": 2
+    },
+    "max-params": {
+      "count": 1
+    },
+    "react/set-state-in-effect": {
+      "count": 1
+    },
+    "typescript/consistent-return": {
+      "count": 4
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 1
+    },
+    "typescript/prefer-nullish-coalescing": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 5
+    }
+  },
+  "packages/docs/astro/src/ui/components/catalog-explorer-model.ts": {
+    "typescript/strict-boolean-expressions": {
+      "count": 5
+    },
+    "unicorn/no-array-sort": {
+      "count": 3
+    }
+  },
+  "packages/docs/astro/src/ui/components/catalog-explorer.fixture.ts": {
+    "typescript/no-non-null-assertion": {
+      "count": 2
+    }
+  },
+  "packages/docs/astro/src/ui/lib/docs.ts": {
+    "typescript/no-unnecessary-condition": {
+      "count": 2
+    },
+    "typescript/prefer-nullish-coalescing": {
+      "count": 2
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 5
+    }
+  },
+  "packages/docs/astro/src/ui/lib/field.ts": {
+    "typescript/explicit-module-boundary-types": {
+      "count": 2
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/ui/lib/frame-sync.ts": {
+    "curly": {
+      "count": 1
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/ui/lib/paging.ts": {
+    "typescript/no-non-null-assertion": {
+      "count": 1
+    },
+    "unicorn/no-array-sort": {
+      "count": 2
+    }
+  },
+  "packages/docs/astro/src/ui/lib/schema-tree.ts": {
+    "complexity": {
+      "count": 2
+    },
+    "max-params": {
+      "count": 2
+    },
+    "no-nested-ternary": {
+      "count": 1
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 2
+    },
+    "unicorn/prefer-top-level-await": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/ui/lib/visualiser.ts": {
+    "complexity": {
+      "count": 1
+    },
+    "max-params": {
+      "count": 1
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 2
+    },
+    "typescript/prefer-nullish-coalescing": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 2
+    }
+  },
+  "packages/docs/astro/src/ui/overrides/DocFooterChrome.tsx": {
+    "jsx-a11y/prefer-tag-over-role": {
+      "count": 1
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 2
+    },
+    "typescript/prefer-nullish-coalescing": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 4
+    }
+  },
+  "packages/docs/astro/src/ui/overrides/PageTitleChrome.tsx": {
+    "complexity": {
+      "count": 2
+    },
+    "jsx-a11y/prefer-tag-over-role": {
+      "count": 2
+    },
+    "no-nested-ternary": {
+      "count": 1
+    },
+    "react/no-array-index-key": {
+      "count": 2
+    },
+    "react/no-object-type-as-default-prop": {
+      "count": 2
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 2
+    },
+    "typescript/no-misused-promises": {
+      "count": 2
+    },
+    "typescript/no-unnecessary-condition": {
+      "count": 5
+    },
+    "typescript/prefer-nullish-coalescing": {
+      "count": 3
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 17
+    }
+  },
+  "packages/docs/astro/src/ui/overrides/SectionRail.tsx": {
+    "typescript/explicit-module-boundary-types": {
+      "count": 2
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/ui/overrides/SidebarControls.tsx": {
+    "jsx-a11y/prefer-tag-over-role": {
+      "count": 1
+    },
+    "react/set-state-in-effect": {
+      "count": 1
+    },
+    "typescript/consistent-return": {
+      "count": 1
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 2
+    }
+  },
+  "packages/docs/astro/src/ui/overrides/SidebarSection.tsx": {
+    "typescript/explicit-module-boundary-types": {
+      "count": 2
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/ui/overrides/SiteChat.tsx": {
+    "typescript/explicit-module-boundary-types": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/ui/overrides/SiteSearch.tsx": {
+    "jsx-a11y/prefer-tag-over-role": {
+      "count": 1
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/ui/overrides/ThemeSelect.tsx": {
+    "typescript/explicit-module-boundary-types": {
+      "count": 2
+    }
+  },
+  "packages/docs/astro/src/ui/pages/ApiPage.tsx": {
+    "complexity": {
+      "count": 1
+    },
+    "jsx-a11y/prefer-tag-over-role": {
+      "count": 1
+    },
+    "max-params": {
+      "count": 1
+    },
+    "react-hooks/exhaustive-deps": {
+      "count": 1
+    },
+    "react/iframe-missing-sandbox": {
+      "count": 1
+    },
+    "typescript/consistent-return": {
+      "count": 1
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 2
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 2
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/ui/pages/ApisPage.tsx": {
+    "typescript/explicit-module-boundary-types": {
+      "count": 2
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/ui/pages/ArchitecturePage.tsx": {
+    "no-useless-assignment": {
+      "count": 1
+    },
+    "react/iframe-missing-sandbox": {
+      "count": 1
+    },
+    "react/set-state-in-effect": {
+      "count": 1
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 2
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/ui/pages/CatalogPage.tsx": {
+    "jsx-a11y/prefer-tag-over-role": {
+      "count": 2
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 2
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/ui/pages/ChannelPage.tsx": {
+    "jsx-a11y/prefer-tag-over-role": {
+      "count": 1
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 2
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 2
+    }
+  },
+  "packages/docs/astro/src/ui/pages/ChannelsPage.tsx": {
+    "typescript/explicit-module-boundary-types": {
+      "count": 2
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/ui/pages/ComponentPage.tsx": {
+    "jsx-a11y/prefer-tag-over-role": {
+      "count": 1
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 2
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 6
+    }
+  },
+  "packages/docs/astro/src/ui/pages/ComponentsPage.tsx": {
+    "typescript/explicit-module-boundary-types": {
+      "count": 2
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/ui/pages/DataModelPage.tsx": {
+    "complexity": {
+      "count": 2
+    },
+    "jsx-a11y/prefer-tag-over-role": {
+      "count": 4
+    },
+    "no-nested-ternary": {
+      "count": 2
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 2
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 9
+    },
+    "typescript/prefer-nullish-coalescing": {
+      "count": 2
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 18
+    }
+  },
+  "packages/docs/astro/src/ui/pages/DataModelsPage.tsx": {
+    "typescript/explicit-module-boundary-types": {
+      "count": 3
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 2
+    }
+  },
+  "packages/docs/astro/src/ui/pages/DataProductPage.tsx": {
+    "jsx-a11y/prefer-tag-over-role": {
+      "count": 1
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 2
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 6
+    }
+  },
+  "packages/docs/astro/src/ui/pages/DataProductsPage.tsx": {
+    "typescript/explicit-module-boundary-types": {
+      "count": 2
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/ui/pages/DesignPage.tsx": {
+    "jsx-a11y/prefer-tag-over-role": {
+      "count": 4
+    },
+    "react/no-object-type-as-default-prop": {
+      "count": 1
+    },
+    "typescript/consistent-return": {
+      "count": 1
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 2
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 8
+    }
+  },
+  "packages/docs/astro/src/ui/pages/DesignStudio.tsx": {
+    "anti-slop/require-readable-spacing": {
+      "count": 1
+    },
+    "complexity": {
+      "count": 2
+    },
+    "jsx-a11y/prefer-tag-over-role": {
+      "count": 1
+    },
+    "react/refs": {
+      "count": 3
+    },
+    "typescript/consistent-return": {
+      "count": 3
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 2
+    },
+    "typescript/no-unnecessary-condition": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 4
+    }
+  },
+  "packages/docs/astro/src/ui/pages/DesignsPage.tsx": {
+    "typescript/explicit-module-boundary-types": {
+      "count": 2
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/ui/pages/DomainPage.tsx": {
+    "complexity": {
+      "count": 1
+    },
+    "jsx-a11y/prefer-tag-over-role": {
+      "count": 1
+    },
+    "no-nested-ternary": {
+      "count": 1
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 2
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 4
+    }
+  },
+  "packages/docs/astro/src/ui/pages/DomainsPage.tsx": {
+    "typescript/explicit-module-boundary-types": {
+      "count": 2
+    }
+  },
+  "packages/docs/astro/src/ui/pages/EntitiesPage.tsx": {
+    "typescript/explicit-module-boundary-types": {
+      "count": 2
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 2
+    }
+  },
+  "packages/docs/astro/src/ui/pages/EntityPage.tsx": {
+    "complexity": {
+      "count": 1
+    },
+    "jsx-a11y/prefer-tag-over-role": {
+      "count": 3
+    },
+    "react/no-object-type-as-default-prop": {
+      "count": 1
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 2
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 8
+    }
+  },
+  "packages/docs/astro/src/ui/pages/EventPage.tsx": {
+    "complexity": {
+      "count": 1
+    },
+    "jsx-a11y/prefer-tag-over-role": {
+      "count": 3
+    },
+    "react/no-array-index-key": {
+      "count": 1
+    },
+    "react/no-object-type-as-default-prop": {
+      "count": 2
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 2
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 1
+    },
+    "typescript/prefer-nullish-coalescing": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 7
+    }
+  },
+  "packages/docs/astro/src/ui/pages/EventVersionPage.tsx": {
+    "jsx-a11y/prefer-tag-over-role": {
+      "count": 1
+    },
+    "no-nested-ternary": {
+      "count": 1
+    },
+    "react/no-object-type-as-default-prop": {
+      "count": 1
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 2
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/ui/pages/FieldsPage.stories.tsx": {
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/ui/pages/FieldsPage.tsx": {
+    "jsx-a11y/prefer-tag-over-role": {
+      "count": 2
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 2
+    },
+    "typescript/prefer-nullish-coalescing": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 4
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/ui/pages/FlowPage.tsx": {
+    "complexity": {
+      "count": 2
+    },
+    "jsx-a11y/prefer-tag-over-role": {
+      "count": 5
+    },
+    "react/no-object-type-as-default-prop": {
+      "count": 1
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 2
+    },
+    "typescript/prefer-nullish-coalescing": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 12
+    }
+  },
+  "packages/docs/astro/src/ui/pages/FlowsPage.tsx": {
+    "jsx-a11y/prefer-tag-over-role": {
+      "count": 1
+    },
+    "react/no-object-type-as-default-prop": {
+      "count": 1
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 2
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/ui/pages/GlossaryPage.tsx": {
+    "jsx-a11y/prefer-tag-over-role": {
+      "count": 1
+    },
+    "react/no-array-index-key": {
+      "count": 1
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 2
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 4
+    }
+  },
+  "packages/docs/astro/src/ui/pages/HomeBlock.tsx": {
+    "complexity": {
+      "count": 1
+    },
+    "jsx-a11y/control-has-associated-label": {
+      "count": 1
+    },
+    "jsx-a11y/prefer-tag-over-role": {
+      "count": 3
+    },
+    "no-nested-ternary": {
+      "count": 1
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "typescript/consistent-return": {
+      "count": 1
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 3
+    },
+    "typescript/no-unsafe-type-assertion": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/ui/pages/HomePage.stories.tsx": {
+    "typescript/no-non-null-assertion": {
+      "count": 5
+    },
+    "typescript/no-unsafe-type-assertion": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/ui/pages/HomePage.tsx": {
+    "typescript/explicit-module-boundary-types": {
+      "count": 2
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/ui/pages/KindIndexPage.stories.tsx": {
+    "max-params": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/ui/pages/KindIndexPage.tsx": {
+    "curly": {
+      "count": 1
+    },
+    "jsx-a11y/prefer-tag-over-role": {
+      "count": 2
+    },
+    "typescript/array-type": {
+      "count": 1
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 2
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 5
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/ui/pages/McpServerPage.tsx": {
+    "complexity": {
+      "count": 1
+    },
+    "jsx-a11y/prefer-tag-over-role": {
+      "count": 1
+    },
+    "react/no-array-index-key": {
+      "count": 1
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 2
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 2
+    }
+  },
+  "packages/docs/astro/src/ui/pages/McpServersPage.tsx": {
+    "typescript/explicit-module-boundary-types": {
+      "count": 2
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/ui/pages/NewDesign.tsx": {
+    "typescript/explicit-module-boundary-types": {
+      "count": 2
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 4
+    }
+  },
+  "packages/docs/astro/src/ui/pages/OwnerPage.tsx": {
+    "typescript/explicit-module-boundary-types": {
+      "count": 2
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 10
+    }
+  },
+  "packages/docs/astro/src/ui/pages/OwnersPage.tsx": {
+    "typescript/explicit-module-boundary-types": {
+      "count": 2
+    }
+  },
+  "packages/docs/astro/src/ui/pages/RetirementsPage.tsx": {
+    "jsx-a11y/prefer-tag-over-role": {
+      "count": 1
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 3
+    }
+  },
+  "packages/docs/astro/src/ui/pages/SchemasPage.tsx": {
+    "jsx-a11y/prefer-tag-over-role": {
+      "count": 2
+    },
+    "no-nested-ternary": {
+      "count": 1
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 2
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/ui/pages/SearchPage.tsx": {
+    "jsx-a11y/prefer-tag-over-role": {
+      "count": 1
+    },
+    "react/no-array-index-key": {
+      "count": 1
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 1
+    },
+    "unicorn/no-array-sort": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/ui/pages/ServicePage.tsx": {
+    "complexity": {
+      "count": 1
+    },
+    "jsx-a11y/prefer-tag-over-role": {
+      "count": 3
+    },
+    "react/no-object-type-as-default-prop": {
+      "count": 2
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 2
+    },
+    "typescript/prefer-nullish-coalescing": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 5
+    }
+  },
+  "packages/docs/astro/src/ui/pages/ServicesPage.stories.tsx": {
+    "typescript/no-non-null-assertion": {
+      "count": 1
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 2
+    }
+  },
+  "packages/docs/astro/src/ui/pages/ServicesPage.tsx": {
+    "jsx-a11y/prefer-tag-over-role": {
+      "count": 1
+    },
+    "react/set-state-in-effect": {
+      "count": 1
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 2
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 3
+    }
+  },
+  "packages/docs/astro/src/ui/pages/SkillsPage.tsx": {
+    "jsx-a11y/prefer-tag-over-role": {
+      "count": 2
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 2
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 4
+    }
+  },
+  "packages/docs/astro/src/ui/pages/SpecificationPage.tsx": {
+    "typescript/explicit-module-boundary-types": {
+      "count": 2
+    }
+  },
+  "packages/docs/astro/src/ui/pages/SpecificationsPage.tsx": {
+    "typescript/explicit-module-boundary-types": {
+      "count": 2
+    }
+  },
+  "packages/docs/astro/src/ui/pages/SystemPage.tsx": {
+    "jsx-a11y/prefer-tag-over-role": {
+      "count": 1
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 2
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/ui/pages/SystemsPage.tsx": {
+    "typescript/explicit-module-boundary-types": {
+      "count": 2
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/view.ts": {
+    "complexity": {
+      "count": 1
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 3
+    },
+    "unicorn/no-array-sort": {
+      "count": 2
+    }
+  },
+  "packages/docs/astro/src/visualiser.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 1
+    },
+    "complexity": {
+      "count": 2
+    },
+    "no-nested-ternary": {
+      "count": 1
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 2
+    },
+    "typescript/no-unnecessary-condition": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 13
+    },
+    "unicorn/no-array-sort": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/src/wiki-refs.ts": {
+    "typescript/consistent-return": {
+      "count": 1
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 1
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 4
+    },
+    "typescript/no-unnecessary-condition": {
+      "count": 1
+    },
+    "typescript/no-unsafe-type-assertion": {
+      "count": 1
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 1
+    },
+    "unicorn/prefer-array-find": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/test/authoring.test.ts": {
+    "max-params": {
+      "count": 1
+    },
+    "typescript/no-unsafe-type-assertion": {
+      "count": 1
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/test/catalog-snapshot.test.ts": {
+    "unicorn/no-array-sort": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/test/catalog.test.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 3
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 4
+    },
+    "unicorn/no-array-sort": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/test/component-catalog.test.ts": {
+    "no-script-url": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 2
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/test/components.test.ts": {
+    "unicorn/consistent-function-scoping": {
+      "count": 4
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/test/data-models.test.ts": {
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/test/domain-sidebar.test.ts": {
+    "max-params": {
+      "count": 1
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/test/event-path.test.ts": {
+    "max-params": {
+      "count": 1
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/test/event-versions.test.ts": {
+    "max-params": {
+      "count": 1
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/test/eventcatalog-path.test.ts": {
+    "no-script-url": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/test/extensions.test.ts": {
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/test/favicon.test.ts": {
+    "no-unused-vars": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/test/flows.test.ts": {
+    "max-params": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/test/graph.test.ts": {
+    "no-promise-executor-return": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/test/home-layout.test.ts": {
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 2
+    }
+  },
+  "packages/docs/astro/test/interactions.test.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 1
+    },
+    "react/no-children-prop": {
+      "count": 2
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 14
+    }
+  },
+  "packages/docs/astro/test/links.test.ts": {
+    "unicorn/consistent-function-scoping": {
+      "count": 2
+    }
+  },
+  "packages/docs/astro/test/llms.test.ts": {
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/test/loader.test.ts": {
+    "typescript/no-unsafe-type-assertion": {
+      "count": 2
+    }
+  },
+  "packages/docs/astro/test/map-height.test.ts": {
+    "unicorn/no-array-callback-reference": {
+      "count": 3
+    }
+  },
+  "packages/docs/astro/test/mcp-route.test.ts": {
+    "max-params": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/test/mcp.test.ts": {
+    "typescript/no-unnecessary-condition": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/test/mermaid.test.ts": {
+    "typescript/no-deprecated": {
+      "count": 2
+    }
+  },
+  "packages/docs/astro/test/nav.test.ts": {
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 2
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/test/owners.test.ts": {
+    "max-params": {
+      "count": 1
+    },
+    "no-script-url": {
+      "count": 1
+    },
+    "typescript/no-unsafe-type-assertion": {
+      "count": 1
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/test/paging.test.ts": {
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/test/react-integration.test.ts": {
+    "no-unused-vars": {
+      "count": 1
+    },
+    "typescript/no-floating-promises": {
+      "count": 1
+    },
+    "typescript/no-unsafe-type-assertion": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/test/readable-pinch.test.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/test/recent.test.ts": {
+    "typescript/no-unsafe-type-assertion": {
+      "count": 3
+    }
+  },
+  "packages/docs/astro/test/routes.test.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 1
+    },
+    "typescript/no-floating-promises": {
+      "count": 1
+    },
+    "typescript/no-unsafe-type-assertion": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/test/service-page.test.ts": {
+    "no-script-url": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/test/sidebar.test.ts": {
+    "max-params": {
+      "count": 1
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 5
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/test/stories.test.ts": {
+    "typescript/no-unsafe-type-assertion": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/test/theme-select.test.ts": {
+    "typescript/no-deprecated": {
+      "count": 2
+    }
+  },
+  "packages/docs/astro/test/twins.test.ts": {
+    "typescript/no-unsafe-type-assertion": {
+      "count": 1
+    }
+  },
+  "packages/docs/astro/test/visualiser.test.ts": {
+    "complexity": {
+      "count": 1
+    },
+    "max-params": {
+      "count": 2
+    },
+    "typescript/no-unsafe-type-assertion": {
+      "count": 3
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 3
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 6
+    },
+    "unicorn/no-array-sort": {
+      "count": 2
+    }
+  },
+  "packages/docs/astro/test/wiki-refs.test.ts": {
+    "typescript/no-deprecated": {
+      "count": 2
+    }
+  },
+  "packages/docs/chatbot/src/index.ts": {
+    "typescript/explicit-module-boundary-types": {
+      "count": 1
+    },
+    "typescript/no-deprecated": {
+      "count": 4
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 1
+    },
+    "typescript/require-await": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 3
+    },
+    "unicorn/no-array-sort": {
+      "count": 2
+    },
+    "unicorn/no-instanceof-builtins": {
+      "count": 1
+    }
+  },
+  "packages/docs/chatbot/src/react/ChatPanel.tsx": {
+    "complexity": {
+      "count": 2
+    },
+    "import/no-namespace": {
+      "count": 1
+    },
+    "no-nested-ternary": {
+      "count": 2
+    },
+    "react/jsx-no-constructed-context-values": {
+      "count": 1
+    },
+    "react/no-array-index-key": {
+      "count": 1
+    },
+    "react/no-object-type-as-default-prop": {
+      "count": 4
+    },
+    "react/no-unstable-nested-components": {
+      "count": 1
+    },
+    "react/set-state-in-effect": {
+      "count": 1
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 13
+    },
+    "typescript/no-misused-promises": {
+      "count": 1
+    },
+    "typescript/no-unsafe-return": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 2
+    },
+    "unicorn/prefer-array-find": {
+      "count": 1
+    }
+  },
+  "packages/docs/chatbot/src/react/customize.tsx": {
+    "typescript/no-unsafe-type-assertion": {
+      "count": 1
+    }
+  },
+  "packages/docs/chatbot/test/panel.test.tsx": {
+    "typescript/no-base-to-string": {
+      "count": 1
+    },
+    "typescript/no-unsafe-call": {
+      "count": 1
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    }
+  },
+  "packages/docs/core/src/about.ts": {
+    "typescript/no-non-null-assertion": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 5
+    },
+    "unicorn/no-array-sort": {
+      "count": 2
+    }
+  },
+  "packages/docs/core/src/check.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 2
+    },
+    "complexity": {
+      "count": 1
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    }
+  },
+  "packages/docs/core/src/design-model.ts": {
+    "complexity": {
+      "count": 3
+    },
+    "max-params": {
+      "count": 1
+    },
+    "no-nested-ternary": {
+      "count": 2
+    },
+    "typescript/array-type": {
+      "count": 1
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 15
+    },
+    "unicorn/no-array-sort": {
+      "count": 3
+    }
+  },
+  "packages/docs/core/src/designs.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 2
+    },
+    "complexity": {
+      "count": 5
+    },
+    "max-params": {
+      "count": 1
+    },
+    "no-nested-ternary": {
+      "count": 2
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 12
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 10
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    }
+  },
+  "packages/docs/core/src/diagram.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 1
+    },
+    "complexity": {
+      "count": 5
+    },
+    "max-params": {
+      "count": 1
+    },
+    "no-nested-ternary": {
+      "count": 3
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 2
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 1
+    },
+    "typescript/prefer-nullish-coalescing": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 10
+    },
+    "unicorn/no-array-sort": {
+      "count": 1
+    }
+  },
+  "packages/docs/core/src/flows.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 1
+    },
+    "complexity": {
+      "count": 4
+    },
+    "max-params": {
+      "count": 3
+    },
+    "no-nested-ternary": {
+      "count": 1
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 2
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 5
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 11
+    },
+    "unicorn/no-array-sort": {
+      "count": 1
+    },
+    "unicorn/prefer-string-replace-all": {
+      "count": 1
+    }
+  },
+  "packages/docs/core/src/frontmatter.ts": {
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 1
+    },
+    "unicorn/no-array-sort": {
+      "count": 1
+    }
+  },
+  "packages/docs/core/src/git.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 1
+    },
+    "complexity": {
+      "count": 1
+    },
+    "no-useless-assignment": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 3
+    }
+  },
+  "packages/docs/core/src/kinds.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 1
+    },
+    "complexity": {
+      "count": 1
+    },
+    "typescript/no-base-to-string": {
+      "count": 1
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 2
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    },
+    "unicorn/prefer-top-level-await": {
+      "count": 1
+    }
+  },
+  "packages/docs/core/src/lifecycles.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 1
+    },
+    "complexity": {
+      "count": 1
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 2
+    },
+    "typescript/no-unsafe-assignment": {
+      "count": 2
+    },
+    "typescript/no-useless-default-assignment": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 12
+    },
+    "unicorn/prefer-string-replace-all": {
+      "count": 1
+    },
+    "unicorn/prefer-top-level-await": {
+      "count": 6
+    }
+  },
+  "packages/docs/core/src/manifest.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 1
+    },
+    "complexity": {
+      "count": 1
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 1
+    }
+  },
+  "packages/docs/core/src/model.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 3
+    },
+    "complexity": {
+      "count": 4
+    },
+    "curly": {
+      "count": 2
+    },
+    "max-depth": {
+      "count": 1
+    },
+    "max-params": {
+      "count": 2
+    },
+    "no-nested-ternary": {
+      "count": 1
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 3
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 2
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 33
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 3
+    },
+    "unicorn/no-array-sort": {
+      "count": 5
+    },
+    "unicorn/prefer-string-replace-all": {
+      "count": 1
+    }
+  },
+  "packages/docs/core/src/odcs.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 4
+    },
+    "complexity": {
+      "count": 2
+    },
+    "curly": {
+      "count": 2
+    },
+    "no-nested-ternary": {
+      "count": 1
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "typescript/prefer-nullish-coalescing": {
+      "count": 2
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 3
+    },
+    "unicorn/no-array-sort": {
+      "count": 1
+    },
+    "unicorn/prefer-structured-clone": {
+      "count": 1
+    },
+    "unicorn/prefer-top-level-await": {
+      "count": 7
+    }
+  },
+  "packages/docs/core/src/odps.ts": {
+    "typescript/prefer-nullish-coalescing": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    }
+  },
+  "packages/docs/core/src/overviews.ts": {
+    "complexity": {
+      "count": 1
+    },
+    "max-params": {
+      "count": 1
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 8
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    }
+  },
+  "packages/docs/core/src/read-docs.ts": {
+    "complexity": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 4
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 1
+    },
+    "unicorn/no-array-sort": {
+      "count": 1
+    }
+  },
+  "packages/docs/core/src/resource-graph.ts": {
+    "complexity": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 4
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 1
+    },
+    "unicorn/no-array-sort": {
+      "count": 5
+    }
+  },
+  "packages/docs/core/src/site-config.ts": {
+    "typescript/no-unsafe-type-assertion": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 5
+    }
+  },
+  "packages/docs/core/src/storm.ts": {
+    "complexity": {
+      "count": 1
+    },
+    "no-nested-ternary": {
+      "count": 1
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 2
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 5
+    },
+    "typescript/prefer-nullish-coalescing": {
+      "count": 3
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 7
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 1
+    }
+  },
+  "packages/docs/core/src/sync.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 1
+    },
+    "complexity": {
+      "count": 2
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "typescript/no-unsafe-assignment": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 2
+    },
+    "unicorn/prefer-top-level-await": {
+      "count": 1
+    }
+  },
+  "packages/docs/core/test/contracts.test.ts": {
+    "no-unused-vars": {
+      "count": 1
+    }
+  },
+  "packages/docs/core/test/designs.test.ts": {
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    },
+    "unicorn/no-array-sort": {
+      "count": 1
+    }
+  },
+  "packages/docs/core/test/diagram.test.ts": {
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    }
+  },
+  "packages/docs/core/test/docs.test.ts": {
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    }
+  },
+  "packages/docs/core/test/flows.test.ts": {
+    "unicorn/no-array-sort": {
+      "count": 2
+    }
+  },
+  "packages/docs/core/test/kinds.test.ts": {
+    "unicorn/prefer-structured-clone": {
+      "count": 1
+    }
+  },
+  "packages/docs/core/test/lifecycles.test.ts": {
+    "typescript/require-array-sort-compare": {
+      "count": 1
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 6
+    },
+    "unicorn/no-array-sort": {
+      "count": 1
+    },
+    "vitest/require-to-throw-message": {
+      "count": 3
+    }
+  },
+  "packages/docs/core/test/model.test.ts": {
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    }
+  },
+  "packages/docs/core/test/odcs.test.ts": {
+    "no-nested-ternary": {
+      "count": 2
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 2
+    },
+    "unicorn/prefer-single-call": {
+      "count": 1
+    }
+  },
+  "packages/docs/core/test/resource-graph.test.ts": {
+    "unicorn/no-array-reverse": {
+      "count": 1
+    }
+  },
+  "packages/docs/core/test/storm.test.ts": {
+    "typescript/await-thenable": {
+      "count": 1
+    }
+  },
+  "packages/events/cli/src/adapters.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 3
+    },
+    "complexity": {
+      "count": 1
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 2
+    },
+    "typescript/no-unnecessary-condition": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 12
+    },
+    "unicorn/no-array-sort": {
+      "count": 1
+    },
+    "unicorn/prefer-top-level-await": {
+      "count": 4
+    }
+  },
+  "packages/events/cli/src/bin.ts": {
+    "no-console": {
+      "count": 1
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 2
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    },
+    "typescript/use-unknown-in-catch-callback-variable": {
+      "count": 1
+    },
+    "unicorn/prefer-top-level-await": {
+      "count": 1
+    }
+  },
+  "packages/events/cli/src/commands/annotation.ts": {
+    "typescript/no-non-null-assertion": {
+      "count": 2
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    }
+  },
+  "packages/events/cli/src/commands/changelog.ts": {
+    "no-console": {
+      "count": 2
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 2
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    },
+    "unicorn/no-array-sort": {
+      "count": 1
+    }
+  },
+  "packages/events/cli/src/commands/check.ts": {
+    "complexity": {
+      "count": 1
+    },
+    "max-params": {
+      "count": 1
+    },
+    "no-console": {
+      "count": 9
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 9
+    }
+  },
+  "packages/events/cli/src/commands/delivery.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 2
+    },
+    "complexity": {
+      "count": 4
+    },
+    "max-params": {
+      "count": 1
+    },
+    "no-console": {
+      "count": 8
+    },
+    "no-nested-ternary": {
+      "count": 2
+    },
+    "no-promise-executor-return": {
+      "count": 1
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 2
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 2
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 6
+    },
+    "typescript/require-array-sort-compare": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 26
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    },
+    "unicorn/no-array-sort": {
+      "count": 3
+    },
+    "unicorn/prefer-top-level-await": {
+      "count": 2
+    }
+  },
+  "packages/events/cli/src/commands/docs.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 3
+    },
+    "complexity": {
+      "count": 1
+    },
+    "no-console": {
+      "count": 29
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "typescript/consistent-return": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 7
+    }
+  },
+  "packages/events/cli/src/commands/drift.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 1
+    },
+    "complexity": {
+      "count": 3
+    },
+    "max-depth": {
+      "count": 1
+    },
+    "no-console": {
+      "count": 16
+    },
+    "no-nested-ternary": {
+      "count": 3
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 3
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 2
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 32
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 1
+    }
+  },
+  "packages/events/cli/src/commands/fields.ts": {
+    "complexity": {
+      "count": 1
+    },
+    "no-console": {
+      "count": 8
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 8
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 1
+    }
+  },
+  "packages/events/cli/src/commands/flows-draft.ts": {
+    "complexity": {
+      "count": 3
+    },
+    "max-params": {
+      "count": 1
+    },
+    "no-nested-ternary": {
+      "count": 1
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 2
+    },
+    "typescript/consistent-return": {
+      "count": 1
+    },
+    "typescript/consistent-type-imports": {
+      "count": 2
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 1
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 3
+    },
+    "typescript/no-unnecessary-condition": {
+      "count": 3
+    },
+    "typescript/no-unsafe-type-assertion": {
+      "count": 2
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 14
+    }
+  },
+  "packages/events/cli/src/commands/flows.ts": {
+    "complexity": {
+      "count": 1
+    },
+    "no-console": {
+      "count": 8
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "typescript/restrict-template-expressions": {
+      "count": 2
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    }
+  },
+  "packages/events/cli/src/commands/from-asyncapi.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 5
+    },
+    "complexity": {
+      "count": 4
+    },
+    "max-depth": {
+      "count": 2
+    },
+    "no-console": {
+      "count": 12
+    },
+    "no-nested-ternary": {
+      "count": 1
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 3
+    },
+    "typescript/no-base-to-string": {
+      "count": 9
+    },
+    "typescript/no-unnecessary-type-conversion": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 5
+    },
+    "unicorn/no-array-sort": {
+      "count": 2
+    },
+    "unicorn/prefer-top-level-await": {
+      "count": 14
+    }
+  },
+  "packages/events/cli/src/commands/from-eventcatalog.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 8
+    },
+    "complexity": {
+      "count": 2
+    },
+    "curly": {
+      "count": 4
+    },
+    "max-params": {
+      "count": 2
+    },
+    "no-console": {
+      "count": 17
+    },
+    "no-nested-ternary": {
+      "count": 2
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 2
+    },
+    "typescript/no-base-to-string": {
+      "count": 1
+    },
+    "typescript/no-unsafe-argument": {
+      "count": 1
+    },
+    "typescript/restrict-template-expressions": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 23
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 1
+    },
+    "unicorn/no-array-sort": {
+      "count": 9
+    },
+    "unicorn/prefer-top-level-await": {
+      "count": 12
+    }
+  },
+  "packages/events/cli/src/commands/from-snapshot.ts": {
+    "no-console": {
+      "count": 7
+    },
+    "no-multi-assign": {
+      "count": 1
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 1
+    },
+    "typescript/no-unsafe-return": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 3
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 1
+    },
+    "unicorn/no-array-sort": {
+      "count": 2
+    }
+  },
+  "packages/events/cli/src/commands/health.ts": {
+    "no-console": {
+      "count": 4
+    },
+    "no-nested-ternary": {
+      "count": 1
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 2
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 1
+    },
+    "unicorn/no-array-sort": {
+      "count": 1
+    }
+  },
+  "packages/events/cli/src/commands/import.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 9
+    },
+    "complexity": {
+      "count": 2
+    },
+    "max-params": {
+      "count": 1
+    },
+    "no-console": {
+      "count": 5
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 7
+    },
+    "typescript/no-unsafe-assignment": {
+      "count": 2
+    },
+    "typescript/require-await": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 26
+    },
+    "typescript/use-unknown-in-catch-callback-variable": {
+      "count": 2
+    }
+  },
+  "packages/events/cli/src/commands/mcp-sweep.ts": {
+    "complexity": {
+      "count": 1
+    },
+    "no-console": {
+      "count": 5
+    },
+    "no-nested-ternary": {
+      "count": 1
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 9
+    }
+  },
+  "packages/events/cli/src/commands/pr-comment.ts": {
+    "max-params": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 4
+    },
+    "unicorn/prefer-top-level-await": {
+      "count": 2
+    }
+  },
+  "packages/events/cli/src/commands/resources.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 8
+    },
+    "complexity": {
+      "count": 3
+    },
+    "curly": {
+      "count": 1
+    },
+    "max-params": {
+      "count": 1
+    },
+    "no-console": {
+      "count": 26
+    },
+    "no-nested-ternary": {
+      "count": 1
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 2
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 1
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 30
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    },
+    "unicorn/prefer-structured-clone": {
+      "count": 4
+    }
+  },
+  "packages/events/cli/src/commands/retire.ts": {
+    "complexity": {
+      "count": 2
+    },
+    "max-params": {
+      "count": 1
+    },
+    "no-console": {
+      "count": 3
+    },
+    "oxc/branches-sharing-code": {
+      "count": 1
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 14
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 1
+    },
+    "unicorn/no-array-sort": {
+      "count": 1
+    },
+    "unicorn/prefer-top-level-await": {
+      "count": 2
+    }
+  },
+  "packages/events/cli/src/commands/scan.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 2
+    },
+    "complexity": {
+      "count": 1
+    },
+    "eqeqeq": {
+      "count": 1
+    },
+    "no-console": {
+      "count": 25
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 9
+    }
+  },
+  "packages/events/cli/src/commands/site-eventcatalog.ts": {
+    "no-console": {
+      "count": 6
+    },
+    "typescript/restrict-plus-operands": {
+      "count": 2
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    }
+  },
+  "packages/events/cli/src/commands/site.ts": {
+    "complexity": {
+      "count": 3
+    },
+    "no-console": {
+      "count": 42
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 2
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 2
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 77
+    },
+    "typescript/use-unknown-in-catch-callback-variable": {
+      "count": 8
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    },
+    "unicorn/no-array-sort": {
+      "count": 1
+    }
+  },
+  "packages/events/cli/src/commands/to-asyncapi.ts": {
+    "complexity": {
+      "count": 4
+    },
+    "curly": {
+      "count": 2
+    },
+    "max-params": {
+      "count": 1
+    },
+    "no-console": {
+      "count": 7
+    },
+    "no-multi-assign": {
+      "count": 3
+    },
+    "no-nested-ternary": {
+      "count": 2
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 4
+    },
+    "typescript/no-unnecessary-condition": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 14
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    },
+    "unicorn/no-array-sort": {
+      "count": 3
+    },
+    "unicorn/prefer-top-level-await": {
+      "count": 1
+    }
+  },
+  "packages/events/cli/src/commands/validate.ts": {
+    "complexity": {
+      "count": 1
+    },
+    "no-console": {
+      "count": 12
+    },
+    "oxc/branches-sharing-code": {
+      "count": 1
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "typescript/restrict-template-expressions": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 8
+    }
+  },
+  "packages/events/cli/src/company-index.ts": {
+    "typescript/prefer-nullish-coalescing": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    }
+  },
+  "packages/events/cli/src/enrol.ts": {
+    "complexity": {
+      "count": 1
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "typescript/no-unsafe-argument": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 8
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    },
+    "unicorn/no-array-sort": {
+      "count": 1
+    }
+  },
+  "packages/events/cli/src/eventcatalog.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 9
+    },
+    "complexity": {
+      "count": 2
+    },
+    "curly": {
+      "count": 4
+    },
+    "no-console": {
+      "count": 2
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 2
+    },
+    "typescript/array-type": {
+      "count": 1
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 1
+    },
+    "typescript/prefer-nullish-coalescing": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 19
+    },
+    "typescript/use-unknown-in-catch-callback-variable": {
+      "count": 1
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 2
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 3
+    },
+    "unicorn/no-array-sort": {
+      "count": 3
+    },
+    "unicorn/prefer-top-level-await": {
+      "count": 9
+    }
+  },
+  "packages/events/cli/src/federation.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 2
+    },
+    "complexity": {
+      "count": 6
+    },
+    "max-params": {
+      "count": 1
+    },
+    "no-console": {
+      "count": 24
+    },
+    "no-nested-ternary": {
+      "count": 2
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 3
+    },
+    "typescript/no-unsafe-assignment": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 36
+    },
+    "typescript/use-unknown-in-catch-callback-variable": {
+      "count": 2
+    },
+    "unicorn/no-array-sort": {
+      "count": 5
+    }
+  },
+  "packages/events/cli/src/index.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 1
+    },
+    "no-console": {
+      "count": 4
+    },
+    "typescript/use-unknown-in-catch-callback-variable": {
+      "count": 1
+    }
+  },
+  "packages/events/cli/src/rules.ts": {
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    },
+    "unicorn/no-array-sort": {
+      "count": 1
+    }
+  },
+  "packages/events/cli/src/site-react.ts": {
+    "curly": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    }
+  },
+  "packages/events/cli/src/site-resolve.ts": {
+    "complexity": {
+      "count": 1
+    },
+    "curly": {
+      "count": 3
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 2
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 1
+    },
+    "typescript/no-unnecessary-condition": {
+      "count": 1
+    },
+    "typescript/no-unsafe-argument": {
+      "count": 1
+    },
+    "typescript/no-unsafe-assignment": {
+      "count": 1
+    },
+    "typescript/no-unsafe-member-access": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 3
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 1
+    }
+  },
+  "packages/events/cli/test/actions.test.ts": {
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    }
+  },
+  "packages/events/cli/test/adapter-isolation.test.ts": {
+    "vitest/require-to-throw-message": {
+      "count": 1
+    }
+  },
+  "packages/events/cli/test/adapters.discover.test.ts": {
+    "unicorn/no-array-sort": {
+      "count": 2
+    }
+  },
+  "packages/events/cli/test/check.test.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 1
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 7
+    }
+  },
+  "packages/events/cli/test/delivery.cli.test.ts": {
+    "no-unused-vars": {
+      "count": 1
+    },
+    "typescript/no-unsafe-return": {
+      "count": 1
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    }
+  },
+  "packages/events/cli/test/docs-import.test.ts": {
+    "vitest/require-to-throw-message": {
+      "count": 2
+    }
+  },
+  "packages/events/cli/test/docs.cli.test.ts": {
+    "unicorn/consistent-function-scoping": {
+      "count": 3
+    }
+  },
+  "packages/events/cli/test/drift-agents.cli.test.ts": {
+    "no-unused-vars": {
+      "count": 1
+    },
+    "typescript/no-unsafe-call": {
+      "count": 2
+    }
+  },
+  "packages/events/cli/test/drift-consumers.cli.test.ts": {
+    "no-promise-executor-return": {
+      "count": 1
+    },
+    "no-unused-vars": {
+      "count": 1
+    },
+    "typescript/no-unsafe-call": {
+      "count": 2
+    },
+    "typescript/no-unsafe-type-assertion": {
+      "count": 1
+    }
+  },
+  "packages/events/cli/test/drift-ref.cli.test.ts": {
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    }
+  },
+  "packages/events/cli/test/drift.cli.test.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 1
+    },
+    "no-unused-vars": {
+      "count": 1
+    }
+  },
+  "packages/events/cli/test/enrol.test.ts": {
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    }
+  },
+  "packages/events/cli/test/eventcatalog-both.test.ts": {
+    "no-script-url": {
+      "count": 2
+    },
+    "typescript/no-unnecessary-condition": {
+      "count": 1
+    },
+    "typescript/no-unsafe-return": {
+      "count": 1
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    },
+    "unicorn/no-array-sort": {
+      "count": 2
+    }
+  },
+  "packages/events/cli/test/eventcatalog-generator.test.ts": {
+    "no-unused-vars": {
+      "count": 1
+    },
+    "typescript/no-unnecessary-condition": {
+      "count": 2
+    },
+    "unicorn/no-array-sort": {
+      "count": 1
+    }
+  },
+  "packages/events/cli/test/eventcatalog.ownership.test.ts": {
+    "no-unused-vars": {
+      "count": 1
+    },
+    "typescript/no-unnecessary-condition": {
+      "count": 9
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 2
+    },
+    "vitest/require-to-throw-message": {
+      "count": 1
+    }
+  },
+  "packages/events/cli/test/eventcatalog.test.ts": {
+    "max-params": {
+      "count": 2
+    },
+    "no-unused-vars": {
+      "count": 1
+    },
+    "typescript/no-unnecessary-condition": {
+      "count": 20
+    },
+    "typescript/no-unsafe-type-assertion": {
+      "count": 2
+    },
+    "unicorn/no-array-sort": {
+      "count": 2
+    },
+    "vitest/require-to-throw-message": {
+      "count": 1
+    }
+  },
+  "packages/events/cli/test/federation.cli.test.ts": {
+    "no-unused-vars": {
+      "count": 1
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 6
+    }
+  },
+  "packages/events/cli/test/fixtures/effect-import/src/import.ts": {
+    "typescript/explicit-module-boundary-types": {
+      "count": 1
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 2
+    }
+  },
+  "packages/events/cli/test/from-snapshot.cli.test.ts": {
+    "typescript/no-unnecessary-type-conversion": {
+      "count": 1
+    }
+  },
+  "packages/events/cli/test/import-redirect.test.ts": {
+    "no-promise-executor-return": {
+      "count": 2
+    }
+  },
+  "packages/events/cli/test/import.cli.test.ts": {
+    "no-promise-executor-return": {
+      "count": 1
+    },
+    "typescript/no-misused-promises": {
+      "count": 1
+    },
+    "vitest/require-to-throw-message": {
+      "count": 2
+    }
+  },
+  "packages/events/cli/test/importers.cli.test.ts": {
+    "no-unused-vars": {
+      "count": 1
+    },
+    "typescript/no-unnecessary-condition": {
+      "count": 1
+    }
+  },
+  "packages/events/cli/test/importers.eventcatalog-shapes.test.ts": {
+    "no-script-url": {
+      "count": 1
+    },
+    "typescript/no-unsafe-call": {
+      "count": 2
+    },
+    "typescript/no-unsafe-return": {
+      "count": 2
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 5
+    },
+    "unicorn/no-array-sort": {
+      "count": 7
+    }
+  },
+  "packages/events/cli/test/importers.failures.test.ts": {
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    }
+  },
+  "packages/events/cli/test/mcp-sweep.test.ts": {
+    "typescript/no-unsafe-return": {
+      "count": 2
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    },
+    "vitest/require-to-throw-message": {
+      "count": 1
+    }
+  },
+  "packages/events/cli/test/pr-comment.test.ts": {
+    "typescript/no-base-to-string": {
+      "count": 2
+    }
+  },
+  "packages/events/cli/test/resources.cli.test.ts": {
+    "no-nested-ternary": {
+      "count": 2
+    },
+    "no-promise-executor-return": {
+      "count": 2
+    },
+    "no-unused-vars": {
+      "count": 1
+    },
+    "typescript/no-invalid-void-type": {
+      "count": 1
+    },
+    "typescript/no-unsafe-type-assertion": {
+      "count": 1
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 2
+    },
+    "vitest/require-to-throw-message": {
+      "count": 4
+    }
+  },
+  "packages/events/cli/test/retire.cli.test.ts": {
+    "no-promise-executor-return": {
+      "count": 2
+    },
+    "typescript/no-unsafe-type-assertion": {
+      "count": 5
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 2
+    }
+  },
+  "packages/events/cli/test/rules.cli.test.ts": {
+    "typescript/no-unsafe-type-assertion": {
+      "count": 1
+    }
+  },
+  "packages/events/cli/test/scan.cli.test.ts": {
+    "no-unused-vars": {
+      "count": 1
+    },
+    "vitest/require-to-throw-message": {
+      "count": 2
+    }
+  },
+  "packages/events/cli/test/site-resolve.test.ts": {
+    "unicorn/no-array-sort": {
+      "count": 1
+    }
+  },
+  "packages/events/cli/test/site.test.ts": {
+    "unicorn/consistent-function-scoping": {
+      "count": 4
+    }
+  },
+  "packages/events/cli/test/skills.test.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 1
+    },
+    "no-unused-vars": {
+      "count": 1
+    },
+    "unicorn/no-array-sort": {
+      "count": 2
+    }
+  },
+  "packages/events/cli/test/to-asyncapi.test.ts": {
+    "max-params": {
+      "count": 1
+    },
+    "typescript/require-array-sort-compare": {
+      "count": 3
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 4
+    },
+    "unicorn/no-array-sort": {
+      "count": 9
+    },
+    "vitest/require-to-throw-message": {
+      "count": 1
+    }
+  },
+  "packages/events/cli/test/validate.cli.test.ts": {
+    "no-promise-executor-return": {
+      "count": 1
+    },
+    "no-unused-vars": {
+      "count": 1
+    },
+    "typescript/no-misused-promises": {
+      "count": 1
+    },
+    "typescript/no-unsafe-type-assertion": {
+      "count": 1
+    }
+  },
+  "packages/events/core/src/adapter-event.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 1
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 2
+    },
+    "unicorn/prefer-top-level-await": {
+      "count": 2
+    }
+  },
+  "packages/events/core/src/api-resources.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 1
+    },
+    "complexity": {
+      "count": 3
+    },
+    "curly": {
+      "count": 5
+    },
+    "max-params": {
+      "count": 1
+    },
+    "no-nested-ternary": {
+      "count": 1
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 2
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 19
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    },
+    "unicorn/no-array-sort": {
+      "count": 3
+    }
+  },
+  "packages/events/core/src/architecture.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 3
+    },
+    "complexity": {
+      "count": 3
+    },
+    "curly": {
+      "count": 2
+    },
+    "max-depth": {
+      "count": 2
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 2
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 1
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 4
+    },
+    "typescript/no-unsafe-type-assertion": {
+      "count": 1
+    },
+    "typescript/require-array-sort-compare": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 14
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 3
+    },
+    "unicorn/no-array-sort": {
+      "count": 15
+    },
+    "unicorn/prefer-structured-clone": {
+      "count": 2
+    }
+  },
+  "packages/events/core/src/catalog-artifact.ts": {
+    "complexity": {
+      "count": 1
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 4
+    },
+    "unicorn/no-array-sort": {
+      "count": 1
+    }
+  },
+  "packages/events/core/src/catalog-lock.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 4
+    },
+    "no-promise-executor-return": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 3
+    }
+  },
+  "packages/events/core/src/cloudevents.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 3
+    },
+    "complexity": {
+      "count": 1
+    },
+    "max-params": {
+      "count": 1
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "typescript/no-base-to-string": {
+      "count": 1
+    },
+    "typescript/no-deprecated": {
+      "count": 1
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 2
+    },
+    "unicorn/prefer-type-error": {
+      "count": 1
+    }
+  },
+  "packages/events/core/src/codeowners.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 3
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 2
+    }
+  },
+  "packages/events/core/src/command-resources.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 3
+    },
+    "complexity": {
+      "count": 1
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "typescript/no-deprecated": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 5
+    },
+    "typescript/use-unknown-in-catch-callback-variable": {
+      "count": 1
+    }
+  },
+  "packages/events/core/src/company-index.ts": {
+    "no-nested-ternary": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 4
+    }
+  },
+  "packages/events/core/src/components.ts": {
+    "complexity": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 8
+    },
+    "unicorn/no-array-sort": {
+      "count": 1
+    }
+  },
+  "packages/events/core/src/consumes.ts": {
+    "complexity": {
+      "count": 4
+    },
+    "curly": {
+      "count": 3
+    },
+    "max-params": {
+      "count": 1
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 3
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 1
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 1
+    },
+    "typescript/no-unsafe-argument": {
+      "count": 1
+    },
+    "typescript/prefer-nullish-coalescing": {
+      "count": 2
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 6
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 1
+    },
+    "unicorn/no-array-sort": {
+      "count": 9
+    },
+    "unicorn/prefer-top-level-await": {
+      "count": 5
+    }
+  },
+  "packages/events/core/src/contract-file.ts": {
+    "complexity": {
+      "count": 1
+    },
+    "no-nested-ternary": {
+      "count": 2
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    }
+  },
+  "packages/events/core/src/correlation.ts": {
+    "typescript/explicit-module-boundary-types": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    },
+    "unicorn/no-array-sort": {
+      "count": 1
+    }
+  },
+  "packages/events/core/src/delivery-aws.ts": {
+    "complexity": {
+      "count": 3
+    },
+    "curly": {
+      "count": 10
+    },
+    "no-nested-ternary": {
+      "count": 10
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 3
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 1
+    },
+    "typescript/no-unnecessary-type-conversion": {
+      "count": 1
+    },
+    "typescript/prefer-nullish-coalescing": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 10
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    },
+    "unicorn/no-array-sort": {
+      "count": 1
+    },
+    "unicorn/prefer-top-level-await": {
+      "count": 3
+    }
+  },
+  "packages/events/core/src/delivery-kafka.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 1
+    },
+    "complexity": {
+      "count": 1
+    },
+    "max-depth": {
+      "count": 3
+    },
+    "no-nested-ternary": {
+      "count": 1
+    },
+    "no-unused-vars": {
+      "count": 1
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    },
+    "unicorn/no-array-sort": {
+      "count": 2
+    }
+  },
+  "packages/events/core/src/delivery-match.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 4
+    },
+    "complexity": {
+      "count": 4
+    },
+    "no-nested-ternary": {
+      "count": 9
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 4
+    },
+    "typescript/no-base-to-string": {
+      "count": 3
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 4
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    },
+    "unicorn/prefer-string-raw": {
+      "count": 1
+    }
+  },
+  "packages/events/core/src/delivery-model.ts": {
+    "max-params": {
+      "count": 2
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 1
+    },
+    "unicorn/prefer-structured-clone": {
+      "count": 1
+    },
+    "unicorn/prefer-top-level-await": {
+      "count": 1
+    }
+  },
+  "packages/events/core/src/delivery-rabbitmq.ts": {
+    "complexity": {
+      "count": 2
+    },
+    "max-params": {
+      "count": 2
+    },
+    "no-nested-ternary": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 11
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 2
+    },
+    "unicorn/no-array-sort": {
+      "count": 2
+    },
+    "unicorn/prefer-top-level-await": {
+      "count": 2
+    }
+  },
+  "packages/events/core/src/delivery-servicebus.ts": {
+    "complexity": {
+      "count": 1
+    },
+    "max-params": {
+      "count": 1
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 5
+    },
+    "unicorn/no-array-sort": {
+      "count": 1
+    },
+    "unicorn/prefer-top-level-await": {
+      "count": 2
+    }
+  },
+  "packages/events/core/src/delivery.ts": {
+    "complexity": {
+      "count": 12
+    },
+    "curly": {
+      "count": 1
+    },
+    "max-params": {
+      "count": 7
+    },
+    "no-nested-ternary": {
+      "count": 7
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 9
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 1
+    },
+    "typescript/no-base-to-string": {
+      "count": 7
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 7
+    },
+    "typescript/prefer-nullish-coalescing": {
+      "count": 2
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 41
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 13
+    },
+    "unicorn/no-array-reverse": {
+      "count": 1
+    },
+    "unicorn/no-array-sort": {
+      "count": 3
+    },
+    "unicorn/prefer-top-level-await": {
+      "count": 3
+    }
+  },
+  "packages/events/core/src/diff.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 7
+    },
+    "complexity": {
+      "count": 4
+    },
+    "max-params": {
+      "count": 5
+    },
+    "no-nested-ternary": {
+      "count": 4
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 3
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 4
+    },
+    "unicorn/no-array-sort": {
+      "count": 1
+    }
+  },
+  "packages/events/core/src/drift.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 10
+    },
+    "complexity": {
+      "count": 7
+    },
+    "max-params": {
+      "count": 3
+    },
+    "no-nested-ternary": {
+      "count": 5
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 6
+    },
+    "typescript/consistent-return": {
+      "count": 1
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 7
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 28
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 2
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 4
+    },
+    "unicorn/no-array-sort": {
+      "count": 5
+    }
+  },
+  "packages/events/core/src/enrich-event.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 3
+    },
+    "complexity": {
+      "count": 2
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 7
+    }
+  },
+  "packages/events/core/src/example-gen.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 1
+    },
+    "complexity": {
+      "count": 1
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 2
+    },
+    "typescript/no-unsafe-argument": {
+      "count": 1
+    },
+    "typescript/no-unsafe-assignment": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 4
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 1
+    },
+    "unicorn/prefer-top-level-await": {
+      "count": 6
+    }
+  },
+  "packages/events/core/src/fields.ts": {
+    "complexity": {
+      "count": 3
+    },
+    "curly": {
+      "count": 3
+    },
+    "max-params": {
+      "count": 2
+    },
+    "no-nested-ternary": {
+      "count": 1
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 2
+    },
+    "typescript/no-base-to-string": {
+      "count": 2
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 3
+    },
+    "typescript/no-unnecessary-condition": {
+      "count": 2
+    },
+    "typescript/prefer-nullish-coalescing": {
+      "count": 2
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 10
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 2
+    },
+    "unicorn/no-array-sort": {
+      "count": 2
+    },
+    "unicorn/prefer-top-level-await": {
+      "count": 7
+    }
+  },
+  "packages/events/core/src/frontmatter.ts": {
+    "typescript/no-unnecessary-type-parameters": {
+      "count": 1
+    },
+    "unicorn/prefer-structured-clone": {
+      "count": 1
+    }
+  },
+  "packages/events/core/src/gateways.ts": {
+    "complexity": {
+      "count": 2
+    },
+    "curly": {
+      "count": 3
+    },
+    "no-nested-ternary": {
+      "count": 1
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 7
+    },
+    "unicorn/no-array-sort": {
+      "count": 1
+    }
+  },
+  "packages/events/core/src/json-ref.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 1
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 2
+    },
+    "typescript/no-unnecessary-type-parameters": {
+      "count": 1
+    },
+    "typescript/no-unsafe-assignment": {
+      "count": 1
+    },
+    "typescript/no-unsafe-member-access": {
+      "count": 1
+    },
+    "typescript/no-unsafe-return": {
+      "count": 2
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    }
+  },
+  "packages/events/core/src/json-schema-dialect.ts": {
+    "no-nested-ternary": {
+      "count": 1
+    },
+    "typescript/no-base-to-string": {
+      "count": 1
+    }
+  },
+  "packages/events/core/src/llm.ts": {
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 1
+    },
+    "unicorn/no-array-sort": {
+      "count": 1
+    },
+    "unicorn/no-immediate-mutation": {
+      "count": 1
+    },
+    "unicorn/prefer-single-call": {
+      "count": 7
+    }
+  },
+  "packages/events/core/src/load.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 2
+    },
+    "complexity": {
+      "count": 2
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 2
+    },
+    "typescript/no-unnecessary-condition": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 3
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 1
+    },
+    "unicorn/no-array-sort": {
+      "count": 1
+    },
+    "unicorn/prefer-top-level-await": {
+      "count": 3
+    }
+  },
+  "packages/events/core/src/merge-discoveries.ts": {
+    "complexity": {
+      "count": 2
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "typescript/no-redundant-type-constituents": {
+      "count": 2
+    },
+    "typescript/no-unsafe-type-assertion": {
+      "count": 1
+    },
+    "unicorn/no-array-sort": {
+      "count": 1
+    }
+  },
+  "packages/events/core/src/model-resources.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 31
+    },
+    "complexity": {
+      "count": 16
+    },
+    "curly": {
+      "count": 18
+    },
+    "max-depth": {
+      "count": 10
+    },
+    "max-params": {
+      "count": 5
+    },
+    "no-nested-ternary": {
+      "count": 1
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 10
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 13
+    },
+    "typescript/prefer-nullish-coalescing": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 35
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 1
+    },
+    "unicorn/no-array-sort": {
+      "count": 1
+    }
+  },
+  "packages/events/core/src/naming.ts": {
+    "unicorn/no-array-callback-reference": {
+      "count": 1
+    }
+  },
+  "packages/events/core/src/network.ts": {
+    "complexity": {
+      "count": 1
+    },
+    "curly": {
+      "count": 6
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 5
+    },
+    "unicorn/no-array-sort": {
+      "count": 2
+    }
+  },
+  "packages/events/core/src/openapi-drift.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 1
+    },
+    "complexity": {
+      "count": 3
+    },
+    "max-depth": {
+      "count": 1
+    },
+    "max-params": {
+      "count": 1
+    },
+    "no-nested-ternary": {
+      "count": 1
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "typescript/no-base-to-string": {
+      "count": 2
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 3
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    }
+  },
+  "packages/events/core/src/ownership-sources.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 3
+    },
+    "complexity": {
+      "count": 1
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 11
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    },
+    "unicorn/no-array-sort": {
+      "count": 1
+    }
+  },
+  "packages/events/core/src/projection.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 4
+    },
+    "complexity": {
+      "count": 1
+    },
+    "no-nested-ternary": {
+      "count": 2
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 1
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 2
+    },
+    "unicorn/no-array-sort": {
+      "count": 6
+    }
+  },
+  "packages/events/core/src/publish-catalog.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 1
+    },
+    "complexity": {
+      "count": 1
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 2
+    },
+    "typescript/use-unknown-in-catch-callback-variable": {
+      "count": 1
+    },
+    "unicorn/no-array-sort": {
+      "count": 1
+    }
+  },
+  "packages/events/core/src/references.ts": {
+    "complexity": {
+      "count": 3
+    },
+    "curly": {
+      "count": 1
+    },
+    "max-depth": {
+      "count": 1
+    },
+    "no-nested-ternary": {
+      "count": 4
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 3
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 7
+    },
+    "unicorn/no-array-sort": {
+      "count": 6
+    }
+  },
+  "packages/events/core/src/rehearse.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 3
+    },
+    "typescript/no-dynamic-delete": {
+      "count": 1
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 2
+    }
+  },
+  "packages/events/core/src/repository-events.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 3
+    },
+    "complexity": {
+      "count": 4
+    },
+    "curly": {
+      "count": 3
+    },
+    "max-params": {
+      "count": 1
+    },
+    "no-useless-assignment": {
+      "count": 1
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 1
+    },
+    "typescript/no-unsafe-assignment": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 2
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 2
+    },
+    "unicorn/no-array-sort": {
+      "count": 1
+    }
+  },
+  "packages/events/core/src/resource-drift.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 1
+    },
+    "complexity": {
+      "count": 1
+    },
+    "curly": {
+      "count": 1
+    },
+    "import/no-duplicates": {
+      "count": 1
+    },
+    "max-params": {
+      "count": 2
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 5
+    },
+    "unicorn/no-array-sort": {
+      "count": 4
+    }
+  },
+  "packages/events/core/src/resource-files.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 2
+    },
+    "complexity": {
+      "count": 1
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "typescript/no-useless-default-assignment": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 2
+    },
+    "unicorn/no-array-sort": {
+      "count": 1
+    }
+  },
+  "packages/events/core/src/resource-graph.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 1
+    },
+    "complexity": {
+      "count": 5
+    },
+    "eqeqeq": {
+      "count": 3
+    },
+    "max-params": {
+      "count": 1
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 3
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 11
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    },
+    "unicorn/no-array-sort": {
+      "count": 21
+    },
+    "unicorn/prefer-structured-clone": {
+      "count": 1
+    }
+  },
+  "packages/events/core/src/resource-store.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 2
+    },
+    "complexity": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    }
+  },
+  "packages/events/core/src/retire.ts": {
+    "complexity": {
+      "count": 1
+    },
+    "no-nested-ternary": {
+      "count": 3
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 4
+    },
+    "typescript/prefer-nullish-coalescing": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 6
+    },
+    "unicorn/no-array-sort": {
+      "count": 1
+    }
+  },
+  "packages/events/core/src/route-pattern.ts": {
+    "complexity": {
+      "count": 2
+    },
+    "no-nested-ternary": {
+      "count": 2
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 2
+    },
+    "unicorn/no-array-sort": {
+      "count": 1
+    }
+  },
+  "packages/events/core/src/rules.ts": {
+    "typescript/strict-boolean-expressions": {
+      "count": 4
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 1
+    }
+  },
+  "packages/events/core/src/runtime-evidence.ts": {
+    "typescript/explicit-module-boundary-types": {
+      "count": 1
+    }
+  },
+  "packages/events/core/src/scan-architecture.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 3
+    },
+    "complexity": {
+      "count": 2
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    },
+    "unicorn/no-array-sort": {
+      "count": 1
+    }
+  },
+  "packages/events/core/src/scan-avro.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 8
+    },
+    "complexity": {
+      "count": 4
+    },
+    "max-params": {
+      "count": 1
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 2
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 4
+    },
+    "typescript/no-unnecessary-condition": {
+      "count": 2
+    },
+    "typescript/no-unnecessary-type-conversion": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 23
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 2
+    }
+  },
+  "packages/events/core/src/scan-catalog.ts": {
+    "typescript/strict-boolean-expressions": {
+      "count": 5
+    },
+    "typescript/use-unknown-in-catch-callback-variable": {
+      "count": 1
+    }
+  },
+  "packages/events/core/src/scan-convention.ts": {
+    "complexity": {
+      "count": 1
+    },
+    "max-params": {
+      "count": 1
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 1
+    },
+    "typescript/no-unsafe-return": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 7
+    }
+  },
+  "packages/events/core/src/scan-json-schema.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 6
+    },
+    "complexity": {
+      "count": 3
+    },
+    "max-params": {
+      "count": 1
+    },
+    "no-nested-ternary": {
+      "count": 1
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 3
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 2
+    },
+    "typescript/no-unnecessary-condition": {
+      "count": 2
+    },
+    "typescript/no-unsafe-assignment": {
+      "count": 2
+    },
+    "typescript/prefer-nullish-coalescing": {
+      "count": 6
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 19
+    }
+  },
+  "packages/events/core/src/scan-message-contract.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 3
+    },
+    "complexity": {
+      "count": 3
+    },
+    "curly": {
+      "count": 1
+    },
+    "max-params": {
+      "count": 1
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 8
+    },
+    "typescript/no-unnecessary-condition": {
+      "count": 1
+    },
+    "typescript/no-unsafe-assignment": {
+      "count": 2
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 4
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 1
+    },
+    "unicorn/no-array-sort": {
+      "count": 3
+    }
+  },
+  "packages/events/core/src/scan-openapi.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 3
+    },
+    "complexity": {
+      "count": 4
+    },
+    "max-depth": {
+      "count": 1
+    },
+    "max-params": {
+      "count": 1
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 2
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 1
+    },
+    "typescript/no-unnecessary-condition": {
+      "count": 2
+    },
+    "typescript/no-unnecessary-type-conversion": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 11
+    }
+  },
+  "packages/events/core/src/scan-protobuf.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 4
+    },
+    "complexity": {
+      "count": 4
+    },
+    "max-params": {
+      "count": 1
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 2
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 2
+    },
+    "typescript/no-unnecessary-condition": {
+      "count": 2
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 13
+    }
+  },
+  "packages/events/core/src/schema-registries.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 10
+    },
+    "complexity": {
+      "count": 1
+    },
+    "max-depth": {
+      "count": 2
+    },
+    "max-params": {
+      "count": 1
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 3
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 2
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 3
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    },
+    "unicorn/no-array-sort": {
+      "count": 2
+    }
+  },
+  "packages/events/core/src/schema.ts": {
+    "typescript/no-deprecated": {
+      "count": 1
+    },
+    "typescript/no-unnecessary-condition": {
+      "count": 1
+    }
+  },
+  "packages/events/core/src/service-owners.ts": {
+    "complexity": {
+      "count": 1
+    },
+    "curly": {
+      "count": 2
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 3
+    },
+    "unicorn/no-array-sort": {
+      "count": 6
+    }
+  },
+  "packages/events/core/src/snapshot.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 1
+    },
+    "complexity": {
+      "count": 2
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 4
+    },
+    "typescript/no-unnecessary-condition": {
+      "count": 3
+    },
+    "typescript/prefer-nullish-coalescing": {
+      "count": 3
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 8
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    },
+    "unicorn/no-array-sort": {
+      "count": 4
+    },
+    "unicorn/prefer-top-level-await": {
+      "count": 2
+    }
+  },
+  "packages/events/core/src/snippets.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 1
+    },
+    "unicorn/prefer-top-level-await": {
+      "count": 7
+    }
+  },
+  "packages/events/core/src/source-lines.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 2
+    },
+    "complexity": {
+      "count": 1
+    }
+  },
+  "packages/events/core/src/task-context.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 1
+    },
+    "complexity": {
+      "count": 2
+    },
+    "no-nested-ternary": {
+      "count": 1
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "typescript/no-base-to-string": {
+      "count": 1
+    },
+    "typescript/no-unnecessary-condition": {
+      "count": 2
+    },
+    "typescript/prefer-nullish-coalescing": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 9
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 4
+    },
+    "unicorn/no-array-sort": {
+      "count": 1
+    },
+    "unicorn/prefer-top-level-await": {
+      "count": 2
+    }
+  },
+  "packages/events/core/src/utils.ts": {
+    "typescript/no-non-null-assertion": {
+      "count": 5
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    },
+    "unicorn/no-array-sort": {
+      "count": 1
+    }
+  },
+  "packages/events/core/src/validate.ts": {
+    "complexity": {
+      "count": 1
+    },
+    "curly": {
+      "count": 1
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "typescript/no-unnecessary-condition": {
+      "count": 1
+    },
+    "typescript/restrict-template-expressions": {
+      "count": 2
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 4
+    }
+  },
+  "packages/events/core/src/write-event-folder.ts": {
+    "complexity": {
+      "count": 2
+    },
+    "no-nested-ternary": {
+      "count": 1
+    },
+    "typescript/no-misused-spread": {
+      "count": 1
+    },
+    "typescript/prefer-nullish-coalescing": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 2
+    }
+  },
+  "packages/events/core/test/architecture.test.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 2
+    }
+  },
+  "packages/events/core/test/catalog-boundary.test.ts": {
+    "unicorn/no-array-sort": {
+      "count": 1
+    },
+    "vitest/require-to-throw-message": {
+      "count": 3
+    }
+  },
+  "packages/events/core/test/catalog-freshness.test.ts": {
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    }
+  },
+  "packages/events/core/test/cloudevents.test.ts": {
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    },
+    "vitest/require-to-throw-message": {
+      "count": 1
+    }
+  },
+  "packages/events/core/test/command-resources.test.ts": {
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    }
+  },
+  "packages/events/core/test/components.test.ts": {
+    "no-script-url": {
+      "count": 2
+    },
+    "vitest/require-to-throw-message": {
+      "count": 1
+    }
+  },
+  "packages/events/core/test/consumes.test.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 2
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 7
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 3
+    }
+  },
+  "packages/events/core/test/delivery-brokers.test.ts": {
+    "no-template-curly-in-string": {
+      "count": 1
+    },
+    "no-unused-vars": {
+      "count": 1
+    },
+    "typescript/no-unsafe-call": {
+      "count": 8
+    },
+    "typescript/no-unsafe-return": {
+      "count": 8
+    },
+    "typescript/no-unsafe-type-assertion": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 8
+    },
+    "unicorn/no-array-reverse": {
+      "count": 1
+    }
+  },
+  "packages/events/core/test/delivery.test.ts": {
+    "no-unused-vars": {
+      "count": 1
+    },
+    "typescript/no-unsafe-call": {
+      "count": 4
+    },
+    "typescript/no-unsafe-return": {
+      "count": 1
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 2
+    }
+  },
+  "packages/events/core/test/diff-constraints.test.ts": {
+    "unicorn/consistent-function-scoping": {
+      "count": 8
+    },
+    "unicorn/no-array-sort": {
+      "count": 1
+    }
+  },
+  "packages/events/core/test/discover.test.ts": {
+    "no-unused-vars": {
+      "count": 1
+    },
+    "unicorn/no-array-sort": {
+      "count": 1
+    }
+  },
+  "packages/events/core/test/drift-oracle.test.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 6
+    },
+    "complexity": {
+      "count": 1
+    },
+    "typescript/no-dynamic-delete": {
+      "count": 1
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 2
+    },
+    "unicorn/no-immediate-mutation": {
+      "count": 1
+    },
+    "unicorn/prefer-top-level-await": {
+      "count": 3
+    }
+  },
+  "packages/events/core/test/drift.test.ts": {
+    "max-params": {
+      "count": 1
+    },
+    "typescript/prefer-nullish-coalescing": {
+      "count": 1
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 10
+    },
+    "unicorn/no-array-sort": {
+      "count": 4
+    }
+  },
+  "packages/events/core/test/endpoint-calls.test.ts": {
+    "unicorn/consistent-function-scoping": {
+      "count": 4
+    }
+  },
+  "packages/events/core/test/example-cases.test.ts": {
+    "max-params": {
+      "count": 1
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 3
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 1
+    }
+  },
+  "packages/events/core/test/fields.test.ts": {
+    "unicorn/consistent-function-scoping": {
+      "count": 3
+    },
+    "unicorn/no-array-sort": {
+      "count": 7
+    }
+  },
+  "packages/events/core/test/graph-contract.test.ts": {
+    "no-unused-vars": {
+      "count": 1
+    }
+  },
+  "packages/events/core/test/json-schema-scan.test.ts": {
+    "no-unused-vars": {
+      "count": 1
+    },
+    "unicorn/no-array-sort": {
+      "count": 1
+    },
+    "vitest/require-to-throw-message": {
+      "count": 1
+    }
+  },
+  "packages/events/core/test/load.test.ts": {
+    "no-unused-vars": {
+      "count": 1
+    }
+  },
+  "packages/events/core/test/mcp-server-compose.test.ts": {
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    }
+  },
+  "packages/events/core/test/model-resources.test.ts": {
+    "typescript/require-array-sort-compare": {
+      "count": 1
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 4
+    },
+    "unicorn/no-array-sort": {
+      "count": 3
+    }
+  },
+  "packages/events/core/test/openapi-drift.test.ts": {
+    "unicorn/consistent-function-scoping": {
+      "count": 2
+    }
+  },
+  "packages/events/core/test/ownership-sources.test.ts": {
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    }
+  },
+  "packages/events/core/test/p4.test.ts": {
+    "unicorn/consistent-function-scoping": {
+      "count": 2
+    }
+  },
+  "packages/events/core/test/plugin-surface.test.ts": {
+    "import/no-namespace": {
+      "count": 1
+    },
+    "unicorn/no-array-sort": {
+      "count": 1
+    }
+  },
+  "packages/events/core/test/references.test.ts": {
+    "max-params": {
+      "count": 1
+    }
+  },
+  "packages/events/core/test/rehearse.test.ts": {
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    }
+  },
+  "packages/events/core/test/repository-events.test.ts": {
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 6
+    },
+    "vitest/require-to-throw-message": {
+      "count": 1
+    }
+  },
+  "packages/events/core/test/resource-drift.test.ts": {
+    "typescript/strict-boolean-expressions": {
+      "count": 4
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 4
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 4
+    }
+  },
+  "packages/events/core/test/resource-files.test.ts": {
+    "typescript/no-unsafe-type-assertion": {
+      "count": 1
+    },
+    "typescript/use-unknown-in-catch-callback-variable": {
+      "count": 2
+    },
+    "vitest/expect-expect": {
+      "count": 1
+    }
+  },
+  "packages/events/core/test/resource-graph.test.ts": {
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 1
+    },
+    "unicorn/no-array-sort": {
+      "count": 1
+    }
+  },
+  "packages/events/core/test/retire.test.ts": {
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    }
+  },
+  "packages/events/core/test/scan-convention.test.ts": {
+    "typescript/no-unnecessary-type-conversion": {
+      "count": 3
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    },
+    "unicorn/no-array-sort": {
+      "count": 1
+    }
+  },
+  "packages/events/core/test/schema-registries.test.ts": {
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    }
+  },
+  "packages/events/core/test/schema.test.ts": {
+    "unicorn/no-array-callback-reference": {
+      "count": 2
+    },
+    "vitest/require-to-throw-message": {
+      "count": 4
+    }
+  },
+  "packages/events/core/test/snapshot.test.ts": {
+    "no-unused-vars": {
+      "count": 1
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    },
+    "unicorn/no-array-sort": {
+      "count": 1
+    }
+  },
+  "packages/events/core/test/task-context.test.ts": {
+    "typescript/no-unsafe-type-assertion": {
+      "count": 1
+    }
+  },
+  "packages/events/core/test/validate.test.ts": {
+    "no-unused-vars": {
+      "count": 1
+    },
+    "unicorn/no-array-sort": {
+      "count": 1
+    }
+  },
+  "packages/events/mcp/src/flows.ts": {
+    "max-params": {
+      "count": 1
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 1
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 3
+    }
+  },
+  "packages/events/mcp/src/index.ts": {
+    "complexity": {
+      "count": 1
+    },
+    "no-unused-vars": {
+      "count": 1
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "typescript/prefer-nullish-coalescing": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 6
+    },
+    "typescript/use-unknown-in-catch-callback-variable": {
+      "count": 1
+    },
+    "unicorn/prefer-top-level-await": {
+      "count": 1
+    }
+  },
+  "packages/events/mcp/src/knowledge.ts": {
+    "complexity": {
+      "count": 1
+    },
+    "max-params": {
+      "count": 5
+    },
+    "no-nested-ternary": {
+      "count": 1
+    },
+    "typescript/array-type": {
+      "count": 1
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 7
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 1
+    },
+    "typescript/no-unnecessary-condition": {
+      "count": 2
+    },
+    "typescript/no-unsafe-assignment": {
+      "count": 2
+    },
+    "typescript/no-unsafe-member-access": {
+      "count": 1
+    },
+    "typescript/prefer-nullish-coalescing": {
+      "count": 2
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 13
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 1
+    },
+    "unicorn/no-array-sort": {
+      "count": 2
+    },
+    "unicorn/prefer-top-level-await": {
+      "count": 6
+    }
+  },
+  "packages/events/mcp/src/map.ts": {
+    "complexity": {
+      "count": 1
+    },
+    "max-params": {
+      "count": 1
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 8
+    }
+  },
+  "packages/events/mcp/src/model.ts": {
+    "typescript/explicit-module-boundary-types": {
+      "count": 3
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    }
+  },
+  "packages/events/mcp/src/server.ts": {
+    "typescript/no-unnecessary-type-parameters": {
+      "count": 1
+    },
+    "typescript/require-await": {
+      "count": 14
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 3
+    }
+  },
+  "packages/events/mcp/src/tools.ts": {
+    "max-params": {
+      "count": 2
+    },
+    "typescript/explicit-module-boundary-types": {
+      "count": 7
+    },
+    "typescript/no-base-to-string": {
+      "count": 2
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 2
+    },
+    "typescript/no-unnecessary-condition": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 8
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 1
+    },
+    "unicorn/no-array-sort": {
+      "count": 5
+    }
+  },
+  "packages/events/mcp/test/agent-catalog.test.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 1
+    },
+    "no-unused-vars": {
+      "count": 1
+    }
+  },
+  "packages/events/mcp/test/agents-link.test.ts": {
+    "no-unused-vars": {
+      "count": 1
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    }
+  },
+  "packages/events/mcp/test/data-contract.test.ts": {
+    "typescript/no-unsafe-type-assertion": {
+      "count": 1
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 2
+    }
+  },
+  "packages/events/mcp/test/flows.test.ts": {
+    "typescript/no-unsafe-call": {
+      "count": 1
+    },
+    "typescript/no-unsafe-type-assertion": {
+      "count": 1
+    }
+  },
+  "packages/events/mcp/test/knowledge.test.ts": {
+    "unicorn/consistent-function-scoping": {
+      "count": 4
+    },
+    "vitest/require-to-throw-message": {
+      "count": 5
+    }
+  },
+  "packages/events/mcp/test/map.test.ts": {
+    "max-params": {
+      "count": 1
+    },
+    "typescript/no-unnecessary-condition": {
+      "count": 1
+    },
+    "unicorn/no-array-sort": {
+      "count": 3
+    }
+  },
+  "packages/events/mcp/test/tools.test.ts": {
+    "no-unused-vars": {
+      "count": 1
+    },
+    "vitest/require-to-throw-message": {
+      "count": 1
+    }
+  },
+  "packages/events/mcp/view/map.tsx": {
+    "anti-slop/require-readable-spacing": {
+      "count": 1
+    },
+    "complexity": {
+      "count": 1
+    },
+    "no-nested-ternary": {
+      "count": 1
+    },
+    "typescript/consistent-return": {
+      "count": 1
+    },
+    "typescript/no-deprecated": {
+      "count": 2
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 3
+    },
+    "unicorn/prefer-top-level-await": {
+      "count": 1
+    }
+  },
+  "packages/events/plugin-zod/src/bin.ts": {
+    "no-console": {
+      "count": 4
+    },
+    "typescript/use-unknown-in-catch-callback-variable": {
+      "count": 1
+    },
+    "unicorn/prefer-top-level-await": {
+      "count": 1
+    }
+  },
+  "packages/events/plugin-zod/src/define-event.ts": {
+    "complexity": {
+      "count": 1
+    },
+    "typescript/no-deprecated": {
+      "count": 2
+    }
+  },
+  "packages/events/plugin-zod/src/event-mapper.ts": {
+    "typescript/no-deprecated": {
+      "count": 1
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 4
+    }
+  },
+  "packages/events/plugin-zod/src/scanner.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 3
+    },
+    "complexity": {
+      "count": 2
+    },
+    "max-params": {
+      "count": 1
+    },
+    "no-nested-ternary": {
+      "count": 3
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 2
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 1
+    },
+    "typescript/no-unnecessary-condition": {
+      "count": 1
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 8
+    }
+  },
+  "packages/events/plugin-zod/src/static-scan.ts": {
+    "anti-slop/require-readable-spacing": {
+      "count": 11
+    },
+    "complexity": {
+      "count": 5
+    },
+    "max-params": {
+      "count": 2
+    },
+    "no-nested-ternary": {
+      "count": 3
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 5
+    },
+    "typescript/no-dynamic-delete": {
+      "count": 1
+    },
+    "typescript/no-non-null-assertion": {
+      "count": 3
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 6
+    },
+    "unicorn/prefer-top-level-await": {
+      "count": 2
+    }
+  },
+  "packages/events/plugin-zod/test/runner.test.ts": {
+    "no-unused-vars": {
+      "count": 1
+    },
+    "vitest/require-to-throw-message": {
+      "count": 1
+    }
+  },
+  "packages/events/plugin-zod/test/scanner.test.ts": {
+    "complexity": {
+      "count": 1
+    },
+    "no-unused-vars": {
+      "count": 1
+    },
+    "typescript/no-unsafe-return": {
+      "count": 1
+    },
+    "unicorn/no-array-sort": {
+      "count": 1
+    }
+  },
+  "packages/events/plugin-zod/test/static-scan.test.ts": {
+    "typescript/no-deprecated": {
+      "count": 4
+    }
+  },
+  "packages/events/plugin-zod/test/writer.test.ts": {
+    "unicorn/no-array-sort": {
+      "count": 1
+    },
+    "vitest/require-to-throw-message": {
+      "count": 1
+    }
+  },
+  "scripts/lint-effect.mjs": {
+    "no-console": {
+      "count": 2
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 1
+    }
+  },
+  "scripts/pin-actions.mjs": {
+    "no-console": {
+      "count": 3
+    },
+    "no-regex-spaces": {
+      "count": 1
+    }
+  },
+  "scripts/smoke-audit.ts": {
+    "no-console": {
+      "count": 2
+    },
+    "no-unused-vars": {
+      "count": 2
+    },
+    "typescript/no-unsafe-assignment": {
+      "count": 2
+    },
+    "typescript/no-unsafe-member-access": {
+      "count": 3
+    },
+    "typescript/no-unsafe-return": {
+      "count": 1
+    },
+    "typescript/use-unknown-in-catch-callback-variable": {
+      "count": 1
+    },
+    "unicorn/prefer-top-level-await": {
+      "count": 1
+    }
+  },
+  "scripts/smoke-cost.ts": {
+    "no-console": {
+      "count": 8
+    },
+    "no-unused-vars": {
+      "count": 2
+    },
+    "typescript/no-unsafe-assignment": {
+      "count": 3
+    },
+    "typescript/no-unsafe-call": {
+      "count": 1
+    },
+    "typescript/no-unsafe-member-access": {
+      "count": 11
+    },
+    "typescript/no-unsafe-return": {
+      "count": 1
+    },
+    "typescript/use-unknown-in-catch-callback-variable": {
+      "count": 1
+    },
+    "unicorn/prefer-top-level-await": {
+      "count": 1
+    }
+  },
+  "scripts/smoke-describe.ts": {
+    "no-console": {
+      "count": 4
+    },
+    "no-unused-vars": {
+      "count": 2
+    },
+    "typescript/no-unsafe-argument": {
+      "count": 1
+    },
+    "typescript/no-unsafe-assignment": {
+      "count": 1
+    },
+    "typescript/no-unsafe-member-access": {
+      "count": 3
+    },
+    "typescript/prefer-nullish-coalescing": {
+      "count": 2
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 2
+    },
+    "typescript/use-unknown-in-catch-callback-variable": {
+      "count": 1
+    },
+    "unicorn/no-array-sort": {
+      "count": 1
+    },
+    "unicorn/prefer-top-level-await": {
+      "count": 1
+    }
+  },
+  "scripts/smoke-drift.ts": {
+    "no-console": {
+      "count": 4
+    },
+    "no-unused-vars": {
+      "count": 2
+    },
+    "typescript/no-unsafe-assignment": {
+      "count": 1
+    },
+    "typescript/no-unsafe-member-access": {
+      "count": 9
+    },
+    "typescript/strict-boolean-expressions": {
+      "count": 1
+    },
+    "typescript/use-unknown-in-catch-callback-variable": {
+      "count": 1
+    },
+    "unicorn/prefer-top-level-await": {
+      "count": 1
+    }
+  },
+  "scripts/smoke-mcp.ts": {
+    "no-unused-vars": {
+      "count": 2
+    },
+    "typescript/use-unknown-in-catch-callback-variable": {
+      "count": 1
+    },
+    "unicorn/prefer-top-level-await": {
+      "count": 1
+    }
+  },
+  "scripts/smoke-product.mjs": {
+    "anti-slop/require-readable-spacing": {
+      "count": 1
+    },
+    "no-console": {
+      "count": 5
+    },
+    "unicorn/no-array-sort": {
+      "count": 2
+    }
+  },
+  "scripts/typecheck.mjs": {
+    "no-console": {
+      "count": 2
+    }
+  },
+  "scripts/verify-delivery.mjs": {
+    "max-params": {
+      "count": 1
+    },
+    "no-console": {
+      "count": 2
+    },
+    "no-promise-executor-return": {
+      "count": 1
+    }
+  },
+  "scripts/verify-federation.mjs": {
+    "max-params": {
+      "count": 1
+    },
+    "no-console": {
+      "count": 2
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    },
+    "unicorn/no-array-callback-reference": {
+      "count": 2
+    }
+  },
+  "scripts/verify-frameworks.mjs": {
+    "no-console": {
+      "count": 3
+    },
+    "unicorn/no-array-sort": {
+      "count": 1
+    }
+  },
+  "scripts/write-contracts.mjs": {
+    "anti-slop/require-readable-spacing": {
+      "count": 1
+    },
+    "no-console": {
+      "count": 2
+    },
+    "no-unused-vars": {
+      "count": 1
+    }
+  },
+  "starters/agent-default/tools/issue-refund/schema.zod.ts": {
+    "typescript/no-unsafe-assignment": {
+      "count": 9
+    },
+    "typescript/no-unsafe-call": {
+      "count": 14
+    },
+    "typescript/no-unsafe-member-access": {
+      "count": 14
+    }
+  },
+  "starters/agent-default/tools/lookup-order/schema.zod.ts": {
+    "typescript/no-unsafe-assignment": {
+      "count": 9
+    },
+    "typescript/no-unsafe-call": {
+      "count": 11
+    },
+    "typescript/no-unsafe-member-access": {
+      "count": 11
+    }
+  },
+  "starters/agent-default/tools/send-email/schema.zod.ts": {
+    "typescript/no-unsafe-assignment": {
+      "count": 8
+    },
+    "typescript/no-unsafe-call": {
+      "count": 15
+    },
+    "typescript/no-unsafe-member-access": {
+      "count": 15
+    }
+  },
+  "tools/ask-benchmark/run.mjs": {
+    "complexity": {
+      "count": 1
+    },
+    "no-console": {
+      "count": 2
+    },
+    "no-nested-ternary": {
+      "count": 1
+    },
+    "no-promise-executor-return": {
+      "count": 1
+    },
+    "no-unused-vars": {
+      "count": 1
+    }
+  }
+}

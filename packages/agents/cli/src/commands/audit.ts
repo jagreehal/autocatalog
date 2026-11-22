@@ -1,6 +1,7 @@
 import { resolve } from 'node:path';
 import kleur from 'kleur';
-import { auditCatalog, groupFindings, loadCatalog, type Severity } from 'autocatalog-agents-core';
+import { auditCatalog, groupFindings, loadCatalog } from 'autocatalog-agents-core';
+import type { Severity } from 'autocatalog-agents-core';
 
 const SEVERITY_COLOR: Record<Severity, (s: string) => string> = {
   P0: kleur.red,
@@ -8,7 +9,7 @@ const SEVERITY_COLOR: Record<Severity, (s: string) => string> = {
   P2: kleur.dim,
 };
 
-export const runAudit = async (args: string[]): Promise<number> => {
+export const runAudit = async (args: Array<string>): Promise<number> => {
   let root = '.';
   let json = false;
   let failOn: Severity = 'P0';
@@ -16,13 +17,17 @@ export const runAudit = async (args: string[]): Promise<number> => {
   for (let i = 0; i < args.length; i++) {
     const a = args[i]!;
 
-    if (a === '--root') root = args[++i] ?? '.';
-    else if (a === '--json') json = true;
-    else if (a === '--fail-on') {
+    if (a === '--root') {
+      root = args[++i] ?? '.';
+    } else if (a === '--json') {
+      json = true;
+    } else if (a === '--fail-on') {
       // Anything but P1/P2 has always meant the P0 threshold.
       const severity = args[++i];
       failOn = severity === 'P1' || severity === 'P2' ? severity : 'P0';
-    } else if (!root || root === '.') root = a;
+    } else if (!root || root === '.') {
+      root = a;
+    }
   }
 
   const cat = await loadCatalog(resolve(root));
@@ -41,7 +46,9 @@ export const runAudit = async (args: string[]): Promise<number> => {
       for (const sev of ['P0', 'P1', 'P2'] as const) {
         const bucket = grouped[sev];
 
-        if (bucket.length === 0) continue;
+        if (bucket.length === 0) {
+          continue;
+        }
         process.stdout.write(SEVERITY_COLOR[sev](`${sev}  (${bucket.length})\n`));
 
         for (const f of bucket) {

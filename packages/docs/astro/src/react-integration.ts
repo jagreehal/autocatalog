@@ -16,8 +16,8 @@ const ui = fileURLToPath(new URL('./ui', import.meta.url));
  * ESM entry that re-exports React 19's hook.
  */
 export function cjsShimAliases(
-  from: string = path.dirname(fileURLToPath(import.meta.url)),
-): { find: RegExp; replacement: string }[] {
+  from: string = import.meta.dirname,
+): Array<{ find: RegExp; replacement: string }> {
   const shim = path.join(from, 'use-sync-external-store-shim.ts');
 
   // Exact match: a string find is a prefix and would rewrite `…/shim/index.js` too.
@@ -77,13 +77,15 @@ const REACT = /^react(-dom)?(\/|$)/;
  */
 function oneReact(): Plugin {
   const chatbot = path.dirname(path.dirname(require.resolve('autocatalog-chatbot')));
-  const self = fileURLToPath(import.meta.url);
+  const self = import.meta.filename;
 
   return {
     name: 'autocatalog-docs-one-react',
     enforce: 'pre',
     resolveId(source, importer) {
-      if (!importer?.startsWith(chatbot) || !REACT.test(source)) return null;
+      if (!importer?.startsWith(chatbot) || !REACT.test(source)) {
+        return null;
+      }
 
       return this.resolve(source, self, { skipSelf: true });
     },
@@ -111,8 +113,12 @@ export function siteHasReact(projectRoot: string): boolean {
 // require: a pnpm script's NODE_PATH lets require find what Vite will not.
 function installed(from: string, name: string): boolean {
   for (let dir = from; ; dir = path.dirname(dir)) {
-    if (fs.existsSync(path.join(dir, 'node_modules', name, 'package.json'))) return true;
+    if (fs.existsSync(path.join(dir, 'node_modules', name, 'package.json'))) {
+      return true;
+    }
 
-    if (path.dirname(dir) === dir) return false;
+    if (path.dirname(dir) === dir) {
+      return false;
+    }
   }
 }

@@ -8,8 +8,8 @@ import {
   findCatalogRoots,
   renderDriftMarkdown,
   scanCatalog,
-  type DriftReport,
 } from 'autocatalog-core';
+import type { DriftReport } from 'autocatalog-core';
 import kleur from 'kleur';
 import { discoverAdapters, discoverDiscoveryAdapters } from '../adapters';
 import { githubAnnotation } from './annotation';
@@ -77,9 +77,13 @@ async function runContracts(dir: string, root: string, opts: RunCheckOptions) {
 
     const prefix = path.relative(root, dir).split(path.sep).join('/');
 
-    for (const error of errors) report(prefix ? `${prefix}/${error}` : error, format, root);
+    for (const error of errors) {
+      report(prefix ? `${prefix}/${error}` : error, format, root);
+    }
 
-    if (errors.length === 0) console.log(kleur.green('✓ contracts read'));
+    if (errors.length === 0) {
+      console.log(kleur.green('✓ contracts read'));
+    }
 
     return errors.length > 0 ? 1 : 0;
   } finally {
@@ -140,7 +144,7 @@ function packageChecks(
   dir: string,
   root: string,
   opts: RunCheckOptions & { onReport?: (report: DriftReport) => void },
-): Check[] {
+): Array<Check> {
   const exists = (name: string) => fsSync.existsSync(path.join(dir, name));
   const where = dir === root ? '' : ` in ${path.relative(root, dir).split(path.sep).join('/')}`;
 
@@ -168,7 +172,7 @@ function packageChecks(
  */
 export async function runCheck(input: RunCheckOptions): Promise<number> {
   const root = path.resolve(input.root);
-  const reports: DriftReport[] = [];
+  const reports: Array<DriftReport> = [];
   const opts = { ...input, onReport: (report: DriftReport) => reports.push(report) };
 
   // A monorepo publishes from its packages, so each one answers for itself.
@@ -182,7 +186,7 @@ export async function runCheck(input: RunCheckOptions): Promise<number> {
       : [`${where} and ${duplicateOf || 'the root'} both publish as ${name}; rename one folder`],
   );
 
-  const checks: Check[] = [
+  const checks: Array<Check> = [
     // Flows, glossaries and teams answer to this check too, with or without a docs/.
     ...(roots.length > 0
       ? [['Documents', () => runDocsCheck({ root, format: opts.format })] as const]
@@ -199,7 +203,9 @@ export async function runCheck(input: RunCheckOptions): Promise<number> {
     return 0;
   }
 
-  for (const clash of clashes) report(clash, opts.format, root);
+  for (const clash of clashes) {
+    report(clash, opts.format, root);
+  }
 
   const failures = clashes.length > 0 ? ['Packages that publish under one name'] : [];
 
@@ -208,20 +214,24 @@ export async function runCheck(input: RunCheckOptions): Promise<number> {
 
     // One check that cannot run is a failure, and the others still report.
     try {
-      if ((await run()) !== 0) failures.push(name);
+      if ((await run()) !== 0) {
+        failures.push(name);
+      }
     } catch (error) {
       report(error instanceof Error ? error.message : String(error), opts.format, root);
       failures.push(name);
     }
   }
 
-  if (opts.comment) await comment(failures, reports);
+  if (opts.comment) {
+    await comment(failures, reports);
+  }
 
   return failures.length > 0 ? 1 : 0;
 }
 
 /** The result as a pull request comment: what failed, then each drift report. */
-export function commentBody(failures: string[], reports: DriftReport[]): string {
+export function commentBody(failures: Array<string>, reports: Array<DriftReport>): string {
   const findings = reports.filter((report) => report.findings.length > 0);
 
   return [
@@ -236,7 +246,7 @@ export function commentBody(failures: string[], reports: DriftReport[]): string 
  * One comment, kept up to date. A comment that cannot be written, as on a pull
  * request from a fork whose token may only read, is said and does not fail.
  */
-async function comment(failures: string[], reports: DriftReport[]): Promise<void> {
+async function comment(failures: Array<string>, reports: Array<DriftReport>): Promise<void> {
   const pr = await pullRequestFromEnv();
 
   if (!pr) {

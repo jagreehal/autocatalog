@@ -2,16 +2,10 @@
 import '@eventcatalog/visualiser/styles-core.css';
 import { cn } from 'cn';
 import { Maximize2Icon, Minimize2Icon } from 'lucide-react';
-import { mapHeight, type VisualiserGraph } from '#ui/lib/visualiser.ts';
-import {
-  type CSSProperties,
-  lazy,
-  Suspense,
-  useEffect,
-  useRef,
-  useState,
-  type ReactNode,
-} from 'react';
+import { mapHeight } from '#ui/lib/visualiser.ts';
+import type { VisualiserGraph } from '#ui/lib/visualiser.ts';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { Button } from '#ui/components/ui/button.tsx';
 
@@ -56,11 +50,15 @@ export function Graph({ id, label, visualiser, height = '20rem', fallback }: Gra
   }, []);
 
   useEffect(() => {
-    if (!visualiser || !box.current || fullscreen) return;
+    if (!visualiser || !box.current || fullscreen) {
+      return;
+    }
 
     const observer = new IntersectionObserver(
       (entries) => {
-        if (!entries.some((entry) => entry.isIntersecting)) return;
+        if (!entries.some((entry) => entry.isIntersecting)) {
+          return;
+        }
 
         setNear(true);
         observer.disconnect();
@@ -74,10 +72,14 @@ export function Graph({ id, label, visualiser, height = '20rem', fallback }: Gra
   }, [visualiser, fullscreen]);
 
   useEffect(() => {
-    if (!fullscreen) return;
+    if (!fullscreen) {
+      return;
+    }
 
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setFullscreen(false);
+      if (event.key === 'Escape') {
+        setFullscreen(false);
+      }
     };
 
     document.documentElement.dataset.graphFullscreen = '';
@@ -132,6 +134,7 @@ export function Graph({ id, label, visualiser, height = '20rem', fallback }: Gra
             steps={visualiser.steps}
             lanes={visualiser.lanes}
             levels={visualiser.levels}
+            initialLevel={visualiser.initialLevel}
             proposed={visualiser.proposed}
           />
         </Suspense>

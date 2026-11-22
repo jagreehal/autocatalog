@@ -47,7 +47,7 @@ it('ignores an unreadable file outside its repositories, such as one in a folder
   await fs.mkdir(path.join(root, 'docs'));
 
   const layout = resolveDocsLayout(root, { exclude: [path.basename(root)] });
-  const deleted: string[] = [];
+  const deleted: Array<string> = [];
 
   const context: Pick<LoaderContext, 'meta'> & {
     store: Pick<LoaderContext['store'], 'clear' | 'delete'>;

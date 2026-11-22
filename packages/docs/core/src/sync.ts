@@ -1,12 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { isDeepStrictEqual } from 'node:util';
-import {
-  type JsonObject,
-  type JsonValue,
-  jsonObjectSchema,
-  jsonValueSchema,
-} from 'autocatalog-core';
+import { jsonObjectSchema, jsonValueSchema } from 'autocatalog-core';
+import type { JsonObject, JsonValue } from 'autocatalog-core';
 import { z } from 'zod';
 import { DOCS_SCHEMA_PATH } from './frontmatter';
 
@@ -42,7 +38,7 @@ export interface SyncContractResult {
   /** Absolute path of the local copy. */
   file: string;
   /** Field-level differences, in the order a reader wants them. */
-  changes: string[];
+  changes: Array<string>;
   /** Set when the source could not be read. */
   error?: string;
 }
@@ -50,11 +46,14 @@ export interface SyncContractResult {
 async function defaultFetchJson(url: string): Promise<JsonValue> {
   // https only: this writes a file that decides what every document in the
   // repository must satisfy, so it is not something to take over plain http.
-  if (!url.startsWith('https://'))
+  if (!url.startsWith('https://')) {
     throw new Error(`refusing to fetch over a non-https URL: ${url}`);
+  }
   const response = await fetch(url);
 
-  if (!response.ok) throw new Error(`${url} returned ${response.status}`);
+  if (!response.ok) {
+    throw new Error(`${url} returned ${response.status}`);
+  }
 
   return jsonValueSchema.parse(await response.json());
 }
@@ -72,8 +71,8 @@ const contractKeywords = z.looseObject({
 });
 
 /** Top-level differences, described the way a reviewer would say them. */
-export function describeContractChanges(local: JsonObject, upstream: JsonObject): string[] {
-  const changes: string[] = [];
+export function describeContractChanges(local: JsonObject, upstream: JsonObject): Array<string> {
+  const changes: Array<string> = [];
   const localKeywords = contractKeywords.parse(local);
   const upstreamKeywords = contractKeywords.parse(upstream);
 
@@ -81,14 +80,17 @@ export function describeContractChanges(local: JsonObject, upstream: JsonObject)
   const upstreamProps = upstreamKeywords.properties ?? {};
 
   for (const field of Object.keys(upstreamProps)) {
-    if (!(field in localProps)) changes.push(`+ field ${field}`);
-    else if (!isDeepStrictEqual(localProps[field], upstreamProps[field])) {
+    if (!(field in localProps)) {
+      changes.push(`+ field ${field}`);
+    } else if (!isDeepStrictEqual(localProps[field], upstreamProps[field])) {
       changes.push(`~ field ${field} changed`);
     }
   }
 
   for (const field of Object.keys(localProps)) {
-    if (!(field in upstreamProps)) changes.push(`- field ${field} removed upstream`);
+    if (!(field in upstreamProps)) {
+      changes.push(`- field ${field} removed upstream`);
+    }
   }
 
   const localRequired = new Set(localKeywords.required ?? []);
@@ -96,11 +98,15 @@ export function describeContractChanges(local: JsonObject, upstream: JsonObject)
 
   for (const field of upstreamRequired) {
     // The change most likely to fail a build that was passing this morning.
-    if (!localRequired.has(field)) changes.push(`! ${field} is now required`);
+    if (!localRequired.has(field)) {
+      changes.push(`! ${field} is now required`);
+    }
   }
 
   for (const field of localRequired) {
-    if (!upstreamRequired.has(field)) changes.push(`~ ${field} is no longer required`);
+    if (!upstreamRequired.has(field)) {
+      changes.push(`~ ${field} is no longer required`);
+    }
   }
 
   if (Boolean(local.additionalProperties) !== Boolean(upstream.additionalProperties)) {
@@ -136,7 +142,9 @@ export async function syncFrontmatterContract(
 
   const source = options.from ?? contractKeywords.parse(local).$id ?? null;
 
-  if (!source) return { ...base, status: 'no-source' };
+  if (!source) {
+    return { ...base, status: 'no-source' };
+  }
 
   let upstream: JsonObject;
 
@@ -147,7 +155,9 @@ export async function syncFrontmatterContract(
 
     const parsed = jsonObjectSchema.safeParse(raw);
 
-    if (!parsed.success) throw new Error('the source is not a JSON Schema object');
+    if (!parsed.success) {
+      throw new Error('the source is not a JSON Schema object');
+    }
 
     upstream = parsed.data;
   } catch (error) {

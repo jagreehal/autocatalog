@@ -45,14 +45,14 @@ export interface DatastoreRow {
   id: string;
   namespace?: string | undefined;
   owner: string | null;
-  writers: string[];
-  readers: string[];
+  writers: Array<string>;
+  readers: Array<string>;
   evidence: { count: number; environment?: string | undefined } | null;
 }
 
 export interface CatalogPageProps {
-  failures: CatalogFailure[];
-  datastores: DatastoreRow[];
+  failures: Array<CatalogFailure>;
+  datastores: Array<DatastoreRow>;
   /** Undefined when there is nothing worth drawing. */
   map?: VisualiserGraph | undefined;
   /** The graph's rows, for the explorer below the map. */

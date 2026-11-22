@@ -39,7 +39,7 @@ const link = (target: string, at: string) => fs.symlink(target, path.join(root, 
 async function rejection(promise: Promise<unknown>): Promise<ResourceReadError> {
   const error = await promise.then(
     () => undefined,
-    (reason: Error) => reason,
+    (error_: Error) => error_,
   );
 
   expect(error).toBeInstanceOf(ResourceReadError);

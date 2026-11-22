@@ -53,9 +53,9 @@ it('gives an agent a flow with each finding’s status, and how to read the coun
 
   const listed = await call({});
 
-  expect(JSON.parse(listed.content[0]!.text).flows).toMatchObject([{ id: 'fulfil' }]);
+  expect(JSON.parse(listed.content[0].text).flows).toMatchObject([{ id: 'fulfil' }]);
 
-  const context = JSON.parse((await call({ id: 'fulfil' })).content[0]!.text);
+  const context = JSON.parse((await call({ id: 'fulfil' })).content[0].text);
 
   expect(context.howToRead).toContain('hypothesis');
   expect(context.steps[0].notes).toMatchObject([
@@ -80,7 +80,7 @@ it('gives an agent a flow with each finding’s status, and how to read the coun
     '---\ntitle: Dotted\nentity: order\nsteps:\n  - id: a\n    title: A\n    field: capture.status\n    transition: { from: new, to: done }\n  - id: b\n    title: B\n    field: capture.status\n    transition: { from: done, to: new }\n  - id: c\n    title: C\n    field: status\n    transition: { from: new, to: done }\n---\n',
   );
 
-  const dotted = JSON.parse((await call({ id: 'dotted' })).content[0]!.text);
+  const dotted = JSON.parse((await call({ id: 'dotted' })).content[0].text);
 
   expect(dotted.observe.map((hint: { input: object }) => hint.input)).toEqual([
     { entity: 'order', field: 'capture.status' },
@@ -112,7 +112,7 @@ it('gives an agent a flow with each finding’s status, and how to read the coun
     }),
   );
 
-  const stale = JSON.parse((await call({ id: 'fulfil' })).content[0]!.text);
+  const stale = JSON.parse((await call({ id: 'fulfil' })).content[0].text);
 
   expect(stale.steps[0].evidence).toBe('not checked');
 

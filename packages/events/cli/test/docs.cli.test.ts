@@ -2,7 +2,8 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { jsonObjectSchema, type JsonObject } from 'autocatalog-core';
+import { jsonObjectSchema } from 'autocatalog-core';
+import type { JsonObject } from 'autocatalog-core';
 import { z } from 'zod';
 import {
   runDocsCheck,
@@ -193,9 +194,9 @@ describe('ac docs check', () => {
     await runDocsInitSchema({ root, quiet: true });
     await write('a/docs/bad.md', '---\ntitle: No owner\n---\n\nBody.\n');
 
-    const said: string[] = [];
+    const said: Array<string> = [];
 
-    const spy = vi.spyOn(console, 'error').mockImplementation((...args: unknown[]) => {
+    const spy = vi.spyOn(console, 'error').mockImplementation((...args: Array<unknown>) => {
       said.push(args.map(String).join(' '));
     });
 
@@ -238,9 +239,9 @@ describe('ac docs init-conventions', () => {
     );
     await write('a/docs/postmortems/outage.md', '---\ntitle: Outage\nowner: Ops\n---\n\nBody.\n');
 
-    const said: string[] = [];
+    const said: Array<string> = [];
 
-    const spy = vi.spyOn(console, 'error').mockImplementation((...args: unknown[]) => {
+    const spy = vi.spyOn(console, 'error').mockImplementation((...args: Array<unknown>) => {
       said.push(args.map(String).join(' '));
     });
 
@@ -277,9 +278,9 @@ describe('ac docs sync-schema', () => {
     const local = await readSchema();
     const canonical = await upstream({ ...local, required: ['title', 'owner', 'tier'] });
 
-    const said: string[] = [];
+    const said: Array<string> = [];
 
-    const spy = vi.spyOn(console, 'error').mockImplementation((...args: unknown[]) => {
+    const spy = vi.spyOn(console, 'error').mockImplementation((...args: Array<unknown>) => {
       said.push(args.map(String).join(' '));
     });
 

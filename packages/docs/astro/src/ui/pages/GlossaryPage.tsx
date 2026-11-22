@@ -30,7 +30,7 @@ export interface GlossaryPageProps {
       summary?: string | undefined;
       description?: string | undefined;
       /** Other words teams use for it. */
-      aliases: string[];
+      aliases: Array<string>;
       /** What implements it, from its `about:`. */
       about: Array<{ name: string; href?: string | undefined }>;
     }>;

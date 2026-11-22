@@ -14,7 +14,7 @@ interface DraftStep {
   summary?: string;
   track?: 'failure';
   repeats?: string;
-  systems?: string[];
+  systems?: Array<string>;
   policy?: string;
   code: Array<{ file: string; contains: string }>;
   next_step?: string;
@@ -24,18 +24,18 @@ interface DraftStep {
 export interface DraftedFlow {
   title: string;
   summary?: string;
-  steps: DraftStep[];
+  steps: Array<DraftStep>;
 }
 
 const words = (name: string) =>
   name
-    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
-    .replace(/[_-]+/g, ' ')
+    .replaceAll(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .replaceAll(/[_-]+/g, ' ')
     .trim()
     .toLowerCase()
     .split(/\s+/);
 
-const sentence = (parts: string[]) => {
+const sentence = (parts: Array<string>) => {
   const text = parts.join(' ');
 
   return text.charAt(0).toUpperCase() + text.slice(1);
@@ -62,11 +62,17 @@ const IRREGULAR = new Map([
 function pastTense(verb: string): string {
   const irregular = IRREGULAR.get(verb);
 
-  if (irregular) return irregular;
+  if (irregular) {
+    return irregular;
+  }
 
-  if (verb.endsWith('e')) return `${verb}d`;
+  if (verb.endsWith('e')) {
+    return `${verb}d`;
+  }
 
-  if (/[^aeiou]y$/.test(verb)) return `${verb.slice(0, -1)}ied`;
+  if (/[^aeiou]y$/.test(verb)) {
+    return `${verb.slice(0, -1)}ied`;
+  }
 
   return `${verb}ed`;
 }
@@ -81,14 +87,18 @@ export function factOf(name: string): string {
 }
 
 /** The first generator in a program: the body whose yields are its steps. */
-function bodyOf(nodes: readonly StaticFlowNode[]): StaticFlowNode | undefined {
+function bodyOf(nodes: ReadonlyArray<StaticFlowNode>): StaticFlowNode | undefined {
   for (const node of nodes) {
-    if (node.type === 'generator') return node;
+    if (node.type === 'generator') {
+      return node;
+    }
 
     const inner = 'children' in node && Array.isArray(node.children) ? node.children : [];
     const found = bodyOf(inner);
 
-    if (found) return found;
+    if (found) {
+      return found;
+    }
   }
 
   return undefined;
@@ -96,8 +106,8 @@ function bodyOf(nodes: readonly StaticFlowNode[]): StaticFlowNode | undefined {
 
 interface Named {
   name: string;
-  errors: string[];
-  systems: string[];
+  errors: Array<string>;
+  systems: Array<string>;
   repeats?: string | undefined;
   /** What the call's own handlers do with an error; nothing when they do not catch it. */
   recovery: (error: string) => Recovery | undefined;
@@ -111,7 +121,7 @@ interface Named {
 interface Recovery {
   known: boolean;
   continues: boolean;
-  raises: string[];
+  raises: Array<string>;
 }
 
 const UNREAD: Recovery = { known: false, continues: false, raises: [] };
@@ -125,20 +135,24 @@ const tagsOf = (union: string | undefined) =>
 /** How the analyzer walks its own tree: a node's children, whatever kind it is. */
 type ChildrenOf = (node: StaticFlowNode) => ReadonlyArray<StaticFlowNode>;
 
-const nodesUnder = (node: StaticFlowNode, childrenOf: ChildrenOf): StaticFlowNode[] => [
+const nodesUnder = (node: StaticFlowNode, childrenOf: ChildrenOf): Array<StaticFlowNode> => [
   node,
   ...childrenOf(node).flatMap((child) => nodesUnder(child, childrenOf)),
 ];
 
 /** A handler's outcome, from the types of the effects it can end with. */
 function outcomeOf(handler: StaticFlowNode | undefined, childrenOf: ChildrenOf): Recovery {
-  if (!handler) return UNREAD;
+  if (!handler) {
+    return UNREAD;
+  }
 
   const typed = nodesUnder(handler, childrenOf).flatMap((node) =>
     node.type === 'effect' && node.typeSignature ? [node.typeSignature] : [],
   );
 
-  if (typed.length === 0) return UNREAD;
+  if (typed.length === 0) {
+    return UNREAD;
+  }
 
   return {
     known: true,
@@ -184,7 +198,7 @@ const CATCH_ALL = new Set([
  */
 function chain(recovery: Recovery, rest: (error: string) => Recovery | undefined): Recovery {
   let { known, continues } = recovery;
-  const raises: string[] = [];
+  const raises: Array<string> = [];
 
   for (const raised of recovery.raises) {
     const next = rest(raised);
@@ -204,7 +218,7 @@ function chain(recovery: Recovery, rest: (error: string) => Recovery | undefined
 
 /** What a pipe's handlers do with an error, in the order they run. */
 function catches(
-  handlers: readonly StaticFlowNode[],
+  handlers: ReadonlyArray<StaticFlowNode>,
   childrenOf: ChildrenOf,
 ): (error: string) => Recovery | undefined {
   const ordered = handlers.flatMap((node) => (node.type === 'error-handler' ? [node] : []));
@@ -212,7 +226,9 @@ function catches(
   const outcome = (node: (typeof ordered)[number], error: string) => {
     const tagged = node.tagHandlers?.find(({ tag }) => tag === error);
 
-    if (tagged) return outcomeOf(tagged.handler, childrenOf);
+    if (tagged) {
+      return outcomeOf(tagged.handler, childrenOf);
+    }
 
     return node.errorTag === error ||
       node.errorTags?.includes(error) ||
@@ -223,11 +239,15 @@ function catches(
 
   const resolve = (error: string, from: number): Recovery | undefined => {
     for (const [index, node] of ordered.entries()) {
-      if (index < from) continue;
+      if (index < from) {
+        continue;
+      }
 
       const found = outcome(node, error);
 
-      if (found) return chain(found, (raised) => resolve(raised, index + 1));
+      if (found) {
+        return chain(found, (raised) => resolve(raised, index + 1));
+      }
     }
 
     return undefined;
@@ -257,11 +277,17 @@ function handlerOutcome(handler: string, known: ReadonlySet<string>): Recovery {
   const logs = /Effect\.log\w*\(/.test(handler);
   const conditional = /\?[^?.]|\bif\s*\(|Effect\.(if|when|unless)\b|Match\./.test(handler);
 
-  if (!fails) return recovers || logs ? { known: true, continues: true, raises: [] } : UNREAD;
+  if (!fails) {
+    return recovers || logs ? { known: true, continues: true, raises: [] } : UNREAD;
+  }
 
-  if (raises.length === 0) return UNREAD;
+  if (raises.length === 0) {
+    return UNREAD;
+  }
 
-  if (!recovers) return { known: true, continues: false, raises };
+  if (!recovers) {
+    return { known: true, continues: false, raises };
+  }
 
   return conditional ? { known: true, continues: true, raises } : UNREAD;
 }
@@ -284,10 +310,14 @@ const recoveryInSource =
     ]) {
       const match = pattern.exec(text);
 
-      if (match && (!at || match.index < at.index)) at = match;
+      if (match && (!at || match.index < at.index)) {
+        at = match;
+      }
     }
 
-    if (!at) return undefined;
+    if (!at) {
+      return undefined;
+    }
 
     const start = at.index + at[0].length;
     const handler = handlerText(text, start);
@@ -307,18 +337,20 @@ const recoveryInSource =
  */
 function namedSteps(
   ir: StaticEffectIR,
-  programs: StaticEffectIR[],
+  programs: Array<StaticEffectIR>,
   source: string,
   childrenOf: ChildrenOf,
-): Named[] {
+): Array<Named> {
   const body = bodyOf(ir.root.children);
 
-  if (body?.type !== 'generator') return [];
+  if (body?.type !== 'generator') {
+    return [];
+  }
 
   const byName = new Map(programs.map((program) => [program.root.programName, program]));
   const knownErrors = new Set(programs.flatMap((program) => program.root.errorTypes ?? []));
 
-  return body.yields.flatMap(({ effect: yielded }): Named[] => {
+  return body.yields.flatMap(({ effect: yielded }): Array<Named> => {
     if (yielded.type === 'loop') {
       const text = source.slice(yielded.location?.offset ?? 0, yielded.location?.endOffset ?? 0);
 
@@ -326,7 +358,9 @@ function namedSteps(
         (program) => program !== ir && new RegExp(`\\b${program.root.programName}\\b`).test(text),
       );
 
-      if (!called) return [];
+      if (!called) {
+        return [];
+      }
 
       return [
         {
@@ -341,7 +375,9 @@ function namedSteps(
 
     const effect = yielded.type === 'pipe' ? yielded.initial : yielded;
 
-    if (effect.type !== 'effect' || effect.callee.includes('.')) return [];
+    if (effect.type !== 'effect' || effect.callee.includes('.')) {
+      return [];
+    }
 
     const called = byName.get(effect.callee);
 
@@ -367,7 +403,7 @@ function namedSteps(
  */
 export function draftFromEffect(
   ir: StaticEffectIR,
-  programs: StaticEffectIR[],
+  programs: Array<StaticEffectIR>,
   options: { file: string; source: string; childrenOf: ChildrenOf },
 ): DraftedFlow {
   const named = namedSteps(ir, programs, options.source, options.childrenOf);
@@ -387,7 +423,9 @@ export function draftFromEffect(
   const allocate = (base: string) => {
     let id = base;
 
-    for (let count = 2; used.has(id); count += 1) id = `${base}-${count}`;
+    for (let count = 2; used.has(id); count += 1) {
+      id = `${base}-${count}`;
+    }
 
     used.add(id);
 
@@ -412,8 +450,8 @@ export function draftFromEffect(
   const completed =
     last && last.errors.length > 0 ? `${kebab(ir.root.programName)}-completed` : undefined;
 
-  const steps: DraftStep[] = [];
-  const failures: DraftStep[] = [];
+  const steps: Array<DraftStep> = [];
+  const failures: Array<DraftStep> = [];
 
   for (const [index, step] of named.entries()) {
     const id = ids[index]!;
@@ -430,7 +468,7 @@ export function draftFromEffect(
 
       // A failure its handler raises in turn is a fact of its own, which the
       // program may stop on or let escape.
-      const replacements: DraftStep[] = [];
+      const replacements: Array<DraftStep> = [];
 
       const raised = (recovery?.raises ?? []).map((replacement) => {
         const raisedId = allocate(`${failure}-${kebab(replacement)}`);
@@ -464,21 +502,22 @@ export function draftFromEffect(
 
       const onward = [...(carriesOn ? [after] : []), ...raised];
 
-      failures.push({
-        id: failure,
-        title: sentence(words(error)),
-        track: 'failure',
-        ...(recovery?.known === false && {
-          summary: 'Caught by a handler the draft cannot read: say what happens next.',
-        }),
-        ...(policy && { policy }),
-        code: [{ file: options.file, contains: error }],
-        ...(carriesOn && raised.length === 0
-          ? { next_step: after }
-          : onward.length > 0 && { next_steps: onward }),
-      });
-
-      failures.push(...replacements);
+      failures.push(
+        {
+          id: failure,
+          title: sentence(words(error)),
+          track: 'failure',
+          ...(recovery?.known === false && {
+            summary: 'Caught by a handler the draft cannot read: say what happens next.',
+          }),
+          ...(policy && { policy }),
+          code: [{ file: options.file, contains: error }],
+          ...(carriesOn && raised.length === 0
+            ? { next_step: after }
+            : onward.length > 0 && { next_steps: onward }),
+        },
+        ...replacements,
+      );
 
       return { id: failure, label: `fails with ${error}` };
     });
@@ -682,7 +721,9 @@ export const draftFlow = Effect.fn('flows.draft')(function* (opts: FlowsDraftOpt
     childrenOf: analyzer.childrenOf,
   });
 
-  if (flow.steps.length === 0) return yield* new NothingToDraft({ program: opts.program });
+  if (flow.steps.length === 0) {
+    return yield* new NothingToDraft({ program: opts.program });
+  }
 
   const markdown = draftMarkdown(flow, `${relative} (${opts.program})`);
 
@@ -695,7 +736,9 @@ export const draftFlow = Effect.fn('flows.draft')(function* (opts: FlowsDraftOpt
   const target = path.join(root, 'flows', `${opts.id ?? kebab(opts.program)}.md`);
   const shown = path.relative(root, target);
 
-  if (fs.existsSync(target) && !opts.force) return yield* new FlowExists({ target: shown });
+  if (fs.existsSync(target) && !opts.force) {
+    return yield* new FlowExists({ target: shown });
+  }
 
   yield* writeFlow(target, markdown);
   yield* Console.log(`Wrote ${shown}. Open it, name the facts, and run ac docs check.`);

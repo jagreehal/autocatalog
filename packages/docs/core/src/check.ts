@@ -6,7 +6,8 @@ import { resolveAbout } from './about';
 import { DOCS_MANIFEST_PATH } from './manifest';
 import { frontmatterSchema, resolveFrontmatterContract } from './frontmatter';
 import { kindFailure, kindValidator, resolveDocKinds, supersession } from './kinds';
-import { readDocs, type ReadDocsOptions, resolveDocsLayout } from './read-docs';
+import { readDocs, resolveDocsLayout } from './read-docs';
+import type { ReadDocsOptions } from './read-docs';
 import { readRepositoryMeta, REPOSITORY_META } from './repository-meta';
 
 export interface CheckDocsOptions extends ReadDocsOptions {
@@ -33,11 +34,11 @@ export interface CheckDocsOptions extends ReadDocsOptions {
    * none of these are lives in another repository and goes unchecked here;
    * the composed site resolves it.
    */
-  resources?: CatalogResource[];
+  resources?: Array<CatalogResource>;
 }
 
 export interface CheckDocsResult {
-  failures: string[];
+  failures: Array<string>;
   docs: number;
   repos: number;
   /** False when no manifest was available, so cross-repo links went unchecked. */
@@ -66,13 +67,15 @@ function readManifest(
 ): z.infer<typeof publishedIndex> | null {
   const resolved = manifestPath ?? path.join(root, DOCS_MANIFEST_PATH);
 
-  if (!fs.existsSync(resolved)) return null;
+  if (!fs.existsSync(resolved)) {
+    return null;
+  }
 
   return publishedIndex.parse(JSON.parse(fs.readFileSync(resolved, 'utf8')));
 }
 
 /** A `docs/meta.json` that does not read, or names something that is not a folder of `docs/`. */
-function repositoryMetaFailures(root: string, options: CheckDocsOptions): string[] {
+function repositoryMetaFailures(root: string, options: CheckDocsOptions): Array<string> {
   return resolveDocsLayout(root, options).roots.flatMap(({ dir }) => {
     const { problem } = readRepositoryMeta(dir);
     const file = path.relative(root, path.join(dir, REPOSITORY_META)).split(path.sep).join('/');
@@ -93,7 +96,9 @@ export function checkDocs(root: string, options: CheckDocsOptions = {}): CheckDo
     ...options,
     audience: 'all',
     onUnreadable: (doc, message) => {
-      if (!message.startsWith(REPOSITORY_META)) throw new Error(`${doc.file}: ${message}`);
+      if (!message.startsWith(REPOSITORY_META)) {
+        throw new Error(`${doc.file}: ${message}`);
+      }
     },
   });
 
@@ -106,20 +111,22 @@ export function checkDocs(root: string, options: CheckDocsOptions = {}): CheckDo
   // What this checkout is answerable for: derived from what is on disk, so no
   // caller has to declare it. One repo in its own CI, many in a combined index.
   const owned = new Set(docs.map((doc) => doc.repo));
-  const failures: string[] = repositoryMetaFailures(root, options);
+  const failures: Array<string> = repositoryMetaFailures(root, options);
   const kinds = new Set<string>(options.resources?.map((resource) => resource.ref.kind));
 
   for (const doc of docs) {
     const { kind, issues } = validate(doc);
 
     if (issues.length > 0) {
-      for (const issue of issues) failures.push(kindFailure(doc.file, kind, issue));
+      for (const issue of issues) {
+        failures.push(kindFailure(doc.file, kind, issue));
+      }
       continue;
     }
 
     // Fenced blocks are excluded: documentation teaches this rule by showing
     // the wrong form, and flagging its own example would be absurd.
-    const prose = doc.body.replace(/^```[\s\S]*?^```/gm, '');
+    const prose = doc.body.replaceAll(/^```[\s\S]*?^```/gm, '');
 
     for (const [, link] of prose.matchAll(/]\((\.\.\/\.\.\/[^)]+)\)/g)) {
       failures.push(
@@ -159,7 +166,9 @@ export function checkDocs(root: string, options: CheckDocsOptions = {}): CheckDo
           ? !present.has(target)
           : manifest !== null && !(target in manifest);
 
-        if (dangling) failures.push(`${doc.file}: ${field} '${target}' does not resolve`);
+        if (dangling) {
+          failures.push(`${doc.file}: ${field} '${target}' does not resolve`);
+        }
       }
     }
 
@@ -171,10 +180,14 @@ export function checkDocs(root: string, options: CheckDocsOptions = {}): CheckDo
     }
 
     for (const target of about.data.about ?? []) {
-      if (!kinds.has(target.split('/')[0] ?? '')) continue;
+      if (!kinds.has(target.split('/')[0] ?? '')) {
+        continue;
+      }
       const resolution = resolveAbout(target, options.resources ?? [], doc.repo);
 
-      if ('failure' in resolution) failures.push(`${doc.file}: ${resolution.failure}`);
+      if ('failure' in resolution) {
+        failures.push(`${doc.file}: ${resolution.failure}`);
+      }
     }
   }
 

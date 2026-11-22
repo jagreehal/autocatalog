@@ -10,13 +10,13 @@ import {
   loadCatalog as loadAgentsCatalog,
 } from 'autocatalog-agents-core';
 import {
-  type CatalogResource,
   createEventResourceGraph,
   findCatalogRoots,
   loadRepositoryEvents,
   readResourceGraph,
   resourceKey,
 } from 'autocatalog-core';
+import type { CatalogResource } from 'autocatalog-core';
 import {
   buildDocsManifest,
   checkDocs,
@@ -71,11 +71,16 @@ export interface DocsCommandOptions {
  * will not load is `ac validate`'s failure to report, so here it contributes
  * nothing rather than failing the docs check twice.
  */
-export async function checkoutResources(root: string, repo?: string): Promise<CatalogResource[]> {
-  const resources: CatalogResource[] = [];
+export async function checkoutResources(
+  root: string,
+  repo?: string,
+): Promise<Array<CatalogResource>> {
+  const resources: Array<CatalogResource> = [];
 
   for (const { name, dir, nested, duplicateOf } of findCatalogRoots(root, { name: repo })) {
-    if (duplicateOf !== undefined) continue;
+    if (duplicateOf !== undefined) {
+      continue;
+    }
 
     const graph = await loadRepositoryEvents(dir, { ownersWithin: root, exclude: nested })
       .then((events) => createEventResourceGraph(events, { repository: name }))
@@ -337,7 +342,9 @@ export async function runDocsSyncSchema(
     case 'written':
       console.log(kleur.green(`✓ updated ${where} from ${result.source}`));
 
-      for (const change of result.changes) console.log(`  ${change}`);
+      for (const change of result.changes) {
+        console.log(`  ${change}`);
+      }
       console.log(
         kleur.dim('  Run ac docs check — documents may no longer satisfy it — then commit it.'),
       );
@@ -347,7 +354,9 @@ export async function runDocsSyncSchema(
     case 'drifted':
       console.error(`${kleur.red('✗')} ${where} has drifted from ${result.source}`);
 
-      for (const change of result.changes) console.error(`  ${change}`);
+      for (const change of result.changes) {
+        console.error(`  ${change}`);
+      }
       console.error(kleur.dim('  Run with --write to take the upstream contract.'));
 
       return 1;
@@ -365,9 +374,13 @@ export async function runDocsManifest(opts: DocsCommandOptions): Promise<number>
       repo: opts.repo,
     });
   } catch (error) {
-    if (!(error instanceof DocsManifestError)) throw error;
+    if (!(error instanceof DocsManifestError)) {
+      throw error;
+    }
 
-    for (const failure of error.failures) console.error(`${kleur.red('✗')} ${failure}`);
+    for (const failure of error.failures) {
+      console.error(`${kleur.red('✗')} ${failure}`);
+    }
     console.error(kleur.red(error.message));
 
     return 1;
@@ -402,7 +415,7 @@ const IMPORTABLE = /\.(md|markdown|txt)$/i;
 
 const titleOf = (text: string, file: string) =>
   /^#\s+(.+)$/m.exec(text)?.[1]?.trim() ??
-  path.basename(file, path.extname(file)).replace(/[-_]+/g, ' ');
+  path.basename(file, path.extname(file)).replaceAll(/[-_]+/g, ' ');
 
 /** A page's frontmatter and body. A leading `---` can also be a horizontal rule. */
 function splitFrontmatter(text: string) {
@@ -438,7 +451,9 @@ export async function runDocsImport(opts: DocsImportOptions): Promise<number> {
 
   for (const entry of entries) {
     // Regular files only: an export is a folder of pages, and a link could be anything.
-    if (!entry.isFile()) continue;
+    if (!entry.isFile()) {
+      continue;
+    }
 
     if (!IMPORTABLE.test(entry.name)) {
       skipped += 1;
@@ -463,11 +478,16 @@ export async function runDocsImport(opts: DocsImportOptions): Promise<number> {
       () => false,
     );
 
-    if (saved) written += 1;
-    else skipped += 1;
+    if (saved) {
+      written += 1;
+    } else {
+      skipped += 1;
+    }
   }
 
-  if (!opts.quiet) console.log(kleur.green(`✓ imported ${written}, skipped ${skipped}`));
+  if (!opts.quiet) {
+    console.log(kleur.green(`✓ imported ${written}, skipped ${skipped}`));
+  }
 
   return 0;
 }

@@ -53,7 +53,7 @@ Examples:
  * Exported so `ac agents …` runs exactly this code rather than a second copy
  * of the dispatch, and so one binary can front the whole product.
  */
-export const runAgentsCli = async (argv: string[]): Promise<number> => {
+export const runAgentsCli = async (argv: Array<string>): Promise<number> => {
   try {
     return await dispatch(argv);
   } catch (error) {
@@ -67,7 +67,7 @@ export const runAgentsCli = async (argv: string[]): Promise<number> => {
   }
 };
 
-const dispatch = async (argv: string[]): Promise<number> => {
+const dispatch = async (argv: Array<string>): Promise<number> => {
   const [cmd, ...rest] = argv;
 
   if (!cmd || cmd === '--help' || cmd === '-h') {

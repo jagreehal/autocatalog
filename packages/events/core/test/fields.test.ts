@@ -4,7 +4,7 @@ import type { JsonObject, JsonValue } from '../src/json';
 import type { LoadedEvent } from '../src/load';
 import { eventFrontmatter } from '../src/schema';
 
-function event(id: string, schema: JsonObject, consumers: string[] = []): LoadedEvent {
+function event(id: string, schema: JsonObject, consumers: Array<string> = []): LoadedEvent {
   return {
     folder: {
       path: `/tmp/${id}`,
@@ -232,17 +232,18 @@ describe('guaranteedFieldPaths', () => {
 
     const id: JsonObject = { required: ['id'], properties: { id: { type: 'string' } } };
 
-    const customers: JsonObject[] = [
+    const customers: Array<JsonObject> = [
       { allOf: [{ type: 'object', ...id }] },
       { allOf: [{ type: 'object' }, id] },
       { type: 'object', allOf: [id] },
     ];
 
-    for (const customer of customers)
+    for (const customer of customers) {
       expect([...guaranteedFieldPaths(wrapped(customer))].sort()).toEqual([
         'customer',
         'customer.id',
       ]);
+    }
 
     // An allOf that never says object still admits null.
     expect([...guaranteedFieldPaths(wrapped({ allOf: [id] }))]).toEqual(['customer']);

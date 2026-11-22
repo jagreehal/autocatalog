@@ -46,7 +46,9 @@ const LANGUAGES = {
 function run(cmd, args, cwd) {
   const result = spawnSync(cmd, args, { cwd, encoding: 'utf8' });
 
-  if (result.error) throw result.error;
+  if (result.error) {
+    throw result.error;
+  }
 
   return result;
 }
@@ -81,7 +83,9 @@ function readTree(dir) {
 function scan(repo, out) {
   const result = ac(['scan', repo, '--out', out]);
 
-  if (result.status !== 0) throw new Error(`scan failed\n${result.stdout}${result.stderr}`);
+  if (result.status !== 0) {
+    throw new Error(`scan failed\n${result.stdout}${result.stderr}`);
+  }
 }
 
 function summarize(contracts, events) {

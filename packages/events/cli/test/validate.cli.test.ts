@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { runValidate } from '../src/commands/validate';
 
-const here = path.dirname(fileURLToPath(import.meta.url));
+const here = import.meta.dirname;
 
 const goodRoot = path.resolve(here, '../../core/test/fixtures/basic-catalog');
 
@@ -140,7 +140,7 @@ describe('runValidate: what this repository consumes', () => {
     await fs.rm(work, { recursive: true, force: true });
   });
 
-  const declare = (fields: string[]) =>
+  const declare = (fields: Array<string>) =>
     fs.writeFile(
       path.join(work, 'autocatalog.consumes.json'),
       JSON.stringify({

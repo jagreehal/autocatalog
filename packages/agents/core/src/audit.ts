@@ -1,13 +1,14 @@
 import { computeImpact } from './impact.js';
 import { estimateAgentCost } from './cost.js';
-import { entitiesOf, entityOf, refKey, type Catalog } from './loader.js';
+import { entitiesOf, entityOf, refKey } from './loader.js';
+import type { Catalog } from './loader.js';
 import { isPinned } from './mcp-config.js';
 
 const COST_CEILING_USD = (() => {
   const fromEnv =
     typeof process !== 'undefined' ? process.env?.AGENTCATALOG_COST_CEILING_USD : undefined;
 
-  const parsed = fromEnv ? Number(fromEnv) : NaN;
+  const parsed = fromEnv ? Number(fromEnv) : Number.NaN;
 
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 5000;
 })();
@@ -16,9 +17,9 @@ const DOMAIN_COST_CEILING_USD = (() => {
   const fromEnv =
     typeof process !== 'undefined' ? process.env?.AGENTCATALOG_DOMAIN_COST_CEILING_USD : undefined;
 
-  const parsed = fromEnv ? Number(fromEnv) : NaN;
+  const parsed = fromEnv ? Number(fromEnv) : Number.NaN;
 
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : 20000;
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 20_000;
 })();
 
 import type { Entity, EntityKind, Model } from './schemas.js';
@@ -37,23 +38,23 @@ export type Finding = {
 export type FindingDetails = {
   adapter?: string;
   sources?: NonNullable<Entity['discovery']>['sources'];
-  needsReview?: string[];
-  dangerousTools?: string[];
-  unannotatedTools?: string[];
+  needsReview?: Array<string>;
+  dangerousTools?: Array<string>;
+  unannotatedTools?: Array<string>;
   reason?: string;
   model?: string;
   modelStatus?: Model['status'];
   monthly?: number;
   ceiling?: number;
-  missingFiles?: string[];
-  cycle?: string[];
+  missingFiles?: Array<string>;
+  cycle?: Array<string>;
 };
 
-type CycleCheck = { cycle: boolean; path?: string[] };
+type CycleCheck = { cycle: boolean; path?: Array<string> };
 
 export type AuditOptions = {
   /** Skip rules with these ids. */
-  skip?: string[];
+  skip?: Array<string>;
 };
 
 const isDestructive = (s?: string): boolean => s === 'external-write' || s === 'destructive';
@@ -62,7 +63,7 @@ const dependents = (cat: Catalog, kind: EntityKind, id: string) =>
   computeImpact(cat, { kind, id }).dependents;
 
 const hasCycle = (steps: Array<{ from: string; to: string }>): CycleCheck => {
-  const adj = new Map<string, string[]>();
+  const adj = new Map<string, Array<string>>();
 
   for (const s of steps) {
     const list = adj.get(s.from) ?? [];
@@ -75,9 +76,9 @@ const hasCycle = (steps: Array<{ from: string; to: string }>): CycleCheck => {
     BLACK = 2;
 
   const color = new Map<string, number>();
-  let cyclePath: string[] | undefined;
+  let cyclePath: Array<string> | undefined;
 
-  const visit = (n: string, stack: string[]): boolean => {
+  const visit = (n: string, stack: Array<string>): boolean => {
     color.set(n, GRAY);
     stack.push(n);
 
@@ -91,7 +92,9 @@ const hasCycle = (steps: Array<{ from: string; to: string }>): CycleCheck => {
         return true;
       }
 
-      if (c === WHITE && visit(m, stack)) return true;
+      if (c === WHITE && visit(m, stack)) {
+        return true;
+      }
     }
 
     color.set(n, BLACK);
@@ -102,23 +105,27 @@ const hasCycle = (steps: Array<{ from: string; to: string }>): CycleCheck => {
 
   for (const n of adj.keys()) {
     if ((color.get(n) ?? WHITE) === WHITE) {
-      if (visit(n, [])) return { cycle: true, path: cyclePath };
+      if (visit(n, [])) {
+        return { cycle: true, path: cyclePath };
+      }
     }
   }
 
   return { cycle: false };
 };
 
-const RULES: Array<(cat: Catalog) => Finding[]> = [
+const RULES: Array<(cat: Catalog) => Array<Finding>> = [
   // P1: Inferred entities are useful drafts, but not production-ready declarations
   (cat) => {
-    const out: Finding[] = [];
+    const out: Array<Finding> = [];
 
     for (const [kind, entities] of cat.entities.entries()) {
       for (const entity of entities.values()) {
         const discovery = entity.discovery;
 
-        if (!discovery || discovery.confidence !== 'inferred') continue;
+        if (!discovery || discovery.confidence !== 'inferred') {
+          continue;
+        }
         out.push({
           rule: 'inferred-entity-needs-review',
           severity: 'P1',
@@ -138,8 +145,8 @@ const RULES: Array<(cat: Catalog) => Finding[]> = [
 
   // P0: any Agent with risk=high but no Eval targeting it
   (cat) => {
-    const out: Finding[] = [];
-    const evalsByTarget = new Map<string, string[]>();
+    const out: Array<Finding> = [];
+    const evalsByTarget = new Map<string, Array<string>>();
 
     for (const e of entitiesOf(cat, 'eval')) {
       const list = evalsByTarget.get(e.target) ?? [];
@@ -148,7 +155,9 @@ const RULES: Array<(cat: Catalog) => Finding[]> = [
     }
 
     for (const a of entitiesOf(cat, 'agent')) {
-      if (a.risk !== 'high') continue;
+      if (a.risk !== 'high') {
+        continue;
+      }
       const evs = evalsByTarget.get(a.id) ?? [];
 
       if (evs.length === 0) {
@@ -166,10 +175,12 @@ const RULES: Array<(cat: Catalog) => Finding[]> = [
 
   // P0: Agent uses an external-write/destructive Tool but declares no Policies
   (cat) => {
-    const out: Finding[] = [];
+    const out: Array<Finding> = [];
 
     for (const a of entitiesOf(cat, 'agent')) {
-      if (a.policies.length > 0) continue;
+      if (a.policies.length > 0) {
+        continue;
+      }
 
       const dangerous = a.tools.filter((tid) => {
         const t = entityOf(cat, 'tool', tid);
@@ -193,7 +204,7 @@ const RULES: Array<(cat: Catalog) => Finding[]> = [
 
   // P1: Agent has no expected_traffic, so cost cannot be estimated
   (cat) => {
-    const out: Finding[] = [];
+    const out: Array<Finding> = [];
 
     for (const a of entitiesOf(cat, 'agent')) {
       const cost = estimateAgentCost(cat, a.id);
@@ -214,10 +225,12 @@ const RULES: Array<(cat: Catalog) => Finding[]> = [
 
   // P1: Tool side effects must be reviewed before the tool can be treated as production-ready
   (cat) => {
-    const out: Finding[] = [];
+    const out: Array<Finding> = [];
 
     for (const t of entitiesOf(cat, 'tool')) {
-      if (t.side_effects !== 'unknown') continue;
+      if (t.side_effects !== 'unknown') {
+        continue;
+      }
       out.push({
         rule: 'tool-side-effects-unknown',
         severity: 'P1',
@@ -231,10 +244,12 @@ const RULES: Array<(cat: Catalog) => Finding[]> = [
 
   // P1: A package run without a pinned version can change under every client that starts it
   (cat) => {
-    const out: Finding[] = [];
+    const out: Array<Finding> = [];
 
     for (const server of entitiesOf(cat, 'mcp-server')) {
-      if (!server.package || isPinned(server.package) || server.origin === 'built') continue;
+      if (!server.package || isPinned(server.package) || server.origin === 'built') {
+        continue;
+      }
       out.push({
         rule: 'mcp-server-unpinned',
         severity: 'P1',
@@ -248,10 +263,12 @@ const RULES: Array<(cat: Catalog) => Finding[]> = [
 
   // P2: Nothing to compare the server against, so a change to its tools goes unseen
   (cat) => {
-    const out: Finding[] = [];
+    const out: Array<Finding> = [];
 
     for (const server of entitiesOf(cat, 'mcp-server')) {
-      if (cat.snapshots.has(server.id)) continue;
+      if (cat.snapshots.has(server.id)) {
+        continue;
+      }
       out.push({
         rule: 'mcp-server-no-snapshot',
         severity: 'P2',
@@ -265,7 +282,7 @@ const RULES: Array<(cat: Catalog) => Finding[]> = [
 
   // P2: With no destructiveHint, the MCP specification says to assume a tool is destructive
   (cat) => {
-    const out: Finding[] = [];
+    const out: Array<Finding> = [];
 
     for (const [server, snapshots] of cat.snapshots) {
       const unannotated = new Set(
@@ -279,7 +296,9 @@ const RULES: Array<(cat: Catalog) => Finding[]> = [
           .map(({ name }) => name),
       );
 
-      if (unannotated.size === 0) continue;
+      if (unannotated.size === 0) {
+        continue;
+      }
       out.push({
         rule: 'mcp-tool-unannotated',
         severity: 'P2',
@@ -294,7 +313,7 @@ const RULES: Array<(cat: Catalog) => Finding[]> = [
 
   // P1: Agent missing prompts.system reference
   (cat) => {
-    const out: Finding[] = [];
+    const out: Array<Finding> = [];
 
     for (const a of entitiesOf(cat, 'agent')) {
       if (!a.prompts?.system) {
@@ -312,7 +331,7 @@ const RULES: Array<(cat: Catalog) => Finding[]> = [
 
   // P2: Tool with no consuming Agent
   (cat) => {
-    const out: Finding[] = [];
+    const out: Array<Finding> = [];
 
     for (const tool of cat.entities.get('tool')?.values() ?? []) {
       const deps = dependents(cat, 'tool', tool.id);
@@ -332,7 +351,7 @@ const RULES: Array<(cat: Catalog) => Finding[]> = [
 
   // P2: Model with no consuming Agent
   (cat) => {
-    const out: Finding[] = [];
+    const out: Array<Finding> = [];
 
     for (const model of cat.entities.get('model')?.values() ?? []) {
       const deps = dependents(cat, 'model', model.id);
@@ -352,7 +371,7 @@ const RULES: Array<(cat: Catalog) => Finding[]> = [
 
   // P2: Policy with no consuming Agent
   (cat) => {
-    const out: Finding[] = [];
+    const out: Array<Finding> = [];
 
     for (const policy of cat.entities.get('policy')?.values() ?? []) {
       const deps = dependents(cat, 'policy', policy.id);
@@ -372,7 +391,7 @@ const RULES: Array<(cat: Catalog) => Finding[]> = [
 
   // P2: Agent missing domain assignment
   (cat) => {
-    const out: Finding[] = [];
+    const out: Array<Finding> = [];
 
     for (const a of entitiesOf(cat, 'agent')) {
       if (!a.domain) {
@@ -390,14 +409,18 @@ const RULES: Array<(cat: Catalog) => Finding[]> = [
 
   // P0: Agent still references a Model marked deprecated/retired
   (cat) => {
-    const out: Finding[] = [];
+    const out: Array<Finding> = [];
     const deprecatedModels = new Set<string>();
 
     for (const m of entitiesOf(cat, 'model')) {
-      if (m.status === 'deprecated' || m.status === 'retired') deprecatedModels.add(m.id);
+      if (m.status === 'deprecated' || m.status === 'retired') {
+        deprecatedModels.add(m.id);
+      }
     }
 
-    if (deprecatedModels.size === 0) return out;
+    if (deprecatedModels.size === 0) {
+      return out;
+    }
 
     for (const a of entitiesOf(cat, 'agent')) {
       if (deprecatedModels.has(a.model)) {
@@ -417,7 +440,7 @@ const RULES: Array<(cat: Catalog) => Finding[]> = [
 
   // P1: Agent monthly cost exceeds the catalog ceiling (default $5000, override via AGENTCATALOG_COST_CEILING_USD)
   (cat) => {
-    const out: Finding[] = [];
+    const out: Array<Finding> = [];
 
     for (const a of entitiesOf(cat, 'agent')) {
       const cost = estimateAgentCost(cat, a.id);
@@ -438,7 +461,7 @@ const RULES: Array<(cat: Catalog) => Finding[]> = [
 
   // P1: Agent declares a prompts.system file that doesn't exist on disk
   (cat) => {
-    const out: Finding[] = [];
+    const out: Array<Finding> = [];
 
     for (const a of entitiesOf(cat, 'agent')) {
       const m = cat.meta.get(refKey('agent', a.id));
@@ -459,7 +482,7 @@ const RULES: Array<(cat: Catalog) => Finding[]> = [
 
   // P1: Eval declares a cases file that doesn't exist on disk
   (cat) => {
-    const out: Finding[] = [];
+    const out: Array<Finding> = [];
 
     for (const e of entitiesOf(cat, 'eval')) {
       const m = cat.meta.get(refKey('eval', e.id));
@@ -480,19 +503,25 @@ const RULES: Array<(cat: Catalog) => Finding[]> = [
 
   // P1: Domain's total monthly cost exceeds the configured ceiling
   (cat) => {
-    const out: Finding[] = [];
+    const out: Array<Finding> = [];
     const totals = new Map<string, number>();
 
     for (const a of entitiesOf(cat, 'agent')) {
-      if (!a.domain) continue;
+      if (!a.domain) {
+        continue;
+      }
       const cost = estimateAgentCost(cat, a.id);
 
-      if (!cost.monthly) continue;
+      if (!cost.monthly) {
+        continue;
+      }
       totals.set(a.domain, (totals.get(a.domain) ?? 0) + cost.monthly.total);
     }
 
     for (const [domainId, total] of totals.entries()) {
-      if (total <= DOMAIN_COST_CEILING_USD) continue;
+      if (total <= DOMAIN_COST_CEILING_USD) {
+        continue;
+      }
       const domainExists = cat.entities.get('domain')?.has(domainId);
       out.push({
         rule: 'domain-cost-ceiling-exceeded',
@@ -508,10 +537,12 @@ const RULES: Array<(cat: Catalog) => Finding[]> = [
 
   // P1: Workflow flow contains a cycle (handoff loop)
   (cat) => {
-    const out: Finding[] = [];
+    const out: Array<Finding> = [];
 
     for (const w of entitiesOf(cat, 'workflow')) {
-      if (w.flow.length === 0) continue;
+      if (w.flow.length === 0) {
+        continue;
+      }
       const { cycle, path } = hasCycle(w.flow);
 
       if (cycle) {
@@ -531,20 +562,24 @@ const RULES: Array<(cat: Catalog) => Finding[]> = [
 
 export const SEVERITY_ORDER: Record<Severity, number> = { P0: 0, P1: 1, P2: 2 };
 
-export const auditCatalog = (cat: Catalog, opts: AuditOptions = {}): Finding[] => {
+export const auditCatalog = (cat: Catalog, opts: AuditOptions = {}): Array<Finding> => {
   const skip = new Set(opts.skip ?? []);
-  const findings: Finding[] = [];
+  const findings: Array<Finding> = [];
 
   for (const rule of RULES) {
     for (const f of rule(cat)) {
-      if (!skip.has(f.rule)) findings.push(f);
+      if (!skip.has(f.rule)) {
+        findings.push(f);
+      }
     }
   }
 
   findings.sort((a, b) => {
     const s = SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity];
 
-    if (s !== 0) return s;
+    if (s !== 0) {
+      return s;
+    }
 
     return a.rule.localeCompare(b.rule);
   });
@@ -552,10 +587,12 @@ export const auditCatalog = (cat: Catalog, opts: AuditOptions = {}): Finding[] =
   return findings;
 };
 
-export const groupFindings = (findings: Finding[]): Record<Severity, Finding[]> => {
-  const out: Record<Severity, Finding[]> = { P0: [], P1: [], P2: [] };
+export const groupFindings = (findings: Array<Finding>): Record<Severity, Array<Finding>> => {
+  const out: Record<Severity, Array<Finding>> = { P0: [], P1: [], P2: [] };
 
-  for (const f of findings) out[f.severity].push(f);
+  for (const f of findings) {
+    out[f.severity].push(f);
+  }
 
   return out;
 };

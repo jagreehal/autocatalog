@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { z } from 'zod';
-import { isJsonObject, type JsonObject, type JsonValue } from './json';
+import { isJsonObject } from './json';
+import type { JsonObject, JsonValue } from './json';
 
 const localRef = z.object({ $ref: z.string().startsWith('#/') });
 
@@ -16,15 +17,19 @@ export function derefLocal<T = any>(doc: any, node: any, seen = new Set<string>(
   if (parsed.success) {
     const ref = parsed.data.$ref;
 
-    if (seen.has(ref)) throw new Error(`circular $ref: ${ref}`);
+    if (seen.has(ref)) {
+      throw new Error(`circular $ref: ${ref}`);
+    }
     seen.add(ref);
 
     const target = ref
       .slice(2)
       .split('/')
-      .reduce((acc: any, seg) => acc?.[seg.replace(/~1/g, '/').replace(/~0/g, '~')], doc);
+      .reduce((acc: any, seg) => acc?.[seg.replaceAll('~1', '/').replaceAll('~0', '~')], doc);
 
-    if (target === undefined) throw new Error(`unresolvable $ref: ${ref}`);
+    if (target === undefined) {
+      throw new Error(`unresolvable $ref: ${ref}`);
+    }
 
     return derefLocal(doc, target, seen);
   }
@@ -36,7 +41,9 @@ const refValue = z.string();
 
 /** Every `$ref` string in a schema, mapped through `to`; everything else as it was. */
 export function rewriteRefs(node: JsonValue, to: (ref: string) => string): JsonValue {
-  if (Array.isArray(node)) return node.map((item) => rewriteRefs(item, to));
+  if (Array.isArray(node)) {
+    return node.map((item) => rewriteRefs(item, to));
+  }
 
   return isJsonObject(node) ? rewriteObjectRefs(node, to) : node;
 }

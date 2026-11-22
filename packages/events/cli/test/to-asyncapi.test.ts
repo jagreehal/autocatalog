@@ -5,7 +5,8 @@ import specs from '@asyncapi/specs';
 import Ajv from 'ajv';
 import { parse as parseYaml } from 'yaml';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { loadCatalog, validateCatalog, type JsonObject, type JsonValue } from 'autocatalog-core';
+import { loadCatalog, validateCatalog } from 'autocatalog-core';
+import type { JsonObject, JsonValue } from 'autocatalog-core';
 import { runFromAsyncApi } from '../src/commands/from-asyncapi';
 import { catalogToAsyncApi, runToAsyncApi } from '../src/commands/to-asyncapi';
 
@@ -406,7 +407,7 @@ describe('catalogToAsyncApi keys', () => {
       ['orders/B', 'order_placed', 'orders/placed'],
       // Same address as the first: the same channel, carrying both.
       ['orders/C', 'order.repriced', 'orders.placed'],
-    ] as const)
+    ] as const) {
       await event(
         folder,
         {
@@ -419,6 +420,7 @@ describe('catalogToAsyncApi keys', () => {
         },
         { type: 'object' },
       );
+    }
 
     const doc = catalogToAsyncApi(await loadCatalog(path.join(tmp, 'events')), {
       title: 't',
@@ -444,12 +446,13 @@ describe('catalogToAsyncApi keys', () => {
     for (const [domain, id, address] of [
       ['a', 'b', 'x_b'],
       ['b', 'a_b', 'x'],
-    ] as const)
+    ] as const) {
       await event(
         `${domain}/${id}`,
         { id, version: '1.0.0', name: id, summary: 's', domain, transport: [{ address }] },
         { type: 'object' },
       );
+    }
 
     const doc = catalogToAsyncApi(await loadCatalog(path.join(tmp, 'events')), {
       title: 't',
@@ -663,7 +666,7 @@ describe('catalogToAsyncApi edge cases', () => {
 
 describe('ac from-asyncapi, identity and references', () => {
   it('keeps events with the same id in different domains apart, each with its own channel', async () => {
-    for (const domain of ['billing', 'sales'])
+    for (const domain of ['billing', 'sales']) {
       await event(
         `${domain}/Created`,
         {
@@ -676,6 +679,7 @@ describe('ac from-asyncapi, identity and references', () => {
         },
         { type: 'object' },
       );
+    }
 
     const out = path.join(tmp, 'asyncapi.yaml');
     const imported = path.join(tmp, 'imported');
@@ -840,7 +844,7 @@ describe('ac to-asyncapi', () => {
   it('names the services there are when asked for one that is not', async () => {
     await catalog();
 
-    const errors: string[] = [];
+    const errors: Array<string> = [];
     const spy = vi.spyOn(console, 'error').mockImplementation((line: string) => errors.push(line));
 
     try {
@@ -875,7 +879,7 @@ describe('ac to-asyncapi', () => {
       { type: 'object', properties: { self: { $ref: '#' } } },
     );
 
-    const errors: string[] = [];
+    const errors: Array<string> = [];
     const spy = vi.spyOn(console, 'error').mockImplementation((line: string) => errors.push(line));
 
     try {

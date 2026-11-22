@@ -70,7 +70,7 @@ describe('resolveAbout', () => {
 
 describe('createDescribesRelationships', () => {
   it('draws a declared describes edge, and reports what does not resolve', () => {
-    const docs: Doc[] = [
+    const docs: Array<Doc> = [
       {
         id: 'a/runbook',
         repo: 'a',

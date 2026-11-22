@@ -24,7 +24,7 @@ afterEach(async () => {
 kleur.enabled = false;
 
 /** Run a command and keep what it printed. */
-const run = async (command: (args: string[]) => Promise<number>, args: string[]) => {
+const run = async (command: (args: Array<string>) => Promise<number>, args: Array<string>) => {
   let out = '';
   let err = '';
 
@@ -45,7 +45,7 @@ const run = async (command: (args: string[]) => Promise<number>, args: string[])
   return { exit, out, err };
 };
 
-const setConsumes = async (consumes: string[]) => {
+const setConsumes = async (consumes: Array<string>) => {
   const file = path.join(work, 'agents/triage-agent/autocatalog.json');
   const agent = JSON.parse(await fs.readFile(file, 'utf8'));
   await fs.writeFile(

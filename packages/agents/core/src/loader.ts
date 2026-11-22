@@ -9,26 +9,22 @@ import {
   MCP_SNAPSHOT_DIR,
   McpChangeLogSchema,
   McpSnapshotSchema,
-  type McpChangeRecord,
-  type McpSnapshot,
 } from './mcp-snapshot.js';
-import {
-  AUTOCATALOG_ENTITY_FILE,
-  DIR_BY_KIND,
-  ENTITY_KINDS,
-  SCHEMA_BY_KIND,
-  type Agent,
-  type Domain,
-  type Entity,
-  type EntityKind,
-  type Eval,
-  type McpServer,
-  type Model,
-  type Policy,
-  type Skill,
-  type AgentPlugin,
-  type Tool,
-  type Workflow,
+import type { McpChangeRecord, McpSnapshot } from './mcp-snapshot.js';
+import { AUTOCATALOG_ENTITY_FILE, DIR_BY_KIND, ENTITY_KINDS, SCHEMA_BY_KIND } from './schemas.js';
+import type {
+  Agent,
+  Domain,
+  Entity,
+  EntityKind,
+  Eval,
+  McpServer,
+  Model,
+  Policy,
+  Skill,
+  AgentPlugin,
+  Tool,
+  Workflow,
 } from './schemas.js';
 
 /** The catalog root is absent or is not a directory. */
@@ -50,7 +46,7 @@ export type EntityMeta = {
   body: string;
   path: string;
   /** Files referenced by frontmatter (e.g. prompts.system or eval cases) that don't exist on disk. */
-  missingFiles?: string[];
+  missingFiles?: Array<string>;
 };
 
 export type Catalog = {
@@ -58,10 +54,10 @@ export type Catalog = {
   entities: Map<EntityKind, Map<string, Entity>>;
   meta: Map<string, EntityMeta>;
   /** What each MCP server last returned, one snapshot per connection. */
-  snapshots: Map<string, McpSnapshot[]>;
+  snapshots: Map<string, Array<McpSnapshot>>;
   /** What changed on each MCP server, newest first. */
-  changes: Map<string, McpChangeRecord[]>;
-  issues: LoadIssue[];
+  changes: Map<string, Array<McpChangeRecord>>;
+  issues: Array<LoadIssue>;
 };
 
 export type EntityByKind = {
@@ -83,7 +79,7 @@ const isOfKind =
     entity.kind === kind;
 
 /** Every entity of one kind, typed as that kind. */
-export const entitiesOf = <K extends EntityKind>(cat: Catalog, kind: K): EntityByKind[K][] =>
+export const entitiesOf = <K extends EntityKind>(cat: Catalog, kind: K): Array<EntityByKind[K]> =>
   [...(cat.entities.get(kind)?.values() ?? [])].filter(isOfKind(kind));
 
 /** One entity by kind and id, typed as that kind. */
@@ -122,13 +118,13 @@ const exists = async (path: string): Promise<boolean> => {
   }
 };
 
-const listDirs = async (dir: string): Promise<string[]> => {
+const listDirs = async (dir: string): Promise<Array<string>> => {
   const entries = await readdir(dir, { withFileTypes: true });
 
   return entries.filter((e) => e.isDirectory()).map((e) => e.name);
 };
 
-const listFiles = async (dir: string, ext: string): Promise<string[]> => {
+const listFiles = async (dir: string, ext: string): Promise<Array<string>> => {
   const entries = await readdir(dir, { withFileTypes: true });
 
   return entries.filter((e) => e.isFile() && e.name.endsWith(ext)).map((e) => e.name);
@@ -148,7 +144,9 @@ const parseYaml = async (filePath: string) => {
   const raw = await readFile(filePath, 'utf8');
   const parsed = RawFields.safeParse(yaml.load(raw));
 
-  if (!parsed.success) throw new Error('YAML file did not parse to an object');
+  if (!parsed.success) {
+    throw new Error('YAML file did not parse to an object');
+  }
 
   return parsed.data;
 };
@@ -157,7 +155,9 @@ const parseJson = async (filePath: string) => {
   const raw = await readFile(filePath, 'utf8');
   const parsed = RawFields.safeParse(JSON.parse(raw));
 
-  if (!parsed.success) throw new Error('JSON file did not parse to an object');
+  if (!parsed.success) {
+    throw new Error('JSON file did not parse to an object');
+  }
 
   return parsed.data;
 };
@@ -195,13 +195,15 @@ const parseManifestWithOptionalBody = async (dir: string) => {
 const loadKind = async (
   root: string,
   kind: EntityKind,
-  issues: LoadIssue[],
+  issues: Array<LoadIssue>,
   meta: Map<string, EntityMeta>,
 ): Promise<Map<string, Entity>> => {
   const out = new Map<string, Entity>();
   const dir = join(root, DIR_BY_KIND[kind]);
 
-  if (!(await exists(dir))) return out;
+  if (!(await exists(dir))) {
+    return out;
+  }
 
   const schema = SCHEMA_BY_KIND[kind];
 
@@ -230,8 +232,8 @@ const loadKind = async (
 
         out.set(result.data.id, result.data);
         meta.set(refKey(kind, result.data.id), { body: '', path: filePath });
-      } catch (e) {
-        issues.push({ kind: 'parse', path: filePath, message: errorMessage(e) });
+      } catch (error) {
+        issues.push({ kind: 'parse', path: filePath, message: errorMessage(error) });
       }
     }
 
@@ -241,7 +243,9 @@ const loadKind = async (
       const entityDir = join(dir, sub);
       const manifestPath = join(entityDir, AUTOCATALOG_ENTITY_FILE);
 
-      if (!(await exists(manifestPath))) continue;
+      if (!(await exists(manifestPath))) {
+        continue;
+      }
 
       try {
         const data = await parseJson(manifestPath);
@@ -269,8 +273,8 @@ const loadKind = async (
 
         out.set(result.data.id, result.data);
         meta.set(refKey(kind, result.data.id), { body, path: manifestPath });
-      } catch (e) {
-        issues.push({ kind: 'parse', path: manifestPath, message: errorMessage(e) });
+      } catch (error) {
+        issues.push({ kind: 'parse', path: manifestPath, message: errorMessage(error) });
       }
     }
 
@@ -299,7 +303,7 @@ const loadKind = async (
         continue;
       }
 
-      const missingFiles: string[] = [];
+      const missingFiles: Array<string> = [];
 
       const entity = result.data;
 
@@ -309,7 +313,9 @@ const loadKind = async (
         if (promptRef) {
           const resolved = isAbsolute(promptRef) ? promptRef : resolve(entityDir, promptRef);
 
-          if (!(await exists(resolved))) missingFiles.push(resolved);
+          if (!(await exists(resolved))) {
+            missingFiles.push(resolved);
+          }
         }
       }
 
@@ -319,18 +325,22 @@ const loadKind = async (
         if (casesRef) {
           const resolved = isAbsolute(casesRef) ? casesRef : resolve(entityDir, casesRef);
 
-          if (!(await exists(resolved))) missingFiles.push(resolved);
+          if (!(await exists(resolved))) {
+            missingFiles.push(resolved);
+          }
         }
       }
 
       const entry: EntityMeta = { body: content, path: sourcePath };
 
-      if (missingFiles.length > 0) entry.missingFiles = missingFiles;
+      if (missingFiles.length > 0) {
+        entry.missingFiles = missingFiles;
+      }
 
       out.set(entity.id, entity);
       meta.set(refKey(kind, entity.id), entry);
-    } catch (e) {
-      issues.push({ kind: 'parse', path: entityDir, message: errorMessage(e) });
+    } catch (error) {
+      issues.push({ kind: 'parse', path: entityDir, message: errorMessage(error) });
     }
   }
 
@@ -341,15 +351,17 @@ const loadSnapshots = async (
   catalogRoot: string,
   meta: Map<string, EntityMeta>,
   servers: Iterable<string>,
-  issues: LoadIssue[],
-): Promise<Map<string, McpSnapshot[]>> => {
-  const out = new Map<string, McpSnapshot[]>();
+  issues: Array<LoadIssue>,
+): Promise<Map<string, Array<McpSnapshot>>> => {
+  const out = new Map<string, Array<McpSnapshot>>();
 
   for (const server of servers) {
     const manifest = meta.get(refKey('mcp-server', server))?.path;
     const dir = join(manifest ? dirname(manifest) : catalogRoot, MCP_SNAPSHOT_DIR);
 
-    if (!(await exists(dir))) continue;
+    if (!(await exists(dir))) {
+      continue;
+    }
 
     for (const file of (await listFiles(dir, '.json')).sort()) {
       const filePath = join(dir, file);
@@ -357,8 +369,8 @@ const loadSnapshots = async (
       try {
         const snapshot = McpSnapshotSchema.parse(await parseJson(filePath));
         out.set(server, [...(out.get(server) ?? []), snapshot]);
-      } catch (e) {
-        issues.push({ kind: 'parse', path: filePath, message: errorMessage(e) });
+      } catch (error) {
+        issues.push({ kind: 'parse', path: filePath, message: errorMessage(error) });
       }
     }
   }
@@ -369,20 +381,22 @@ const loadSnapshots = async (
 const loadChanges = async (
   meta: Map<string, EntityMeta>,
   servers: Iterable<string>,
-  issues: LoadIssue[],
-): Promise<Map<string, McpChangeRecord[]>> => {
-  const out = new Map<string, McpChangeRecord[]>();
+  issues: Array<LoadIssue>,
+): Promise<Map<string, Array<McpChangeRecord>>> => {
+  const out = new Map<string, Array<McpChangeRecord>>();
 
   for (const server of servers) {
     const manifest = meta.get(refKey('mcp-server', server))?.path;
     const filePath = manifest && join(dirname(manifest), MCP_CHANGES_FILE);
 
-    if (!filePath || !(await exists(filePath))) continue;
+    if (!filePath || !(await exists(filePath))) {
+      continue;
+    }
 
     try {
       out.set(server, McpChangeLogSchema.parse(JSON.parse(await readFile(filePath, 'utf8'))));
-    } catch (e) {
-      issues.push({ kind: 'parse', path: filePath, message: errorMessage(e) });
+    } catch (error) {
+      issues.push({ kind: 'parse', path: filePath, message: errorMessage(error) });
     }
   }
 
@@ -390,7 +404,7 @@ const loadChanges = async (
 };
 
 export const loadCatalog = async (root: string): Promise<Catalog> => {
-  const issues: LoadIssue[] = [];
+  const issues: Array<LoadIssue> = [];
   const meta = new Map<string, EntityMeta>();
   const entities = new Map<EntityKind, Map<string, Entity>>();
 
@@ -405,7 +419,9 @@ export const loadCatalog = async (root: string): Promise<Catalog> => {
     () => false,
   );
 
-  if (!present) throw new CatalogNotFoundError(root);
+  if (!present) {
+    throw new CatalogNotFoundError(root);
+  }
 
   for (const kind of ENTITY_KINDS) {
     entities.set(kind, await loadKind(root, kind, issues, meta));

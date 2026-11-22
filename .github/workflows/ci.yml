@@ -52,6 +52,10 @@ jobs:
 
       - uses: ./.github/actions/setup-pnpm
 
+      # oxlint's type-aware rules read package types from dist/, as typecheck does.
+      - name: Build the packages
+        run: pnpm turbo run build --filter='./packages/*/*'
+
       - name: Lint (Prettier, then oxlint with the anti-slop rules)
         run: pnpm lint
 

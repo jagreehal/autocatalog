@@ -20,18 +20,20 @@ program
       });
 
       if (result.errors.length > 0) {
-        for (const err of result.errors) console.error(kleur.yellow(`  ! ${err}`));
+        for (const err of result.errors) {
+          console.error(kleur.yellow(`  ! ${err}`));
+        }
       }
 
       console.log(kleur.green(`✓ wrote ${result.eventsWritten} event(s) to ${opts.out}`));
       process.exit(result.errors.length > 0 ? 1 : 0);
-    } catch (err) {
-      console.error(kleur.red(err instanceof Error ? err.message : String(err)));
+    } catch (error) {
+      console.error(kleur.red(error instanceof Error ? error.message : String(error)));
       process.exit(1);
     }
   });
 
-program.parseAsync(process.argv).catch((err) => {
-  console.error(err);
+program.parseAsync(process.argv).catch((error) => {
+  console.error(error);
   process.exit(1);
 });

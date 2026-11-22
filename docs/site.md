@@ -114,10 +114,15 @@ keeps the last good site.
   contract history from git still works. Only a regular file inside the
   repository is read, never a symlink. A snapshot that does not read is a
   warning in the build, and the repository's events publish without evidence.
-- `/services/` lists every service with its owner, the APIs it serves and
-  their endpoints, the events it receives and sends, and the services it calls
-  and is called by, with a filter. The sidebar lists each one under Services,
-  open from the start.
+- `/services/` lists every service in a table, 25 a page: its domain, owner,
+  and how many messages it sends and receives, sorted by any column and
+  filtered by text. A row opens to the names behind its counts, the APIs it
+  serves and the services it calls and is called by. A page link keeps its
+  search and sort. The sidebar lists each service under Services, open from
+  the start.
+- An event page opens with Impact under its description: the services that
+  produce it, the ones that consume it, its owner and the flows it is in, each a
+  link. Event, service and domain pages carry breadcrumbs back to Home.
 - `/services/<name>/` lists what one service produces and consumes and the
   APIs it serves. A service comes from each event's `producers` and
   `consumers`, so declaring `producers: ['InventoryManager']` on an event
@@ -403,16 +408,17 @@ keeps the last good site.
 - `/retirements` lists each deprecated event, and each field a schema marks
   `deprecated: true`, with where every consumer stands
   ([retiring a field](/docs/retire)). It appears once there is one.
-- `/catalog` shows the whole knowledge graph, and `/catalog.json` holds the same
-  graph as JSON.
+- `/catalog` shows the whole knowledge graph as a table, 25 resources a page,
+  sorted by any column and filtered by kind or text. A row opens to its source,
+  provenance and connections, and a link to `/catalog/#resource-…` opens the
+  page that row is on. `/catalog.json` holds the same graph as JSON.
 - `/decisions/`, `/runbooks/` and `/incidents/` list every ADR, runbook and
   incident across every repository, newest first, in a table of the columns the
   conventions file names. The status shows as a badge, and the table filters by
   status and by repository. The decisions page also draws each supersede chain,
   oldest first. A kind the organisation adds gets the same page at its own
   `path`, and a kind with no documents gets no page. The Catalog sidebar group
-  and the home page's Explore cards link each one, and the home page counts
-  them.
+  links each one, and the home page counts them under Browse by type.
 - A decision, runbook or incident page is still the document, with its state as
   a badge under the title and its kind, date, other fields, what it applies to
   (its `about:` targets, linked to their service and event pages) and what it
@@ -623,9 +629,10 @@ repository's `docs/meta.json` moves it, lower first, so a handbook can lead:
 
 ### Compose the home page
 
-The home page is a list of blocks: the counts, the architecture map, the
-documents, what changed recently, what needs attention, the ways in, and documents by tag. A site for
-an `audience` starts from its documents, the ways in and tags. `layouts.home`
+The home page is a list of blocks: a search field, where the catalog's facts
+come from beside what needs attention, every kind with its count, the
+architecture map opened on its domains, and the five latest changes. A site for
+an `audience` starts from search, its documents, the ways in and tags. `layouts.home`
 replaces the list, in order. The page keeps its header; the blocks replace what
 is under it:
 
@@ -647,6 +654,9 @@ is under it:
 
 | Block        | Shows                                                                    |
 | ------------ | ------------------------------------------------------------------------ |
+| `search`     | One search field across the page, opening the site's search              |
+| `provenance` | Where the catalog's facts come from, beside what needs attention         |
+| `browse`     | Every kind the catalog holds with its count, or these `kinds`            |
 | `hero`       | A `title`, a line of `text` and `actions`, each a `label` and `href`     |
 | `cards`      | `items` you choose, each a `title`, `href`, `text` and `icon`            |
 | `countCards` | The catalog's counts, chosen by `kinds` or as `homeCounts` chooses them  |
@@ -658,10 +668,12 @@ is under it:
 | `explore`    | A card for each way into the catalog                                     |
 | `tags`       | The documents by tag                                                     |
 
-Every block but `hero`, `countCards` and `attention` takes a `title`. A site
-for an audience does not publish the company's counts, map or attention list,
-so naming `countCards`, `graph`, `recent` or `attention` in its layout fails
-the build.
+Every block but `search`, `hero`, `countCards` and `attention` takes a `title`.
+With no `layouts.home`, the home page is `search`, `provenance`, `browse`,
+`graph` and `recent`. A site for an audience does not publish the company's
+counts, map or attention list, so naming `provenance`, `browse`, `countCards`,
+`graph`, `recent` or `attention` in its layout fails the build; its default is
+`search`, `docs`, `explore` and `tags`.
 `ac site --print-layout home` prints the blocks this site's home page is built
 from, to copy and change.
 
@@ -677,7 +689,7 @@ A built-in block with a field it does not take, a block nobody provides, and an
 extension's block named like a built-in one or like another extension's, fail
 the build and name it.
 
-`homeCounts` chooses the cards that open the home page, by kind and in order:
+`homeCounts` chooses the kinds Browse by type lists, in order:
 
 ```json
 { "homeCounts": ["service", "event", "domain", "repository"] }

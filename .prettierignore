@@ -16,14 +16,15 @@ pnpm-lock.yaml
 examples/demo/events/
 **/contracts/docs-manifest.json
 
-# Vendored anti-slop Oxlint plugin, kept byte-identical to upstream.
-tools/oxlint/anti-slop/
+# Oxlint's record of findings from before the preset, written by `oxlint --suppress-all`.
+oxlint-suppressions.json
 
 # Written by each language's own generator; verify:frameworks checks them byte for byte.
 examples/frameworks/*/contracts/
 
 # Agent worktrees and local tool state, never part of the repository.
 .claude/
+**/.impeccable/
 
 # Studio canvas copied from EventCatalog, kept byte-identical to upstream.
 packages/docs/astro/src/ui/vendor/

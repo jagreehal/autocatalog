@@ -1,5 +1,6 @@
 import { z } from 'astro/zod';
-import { resourceKey, type ResourceGraph, type ResourceRef } from 'autocatalog-core';
+import { resourceKey } from 'autocatalog-core';
+import type { ResourceGraph, ResourceRef } from 'autocatalog-core';
 import { aboutReference } from 'autocatalog-docs-core';
 import { catalogHref, docHref } from './view';
 
@@ -26,7 +27,7 @@ const sameResource = (a: ResourceRef, b: ResourceRef) =>
   a.kind === b.kind && a.namespace === b.namespace && a.id === b.id;
 
 /** Documents that declare in `about:` that they describe one resource. */
-export function documentsAbout(graph: ResourceGraph, target: ResourceRef): ResourceLink[] {
+export function documentsAbout(graph: ResourceGraph, target: ResourceRef): Array<ResourceLink> {
   const byKey = new Map(graph.resources.map((resource) => [resourceKey(resource.ref), resource]));
 
   return graph.relationships
@@ -37,7 +38,9 @@ export function documentsAbout(graph: ResourceGraph, target: ResourceRef): Resou
     .flatMap(({ from }) => {
       const doc = byKey.get(resourceKey(from));
 
-      if (!doc) return [];
+      if (!doc) {
+        return [];
+      }
 
       const { kind, status } = documentKind.parse(doc.attributes);
 
@@ -54,7 +57,7 @@ export function documentsAbout(graph: ResourceGraph, target: ResourceRef): Resou
 }
 
 /** The resources one document declares it is about, linked into the catalog. */
-export function aboutDocument(graph: ResourceGraph, id: string): ResourceLink[] {
+export function aboutDocument(graph: ResourceGraph, id: string): Array<ResourceLink> {
   const [namespace, ...path] = id.split('/');
   const from: ResourceRef = { kind: 'document', namespace, id: path.join('/') };
   const byKey = new Map(graph.resources.map((resource) => [resourceKey(resource.ref), resource]));

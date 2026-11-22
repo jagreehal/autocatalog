@@ -1,7 +1,8 @@
 import { z } from 'zod';
 import { isSafeName, UNSAFE_CONSUMER } from './consumes';
 import { overlaps } from './drift';
-import { jsonObjectSchema, jsonValueSchema, type JsonValue } from './json';
+import { jsonObjectSchema, jsonValueSchema } from './json';
+import type { JsonValue } from './json';
 import { normaliseEventId } from './snapshot';
 
 /**
@@ -11,7 +12,7 @@ import { normaliseEventId } from './snapshot';
  */
 export type ConsumerStanding = 'reads' | 'unknown' | 'unspecified' | 'clear';
 
-const RANK: ConsumerStanding[] = ['reads', 'unknown', 'unspecified', 'clear'];
+const RANK: Array<ConsumerStanding> = ['reads', 'unknown', 'unspecified', 'clear'];
 
 export interface RetirementEvidence {
   /** Where the evidence came from: this repository, the company index, a pact, a snapshot. */
@@ -24,26 +25,26 @@ export interface RetirementEvidence {
 export interface ConsumerRetirement {
   consumer: string;
   standing: ConsumerStanding;
-  evidence: RetirementEvidence[];
+  evidence: Array<RetirementEvidence>;
 }
 
 export interface Retirement {
   event: string;
   field?: string;
   verdict: 'ready' | 'blocked';
-  consumers: ConsumerRetirement[];
+  consumers: Array<ConsumerRetirement>;
   /** What the producer was last seen sending, from a snapshot. */
   runtime?: string;
   /** Evidence that could not be read, so the verdict cannot be ready. */
-  gaps: string[];
-  next: string[];
+  gaps: Array<string>;
+  next: Array<string>;
 }
 
 /** Consumers some source declares, with the fields each says it reads. */
 export interface DeclaredConsumers {
   source: string;
-  consumers: string[];
-  fields: Record<string, string[]>;
+  consumers: Array<string>;
+  fields: Record<string, Array<string>>;
 }
 
 export interface PactEvidence {
@@ -60,16 +61,16 @@ export interface RetirementInput {
   event: string;
   /** The payload path to retire; without one, the whole event. */
   field?: string;
-  declared: DeclaredConsumers[];
+  declared: Array<DeclaredConsumers>;
   runtime?: {
     source: string;
-    consumers: string[];
+    consumers: Array<string>;
     /** Whether the producer still sends the field, or the event, when the source says. */
     sends?: boolean;
   };
-  pacts?: PactEvidence[];
+  pacts?: Array<PactEvidence>;
   /** Evidence asked for that could not be read in full. Any gap blocks the verdict. */
-  gaps?: string[];
+  gaps?: Array<string>;
 }
 
 // Gaps and versions quote text from elsewhere, printed into a pull request.
@@ -78,10 +79,14 @@ const printableGap = (gap: string): string => gap.replaceAll(/[\p{Cc}`|<>[\]!@]/
 const printable = (name: string): string => (isSafeName(name) ? name : UNSAFE_CONSUMER);
 
 /** What the declared fields say of one consumer. */
-function declaredStanding(field: string | undefined, fields: string[] | undefined) {
-  if (field === undefined) return { standing: 'reads' as const, says: 'consumes the event' };
+function declaredStanding(field: string | undefined, fields: Array<string> | undefined) {
+  if (field === undefined) {
+    return { standing: 'reads' as const, says: 'consumes the event' };
+  }
 
-  if (!fields) return { standing: 'unspecified' as const, says: 'declares no fields it reads' };
+  if (!fields) {
+    return { standing: 'unspecified' as const, says: 'declares no fields it reads' };
+  }
 
   return fields.some((declared) => overlaps(field, declared))
     ? { standing: 'reads' as const, says: `reads ${field}` }
@@ -98,7 +103,7 @@ function declaredStanding(field: string | undefined, fields: string[] | undefine
  * A pact or a declaration that names the fields settles it either way.
  */
 export function assessRetirement(input: RetirementInput): Retirement {
-  const evidence = new Map<string, RetirementEvidence[]>();
+  const evidence = new Map<string, Array<RetirementEvidence>>();
 
   const add = (consumer: string, found: RetirementEvidence) =>
     evidence.set(printable(consumer), [...(evidence.get(printable(consumer)) ?? []), found]);
@@ -174,7 +179,9 @@ export function assessRetirement(input: RetirementInput): Retirement {
 
   const gaps = input.gaps ?? [];
 
-  if (gaps.length > 0) next.push('Read the evidence that is missing, then ask again');
+  if (gaps.length > 0) {
+    next.push('Read the evidence that is missing, then ask again');
+  }
 
   const verdict = next.length === 0 ? 'ready' : 'blocked';
 
@@ -280,7 +287,9 @@ const pact4Contents = z.looseObject({
 function pact4Body(contents: JsonValue): JsonValue {
   const wrapped = pact4Contents.safeParse(contents);
 
-  if (!wrapped.success) return contents;
+  if (!wrapped.success) {
+    return contents;
+  }
 
   if (wrapped.data.encoded || z.string().safeParse(wrapped.data.content).success) {
     throw new Error('a message body that is not JSON cannot be read');
@@ -290,8 +299,10 @@ function pact4Body(contents: JsonValue): JsonValue {
 }
 
 /** Whether a payload carries a path such as `customer.id` or `items[].sku`. */
-function carries(value: JsonValue | undefined, path: string[]): boolean {
-  if (path.length === 0) return value !== undefined;
+function carries(value: JsonValue | undefined, path: Array<string>): boolean {
+  if (path.length === 0) {
+    return value !== undefined;
+  }
 
   const [head, ...rest] = path;
   const array = head!.endsWith('[]');
@@ -299,11 +310,15 @@ function carries(value: JsonValue | undefined, path: string[]): boolean {
 
   const child = jsonObjectSchema.safeParse(value);
 
-  if (!child.success || !Object.hasOwn(child.data, key)) return false;
+  if (!child.success || !Object.hasOwn(child.data, key)) {
+    return false;
+  }
 
   const next = child.data[key];
 
-  if (!array) return carries(next, rest);
+  if (!array) {
+    return carries(next, rest);
+  }
 
   const items = z.array(jsonValueSchema).safeParse(next);
 
@@ -352,7 +367,9 @@ export function pactEvidence(
       }),
   ].filter((m) => normaliseEventId(m.description).includes(id));
 
-  if (messages.length === 0) return undefined;
+  if (messages.length === 0) {
+    return undefined;
+  }
 
   const path = options.field?.split('.') ?? [];
 

@@ -58,16 +58,16 @@ export interface FactSheet {
   title?: string;
   key: string;
   summary: string;
-  facts: Fact[];
+  facts: Array<Fact>;
   /** The facts as pull request #482 would change them. */
-  prFacts?: Fact[];
+  prFacts?: Array<Fact>;
   /** What the pull request does to this resource. */
   prAlert?: ReactNode;
 }
 
 export const VIEW = { width: 1110, height: 548 };
 
-export const regions: Region[] = [
+export const regions: Array<Region> = [
   { name: 'payments-service', x: 20, y: 24, w: 560, h: 400 },
   { name: 'ledger', x: 610, y: 24, w: 480, h: 290 },
   { name: 'notifications', x: 610, y: 344, w: 250, h: 186 },
@@ -139,11 +139,17 @@ function port(id: string, side: Side, offset = 0): [number, number, number, numb
   const halfH = nodeHeight(id) / 2;
   const halfW = node.w / 2;
 
-  if (side === 'r') return [node.x + halfW, node.y + offset, 1, 0];
+  if (side === 'r') {
+    return [node.x + halfW, node.y + offset, 1, 0];
+  }
 
-  if (side === 'l') return [node.x - halfW, node.y + offset, -1, 0];
+  if (side === 'l') {
+    return [node.x - halfW, node.y + offset, -1, 0];
+  }
 
-  if (side === 'b') return [node.x + offset, node.y + halfH, 0, 1];
+  if (side === 'b') {
+    return [node.x + offset, node.y + halfH, 0, 1];
+  }
 
   return [node.x + offset, node.y - halfH, 0, -1];
 }
@@ -153,7 +159,9 @@ function arc(from: ReturnType<typeof port>, to: ReturnType<typeof port>) {
   const [x1, y1, dx1, dy1] = from;
   const [x2, y2, dx2, dy2] = to;
 
-  if (x1 === x2 || y1 === y2) return `M${x1} ${y1} L${x2} ${y2}`;
+  if (x1 === x2 || y1 === y2) {
+    return `M${x1} ${y1} L${x2} ${y2}`;
+  }
   const k = Math.max(36, Math.hypot(x2 - x1, y2 - y1) * 0.42);
 
   return `M${x1} ${y1} C${x1 + dx1 * k} ${y1 + dy1 * k} ${x2 + dx2 * k} ${y2 + dy2 * k} ${x2} ${y2}`;
@@ -206,7 +214,7 @@ export const joints = trays.flatMap(({ x, items }) =>
   items.map(([id, provenance]) => ({ key: id, x, y: nodes.get(id)!.y, provenance })),
 );
 
-export const edges: MapEdge[] = [
+export const edges: Array<MapEdge> = [
   link('PaymentService', 'r', 'payment.completed', 'l', 'extracted'),
   link('PaymentService', 'r', 'payment.refunded', 'l', 'extracted'),
   link('payment.completed', 'r', 'LedgerService', 'l', 'declared', { breaking: true }),

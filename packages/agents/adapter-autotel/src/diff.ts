@@ -17,7 +17,7 @@ export type Drift = {
   agentId: string;
   toolId?: string;
   expectedModel?: string;
-  observedModels?: string[];
+  observedModels?: Array<string>;
   message: string;
 };
 
@@ -26,7 +26,7 @@ export type DriftReport = {
   observedSpans: number;
   driftCount: number;
   byKind: Record<DriftKind, number>;
-  drifts: Drift[];
+  drifts: Array<Drift>;
 };
 
 const EMPTY_COUNTS: Record<DriftKind, number> = {
@@ -47,16 +47,22 @@ const declaredModelAliases = (cat: Catalog, modelId: string): Set<string> => {
   const aliases = new Set([modelId]);
   const model = cat.entities.get('model')?.get(modelId);
 
-  if (model?.kind === 'model' && model.model_id) aliases.add(model.model_id);
+  if (model?.kind === 'model' && model.model_id) {
+    aliases.add(model.model_id);
+  }
 
   return aliases;
 };
 
 const hasDeclaredModelAlias = (cat: Catalog, observedModelId: string): boolean => {
-  if (cat.entities.get('model')?.has(observedModelId)) return true;
+  if (cat.entities.get('model')?.has(observedModelId)) {
+    return true;
+  }
 
   for (const model of cat.entities.get('model')?.values() ?? []) {
-    if (model.kind === 'model' && model.model_id === observedModelId) return true;
+    if (model.kind === 'model' && model.model_id === observedModelId) {
+      return true;
+    }
   }
 
   return false;
@@ -75,7 +81,9 @@ const resolveServer = (cat: Catalog, observed: string): string | undefined => {
   const wanted = observed.toLowerCase();
 
   for (const entity of cat.entities.get('mcp-server')?.values() ?? []) {
-    if (entity.kind !== 'mcp-server') continue;
+    if (entity.kind !== 'mcp-server') {
+      continue;
+    }
 
     const names = [
       entity.id,
@@ -84,7 +92,9 @@ const resolveServer = (cat: Catalog, observed: string): string | undefined => {
       ...(entity.discovery?.sources.map(({ symbol }) => symbol) ?? []),
     ];
 
-    if (names.some((name) => name?.toLowerCase() === wanted)) return entity.id;
+    if (names.some((name) => name?.toLowerCase() === wanted)) {
+      return entity.id;
+    }
   }
 
   return undefined;
@@ -117,7 +127,7 @@ const resolveTool = (cat: Catalog, observed: string, server: string | undefined)
 };
 
 export const computeDrift = (cat: Catalog, obs: Observations): DriftReport => {
-  const drifts: Drift[] = [];
+  const drifts: Array<Drift> = [];
   const seen = new Set<string>();
 
   for (const { agent, server, tool } of obs.mcpCalls) {
@@ -208,9 +218,13 @@ export const computeDrift = (cat: Catalog, obs: Observations): DriftReport => {
         const foreign = belongsElsewhere(cat, tool, server);
         const pair = JSON.stringify([tool, server]);
 
-        if (!foreign) observedTools.add(tool);
+        if (!foreign) {
+          observedTools.add(tool);
+        }
 
-        if (checked.has(pair) || (server && agent.servers.includes(server))) continue;
+        if (checked.has(pair) || (server && agent.servers.includes(server))) {
+          continue;
+        }
 
         checked.add(pair);
 
@@ -252,7 +266,9 @@ export const computeDrift = (cat: Catalog, obs: Observations): DriftReport => {
 
   const byKind = { ...EMPTY_COUNTS };
 
-  for (const d of drifts) byKind[d.kind] += 1;
+  for (const d of drifts) {
+    byKind[d.kind] += 1;
+  }
 
   return {
     observedAgents: obs.agents.size,

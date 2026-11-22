@@ -14,22 +14,21 @@ import {
   readConsumerDeclarations,
   scanArchitecture,
   topicMatches,
-  type ConsumerDeclaration,
   deliveryEvents,
-  type DeliveryEvent,
 } from '../src';
+import type { ConsumerDeclaration, DeliveryEvent } from '../src';
 import { loadRepositoryEvents } from '../src/repository-events';
 import type { JsonObject } from '../src/json';
 
-const here = path.dirname(fileURLToPath(import.meta.url));
+const here = import.meta.dirname;
 
 const repo = path.resolve(here, '../../../../fixtures/delivery-rabbitmq');
 
 const DEFINITIONS = 'infrastructure/rabbitmq/definitions.json';
 
-let events: DeliveryEvent[];
+let events: Array<DeliveryEvent>;
 
-let consumers: ConsumerDeclaration[];
+let consumers: Array<ConsumerDeclaration>;
 
 let definitions: JsonObject;
 
@@ -160,11 +159,12 @@ describe('delivery mutations', () => {
       binding(defs).arguments.currency = 'EUR';
     });
 
-    for (const route of current.routes)
+    for (const route of current.routes) {
       route.examples = route.examples.map((example) => ({
         ...example,
         name: `${example.name}-v2`,
       }));
+    }
 
     expect(driftDelivery(analyse(), current)).toContainEqual(
       expect.objectContaining({
@@ -180,8 +180,9 @@ describe('delivery mutations', () => {
       binding(defs).arguments.currency = 'EUR';
     });
 
-    for (const route of current.routes)
+    for (const route of current.routes) {
       route.examples = route.examples.map((example) => ({ ...example, reaches: undefined }));
+    }
 
     expect(driftDelivery(analyse(), current)).toContainEqual(
       expect.objectContaining({
@@ -235,9 +236,9 @@ describe('delivery mutations', () => {
         {
           name: 'ttl',
           vhost: '/',
-          pattern: '^ledger\\.',
+          pattern: String.raw`^ledger\.`,
           'apply-to': 'queues',
-          definition: { 'message-ttl': 60000 },
+          definition: { 'message-ttl': 60_000 },
         },
       ];
     });

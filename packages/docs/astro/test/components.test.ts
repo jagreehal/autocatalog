@@ -2,9 +2,10 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { createElement, type ComponentType } from 'react';
+import { createElement } from 'react';
+import type { ComponentType } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { diagramProps } from '../src/page-models';
+import { diagramProps, deliveryView, exampleViews } from '../src/page-models';
 import { CatalogExplorer } from '../src/ui/components/CatalogExplorer';
 import { explorerModel } from '../src/ui/components/catalog-explorer-model';
 import { DocLinks } from '../src/ui/components/DocLinks';
@@ -18,15 +19,9 @@ import { schemaTree } from '../src/ui/lib/schema-tree';
 import { SourceLinks } from '../src/ui/components/SourceLinks';
 import { TransportFacts } from '../src/ui/components/TransportFacts';
 import { DeliveryFacts } from '../src/ui/components/DeliveryFacts';
-import { deliveryView, exampleViews } from '../src/page-models';
 import { Examples } from '../src/ui/components/Examples';
-import {
-  eventFrontmatter,
-  eventRuntimeEvidence,
-  AUTOCATALOG_GRAPH_SPEC,
-  type JsonObject,
-  type ResourceGraph,
-} from 'autocatalog-core';
+import { eventFrontmatter, eventRuntimeEvidence, AUTOCATALOG_GRAPH_SPEC } from 'autocatalog-core';
+import type { JsonObject, ResourceGraph } from 'autocatalog-core';
 import type { DocListItem } from '../src/view';
 
 // Level 3: the variation matrix of each component, one render per state.
@@ -152,12 +147,36 @@ describe('CatalogExplorer states', () => {
 
     expect(html).toContain('Refund agent');
     expect(html).toContain('Fast model');
-    expect(html).toContain('usesModel');
     expect(html).toContain('agents/refund-agent/autocatalog.json');
     expect(html).toContain('href="#resource-model%3Afast-model"');
+    expect(html).toContain('id="resource-agent%3Arefund-agent"');
+    // Connections and provenance wait behind each row's expand.
+    expect(html).not.toContain('usesModel');
   });
 
-  it('names the commit a repository was read at', async () => {
+  it('server-renders the first page of a long graph, with links to the rest', async () => {
+    const graph: ResourceGraph = {
+      spec: AUTOCATALOG_GRAPH_SPEC,
+      resources: Array.from({ length: 30 }, (_, index) => ({
+        ref: { kind: 'model' as const, id: `model-${String(index + 1).padStart(2, '0')}` },
+        title: `Model ${index + 1}`,
+        tags: [],
+        provenance: { default: 'declared' as const, fields: {} },
+        needsReview: false,
+        attributes: {},
+      })),
+      relationships: [],
+    };
+
+    const html = render(CatalogExplorer, { model: explorerModel(graph) });
+
+    expect(html).toContain('>Model 25<');
+    expect(html).not.toContain('>Model 26<');
+    expect(html).toContain('1 to 25 of 30 resources');
+    expect(html).toContain('href="?page=2"');
+  });
+
+  it('keeps the commit a repository was read at in its model', async () => {
     const commit = '0123456789abcdef0123456789abcdef01234567';
 
     const graph: ResourceGraph = {
@@ -176,10 +195,7 @@ describe('CatalogExplorer states', () => {
       relationships: [],
     };
 
-    const html = render(CatalogExplorer, { model: explorerModel(graph) });
-
-    expect(html).toContain(`title="${commit}"`);
-    expect(html).toContain('>0123456789ab</code>');
+    expect(explorerModel(graph).rows[0]?.commit).toBe(commit);
   });
 });
 

@@ -4,7 +4,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
-import { jsonSchemaDiscoveryAdapter, type DriftReport } from 'autocatalog-core';
+import { jsonSchemaDiscoveryAdapter } from 'autocatalog-core';
+import type { DriftReport } from 'autocatalog-core';
 import { runDrift } from '../src/commands/drift';
 
 const execFileAsync = promisify(execFile);

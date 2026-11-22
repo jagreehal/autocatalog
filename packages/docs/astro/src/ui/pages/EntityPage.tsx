@@ -21,17 +21,17 @@ export interface EntityProperty {
   type: string;
   required: boolean;
   description?: string | undefined;
-  enum?: string[] | undefined;
+  enum?: Array<string> | undefined;
   references?: Link | undefined;
-  properties: EntityProperty[];
+  properties: Array<EntityProperty>;
 }
 
 export interface EntityLifecycle {
   field: string;
-  states: string[];
-  initial: string[];
-  terminal: string[];
-  flows: Link[];
+  states: Array<string>;
+  initial: Array<string>;
+  terminal: Array<string>;
+  flows: Array<Link>;
 }
 
 export interface EntityPageProps {
@@ -39,13 +39,13 @@ export interface EntityPageProps {
   file: string;
   aggregateRoot: boolean;
   identifier?: string | undefined;
-  domains: Link[];
-  services: Link[];
-  properties: EntityProperty[];
+  domains: Array<Link>;
+  services: Array<Link>;
+  properties: Array<EntityProperty>;
   /** The events whose schema carries the identifier. */
-  carriedBy: Link[];
+  carriedBy: Array<Link>;
   /** The states each field moves through, and the flows that move it. */
-  lifecycles?: EntityLifecycle[] | undefined;
+  lifecycles?: Array<EntityLifecycle> | undefined;
   /** This entity and the ones it shares a reference with, as Mermaid. */
   diagram: string | null;
   narrativeHtml?: string | null | undefined;
@@ -60,7 +60,7 @@ const LinkTo = ({ link }: { link: Link }) =>
     <span>{link.name}</span>
   );
 
-const Links = ({ links }: { links: Link[] }) => (
+const Links = ({ links }: { links: Array<Link> }) => (
   <>
     {links.map((link, index) => (
       <span key={link.name}>
@@ -76,10 +76,10 @@ function Rows({
   properties,
   parent,
 }: {
-  properties: EntityProperty[];
+  properties: Array<EntityProperty>;
   parent?: string;
-}): React.ReactElement[] {
-  return properties.flatMap((property): React.ReactElement[] => [
+}): Array<React.ReactElement> {
+  return properties.flatMap((property): Array<React.ReactElement> => [
     <TableRow key={`${parent ?? ''}.${property.name}`} id={parent ? undefined : property.name}>
       <TableCell>
         <code>{parent ? `${parent}.${property.name}` : property.name}</code>

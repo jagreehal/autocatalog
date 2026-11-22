@@ -16,7 +16,11 @@ test.describe('The company documentation index', () => {
     await page.goto('/');
 
     when('a reader searches for a phrase written in one of them');
-    await page.getByRole('button', { name: /search/i }).click();
+    // The header and the home page each offer the same search dialog.
+    await page
+      .getByRole('button', { name: /search/i })
+      .first()
+      .click();
     await page.getByPlaceholder(/search/i).fill('idempotency window');
 
     then('the document that contains it is offered, wherever it lives');
@@ -33,10 +37,7 @@ test.describe('The company documentation index', () => {
 
     then('the home page names the site once, and a document names itself and the site');
     await expect(page).toHaveTitle('Acme docs (demo)');
-    await page
-      .getByRole('link', { name: /Replaying failed captures/ })
-      .first()
-      .click();
+    await page.goto('/payments-service/ops/replay');
     await expect(page).toHaveTitle(/^Replaying failed captures \| Acme docs \(demo\)$/);
   });
 
@@ -83,14 +84,16 @@ test.describe('The company documentation index', () => {
     await page.goto('/');
 
     then('the index reports what it aggregated');
-    await expect(page.getByText('23 documents from 6 repositories')).toBeVisible();
+    const browse = page.getByRole('list', { name: 'Browse by type' });
+    await expect(browse.getByRole('link', { name: 'Documents 23' })).toBeVisible();
+    await expect(browse.getByRole('link', { name: 'Repositories 6' })).toBeVisible();
 
-    when('a repository section is read');
-    then('its documents are listed under its own name');
-    await expect(page.getByRole('heading', { name: 'payments-service' })).toBeVisible();
-    await expect(
-      page.getByRole('link', { name: 'Payments service runbook' }).first(),
-    ).toBeVisible();
+    when('the documents are opened');
+    await browse.getByRole('link', { name: 'Documents 23' }).click();
+    then('each is listed under the repository it lives in');
+    const runbook = page.getByRole('row', { name: 'Payments service runbook' });
+    await expect(runbook).toBeVisible();
+    await expect(runbook).toContainText('payments-service/docs/runbook.md');
   });
 
   test('a declared cross-repository edge resolves, and appears at both ends', async ({
@@ -221,7 +224,13 @@ test.describe('The company documentation index', () => {
     // above the index, which no filter of the index narrows.
     const index = page.locator('[data-catalog-explorer]');
     await expect(index.getByRole('link', { name: 'Refund agent' })).toBeVisible();
-    await expect(index.getByRole('link', { name: 'Payment captured' })).toBeVisible();
+    // The index shows 25 rows a page; narrowed to events, the event is on the first.
+    await expect(async () => {
+      await page.getByRole('radio', { name: /^event 2$/i }).click();
+      await expect(index.getByRole('link', { name: 'Payment captured' })).toBeVisible({
+        timeout: 500,
+      });
+    }).toPass();
 
     when('an engineer narrows the index to Agents');
     // Clicked again until the index has hydrated and listens.
@@ -234,10 +243,11 @@ test.describe('The company documentation index', () => {
     const agent = page.locator('[data-resource][data-kind="agent"]');
     await expect(agent.getByRole('link', { name: 'Refund agent' })).toBeVisible();
     await expect(index.getByRole('link', { name: 'Payment captured' })).toBeHidden();
-    const connections = agent.getByRole('button', { name: /connections?$/ });
-    await connections.click();
-    await expect(connections).toHaveAttribute('aria-expanded', 'true');
-    await agent.getByRole('link', { name: 'Fast model' }).click();
+    const details = agent.getByRole('button', { name: 'Details of Refund agent' });
+    await details.click();
+    await expect(details).toHaveAttribute('aria-expanded', 'true');
+    // Its connections open in the row beneath it.
+    await index.getByRole('link', { name: 'Fast model' }).click();
 
     then('following a connection restores and focuses its target resource');
     const model = page.locator('[data-resource][data-kind="model"]');
@@ -257,11 +267,11 @@ test.describe('The company documentation index', () => {
     await expect(page.getByRole('heading', { level: 1, name: 'Payment captured' })).toBeVisible();
     await expect(page.getByText(/Read from/)).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Schema' })).toBeVisible();
-    const producedBy = page.getByText(/^Produced by/);
-    await expect(producedBy.getByRole('link', { name: 'PaymentService' })).toBeVisible();
+    const impact = page.getByRole('region', { name: 'Impact' });
+    await expect(impact.getByRole('link', { name: 'PaymentService' })).toBeVisible();
 
     when('a reader follows the producing service');
-    await producedBy.getByRole('link', { name: 'PaymentService' }).click();
+    await impact.getByRole('link', { name: 'PaymentService' }).click();
 
     then('its page lists what it produces, which nobody wrote by hand');
     await expect(page.getByRole('heading', { level: 1, name: 'PaymentService' })).toBeVisible();
@@ -300,7 +310,7 @@ test.describe('The company documentation index', () => {
     await page.goto('/events/orders/orders/order.placed/');
 
     then("the consumer another package declared is on it, and the monorepo's owner");
-    const participants = page.getByText(/Consumed by/);
+    const participants = page.getByRole('region', { name: 'Impact' });
     await expect(participants.getByRole('link', { name: 'ShippingService' })).toBeVisible();
     await expect(participants.getByRole('link', { name: 'acme/orders' })).toBeVisible();
 
@@ -595,6 +605,8 @@ test.describe('The company documentation index', () => {
 
     expect(paged.length).toBeGreaterThan(0);
 
-    for (const path of paged) expect(shown).toContain(path);
+    for (const path of paged) {
+      expect(shown).toContain(path);
+    }
   });
 });

@@ -1,10 +1,8 @@
-import {
-  type CatalogResource,
-  isEventCatalogResource,
-  isServiceCatalogResource,
-} from 'autocatalog-core';
+import { isEventCatalogResource, isServiceCatalogResource } from 'autocatalog-core';
+import type { CatalogResource } from 'autocatalog-core';
 import { z } from 'zod';
-import { type Authored, readFolder } from './model';
+import { readFolder } from './model';
+import type { Authored } from './model';
 
 /**
  * Where each kind's overview files live. Under `overviews/`, never at the
@@ -19,7 +17,7 @@ export const OVERVIEW_DIRS = {
 
 export type OverviewKind = keyof typeof OVERVIEW_DIRS;
 
-const OVERVIEW_KINDS: OverviewKind[] = ['domain', 'service', 'system'];
+const OVERVIEW_KINDS: Array<OverviewKind> = ['domain', 'service', 'system'];
 
 const overviewSchema = z.object({
   name: z.string().min(1).optional(),
@@ -51,7 +49,7 @@ export type OverviewTargets = Record<OverviewKind, Iterable<string>>;
  * the systems a design declares.
  */
 export function overviewTargets(
-  resources: CatalogResource[],
+  resources: Array<CatalogResource>,
   extra: Partial<OverviewTargets> = {},
 ): OverviewTargets {
   const domain = new Set(extra.domain);
@@ -59,16 +57,24 @@ export function overviewTargets(
   const system = new Set(extra.system);
 
   for (const resource of resources) {
-    if (isEventCatalogResource(resource)) domain.add(resource.attributes.domain);
+    if (isEventCatalogResource(resource)) {
+      domain.add(resource.attributes.domain);
+    }
 
-    if (resource.ref.kind === 'domain') domain.add(resource.ref.id);
+    if (resource.ref.kind === 'domain') {
+      domain.add(resource.ref.id);
+    }
 
     if (isServiceCatalogResource(resource)) {
       service.add(resource.ref.id);
 
-      for (const name of resource.attributes.domains) domain.add(name);
+      for (const name of resource.attributes.domains) {
+        domain.add(name);
+      }
 
-      if (resource.attributes.system) system.add(resource.attributes.system.id);
+      if (resource.attributes.system) {
+        system.add(resource.attributes.system.id);
+      }
     }
   }
 
@@ -84,19 +90,19 @@ export interface ReadOverviewsOptions {
 }
 
 export interface ReadOverviewsResult {
-  overviews: Overview[];
+  overviews: Array<Overview>;
   /** One line per file left out, naming it and the check it fails. */
-  failures: string[];
+  failures: Array<string>;
   /** One line per file kept or left out that the site can decide only once composed. */
-  warnings: string[];
+  warnings: Array<string>;
 }
 
 /** A file name and a catalog name match ignoring case and punctuation: `payment-worker` is Payment Worker. */
 export const overviewKey = (name: string) =>
   name
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '');
+    .replaceAll(/[^a-z0-9]+/g, '-')
+    .replaceAll(/^-|-$/g, '');
 
 const LABEL: Record<OverviewKind, string> = {
   domain: 'domain',
@@ -117,9 +123,9 @@ export function readOverviews(
   targets: OverviewTargets,
   options: ReadOverviewsOptions = {},
 ): ReadOverviewsResult {
-  const failures: string[] = [];
-  const warnings: string[] = [];
-  const overviews: Overview[] = [];
+  const failures: Array<string> = [];
+  const warnings: Array<string> = [];
+  const overviews: Array<Overview> = [];
 
   const byKey = (names: Iterable<string>) =>
     new Map([...names].map((name) => [overviewKey(name), name]));
@@ -183,12 +189,12 @@ export function readOverviews(
 
 /** Resolve each subdomain's parent, leaving out a cycle and a parent that is not a domain. */
 function checkParents(
-  overviews: Overview[],
+  overviews: Array<Overview>,
   known: Record<OverviewKind, Map<string, string>>,
   options: ReadOverviewsOptions,
-  failures: string[],
-  warnings: string[],
-): Overview[] {
+  failures: Array<string>,
+  warnings: Array<string>,
+): Array<Overview> {
   const domains = overviews.filter((overview) => overview.kind === 'domain');
   const parentOf = new Map<string, string>();
 
@@ -197,7 +203,9 @@ function checkParents(
   const described = new Map(domains.map(({ target }) => [overviewKey(target), target]));
 
   for (const domain of domains) {
-    if (!domain.parent) continue;
+    if (!domain.parent) {
+      continue;
+    }
 
     const at = `${domain.repository}/${domain.file}`;
     const key = overviewKey(domain.parent);
@@ -236,11 +244,15 @@ function checkParents(
       at = next === undefined ? undefined : overviewKey(next);
     }
 
-    if (at === overviewKey(domain.target)) cyclic.add(at);
+    if (at === overviewKey(domain.target)) {
+      cyclic.add(at);
+    }
   }
 
   return overviews.filter((overview) => {
-    if (overview.kind !== 'domain' || !cyclic.has(overviewKey(overview.target))) return true;
+    if (overview.kind !== 'domain' || !cyclic.has(overviewKey(overview.target))) {
+      return true;
+    }
 
     failures.push(
       `${overview.repository}/${overview.file}: domain '${overview.target}' is its own ancestor through parent`,

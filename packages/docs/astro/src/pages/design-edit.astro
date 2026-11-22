@@ -12,7 +12,7 @@ const catalog = await docsCatalog();
 
 const editable = editableDesign(catalog, Astro.params.repository ?? '', Astro.params.id ?? '');
 
-if (!editable) return Astro.rewrite('/404');
+if (!editable) {return Astro.rewrite('/404');}
 
 const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
 

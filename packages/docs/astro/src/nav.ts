@@ -6,8 +6,10 @@ import type { SiteNavLink } from 'autocatalog-docs-core';
  * the home page and every guide's section, and API reference, which opens the
  * one API directly. From the reference, the guides are one click away.
  */
-export function portalNav(docPages: string[], apiPaths: string[]): SiteNavLink[] {
-  if (docPages.length === 0 || apiPaths.length === 0) return [];
+export function portalNav(docPages: Array<string>, apiPaths: Array<string>): Array<SiteNavLink> {
+  if (docPages.length === 0 || apiPaths.length === 0) {
+    return [];
+  }
 
   const sections = [
     ...new Set(docPages.flatMap((page) => page.split('/').filter(Boolean).slice(0, 1))),
@@ -35,7 +37,10 @@ export function portalNav(docPages: string[], apiPaths: string[]): SiteNavLink[]
  * `catalogSegments`, such as `services` or a kind's `decisions`), and Docs, the
  * documents its repositories publish, when there are any besides the home page.
  */
-export function catalogNav(docPages: string[], catalogSegments: Iterable<string>): SiteNavLink[] {
+export function catalogNav(
+  docPages: Array<string>,
+  catalogSegments: Iterable<string>,
+): Array<SiteNavLink> {
   const repositories = [
     ...new Set(docPages.flatMap((page) => page.split('/').filter(Boolean).slice(0, 1))),
   ];
@@ -87,7 +92,9 @@ const slashed = (pathname: string) => (pathname.endsWith('/') ? pathname : `${pa
 
 /** A site path under the base the site is served from. */
 function withBase(href: string, base: string): string {
-  if (EXTERNAL.test(href) || !href.startsWith('/')) return href;
+  if (EXTERNAL.test(href) || !href.startsWith('/')) {
+    return href;
+  }
 
   const prefix = base.replace(/\/$/, '');
 
@@ -99,7 +106,11 @@ function withBase(href: string, base: string): string {
  * the one whose `match` is the longest prefix of the page, so `/guides/api/`
  * beats `/guides/` on its own pages. `/` is current only on the home page.
  */
-export function navLinks(links: SiteNavLink[], pathname: string, base = '/'): NavLinkView[] {
+export function navLinks(
+  links: Array<SiteNavLink>,
+  pathname: string,
+  base = '/',
+): Array<NavLinkView> {
   const page = slashed(pathname);
 
   const prefixes = links.map((link) =>
@@ -130,20 +141,27 @@ export function navLinks(links: SiteNavLink[], pathname: string, base = '/'): Na
 }
 
 /** A sidebar entry as Starlight's route data has it, reduced to what sections read. */
-type SectionEntry = { type: 'link'; href: string } | { type: 'group'; entries: SectionEntry[] };
+type SectionEntry =
+  { type: 'link'; href: string } | { type: 'group'; entries: Array<SectionEntry> };
 
 /** Every link an entry holds, its own or its groups'. */
-export const hrefsIn = (entry: SectionEntry): string[] =>
+export const hrefsIn = (entry: SectionEntry): Array<string> =>
   entry.type === 'link' ? [entry.href] : entry.entries.flatMap(hrefsIn);
 
 /** The section most of an entry's links belong to, if any. */
-function sectionOf(entry: SectionEntry, links: SiteNavLink[], base: string): number | undefined {
+function sectionOf(
+  entry: SectionEntry,
+  links: Array<SiteNavLink>,
+  base: string,
+): number | undefined {
   const votes = new Map<number, number>();
 
   for (const href of hrefsIn(entry)) {
     const section = navLinks(links, href, base).findIndex(({ current }) => current);
 
-    if (section >= 0) votes.set(section, (votes.get(section) ?? 0) + 1);
+    if (section >= 0) {
+      votes.set(section, (votes.get(section) ?? 0) + 1);
+    }
   }
 
   return [...votes].sort(([, a], [, b]) => b - a)[0]?.[0];
@@ -155,18 +173,22 @@ function sectionOf(entry: SectionEntry, links: SiteNavLink[], base: string): num
  * keeps the whole sidebar, so the sidebar always has a way on.
  */
 export function sectionSidebar<Entry extends SectionEntry>(
-  entries: Entry[],
-  links: SiteNavLink[],
+  entries: Array<Entry>,
+  links: Array<SiteNavLink>,
   pathname: string,
   base = '/',
-): Entry[] {
+): Array<Entry> {
   const current = navLinks(links, pathname, base).findIndex((link) => link.current);
 
-  if (current < 0) return entries;
+  if (current < 0) {
+    return entries;
+  }
 
   const sections = entries.map((entry) => sectionOf(entry, links, base));
 
-  if (!sections.includes(current)) return entries;
+  if (!sections.includes(current)) {
+    return entries;
+  }
 
   return entries.filter((_, index) => sections[index] === undefined || sections[index] === current);
 }
@@ -177,9 +199,9 @@ export function sectionSidebar<Entry extends SectionEntry>(
  * not said twice.
  */
 export function liftSectionGroup<Entry extends SectionEntry & { label?: string }>(
-  entries: Entry[],
+  entries: Array<Entry>,
   section: string,
-): Entry[] {
+): Array<Entry> {
   const [first, ...rest] = entries;
 
   if (
@@ -190,5 +212,5 @@ export function liftSectionGroup<Entry extends SectionEntry & { label?: string }
   }
 
   // SAFETY: a group's entries are entries of the same sidebar, so of the same type.
-  return [...(first.entries as Entry[]), ...rest];
+  return [...(first.entries as Array<Entry>), ...rest];
 }

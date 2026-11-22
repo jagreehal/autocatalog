@@ -48,13 +48,17 @@ const company = path.join(WORK, 'remotes/company-site');
 let step = '';
 
 function check(ok, message, output = '') {
-  if (!ok) throw new Error(`${step}: ${message}${output ? `\n${output}` : ''}`);
+  if (!ok) {
+    throw new Error(`${step}: ${message}${output ? `\n${output}` : ''}`);
+  }
 }
 
 function run(cmd, args, cwd) {
   const result = spawnSync(cmd, args, { cwd, encoding: 'utf8' });
 
-  if (result.error) throw result.error;
+  if (result.error) {
+    throw result.error;
+  }
 
   return { status: result.status, out: `${result.stdout}${result.stderr}` };
 }
@@ -160,7 +164,9 @@ const steps = {
     commit(payments, 'payment.completed 1.1.0');
     writeFileSync(path.join(payments, EVENT), current);
 
-    for (const team of [...TEAMS, ...LATER]) commit(remote(team), 'init');
+    for (const team of [...TEAMS, ...LATER]) {
+      commit(remote(team), 'init');
+    }
 
     cpSync(path.join(EXAMPLE, 'company-site'), company, { recursive: true });
     git(company, 'init', '-q', '-b', 'main');
@@ -169,8 +175,9 @@ const steps = {
   'lock pins each repository'() {
     must(company, 'federation', 'lock', ...repositories(...TEAMS));
 
-    for (const team of TEAMS)
+    for (const team of TEAMS) {
       check(pin(team) === git(remote(team), 'rev-parse', 'HEAD').out.trim(), `${team} not pinned`);
+    }
 
     commit(company, 'pin the federation');
   },
@@ -212,7 +219,9 @@ const steps = {
 
     const source = (name) => report.sources.find((s) => s.repository === name);
 
-    for (const team of TEAMS) check(source(team)?.commit === pin(team), `${team} has no pin`);
+    for (const team of TEAMS) {
+      check(source(team)?.commit === pin(team), `${team} has no pin`);
+    }
 
     check(source('payments').events === 1, 'payments counts the unpinned payment.refunded');
     check(source('payments').commands === 1, 'payments has no command');
@@ -242,7 +251,7 @@ const steps = {
     );
 
     check(
-      /Left out legacy-payments: enrolled but not in autocatalog\.lock\.json/.test(out),
+      out.includes('Left out legacy-payments: enrolled but not in autocatalog.lock.json'),
       'legacy-payments not named as unlocked',
       out,
     );
@@ -312,8 +321,9 @@ const steps = {
 
     const units = ['payments-unit', 'payments-unit-again'].map((name) => path.join(WORK, name));
 
-    for (const result of await Promise.all(units.map(build)))
+    for (const result of await Promise.all(units.map(build))) {
       check(result.status === 0, `a concurrent build exited ${result.status}`, result.out);
+    }
 
     const [graph, again] = units.map((unit) => json(path.join(unit, 'dist/catalog.json')));
 
@@ -381,8 +391,9 @@ const steps = {
       'payments/overview is missing',
     );
 
-    for (const id of ['order.placed', 'order.cancelled', 'status.changed', 'payment.completed'])
+    for (const id of ['order.placed', 'order.cancelled', 'status.changed', 'payment.completed']) {
       check(ids.has(`event:${id}`), `${id} is missing`);
+    }
 
     // Two owners of payment.completed must not hide its consumers from the gate.
     const result2 = drift('payments', EVENT, (text) =>
@@ -489,6 +500,8 @@ try {
   console.error(`✗ ${error.message}`);
 }
 
-if (!process.argv[2]) rmSync(WORK, { recursive: true, force: true });
+if (!process.argv[2]) {
+  rmSync(WORK, { recursive: true, force: true });
+}
 
 process.exit(failed ? 1 : 0);

@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { validateCatalog } from '../src/validate';
 
-const here = path.dirname(fileURLToPath(import.meta.url));
+const here = import.meta.dirname;
 
 const goodRoot = path.join(here, 'fixtures/basic-catalog/events');
 
@@ -227,7 +227,7 @@ describe('validateCatalog', () => {
     const policy = {
       type: 'object',
       required: ['owner', 'classification'],
-      properties: { id: { type: 'string', pattern: '^[a-z]+(\\.[a-z]+)+$' } },
+      properties: { id: { type: 'string', pattern: String.raw`^[a-z]+(\.[a-z]+)+$` } },
     };
 
     const result = await validateCatalog(goodRoot, { policy });

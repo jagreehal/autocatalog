@@ -2,13 +2,10 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { parse as parseYaml } from 'yaml';
 import { z } from 'zod';
-import {
-  parseAdapterEventMeta,
-  type AdapterEvent,
-  type AdapterEventMeta,
-  type ProvenanceValue,
-} from './adapter-event';
-import { isJsonObject, jsonObjectSchema, type JsonObject, type JsonValue } from './json';
+import { parseAdapterEventMeta } from './adapter-event';
+import type { AdapterEvent, AdapterEventMeta, ProvenanceValue } from './adapter-event';
+import { isJsonObject, jsonObjectSchema } from './json';
+import type { JsonObject, JsonValue } from './json';
 import { derefLocal, rewriteObjectRefs, rewriteRefs } from './json-ref';
 import type {
   DiscoveryOutput,
@@ -20,7 +17,7 @@ import { DEFAULT_SCAN_EXCLUDE, pascalCase } from './utils';
 
 export interface ScanOpenApiOptions {
   root: string;
-  exclude?: string[];
+  exclude?: Array<string>;
   outDir?: string;
   signal?: AbortSignal;
   maxFiles?: number;
@@ -83,18 +80,22 @@ function stringOrUndefined(value: JsonValue | undefined): string | undefined {
 export function idFromOperationName(raw: string): string {
   const cleaned = String(raw)
     .replace(/^\/+/, '')
-    .replace(/[/\s]+/g, '.')
-    .replace(/[^a-zA-Z0-9._-]/g, '');
+    .replaceAll(/[/\s]+/g, '.')
+    .replaceAll(/[^a-zA-Z0-9._-]/g, '');
 
-  if (!/[a-zA-Z0-9]/.test(cleaned)) return '';
-
-  if (cleaned.includes('.')) return cleaned;
-
-  if (cleaned.includes('-') || cleaned.includes('_')) {
-    return cleaned.replace(/[-_]+/g, '.').toLowerCase();
+  if (!/[a-zA-Z0-9]/.test(cleaned)) {
+    return '';
   }
 
-  return cleaned.replace(/([a-z0-9])([A-Z])/g, '$1.$2').toLowerCase();
+  if (cleaned.includes('.')) {
+    return cleaned;
+  }
+
+  if (cleaned.includes('-') || cleaned.includes('_')) {
+    return cleaned.replaceAll(/[-_]+/g, '.').toLowerCase();
+  }
+
+  return cleaned.replaceAll(/([a-z0-9])([A-Z])/g, '$1.$2').toLowerCase();
 }
 
 function requestContent(doc: Doc, operation: Doc): Doc {
@@ -110,7 +111,9 @@ function jsonBodySchema(doc: Doc, operation: Doc): Doc | undefined {
     Object.keys(content).find((type) => type === 'application/json') ??
     Object.keys(content).find((type) => type.includes('json'));
 
-  if (!mediaType) return undefined;
+  if (!mediaType) {
+    return undefined;
+  }
 
   const schema = derefObject(doc, objectOrEmpty(content[mediaType]).schema);
 
@@ -127,10 +130,12 @@ function standalone(doc: Doc, schema: Doc): Doc {
   const defs: Doc = {};
 
   const to = (ref: string): string => {
-    if (!ref.startsWith(COMPONENT_SCHEMA)) return ref;
+    if (!ref.startsWith(COMPONENT_SCHEMA)) {
+      return ref;
+    }
 
     const pointer = ref.slice(COMPONENT_SCHEMA.length);
-    const name = pointer.replace(/~1/g, '/').replace(/~0/g, '~');
+    const name = pointer.replaceAll('~1', '/').replaceAll('~0', '~');
 
     if (!(name in defs)) {
       // Claimed first, so a schema that refers to itself ends here.
@@ -143,7 +148,9 @@ function standalone(doc: Doc, schema: Doc): Doc {
 
   const rewritten = rewriteObjectRefs(schema, to);
 
-  if (Object.keys(defs).length === 0) return rewritten;
+  if (Object.keys(defs).length === 0) {
+    return rewritten;
+  }
 
   return { ...rewritten, $defs: { ...objectOrEmpty(rewritten.$defs), ...defs } };
 }
@@ -158,7 +165,9 @@ function examplesFor(doc: Doc, operation: Doc): Array<{ name: string; data: Json
   for (const value of Object.values(requestContent(doc, operation))) {
     const media = objectOrEmpty(value);
 
-    if (media.example !== undefined) return [{ name: 'default', data: media.example }];
+    if (media.example !== undefined) {
+      return [{ name: 'default', data: media.example }];
+    }
 
     if (isJsonObject(media.examples)) {
       return Object.entries(media.examples).flatMap(([name, example]) => {
@@ -182,14 +191,18 @@ function buildEvent(input: {
   const { doc, operation, nameHint, relFile, kind } = input;
   const schema = jsonBodySchema(doc, operation);
 
-  if (!schema) return undefined;
+  if (!schema) {
+    return undefined;
+  }
 
   const meta = extensionMeta(operation);
   const operationId = stringOrUndefined(operation.operationId);
   const operationSummary = stringOrUndefined(operation.summary);
   const id = meta?.id ?? idFromOperationName(operationId ?? nameHint);
 
-  if (!id) return undefined;
+  if (!id) {
+    return undefined;
+  }
 
   const version = meta?.version ?? '0.1.0';
   const tag = Array.isArray(operation.tags) ? stringOrUndefined(operation.tags[0]) : undefined;
@@ -199,13 +212,21 @@ function buildEvent(input: {
 
   const inferredFields: Record<string, ProvenanceValue> = {};
 
-  if (!meta?.id) inferredFields.id = 'inferred';
+  if (!meta?.id) {
+    inferredFields.id = 'inferred';
+  }
 
-  if (!meta?.version) inferredFields.version = 'inferred';
+  if (!meta?.version) {
+    inferredFields.version = 'inferred';
+  }
 
-  if (!meta?.domain) inferredFields.domain = 'inferred';
+  if (!meta?.domain) {
+    inferredFields.domain = 'inferred';
+  }
 
-  if (!meta?.summary) inferredFields.summary = 'inferred';
+  if (!meta?.summary) {
+    inferredFields.summary = 'inferred';
+  }
 
   // A webhook or callback is a declaration that this thing is an event; an
   // operation only lands here because someone opted it in by hand. Both beat
@@ -216,7 +237,7 @@ function buildEvent(input: {
   const event: AdapterEvent = {
     id,
     version,
-    name: meta?.name ?? operationSummary ?? pascalCase(id).replace(/([a-z])([A-Z])/g, '$1 $2'),
+    name: meta?.name ?? operationSummary ?? pascalCase(id).replaceAll(/([a-z])([A-Z])/g, '$1 $2'),
     summary:
       meta?.summary ??
       stringOrUndefined(operation.description) ??
@@ -264,16 +285,22 @@ export function eventsFromOpenApiDocument(
     nameHint: string,
     kind: OpenApiScanFinding['kind'],
   ): void => {
-    if (!isJsonObject(operation)) return;
+    if (!isJsonObject(operation)) {
+      return;
+    }
     const built = buildEvent({ doc, operation, nameHint, relFile, kind });
 
-    if (built) found.push(built);
+    if (built) {
+      found.push(built);
+    }
   };
 
   for (const [name, item] of Object.entries(objectOrEmpty(doc.webhooks))) {
     const resolved = derefObject(doc, item);
 
-    for (const method of METHODS) push(resolved?.[method], name, 'openapi-webhook');
+    for (const method of METHODS) {
+      push(resolved?.[method], name, 'openapi-webhook');
+    }
   }
 
   for (const [route, item] of Object.entries(objectOrEmpty(doc.paths))) {
@@ -282,7 +309,9 @@ export function eventsFromOpenApiDocument(
     for (const method of METHODS) {
       const operation = pathItem?.[method];
 
-      if (!isJsonObject(operation)) continue;
+      if (!isJsonObject(operation)) {
+        continue;
+      }
 
       for (const [callbackName, callback] of Object.entries(objectOrEmpty(operation.callbacks))) {
         const resolved = derefObject(doc, callback);
@@ -315,13 +344,15 @@ async function walkSpecFiles(
   outAbs?: string,
   signal?: AbortSignal,
   maxFiles = 50_000,
-): Promise<string[]> {
-  const results: string[] = [];
+): Promise<Array<string>> {
+  const results: Array<string> = [];
 
   async function walk(dir: string): Promise<void> {
     signal?.throwIfAborted();
 
-    if (outAbs && (dir === outAbs || dir.startsWith(outAbs + path.sep))) return;
+    if (outAbs && (dir === outAbs || dir.startsWith(outAbs + path.sep))) {
+      return;
+    }
     let entries;
 
     try {
@@ -336,11 +367,15 @@ async function walkSpecFiles(
       // Directories are walked and regular files read. A symlink is neither: it
       // could name any file on this machine, and the catalog gets published.
       if (entry.isDirectory()) {
-        if (!exclude.has(entry.name) && !entry.name.startsWith('.')) await walk(full);
+        if (!exclude.has(entry.name) && !entry.name.startsWith('.')) {
+          await walk(full);
+        }
       } else if (entry.isFile() && /\.(ya?ml|json)$/i.test(entry.name)) {
         results.push(full);
 
-        if (results.length > maxFiles) throw new Error(`spec file limit exceeded (${maxFiles})`);
+        if (results.length > maxFiles) {
+          throw new Error(`spec file limit exceeded (${maxFiles})`);
+        }
       }
     }
   }
@@ -355,16 +390,17 @@ async function walkSpecFiles(
  * executes repository code. Drift reuses this, so the documents it compares
  * are the ones the scan publishes.
  */
-export async function findOpenApiDocuments(
-  opts: ScanOpenApiOptions,
-): Promise<{ documents: Array<{ relFile: string; doc: Doc; raw: string }>; errors: string[] }> {
+export async function findOpenApiDocuments(opts: ScanOpenApiOptions): Promise<{
+  documents: Array<{ relFile: string; doc: Doc; raw: string }>;
+  errors: Array<string>;
+}> {
   const root = path.resolve(opts.root);
   const exclude = new Set([...DEFAULT_SCAN_EXCLUDE, ...(opts.exclude ?? [])]);
   const outAbs = opts.outDir ? path.resolve(opts.outDir) : undefined;
   const files = await walkSpecFiles(root, exclude, outAbs, opts.signal, opts.maxFiles);
 
   const documents: Array<{ relFile: string; doc: Doc; raw: string }> = [];
-  const errors: string[] = [];
+  const errors: Array<string> = [];
 
   for (const file of files) {
     opts.signal?.throwIfAborted();
@@ -376,7 +412,9 @@ export async function findOpenApiDocuments(
     try {
       const maxFileBytes = opts.maxFileBytes ?? 5 * 1024 * 1024;
 
-      if ((await fs.stat(file)).size > maxFileBytes) continue;
+      if ((await fs.stat(file)).size > maxFileBytes) {
+        continue;
+      }
       raw = await fs.readFile(file, 'utf8');
     } catch {
       continue;
@@ -384,18 +422,22 @@ export async function findOpenApiDocuments(
 
     // Most files in a repo are not OpenAPI. Parsing every YAML to find out is
     // the expensive way to learn nothing.
-    if (!DECLARES_OPENAPI.test(raw)) continue;
+    if (!DECLARES_OPENAPI.test(raw)) {
+      continue;
+    }
 
     let doc: unknown;
 
     try {
       doc = file.endsWith('.json') ? JSON.parse(raw) : parseYaml(raw);
-    } catch (err) {
-      errors.push(`${relFile}: ${err instanceof Error ? err.message : String(err)}`);
+    } catch (error) {
+      errors.push(`${relFile}: ${error instanceof Error ? error.message : String(error)}`);
       continue;
     }
 
-    if (looksLikeOpenApi(doc)) documents.push({ relFile, doc, raw });
+    if (looksLikeOpenApi(doc)) {
+      documents.push({ relFile, doc, raw });
+    }
   }
 
   return { documents, errors };
@@ -407,13 +449,13 @@ export async function findOpenApiDocuments(
  */
 export async function discoverOpenApi(opts: ScanOpenApiOptions): Promise<DiscoveryOutput> {
   const { documents, errors } = await findOpenApiDocuments(opts);
-  const candidates: DiscoveryCandidate[] = [];
+  const candidates: Array<DiscoveryCandidate> = [];
 
   for (const { relFile, doc } of documents) {
     try {
       candidates.push(...eventsFromOpenApiDocument(doc, relFile));
-    } catch (err) {
-      errors.push(`${relFile}: ${err instanceof Error ? err.message : String(err)}`);
+    } catch (error) {
+      errors.push(`${relFile}: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 

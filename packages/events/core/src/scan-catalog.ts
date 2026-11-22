@@ -1,18 +1,19 @@
 import path from 'node:path';
 import type { AdapterEvent } from './adapter-event';
 import { enrichEvent, loadCodeowners } from './enrich-event';
-import {
-  mergeDiscoveries,
-  validateDiscoveryResult,
-  type DiscoveryAdapter,
-  type DiscoveryConflict,
-  type DiscoveryLimits,
-  type ScanFindingBase,
+import { mergeDiscoveries, validateDiscoveryResult } from './merge-discoveries';
+import type {
+  DiscoveryAdapter,
+  DiscoveryConflict,
+  DiscoveryLimits,
+  ScanFindingBase,
 } from './merge-discoveries';
-import { publishCatalog, type PublishCatalogResult } from './publish-catalog';
+import { publishCatalog } from './publish-catalog';
+import type { PublishCatalogResult } from './publish-catalog';
 import { builtInDiscoveryAdapters } from './built-in-adapters';
 import type { ArtifactRepository } from './catalog-artifact';
-import { applySnapshot, type ArchitectureSnapshot, type SnapshotMergeResult } from './snapshot';
+import { applySnapshot } from './snapshot';
+import type { ArchitectureSnapshot, SnapshotMergeResult } from './snapshot';
 
 export interface ScanCatalogOptions {
   /** The repository: CODEOWNERS and every recorded path are relative to it. */
@@ -26,10 +27,10 @@ export interface ScanCatalogOptions {
    * Adapters that read all of `root` even when `discoverIn` narrows the rest:
    * ones whose file pattern is strict enough that nothing stray matches it.
    */
-  wholeRepository?: DiscoveryAdapter[];
+  wholeRepository?: Array<DiscoveryAdapter>;
   outRoot: string;
-  adapters: DiscoveryAdapter[];
-  exclude?: string[];
+  adapters: Array<DiscoveryAdapter>;
+  exclude?: Array<string>;
   repository?: ArtifactRepository;
   signal?: AbortSignal;
   limits?: DiscoveryLimits;
@@ -51,12 +52,12 @@ export interface ScanCatalogOptions {
 }
 
 export interface ScanCatalogResult {
-  events: AdapterEvent[];
-  findings: ScanFindingBase[];
-  conflicts: DiscoveryConflict[];
+  events: Array<AdapterEvent>;
+  findings: Array<ScanFindingBase>;
+  conflicts: Array<DiscoveryConflict>;
   /** Files an Adapter recognised and did not catalog, each with why. */
-  skipped: string[];
-  errors: string[];
+  skipped: Array<string>;
+  errors: Array<string>;
   publication?: PublishCatalogResult;
   /** Present when a runtime snapshot was supplied. */
   runtime?: SnapshotMergeResult;
@@ -147,7 +148,9 @@ export async function scanCatalog(opts: ScanCatalogOptions): Promise<ScanCatalog
 
   const codeowners = await loadCodeowners(root, opts.ownersWithin);
 
-  for (const event of events) enrichEvent(event, codeowners);
+  for (const event of events) {
+    enrichEvent(event, codeowners);
+  }
 
   // Evidence is joined after enrichment so it can contradict a guess: an
   // inferred consumer list that the runtime disagrees with should end up

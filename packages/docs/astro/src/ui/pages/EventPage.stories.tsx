@@ -35,10 +35,19 @@ const meta = {
     examples,
     versions,
     documents: [{ href: '/payments/runbook', title: 'Payments runbook', label: 'payments' }],
+    // The flows the event is a step in: listed in the impact block and in their own card.
+    records: [
+      {
+        id: 'flows',
+        heading: 'Flows',
+        links: [{ href: '/flows/payments/checkout/', title: 'Checkout', label: 'payments' }],
+      },
+    ],
     facts: [
       ['Id', 'payment.completed'],
       ['Domain', 'payments', '/domains/payments/'],
       ['Repository', 'payments'],
+      ['Owner', 'payments', '/owners/payments/'],
       ['Tags', 'payments, billing'],
     ],
     transport: [{ address: 'payments.completed', protocols: ['kafka'], deliveryMode: 'push' }],
@@ -90,6 +99,14 @@ export const Draft: Story = {
   },
 };
 
+/** Published, and nothing subscribes: the impact block says so and how to fix it. */
+export const NoConsumers: Story = {
+  args: {
+    flow: { ...eventFlow, to: [] },
+    visualiser: undefined,
+  },
+};
+
 export const InlineDiagram: Story = {
   args: {
     diagram: {
@@ -119,6 +136,7 @@ export const Bare: Story = {
     examples: [],
     versions: versions.slice(0, 1),
     documents: [],
+    records: [],
     facts: [
       ['Id', 'payment.completed'],
       ['Domain', 'payments'],

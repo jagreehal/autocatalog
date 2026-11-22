@@ -40,7 +40,7 @@ export type ChatText = typeof DEFAULT_CHAT_TEXT;
 
 /** A line of `ChatText` with its placeholders filled in. */
 export function fill(line: string, values: Record<string, string | number>): string {
-  return line.replace(/\{(\w+)\}/g, (match, name: string) =>
+  return line.replaceAll(/\{(\w+)\}/g, (match, name: string) =>
     name in values ? String(values[name]) : match,
   );
 }

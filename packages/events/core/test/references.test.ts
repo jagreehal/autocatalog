@@ -1,11 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import {
-  AUTOCATALOG_GRAPH_SPEC,
-  resolveReferences,
-  versionSatisfies,
-  type CatalogResource,
-  type ResourceGraph,
-} from '../src';
+import { AUTOCATALOG_GRAPH_SPEC, resolveReferences, versionSatisfies } from '../src';
+import type { CatalogResource, ResourceGraph } from '../src';
 
 const event = (
   domain: string,
@@ -21,7 +16,7 @@ const event = (
   attributes: { domain, status: 'active', schema: './schema.json', examples: 0 },
 });
 
-const graph = (...resources: CatalogResource[]): ResourceGraph => ({
+const graph = (...resources: Array<CatalogResource>): ResourceGraph => ({
   spec: AUTOCATALOG_GRAPH_SPEC,
   resources,
   relationships: resources.map((resource) => ({

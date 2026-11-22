@@ -23,8 +23,10 @@ export interface VisualiserGraph {
   lanes?: Diagram['lanes'];
   /** Simpler levels of the same map: 2 without its messages, 1 its domains and systems. */
   levels?: { 1?: Pick<DslGraph, 'nodes' | 'edges'>; 2?: Pick<DslGraph, 'nodes' | 'edges'> };
+  /** The level the map opens at, when it has simpler ones: 1 its domains, 3 everything. */
+  initialLevel?: 1 | 2 | 3;
   /** Node ids drawn as proposed: a design's parts the catalog does not have yet. */
-  proposed?: string[];
+  proposed?: Array<string>;
   /** Runtime evidence by edge id, only where a snapshot covers the map. */
   evidence?: Record<string, EdgeEvidence>;
   live?: LiveFeed;
@@ -34,7 +36,8 @@ export interface VisualiserGraph {
  * The core's `normaliseEventId`: `order.placed` and `OrderPlaced` are one event,
  * so the map and the drift report agree on which edges ran.
  */
-export const normaliseEventId = (id: string): string => id.toLowerCase().replace(/[._\-\s]/g, '');
+export const normaliseEventId = (id: string): string =>
+  id.toLowerCase().replaceAll(/[._\-\s]/g, '');
 
 /**
  * Replay: how often each edge that ran sends a marker, busiest every 0.6s,
@@ -73,9 +76,13 @@ export function edgesForFrame(
   const event = normaliseEventId(name);
 
   return Object.entries(evidence).flatMap(([id, edge]): Array<{ id: string; hollow: boolean }> => {
-    if (edge.event !== event) return [];
+    if (edge.event !== event) {
+      return [];
+    }
 
-    if (edge.producer === undefined) return [{ id, hollow: true }];
+    if (edge.producer === undefined) {
+      return [{ id, hollow: true }];
+    }
 
     return !producer || producer === edge.producer ? [{ id, hollow: false }] : [];
   });
@@ -101,7 +108,9 @@ export function asGroupCard<N extends { id: string; type?: string | undefined; d
 ): N {
   const group = source?.metadata.group;
 
-  if (group !== 'domain' && group !== 'system') return node;
+  if (group !== 'domain' && group !== 'system') {
+    return node;
+  }
 
   const card = { id: node.id, name: source!.label, summary: source!.metadata.summary };
 
@@ -159,14 +168,52 @@ export function mapHeight(
       }
     }
 
-    if (!moved) break;
+    if (!moved) {
+      break;
+    }
   }
 
   const perColumn = new Map<number, number>();
 
-  for (const at of column.values()) perColumn.set(at, (perColumn.get(at) ?? 0) + 1);
+  for (const at of column.values()) {
+    perColumn.set(at, (perColumn.get(at) ?? 0) + 1);
+  }
 
   const rows = Math.max(1, ...perColumn.values());
 
   return Math.min(max, Math.max(MAP_MIN_REM, (MAP_CHROME_PX + rows * MAP_ROW_PX) / 16));
+}
+
+// A domain card's title is 13px at full size; this draws it at about 12px.
+const READABLE_ZOOM = 0.9;
+
+interface Point {
+  x: number;
+  y: number;
+}
+
+/**
+ * The pinch that zooms a map from `zoom` up to a readable size and brings the
+ * drawing's top left corner, `from` on screen, to `to`. It is a Ctrl+wheel
+ * event in pages: React Flow zooms by 2^-deltaY (ten times as strong on a
+ * Mac) about the pointer, so the pointer goes where that zoom carries `from`
+ * onto `to`. Nothing when the map is readable already.
+ */
+export function readablePinch(
+  zoom: number,
+  mac: boolean,
+  from: Point,
+  to: Point,
+): { deltaY: number; clientX: number; clientY: number } | undefined {
+  if (zoom >= READABLE_ZOOM) {
+    return undefined;
+  }
+
+  const scale = READABLE_ZOOM / zoom;
+
+  return {
+    deltaY: -Math.log2(scale) / (mac ? 10 : 1),
+    clientX: (scale * from.x - to.x) / (scale - 1),
+    clientY: (scale * from.y - to.y) / (scale - 1),
+  };
 }

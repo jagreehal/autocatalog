@@ -1,6 +1,7 @@
 /** @jsxImportSource react */
 import { BracesIcon, ChevronRightIcon, SearchIcon } from 'lucide-react';
-import { useMemo, useState, useSyncExternalStore, type ReactNode } from 'react';
+import { useMemo, useState, useSyncExternalStore } from 'react';
+import type { ReactNode } from 'react';
 import { Badge } from '#ui/components/ui/badge.tsx';
 import { Button, LinkButton } from '#ui/components/ui/button.tsx';
 import {
@@ -29,10 +30,10 @@ import type { PropNode } from '../lib/schema-tree';
  */
 export interface SchemaTreeProps {
   /** The schema's properties, from `schemaTree`, which runs where the page is built. */
-  nodes: PropNode[];
+  nodes: Array<PropNode>;
 }
 
-function flatten(nodes: PropNode[]): PropNode[] {
+function flatten(nodes: Array<PropNode>): Array<PropNode> {
   return nodes.flatMap((node) => [node, ...flatten(node.children ?? [])]);
 }
 
@@ -40,7 +41,7 @@ function flatten(nodes: PropNode[]): PropNode[] {
 const isInside = (id: string, ancestor: string) => id.startsWith(`${ancestor}.`);
 
 /** Every ancestor of `id`, outermost first and not including itself: `0.2.1` has `0` and `0.2`. */
-function ancestorsOf(id: string): string[] {
+function ancestorsOf(id: string): Array<string> {
   const parts = id.split('.');
 
   return parts.slice(0, -1).map((_, index) => parts.slice(0, index + 1).join('.'));
@@ -103,7 +104,9 @@ export function SchemaTree({ nodes }: SchemaTreeProps) {
 
     const next = value.trim().toLocaleLowerCase();
 
-    if (!next) return;
+    if (!next) {
+      return;
+    }
 
     const opened = flat.flatMap((node) =>
       node.name.toLocaleLowerCase().includes(next) ? ancestorsOf(node.id) : [],
@@ -114,12 +117,17 @@ export function SchemaTree({ nodes }: SchemaTreeProps) {
 
   const toggle = (id: string, isOpen: boolean) =>
     setOpen((current) => {
-      if (current.has(id) === isOpen) return current;
+      if (current.has(id) === isOpen) {
+        return current;
+      }
 
       const next = new Set(current);
 
-      if (isOpen) next.add(id);
-      else next.delete(id);
+      if (isOpen) {
+        next.add(id);
+      } else {
+        next.delete(id);
+      }
 
       return next;
     });
@@ -198,7 +206,9 @@ interface PropProps {
 }
 
 function Prop({ node, open, visible, onToggle }: PropProps) {
-  if (visible && !visible.has(node.id)) return null;
+  if (visible && !visible.has(node.id)) {
+    return null;
+  }
 
   const row = (
     <>
@@ -296,7 +306,7 @@ export function SchemaSection({
   href,
   note,
 }: {
-  nodes: PropNode[];
+  nodes: Array<PropNode>;
   href: string;
   note: ReactNode;
 }) {

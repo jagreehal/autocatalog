@@ -1,9 +1,11 @@
 import { resourceKey } from 'autocatalog-core';
-import { designChanges, designDiagram, type Design } from 'autocatalog-docs-core';
+import { designChanges, designDiagram } from 'autocatalog-docs-core';
+import type { Design } from 'autocatalog-docs-core';
 import type { DocsCatalog } from './catalog';
 import { renderNarrative } from './flows';
 import type { DesignPageProps, DesignsPageProps } from './ui/pages';
-import { pageOf, type CatalogGraphOptions } from './visualiser';
+import { pageOf } from './visualiser';
+import type { CatalogGraphOptions } from './visualiser';
 
 /** Where a design's page lives on the site, relative to its base. */
 const RANK = { critical: 0, warning: 1, info: 2 } as const;
@@ -28,7 +30,9 @@ export async function designPageProps(
   for (const part of design.resources) {
     const resource = part.ref && resources.get(resourceKey(part.ref));
 
-    if (resource) hrefs[part.id] = pageOf(resource, base, pages);
+    if (resource) {
+      hrefs[part.id] = pageOf(resource, base, pages);
+    }
   }
 
   const names = new Map(design.resources.map((part) => [part.id, part.name]));
@@ -78,7 +82,7 @@ export async function designPageProps(
   };
 }
 
-export function designsPageProps(designs: Design[], base: string): DesignsPageProps {
+export function designsPageProps(designs: Array<Design>, base: string): DesignsPageProps {
   return {
     designs: designs.map((design) => ({
       title: design.title,
