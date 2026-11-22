@@ -1,5 +1,12 @@
 # autocatalog-mcp
 
+## 0.7.1
+
+### Patch Changes
+
+- Updated dependencies [075ea2f]
+  - autocatalog-docs-core@0.14.0
+
 ## 0.7.0
 
 ### Minor Changes
