@@ -1,5 +1,18 @@
 # autocatalog-adapter-zod
 
+## 0.3.6
+
+### Patch Changes
+
+- 75a8ff7: `autocatalog-core/plugin` is the part of core a plugin builds on: the scanner types, the JSON helpers, and the writers for events, components, gateways, networks and models. A plugin that imports only from it keeps working when the rest of core changes. `autocatalog-plugin-zod` imports from it.
+
+  The Kong, Kubernetes, Storybook and ODCS plugins now release from [autocatalog-plugins](https://github.com/jagreehal/autocatalog-plugins).
+
+- Updated dependencies [75a8ff7]
+- Updated dependencies [75a8ff7]
+- Updated dependencies [75a8ff7]
+  - autocatalog-core@0.12.0
+
 ## 0.3.5
 
 ### Patch Changes
