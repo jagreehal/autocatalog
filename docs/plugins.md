@@ -21,6 +21,11 @@ commits and compare.
 
 `autocatalog-plugin-zod` is one. Yours works the same way.
 
+`autocatalog-plugin-zod` ships with the CLI. The other plugins this project
+maintains (Kong, Kubernetes, Storybook and ODCS) live in
+[autocatalog-plugins](https://github.com/jagreehal/autocatalog-plugins), each
+built on `autocatalog-core/plugin` the way yours will be.
+
 ## You may not need one
 
 If your team already keeps its events in a file of its own, describe that file
@@ -126,7 +131,7 @@ A package can declare both.
 
 ## The scanner
 
-The export is a `DiscoveryAdapter` from `autocatalog-core`: a name and a
+The export is a `DiscoveryAdapter` from `autocatalog-core/plugin`: a name and a
 `discover` function. `discover` gets the repository root and returns each
 event it found with the file it came from.
 
@@ -186,17 +191,22 @@ export const ordersPlugin = {
 - `ac scan` reports each of `errors` and fails. Return one per unreadable file,
   and keep going.
 
-With TypeScript, type the export as `DiscoveryAdapter` from `autocatalog-core`
-and the compiler checks every field.
+With TypeScript, type the export as `DiscoveryAdapter` from
+`autocatalog-core/plugin` and the compiler checks every field.
+
+`autocatalog-core/plugin` is the part of core a plugin builds on: the scanner
+types, the JSON helpers and the writers for each committed file. Import from it
+rather than from `autocatalog-core`, so a release of core that changes anything
+else leaves your plugin working.
 
 ## Publish components
 
 A plugin can list the UI components a tool holds, the way
 `autocatalog-plugin-storybook` does for Storybook. Add a `command`, read your
-format, and call `writeComponents` from `autocatalog-core`:
+format, and call `writeComponents` from `autocatalog-core/plugin`:
 
 ```js
-import { writeComponents } from 'autocatalog-core';
+import { writeComponents } from 'autocatalog-core/plugin';
 
 await writeComponents(process.cwd(), {
   components: [
@@ -218,7 +228,7 @@ await writeComponents(process.cwd(), {
 - The site never loads your plugin. It reads the committed file, so anything that
   writes that file publishes to the catalog, with or without a plugin.
 
-[`examples/components`](https://github.com/jagreehal/autocatalog/tree/main/examples/components)
+[`examples/components`](https://github.com/jagreehal/autocatalog-plugins/tree/main/examples/components)
 has a working one in `autocatalog-plugin-gallery`.
 
 ## Running it

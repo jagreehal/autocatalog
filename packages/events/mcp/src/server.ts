@@ -41,7 +41,7 @@ import {
   searchCompany,
 } from './knowledge.js';
 import { catalogMap, describeMap, draftMap } from './map.js';
-import { define } from './model.js';
+import { dataContract, define } from './model.js';
 
 // From src in tests and dist when built, package.json is one folder up.
 const VERSION = z
@@ -499,6 +499,24 @@ export function createServer(
         return asText(
           flowContext(catalog, id, company, audience, await answerGraph(catalog, company)),
         );
+      } catch (e) {
+        return asError(e);
+      }
+    },
+  );
+
+  server.registerTool(
+    'data_contract',
+    {
+      title: 'What a data product promises',
+      description:
+        "A data product's ODCS data contracts, read before querying or joining its data: the schema with each column's type, whether it is required and how it is classified; service levels with how often they were kept; terms of use (purpose, usage, limitations); owner and support; and the AI context: instructions to follow, constraints on what not to do, and verified statements, questions paired with a query the provider vouches for. Reuse a verified query rather than writing your own. Also what the product expects of its inputs. Omit id to list the data products that have contracts.",
+      annotations: { readOnlyHint: true, openWorldHint: false },
+      inputSchema: { id: z.string().min(1).optional() },
+    },
+    async ({ id }) => {
+      try {
+        return asText(dataContract(catalog, id, company));
       } catch (e) {
         return asError(e);
       }

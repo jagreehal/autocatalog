@@ -37,7 +37,8 @@ fails when the committed file no longer matches the manifests.
   can skip the gateway and its authentication
 
 A call involving a service no policy file describes is not judged.
-`ac federation status` lists the same, under its own heading.
+`ac federation status` lists the same, under its own heading, and
+`--fail-on network` fails the run on them.
 
 ## Two configurations of one gateway
 

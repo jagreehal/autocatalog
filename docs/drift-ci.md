@@ -30,9 +30,44 @@ jobs:
 ```
 
 The action checks out your history, runs `ac check` and compares your contracts
-with the base branch. Its failures mark the files they name. Set
-`allow-code-execution: true` to run [catalog rules](/docs/rules) in a repository
-you trust.
+with the base branch. Its failures mark the files they name, and it keeps one
+comment on the pull request with the result: what failed, and each breaking
+change with the consumers it breaks. A later run updates that comment, and a
+clean pull request it never commented on stays quiet.
+
+To name consumers in other repositories, point it at your company site:
+
+```yaml
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: jagreehal/autocatalog/actions/check@v1
+        with:
+          consumers: https://catalog.acme.dev/catalog.json
+          require-consumers: true
+          max-consumers-age: 24
+```
+
+| Input                  | What it does                                                                                                                      |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `consumers`            | The company site's `/catalog.json`, so a break names the consumers [other repositories declare](#consumers-in-other-repositories) |
+| `consumers-token`      | A token for a private company site                                                                                                |
+| `repository`           | This repository's name on the company site, when it differs                                                                       |
+| `require-consumers`    | Fail when the site cannot be read, instead of checking without it                                                                 |
+| `max-consumers-age`    | Hours the site may be old before it counts as unreadable                                                                          |
+| `comment`              | Keep the pull request comment; `true` by default                                                                                  |
+| `allow-code-execution` | Run [catalog rules](/docs/rules) and installed plugins, such as Zod, in a repository you trust                                    |
+| `version`              | The autocatalog version to run; each release of the action pins its own                                                           |
+
+The comment needs `pull-requests: write`. A pull request from a fork gets a
+token that can only read, so the comment is skipped there and the check still
+runs. Plugins run only with `allow-code-execution`, after your own install step:
+`ac check` says which installed plugins it skipped without it. Leave it off for
+pull requests from forks.
 
 To run the steps yourself, with Zod or another installed plugin:
 
@@ -257,7 +292,11 @@ the file's time, and how long ago:
 ```
 
 If the index cannot be read, drift says so and runs without it: an outage on the site does
-not block pull requests across the company.
+not block pull requests across the company. When a gate without consumers is no
+gate, `--require-consumers` fails instead, and `--max-consumers-age 24` treats a
+site older than a day as unreadable: a warning, or a failure with
+`--require-consumers`. A site that sends no `Last-Modified` header has no age to
+check, so `--require-consumers` fails on it too.
 
 The consumer checks its side too. In the consumer's own pull request,
 `ac validate --catalog <url>` checks each declared event exists and each field

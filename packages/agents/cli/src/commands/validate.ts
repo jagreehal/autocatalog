@@ -41,10 +41,10 @@ export const runValidate = async (args: string[]): Promise<number> => {
   for (const kind of ENTITY_KINDS) {
     const n = cat.entities.get(kind)?.size ?? 0;
     total += n;
-    process.stdout.write(`  ${kleur.cyan(kind.padEnd(10))} ${n}\n`);
+    process.stdout.write(`  ${kleur.cyan(kind.padEnd(12))} ${n}\n`);
   }
 
-  process.stdout.write(`  ${kleur.bold('total'.padEnd(10))} ${total}\n\n`);
+  process.stdout.write(`  ${kleur.bold('total'.padEnd(12))} ${total}\n\n`);
 
   if (cat.issues.length > 0) {
     process.stdout.write(kleur.yellow(`load issues (${cat.issues.length}):\n`));

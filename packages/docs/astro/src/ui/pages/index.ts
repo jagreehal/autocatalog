@@ -29,6 +29,8 @@ export { ComponentPage, type ComponentPageProps } from './ComponentPage';
 
 export { McpServersPage, type McpServersPageProps } from './McpServersPage';
 
+export { SkillsPage, type SkillsPageProps } from './SkillsPage';
+
 export { McpServerPage, type McpServerPageProps } from './McpServerPage';
 
 export { SystemsPage, type SystemsPageProps } from './SystemsPage';

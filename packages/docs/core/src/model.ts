@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import {
+  compareSemverish,
   fieldPaths,
   isEventCatalogResource,
   isJsonObject,
@@ -18,7 +19,16 @@ import { z } from 'zod';
 import { resolveAbout } from './about';
 import { DIAGRAM_NODE_TYPES, type Diagram, type DiagramNode } from './diagram';
 import { inside } from './inside';
+import {
+  ODCS_FILE,
+  type OdcsContract,
+  readOdcs,
+  readTrackRecord,
+  type TrackRecord,
+  trackRecordFile,
+} from './odcs';
 import { type Lifecycle, lifecyclesSchema } from './lifecycles';
+import { ODPS_FILE, type OdpsProduct, readOdps } from './odps';
 
 /**
  * The rest of a domain model, one Markdown file per resource in the repository
@@ -130,7 +140,7 @@ export interface Entity extends Authored {
   lifecycles: Record<string, Lifecycle>;
 }
 
-const output = z.union([
+const portSchema = z.union([
   z
     .string()
     .min(1)
@@ -143,8 +153,8 @@ const dataProductSchema = z
     name: z.string().min(1),
     summary: z.string().optional(),
     domain: z.string().optional(),
-    inputs: z.array(z.string().min(1)).default([]),
-    outputs: z.array(output).default([]),
+    inputs: z.array(portSchema).default([]),
+    outputs: z.array(portSchema).default([]),
   })
   .refine((product) => product.inputs.length + product.outputs.length > 0, {
     message: 'a data product names at least one input or output',
@@ -156,11 +166,24 @@ export interface DataProductPort {
   reference: string;
   /** The catalog's resource; absent for another data product, or one `ac docs check` defers. */
   ref?: ResourceRef;
-  /** An output's contract, relative to the repository. */
+  /**
+   * Relative to the repository. On an output, the contract it keeps; on an
+   * input, what this product expects of it (a consumer-driven contract).
+   */
   contract?: string | undefined;
+  /** The repository `contract` is in, when it is not the product's own: an ODPS input names its provider's. */
+  contractRepository?: string | undefined;
+  /** The contract an ODPS port names, as written: its id may hold any character, `@` included. */
+  pin?: { contractId: string; version?: string | undefined } | undefined;
+  /** An ODPS port's name; `rawtransactions`. */
+  name?: string | undefined;
+  /** The contract, read, when it is an ODCS file (`*.odcs.yaml`). */
+  odcs?: OdcsContract | undefined;
+  /** An output's track record, from the results file beside its ODCS contract. */
+  trackRecord?: TrackRecord | undefined;
 }
 
-/** Data a team publishes for others to use: `data-products/<id>.md`. */
+/** Data a team publishes for others to use: `data-products/<id>.md`, or `<id>.odps.yaml` in ODPS. */
 export interface DataProduct extends Authored {
   name: string;
   summary?: string | undefined;
@@ -349,6 +372,12 @@ export interface ReadDomainModelOptions {
    */
   deferMissing?: boolean;
   /**
+   * Keep a pinned input no data product publishes, and the product that reads
+   * it. Follows `deferMissing` unless set: consumer CI reads every checkout, so
+   * it drops such products and resolves inputs the way the site does.
+   */
+  deferUnpublished?: boolean;
+  /**
    * An event's JSON Schema, where the catalog's resource does not carry it: a
    * site reads each event's schema file beside its manifest.
    */
@@ -515,7 +544,8 @@ export function readDomainModel(
     failures,
   );
 
-  const productIds = new Set(productReads.map(({ where }) => where.id));
+  const odpsReads = readOdpsFolder(repositories, failures);
+  const productIds = new Set([...productReads, ...odpsReads].map(({ where }) => where.id));
   const candidates: DataProduct[] = [];
   const definedIn = new Map<string, string>();
 
@@ -532,8 +562,8 @@ export function readDomainModel(
     definedIn.set(where.id, at);
 
     try {
-      const port = (reference: string, contract?: string): DataProductPort => {
-        if (contract) inside(dir, contract);
+      const port = (reference: string, contract?: string, output = false): DataProductPort => {
+        const contractFacts = contract ? readContract(dir, contract, output) : {};
 
         if (reference.startsWith('data-product/')) {
           const id = reference.slice('data-product/'.length);
@@ -542,20 +572,20 @@ export function readDomainModel(
 
           if (id === where.id) throw new Error('a data product cannot feed itself');
 
-          return { reference, contract };
+          return { reference, contract, ...contractFacts };
         }
 
         const resolution = resolveAbout(reference, catalog.resources, where.repository);
 
         if ('failure' in resolution) {
           if (options.deferMissing && resolution.failure.includes('does not resolve')) {
-            return { reference, contract };
+            return { reference, contract, ...contractFacts };
           }
 
           throw new Error(resolution.failure.replace(/^about /, ''));
         }
 
-        return { reference, ref: resolution.ref, contract };
+        return { reference, ref: resolution.ref, contract, ...contractFacts };
       };
 
       if (data.domain) unknownDomain(where, data.domain);
@@ -565,8 +595,8 @@ export function readDomainModel(
         name: data.name,
         summary: data.summary,
         domain: data.domain,
-        inputs: data.inputs.map((reference) => port(reference)),
-        outputs: data.outputs.map(({ ref, contract }) => port(ref, contract)),
+        inputs: data.inputs.map(({ ref, contract }) => port(ref, contract)),
+        outputs: data.outputs.map(({ ref, contract }) => port(ref, contract, true)),
       });
     } catch (error) {
       failures.push(
@@ -575,30 +605,164 @@ export function readDomainModel(
     }
   }
 
-  // A product fed by one that failed its checks would link to a page the site
-  // does not publish, so it fails too, until every remaining link holds.
+  const contracts = odpsReads.length
+    ? contractIndex(repositories)
+    : new Map<string, IndexedContract[]>();
+
+  for (const { data, where } of odpsReads) {
+    const at = `${where.repository}/${where.file}`;
+    const first = definedIn.get(where.id);
+
+    if (first) {
+      failures.push(`${at}: data product '${where.id}' is already defined in ${first}`);
+      continue;
+    }
+
+    definedIn.set(where.id, at);
+
+    try {
+      const port = (
+        { name, version, contractId }: OdpsProduct['outputPorts'][number],
+        output: boolean,
+      ): DataProductPort => {
+        const at = version ? `@${version}` : '';
+
+        if (!contractId) return { reference: `port/${name}${at}`, name };
+
+        const reference = `contract/${contractId}${at}`;
+        const pin = { contractId, version };
+
+        const found = findContract(
+          contracts,
+          contractId,
+          version,
+          output ? where.repository : undefined,
+        );
+
+        if (!found) {
+          if (!output && options.deferMissing) return { reference, name, pin };
+
+          throw new Error(
+            `${output ? 'output' : 'input'} port '${name}' names contract ${contractId}${version ? ` ${version}` : ''}, which no *.odcs.yaml in ${output ? 'this repository' : 'the repositories read'} declares`,
+          );
+        }
+
+        return {
+          reference,
+          name,
+          pin,
+          contract: found.file,
+          ...(found.repository !== where.repository && { contractRepository: found.repository }),
+          ...(output ? readContract(found.dir, found.file, true) : { odcs: found.odcs }),
+        };
+      };
+
+      if (data.domain) unknownDomain(where, data.domain);
+
+      candidates.push({
+        ...where,
+        name: data.name ?? where.id,
+        summary: data.description?.purpose,
+        domain: data.domain,
+        inputs: data.inputPorts.map((p) => port(p, false)),
+        outputs: data.outputPorts.map((p) => port(p, true)),
+      });
+    } catch (error) {
+      failures.push(`${at}: ${problem(error instanceof Error ? error : String(error))}`);
+    }
+  }
+
+  // An ODPS input reads what a data product publishes: that exact version when
+  // pinned, else the newest. A raw file no output keeps, a draft or a copy in
+  // another checkout, is not what it consumes, whichever repository is read first.
+  const bare = (v: string) => v.replace(/^v/, '');
+
+  const pinned = candidates.flatMap((consumer) =>
+    consumer.inputs.flatMap((input) =>
+      input.pin ? [{ consumer, input, read: { ...input } }] : [],
+    ),
+  );
+
   const valid = new Set(candidates.map((product) => product.id));
 
+  // Resolve against the products still standing, drop those that fail on their
+  // own, and resolve again: a dropped provider must not hide a version another keeps.
   for (let changed = true; changed;) {
-    changed = false;
+    const published = candidates.flatMap((product) =>
+      valid.has(product.id)
+        ? product.outputs.flatMap((output) =>
+            output.odcs && output.contract && !output.contractRepository
+              ? [{ product, output, odcs: output.odcs }]
+              : [],
+          )
+        : [],
+    );
+
+    for (const { consumer, input, read } of pinned) {
+      const { contractId: id, version } = read.pin!;
+
+      const match = published
+        .filter(
+          (p) =>
+            p.product !== consumer &&
+            p.odcs.id === id &&
+            (version === undefined || bare(p.odcs.version) === bare(version)),
+        )
+        .sort((a, b) => compareSemverish(b.odcs.version, a.odcs.version))[0];
+
+      Object.assign(
+        input,
+        match
+          ? {
+              reference: `data-product/${match.product.id}`,
+              contract: match.output.contract,
+              odcs: match.odcs,
+              contractRepository:
+                match.product.repository === consumer.repository
+                  ? undefined
+                  : match.product.repository,
+            }
+          : read,
+      );
+    }
+
+    const failing: string[] = [];
 
     for (const product of candidates) {
       if (!valid.has(product.id)) continue;
 
+      // A pinned input no data product publishes promises nothing; `ac docs check`
+      // reads one repository, so it defers what the others may publish.
+      const unpublished =
+        (options.deferUnpublished ?? options.deferMissing)
+          ? undefined
+          : product.inputs.find((port) => port.pin && !port.reference.startsWith('data-product/'));
+
+      // A product fed by one that failed its checks would link to a page the site
+      // does not publish, so it fails too, until every remaining link holds.
       const broken = [...product.inputs, ...product.outputs]
         .flatMap(({ reference }) =>
           reference.startsWith('data-product/') ? [reference.slice('data-product/'.length)] : [],
         )
         .find((id) => !valid.has(id));
 
-      if (broken) {
-        valid.delete(product.id);
+      if (unpublished?.pin) {
+        const { contractId, version } = unpublished.pin;
+
+        failures.push(
+          `${product.repository}/${product.file}: input port '${unpublished.name}' reads contract ${contractId}${version ? ` ${version}` : ''}, which no data product publishes`,
+        );
+      } else if (broken) {
         failures.push(
           `${product.repository}/${product.file}: data product '${broken}' fails its own checks`,
         );
-        changed = true;
-      }
+      } else continue;
+
+      failing.push(product.id);
     }
+
+    for (const id of failing) valid.delete(id);
+    changed = failing.length > 0;
   }
 
   const dataProducts = candidates.filter((product) => valid.has(product.id));
@@ -658,6 +822,135 @@ export function readDomainModel(
   return { glossaries, entities, dataProducts, people, failures, warnings };
 }
 
+/**
+ * A port's contract file: checked to be inside the repository, and read when
+ * it is ODCS. An output's track record comes from the results file beside it,
+ * when there is one; a results file that does not read is ignored line by line.
+ */
+function readContract(
+  dir: string,
+  contract: string,
+  output: boolean,
+): Pick<DataProductPort, 'odcs' | 'trackRecord'> {
+  const full = inside(dir, contract);
+
+  if (!ODCS_FILE.test(contract)) return {};
+  const odcs = readOdcs(fs.readFileSync(full, 'utf8'));
+  const results = trackRecordFile(full);
+
+  if (!output || !fs.lstatSync(results, { throwIfNoEntry: false })?.isFile()) return { odcs };
+
+  const { unreadable: _unreadable, ...trackRecord } = readTrackRecord(
+    fs.readFileSync(inside(dir, path.relative(dir, results)), 'utf8'),
+    odcs,
+  );
+
+  return { odcs, trackRecord };
+}
+
+/** `*.odps.yaml` at each repository's root and in `data-products/`; the file name is the product's id. */
+function readOdpsFolder(
+  repositories: Array<{ repository: string; dir: string }>,
+  failures: string[],
+): Array<{ data: OdpsProduct; where: Authored; dir: string }> {
+  const found: Array<{ data: OdpsProduct; where: Authored; dir: string }> = [];
+
+  for (const { repository, dir } of repositories)
+    for (const folder of ['', MODEL_DIRS.dataProducts]) {
+      const full = path.join(dir, folder);
+
+      if (!fs.lstatSync(full, { throwIfNoEntry: false })?.isDirectory()) continue;
+
+      for (const entry of fs.readdirSync(full, { withFileTypes: true })) {
+        if (!entry.isFile() || !ODPS_FILE.test(entry.name)) continue;
+
+        const file = folder ? `${folder}/${entry.name}` : entry.name;
+        const id = entry.name.replace(ODPS_FILE, '');
+
+        try {
+          if (!ID.test(id)) {
+            throw new Error(
+              `'${id}' cannot be a page's address; use letters, digits, '.', '-' and '_'`,
+            );
+          }
+
+          found.push({
+            data: readOdps(fs.readFileSync(path.join(full, entry.name), 'utf8')),
+            where: { repository, id, file, body: '' },
+            dir,
+          });
+        } catch (error) {
+          failures.push(
+            `${repository}/${file}: ${problem(error instanceof Error ? error : String(error))}`,
+          );
+        }
+      }
+    }
+
+  return found.sort(
+    (a, b) =>
+      a.where.repository.localeCompare(b.where.repository) || a.where.id.localeCompare(b.where.id),
+  );
+}
+
+interface IndexedContract {
+  repository: string;
+  dir: string;
+  /** Relative to the repository. */
+  file: string;
+  odcs: OdcsContract;
+}
+
+const SKIP = new Set(['node_modules', '.git', 'dist', 'build', '.turbo', 'coverage']);
+
+/** Every ODCS contract each repository keeps, by contract id. A file that does not read is left out. */
+function contractIndex(
+  repositories: Array<{ repository: string; dir: string }>,
+): Map<string, IndexedContract[]> {
+  const index = new Map<string, IndexedContract[]>();
+
+  for (const { repository, dir } of repositories) {
+    const walk = (at: string) => {
+      for (const entry of fs.readdirSync(path.join(dir, at), { withFileTypes: true })) {
+        const file = at ? `${at}/${entry.name}` : entry.name;
+
+        if (entry.isDirectory() && !SKIP.has(entry.name)) walk(file);
+
+        if (!entry.isFile() || !ODCS_FILE.test(entry.name)) continue;
+
+        try {
+          const odcs = readOdcs(fs.readFileSync(path.join(dir, file), 'utf8'));
+          index.set(odcs.id, [...(index.get(odcs.id) ?? []), { repository, dir, file, odcs }]);
+        } catch {
+          // `ac from-odcs` lints every contract; here it is only not found.
+        }
+      }
+    };
+
+    if (fs.lstatSync(dir, { throwIfNoEntry: false })?.isDirectory()) walk('');
+  }
+
+  return index;
+}
+
+/** The contract a port names: exactly its version when it gives one, else the newest. */
+function findContract(
+  index: Map<string, IndexedContract[]>,
+  id: string,
+  version: string | undefined,
+  repository: string | undefined,
+): IndexedContract | undefined {
+  const bare = (v: string) => v.replace(/^v/, '');
+
+  const candidates = (index.get(id) ?? []).filter(
+    (c) => repository === undefined || c.repository === repository,
+  );
+
+  if (version !== undefined) return candidates.find((c) => bare(c.odcs.version) === bare(version));
+
+  return candidates.sort((a, b) => compareSemverish(b.odcs.version, a.odcs.version))[0];
+}
+
 /** What a data product's port is called on its page: the resource's own name when it has one. */
 export function portName(port: DataProductPort, catalog: { resources: CatalogResource[] }): string {
   const key = port.ref ? resourceKey(port.ref) : undefined;
@@ -666,7 +959,7 @@ export function portName(port: DataProductPort, catalog: { resources: CatalogRes
     ? catalog.resources.find((resource) => resourceKey(resource.ref) === key)
     : undefined;
 
-  return found?.title ?? port.reference.split('/').at(-1)!;
+  return found?.title ?? port.name ?? port.reference.split('/').at(-1)!;
 }
 
 /** Every term a reader might look up, by id, name or alias, with the domain that defines it. */

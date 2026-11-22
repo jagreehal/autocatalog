@@ -10,9 +10,7 @@ on:
       - 'examples/federation/**'
       - 'packages/events/**'
       - 'packages/docs/**'
-      - 'examples/rest-apis/**'
       - 'scripts/verify-federation.mjs'
-      - 'scripts/verify-rest-apis.mjs'
       - '.github/workflows/federation.yml'
       - '.github/actions/**'
       - 'pnpm-lock.yaml'
@@ -23,9 +21,7 @@ on:
       - 'examples/federation/**'
       - 'packages/events/**'
       - 'packages/docs/**'
-      - 'examples/rest-apis/**'
       - 'scripts/verify-federation.mjs'
-      - 'scripts/verify-rest-apis.mjs'
       - '.github/workflows/federation.yml'
       - '.github/actions/**'
       - 'pnpm-lock.yaml'
@@ -46,8 +42,6 @@ jobs:
 
       - uses: ./.github/actions/setup-pnpm
 
-      - run: pnpm turbo run build --filter=autocatalog-cli... --filter=autocatalog-plugin-kong --filter=autocatalog-plugin-kubernetes
+      - run: pnpm turbo run build --filter=autocatalog-cli...
 
       - run: pnpm verify:federation
-
-      - run: pnpm verify:rest-apis

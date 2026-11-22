@@ -169,6 +169,50 @@ export const McpServerSchema = Base.extend({
   snapshot: McpSnapshotConfigSchema.optional(),
 });
 
+/**
+ * An agent skill: a `SKILL.md` folder Claude Code, Codex and other agents load
+ * when a task matches its description.
+ */
+export const SkillSchema = Base.extend({
+  kind: z.literal('skill').default('skill'),
+  /** A `SKILL.md` skill, a slash command, or a Cursor rule: each is instructions an agent loads. */
+  format: z.enum(['skill', 'command', 'cursor-rule']).default('skill'),
+  /** Tools the skill may use without asking, from its `allowed-tools`. */
+  allowed_tools: z.array(z.string().min(1)).default([]),
+  /** The `agent-plugin` that ships it, when one does. */
+  plugin: z.string().min(1).optional(),
+  repository: RepositorySchema.optional(),
+});
+
+/**
+ * A coding-agent plugin, such as a Claude Code plugin: the skills, subagents,
+ * commands, hooks and MCP servers it ships, where it is published, and the
+ * settings that turn it on. Hook commands and server arguments stay in the
+ * plugin's own files.
+ */
+export const AgentPluginSchema = Base.extend({
+  kind: z.literal('agent-plugin').default('agent-plugin'),
+  /** The marketplace that lists it. */
+  marketplace: z.string().min(1).optional(),
+  /** Where a marketplace fetches it from, when it lives in another repository. */
+  source: z.string().min(1).optional(),
+  /** Its folder in this repository, when the plugin is built here. */
+  path: z.string().min(1).optional(),
+  skills: z.array(z.string().min(1)).default([]),
+  /** Its subagents, by name. */
+  agents: z.array(z.string().min(1)).default([]),
+  commands: z.array(z.string().min(1)).default([]),
+  /** The events its hooks run a command on, such as `PreToolUse`. */
+  hooks: z.array(z.string().min(1)).default([]),
+  /** The MCP servers it starts, by `mcp-server` id. */
+  servers: z.array(z.string().min(1)).default([]),
+  /** The committed settings files that turn it on. */
+  enabled_in: z.array(z.string().min(1)).default([]),
+  /** The repositories that turn it on, when one catalog covers many. */
+  used_by: z.array(z.string().min(1)).optional(),
+  repository: RepositorySchema.optional(),
+});
+
 export const ModelSchema = Base.extend({
   kind: z.literal('model').default('model'),
   provider: z.string().min(1),
@@ -212,6 +256,10 @@ export type Tool = z.infer<typeof ToolSchema>;
 
 export type McpServer = z.infer<typeof McpServerSchema>;
 
+export type Skill = z.infer<typeof SkillSchema>;
+
+export type AgentPlugin = z.infer<typeof AgentPluginSchema>;
+
 export type McpPackage = z.infer<typeof McpPackageSchema>;
 
 export type SideEffect = z.infer<typeof SideEffect>;
@@ -237,11 +285,14 @@ export const EntityKindSchema = z.enum([
   'domain',
   'eval',
   'policy',
+  'skill',
+  'agent-plugin',
 ]);
 
 export type EntityKind = z.infer<typeof EntityKindSchema>;
 
-export type Entity = Agent | Tool | McpServer | Model | Workflow | Domain | Eval | Policy;
+export type Entity =
+  Agent | Tool | McpServer | Model | Workflow | Domain | Eval | Policy | Skill | AgentPlugin;
 
 export const ENTITY_KINDS: readonly EntityKind[] = EntityKindSchema.options;
 
@@ -254,6 +305,8 @@ export const SCHEMA_BY_KIND = {
   domain: DomainSchema,
   eval: EvalSchema,
   policy: PolicySchema,
+  skill: SkillSchema,
+  'agent-plugin': AgentPluginSchema,
 } as const;
 
 export const DIR_BY_KIND: Record<EntityKind, string> = {
@@ -265,4 +318,7 @@ export const DIR_BY_KIND: Record<EntityKind, string> = {
   domain: 'domains',
   eval: 'evals',
   policy: 'policies',
+  // Not skills/: that is where a repository keeps its SKILL.md folders.
+  skill: 'agent-skills',
+  'agent-plugin': 'agent-plugins',
 };

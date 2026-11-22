@@ -11,6 +11,8 @@ const KIND_HEADINGS: Record<EntityKind, string> = {
   eval: 'Evals',
   policy: 'Policies',
   'mcp-server': 'MCP servers',
+  skill: 'Skills',
+  'agent-plugin': 'Agent plugins',
 };
 
 const formatTag = (k: string, v: string): string => `[${k}: ${v}]`;

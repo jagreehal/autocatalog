@@ -1,0 +1,31 @@
+{
+  "name": "payments-review",
+  "owner": "Payments",
+  "description": "Review a payments change for money handling and idempotency.",
+  "version": "1.0.0",
+  "marketplace": "payments",
+  "path": "plugins/payments-review",
+  "skills": ["payments-review-money-check"],
+  "agents": [],
+  "commands": [],
+  "hooks": ["PostToolUse"],
+  "servers": [],
+  "enabled_in": [".claude/settings.json"],
+  "discovery": {
+    "confidence": "inferred",
+    "adapter": "skills",
+    "sources": [
+      {
+        "file": "plugins/payments-review/.claude-plugin/plugin.json",
+        "line": 1,
+        "symbol": "payments-review"
+      },
+      {
+        "file": ".claude/settings.json",
+        "line": 1,
+        "symbol": "payments-review@payments"
+      }
+    ],
+    "needs_review": []
+  }
+}

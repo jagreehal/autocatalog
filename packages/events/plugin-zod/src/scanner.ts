@@ -11,7 +11,7 @@ import {
   type DiscoveryCandidate,
   type DiscoveryOutput,
   type ProvenanceValue,
-} from 'autocatalog-core';
+} from 'autocatalog-core/plugin';
 import { z } from 'zod';
 import { isCompactItem, isExplicitEvent, toAdapterEvent } from './event-mapper';
 import { importsZod, staticExports, type StaticExport } from './static-scan';

@@ -6,7 +6,7 @@ import {
   type CatalogResource,
   type ResourceGraph,
 } from 'autocatalog-core';
-import { catalogAnchor } from '../../view';
+import { catalogAnchor, skillHref } from '../../view';
 
 // Built where autocatalog-core can run: the explorer is hydrated in the
 // browser, which cannot load core, so the page hands it this model instead of
@@ -58,6 +58,10 @@ const baseUrl = () => import.meta.env.BASE_URL.replace(/\/?$/, '/');
 
 function hrefOf(resource: CatalogResource): string {
   if (resource.ref.kind === 'mcp-server') return `${baseUrl()}mcp-servers/${resource.ref.id}/`;
+
+  if (resource.ref.kind === 'skill' || resource.ref.kind === 'agent-plugin') {
+    return skillHref(baseUrl(), resource);
+  }
 
   if (!resource.url) return `#${catalogAnchor(resource.ref)}`;
 

@@ -188,15 +188,15 @@ export async function dataProductPageProps(
     ]),
   );
 
-  const port = ({ reference, ref, contract }: DataProductPort) => {
+  const port = ({ reference, ref, name, contract, odcs, trackRecord }: DataProductPort) => {
     const link = ref
       ? resourceLink(ref, catalog, base, pages)
       : (products.get(reference) ?? {
-          name: portName({ reference }, catalog.graph),
+          name: portName({ reference, name }, catalog.graph),
           href: undefined,
         });
 
-    return { ...link, reference, contract };
+    return { ...link, reference, contract, odcs, trackRecord };
   };
 
   const { nodes, edges } = dataProductDiagram(product, catalog.graph);

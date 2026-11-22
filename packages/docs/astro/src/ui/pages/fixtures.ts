@@ -7,6 +7,7 @@ import type { RuntimeEvidenceView } from '../components/RuntimeEvidence';
 import type { ChannelRow } from '../../channels';
 import type { ComponentRow } from '../../components';
 import type { McpServerRow } from '../../mcp-servers';
+import type { SkillsPageProps } from './SkillsPage';
 import type { SystemRow } from '../../systems';
 
 // Props for the page stories: what the Astro routes would hand each page, kept
@@ -289,3 +290,55 @@ export const unknownMcpServer: McpServerRow = {
 };
 
 export const mcpServers: McpServerRow[] = [builtMcpServer, unknownMcpServer];
+
+export const skillsPage: SkillsPageProps = {
+  plugins: [
+    {
+      anchor: 'resource-agent-plugin%3Areview',
+      title: 'review',
+      summary: 'Code review the way the platform team does it.',
+      version: '1.2.0',
+      marketplace: 'acme-tools',
+      skills: [{ label: 'checklist', href: '#resource-skill%3Areview-checklist' }],
+      agents: ['reviewer'],
+      commands: ['review'],
+      hooks: ['PreToolUse'],
+      servers: [{ label: 'Linear', href: '/mcp-servers/linear-app/' }],
+      builtIn: ['platform-tools'],
+      usedBy: ['orders', 'payments'],
+      owners: ['platform'],
+      needsReview: false,
+    },
+  ],
+  skills: [
+    {
+      anchor: 'resource-skill%3Areview-checklist',
+      title: 'checklist',
+      summary: 'What every review checks before approving.',
+      format: 'skill',
+      allowedTools: [],
+      plugin: { label: 'review', href: '#resource-agent-plugin%3Areview' },
+      owners: ['platform'],
+      needsReview: false,
+    },
+    {
+      anchor: 'resource-skill%3Apayments%2Frelease',
+      title: 'release',
+      summary: 'Cut a release of the payments service.',
+      format: 'skill',
+      allowedTools: ['Bash(git:*)', 'Read'],
+      repository: 'payments',
+      owners: [],
+      needsReview: true,
+    },
+    {
+      anchor: 'resource-skill%3Aorders%2Fcursor-testing',
+      title: 'testing',
+      format: 'cursor-rule',
+      allowedTools: [],
+      repository: 'orders',
+      owners: ['orders-team'],
+      needsReview: false,
+    },
+  ],
+};

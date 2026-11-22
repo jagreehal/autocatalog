@@ -79,11 +79,15 @@ It reads the base branch itself, so you commit no catalog. On another CI, run
 To build one site across every repository your company enrols, with your logo
 and colours, see [the company site](/docs/site). Other paths in:
 
-| Your contracts live in                  | Read                                                                            |
-| --------------------------------------- | ------------------------------------------------------------------------------- |
-| TypeScript, with Zod                    | [Zod](/docs/events/zod)                                                         |
-| Python, with Pydantic                   | [Pydantic](/docs/events/pydantic)                                               |
-| Rust, Go, Java or .NET                  | [Rust, Go, Java, .NET](/docs/events/other-languages)                            |
-| `.json` schema files in a repo          | [JSON Schema](/docs/events/json-schema)                                         |
-| OpenAPI, Avro, or protobuf in a repo    | [OpenAPI](/docs/events/openapi) · [Avro / protobuf](/docs/events/avro-protobuf) |
-| Another repo, AsyncAPI, or EventCatalog | [Importing](/docs/events/importing)                                             |
+autocatalog reads contract files: JSON Schema, OpenAPI, Avro, protobuf. It reads
+code directly only through a plugin, and the Zod plugin is the one it ships.
+Every other language joins by writing its schemas to files you commit.
+
+| Your contracts live in                  | Read                                                                                |
+| --------------------------------------- | ----------------------------------------------------------------------------------- |
+| TypeScript, with Zod                    | [Zod](/docs/events/zod), read from your code by a plugin                            |
+| Python, with Pydantic                   | [Pydantic](/docs/events/pydantic): `autocatalog-py` writes `events/`, you commit it |
+| Rust, Go, Java or .NET                  | [Rust, Go, Java, .NET](/docs/events/other-languages): a test writes the schemas     |
+| `.json` schema files in a repo          | [JSON Schema](/docs/events/json-schema)                                             |
+| OpenAPI, Avro, or protobuf in a repo    | [OpenAPI](/docs/events/openapi) · [Avro / protobuf](/docs/events/avro-protobuf)     |
+| Another repo, AsyncAPI, or EventCatalog | [Importing](/docs/events/importing)                                                 |

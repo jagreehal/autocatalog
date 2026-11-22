@@ -49,6 +49,20 @@ export {
 export { headCommit, lastChanged, sourceUrl, webUrl } from './git';
 
 export {
+  ODCS_FILE,
+  type OdcsColumn,
+  type OdcsContract,
+  type OdcsObject,
+  type OdcsSla,
+  readOdcs,
+  readTrackRecord,
+  type TrackRecord,
+  trackRecordFile,
+} from './odcs';
+
+export { ODPS_FILE, type OdpsProduct, readOdps } from './odps';
+
+export {
   type BuildDocsManifestOptions,
   buildDocsManifest,
   invalidDocuments,

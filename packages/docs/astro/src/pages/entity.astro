@@ -1,7 +1,8 @@
 ---
 import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
 import type { InferGetStaticPropsType } from 'astro';
-import { docsCatalog } from '../catalog';
+import { docsCatalog, repositoryFileChangedAt } from '../catalog';
+import { setLastChanged } from '../shell';
 import { entityPageProps } from '../model';
 import { eventPages, servicePages } from '../page-models';
 import { EntityPage } from '../ui/pages/EntityPage';
@@ -27,6 +28,8 @@ const page = await entityPageProps(entity, catalog, base, {
   servicePages: servicePages(catalog),
   eventPages: eventPages(catalog),
 });
+
+setLastChanged(Astro.locals, repositoryFileChangedAt(catalog, entity.repository, entity.file));
 ---
 
 <StarlightPage

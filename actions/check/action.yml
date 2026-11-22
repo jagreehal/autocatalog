@@ -10,9 +10,27 @@ inputs:
   allow-code-execution:
     description: Run the rules this repository commits. Leave off for pull requests from forks.
     default: 'false'
+  consumers:
+    description: Your company site's /catalog.json, so a breaking change names the consumers other repositories declare.
+    default: ''
+  consumers-token:
+    description: A token for a private company site, sent when reading consumers.
+    default: ''
+  repository:
+    description: This repository's name on the company site, when it differs from the repository's own.
+    default: ''
+  require-consumers:
+    description: Fail when the consumers cannot be read, instead of checking without them.
+    default: 'false'
+  max-consumers-age:
+    description: Hours the company site may be old before its consumers count as unreadable. Empty for no limit.
+    default: ''
+  comment:
+    description: Keep one comment on the pull request with the result. Needs pull-requests write permission; a fork's pull request is skipped.
+    default: 'true'
   version:
-    description: The autocatalog version to run.
-    default: latest
+    description: The autocatalog version to run. Pinned to this release of the action.
+    default: '0.1.17'
   node-version:
     description: The Node.js version to run it on.
     default: '24'
@@ -33,8 +51,21 @@ runs:
         VERSION: ${{ inputs.version }}
         BASE_REF: ${{ github.base_ref }}
         ALLOW_CODE: ${{ inputs.allow-code-execution }}
+        CONSUMERS: ${{ inputs.consumers }}
+        AUTOCATALOG_CONSUMERS_TOKEN: ${{ inputs.consumers-token }}
+        REPOSITORY: ${{ inputs.repository }}
+        REQUIRE_CONSUMERS: ${{ inputs.require-consumers }}
+        MAX_CONSUMERS_AGE: ${{ inputs.max-consumers-age }}
+        COMMENT: ${{ inputs.comment }}
+        GITHUB_TOKEN: ${{ github.token }}
       run: |
         args=(check "$ROOT" --format github)
         if [ -n "$BASE_REF" ]; then args+=(--base-ref "origin/$BASE_REF"); fi
         if [ "$ALLOW_CODE" = "true" ]; then args+=(--allow-code-execution); fi
+        if [ -n "$CONSUMERS" ]; then args+=(--consumers "$CONSUMERS"); fi
+        if [ -n "$AUTOCATALOG_CONSUMERS_TOKEN" ]; then args+=(--consumers-token-env AUTOCATALOG_CONSUMERS_TOKEN); fi
+        if [ -n "$REPOSITORY" ]; then args+=(--repository "$REPOSITORY"); fi
+        if [ "$REQUIRE_CONSUMERS" = "true" ]; then args+=(--require-consumers); fi
+        if [ -n "$MAX_CONSUMERS_AGE" ]; then args+=(--max-consumers-age "$MAX_CONSUMERS_AGE"); fi
+        if [ "$COMMENT" = "true" ] && [ -n "$BASE_REF" ]; then args+=(--comment); fi
         npx --yes "autocatalog@$VERSION" "${args[@]}"

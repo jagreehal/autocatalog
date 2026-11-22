@@ -1,0 +1,19 @@
+{
+  "name": "release",
+  "owner": "Payments",
+  "format": "skill",
+  "description": "Cut a release of the payments service, tag it and write the changelog.",
+  "allowed_tools": ["Bash(git:*)", "Read"],
+  "discovery": {
+    "confidence": "inferred",
+    "adapter": "skills",
+    "sources": [
+      {
+        "file": ".claude/skills/release/SKILL.md",
+        "line": 1,
+        "symbol": "release"
+      }
+    ],
+    "needs_review": []
+  }
+}

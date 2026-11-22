@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { AUTOCATALOG_GRAPH_SPEC, type ResourceGraph } from 'autocatalog-core';
@@ -8,7 +9,8 @@ import { renderLlmsTxt } from '../src/llms';
 import { componentRows } from '../src/page-models';
 import { componentTwin } from '../src/twins';
 
-const examples = fileURLToPath(new URL('../../../../examples/components', import.meta.url));
+// The files the component examples commit, as the site reads them.
+const examples = fileURLToPath(new URL('fixtures/components', import.meta.url));
 
 const graph = (...repositories: Array<[string, string?]>): ResourceGraph => ({
   spec: AUTOCATALOG_GRAPH_SPEC,
@@ -146,4 +148,16 @@ describe('the component examples', () => {
       '- [Button](https://acme.dev/components/design-system/design-system-button.md): The one button every product uses; in design-system; owned by Design Systems',
     );
   });
+});
+
+describe('components on the site', () => {
+  // Each tool's name lives in its plugin; the site reads only the graph.
+  it.each(['components.ts', 'ui/pages/ComponentPage.tsx', 'ui/pages/ComponentsPage.tsx'])(
+    '%s never names the tool a component came from',
+    (file) => {
+      expect(readFileSync(new URL(`../src/${file}`, import.meta.url), 'utf8')).not.toMatch(
+        /storybook/i,
+      );
+    },
+  );
 });

@@ -33,6 +33,7 @@ export const RESERVED_SEGMENTS = new Set([
   'architecture',
   'catalog',
   'catalog.json',
+  'catalog.meta.json',
   'channels',
   'contracts',
   'data',
@@ -52,6 +53,7 @@ export const RESERVED_SEGMENTS = new Set([
   'retirements',
   'schemas',
   'services',
+  'skills',
   'specs',
   'systems',
 ]);

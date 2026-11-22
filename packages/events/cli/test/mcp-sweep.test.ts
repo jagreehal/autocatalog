@@ -104,6 +104,36 @@ describe('ac mcp-sweep', () => {
     await expect(manifest('api-githubcopilot-com')).resolves.toBeDefined();
   });
 
+  it("lists each repository's skills and the plugins they turn on", async () => {
+    const skill = '---\nname: release\ndescription: Cut a release.\n---\n';
+
+    const exit = await sweep([
+      await repository('payments', {
+        '.claude/skills/release/SKILL.md': skill,
+        '.claude/settings.json': JSON.stringify({ enabledPlugins: { 'review@acme': true } }),
+      }),
+      await repository('orders', { '.claude/skills/release/SKILL.md': skill }),
+      await repository('tools', {
+        '.claude-plugin/plugin.json': JSON.stringify({ name: 'review' }),
+      }),
+    ]);
+
+    const entry = async (dir: string, id: string) =>
+      JSON.parse(
+        await fs.readFile(path.join(work, 'catalog', dir, id, 'autocatalog.json'), 'utf8'),
+      );
+
+    expect(exit).toBe(0);
+    expect(await entry('agent-skills', 'payments-release')).toMatchObject({
+      repository: { id: 'payments' },
+    });
+    await expect(entry('agent-skills', 'orders-release')).resolves.toBeDefined();
+    expect(await entry('agent-plugins', 'tools-review')).toMatchObject({
+      repository: { id: 'tools' },
+      used_by: ['payments'],
+    });
+  });
+
   it('asks what to sweep', async () => {
     const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
 

@@ -25,9 +25,12 @@ inputs:
   title:
     description: The site's title, when autocatalog.site.json names none.
     default: ''
+  strict:
+    description: Fail, and publish nothing, when any enrolled repository or source is left out. A partial catalog reads as a complete one.
+    default: 'true'
   version:
-    description: The autocatalog version to run.
-    default: latest
+    description: The autocatalog version to run. Pinned to this release of the action.
+    default: '0.1.17'
   node-version:
     description: The Node.js version to run it on.
     default: '24'
@@ -82,6 +85,7 @@ runs:
         SITE: ${{ inputs.site }}
         BASE: ${{ inputs.base }}
         TITLE: ${{ inputs.title }}
+        STRICT: ${{ inputs.strict }}
         UNCHANGED: ${{ steps.deployed.outputs.cache-hit }}
       run: |
         if [ "$UNCHANGED" = "true" ]; then
@@ -95,5 +99,6 @@ runs:
         if [ -n "$SITE" ]; then flags+=(--site "$SITE"); fi
         if [ -n "$BASE" ]; then flags+=(--base "$BASE"); fi
         if [ -n "$TITLE" ]; then flags+=(--title "$TITLE"); fi
+        if [ "$STRICT" = "true" ]; then flags+=(--strict); fi
         npx --yes "autocatalog@$VERSION" "${flags[@]}"
         echo "built=true" >> "$GITHUB_OUTPUT"

@@ -1,0 +1,21 @@
+---
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import { docsCatalog } from '../catalog';
+import { buildSkills } from '../skills';
+import { SkillsPage } from '../ui/pages/SkillsPage';
+
+const catalog = await docsCatalog();
+
+const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+---
+
+<StarlightPage
+  frontmatter={{
+    title: 'Skills and plugins',
+    description:
+      'The skills, commands, rules and coding-agent plugins teams commit, and what each may do without asking.',
+    tableOfContents: false,
+  }}
+>
+  <SkillsPage {...buildSkills(catalog.graph, base)} />
+</StarlightPage>

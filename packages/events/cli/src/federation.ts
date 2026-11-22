@@ -36,6 +36,7 @@ import {
   tokenHeader,
   type EnrolledRepository,
 } from './enrol';
+import type { FailOn } from './federation-fail-on';
 
 /**
  * Federation: one company catalog from catalogs each team owns, built
@@ -971,12 +972,19 @@ export async function prepareSources(
   };
 }
 
+/** The findings a status holds of the kinds named, each under its kind. */
+export function failingFindings(status: FederationStatus, failOn: readonly FailOn[]): string[] {
+  return failOn.flatMap((kind) => status[kind].map((finding) => `${kind}: ${finding}`));
+}
+
 export async function runFederationStatus(
   opts: EnrolmentFlags & {
     root: string;
     cache: string;
     lock?: string;
     format: 'text' | 'json';
+    /** Findings that fail the run as well as being said. */
+    failOn?: FailOn[];
   },
 ): Promise<number> {
   const prepared = await prepareSources(opts).catch((error: Error) => error);
@@ -993,7 +1001,17 @@ export async function runFederationStatus(
     opts.format === 'json' ? JSON.stringify(status, null, 2) : renderFederationStatus(status),
   );
 
-  // A source left out or two owners of one id is a broken federation; a
-  // reference still to resolve is not.
-  return status.duplicates.length > 0 || status.failures.length > 0 ? 1 : 0;
+  // A source left out or two owners of one id is a broken federation. The
+  // rest are reports, until --fail-on says which of them a team enforces.
+  const failing = failingFindings(status, opts.failOn ?? []);
+
+  if (failing.length > 0 && opts.format === 'text') {
+    console.error(
+      kleur.red(
+        `\n--fail-on ${(opts.failOn ?? []).join(',')}: ${failing.length} ${failing.length === 1 ? 'finding fails' : 'findings fail'} the run`,
+      ),
+    );
+  }
+
+  return status.duplicates.length > 0 || status.failures.length > 0 || failing.length > 0 ? 1 : 0;
 }

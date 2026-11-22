@@ -20,6 +20,16 @@ import {
   mcpToolId,
   parseStoredMcpServer,
   refreshMcpServer,
+  discoverSkills,
+  pluginDraft,
+  refreshSkillEntry,
+  skillChanges,
+  skillDraft,
+  SKILLS_ADAPTER,
+  parseSkillEntry,
+  type SkillChange,
+  type SkillEntry,
+  type SkillKind,
   type DiscoveredAgent,
   type DiscoveredMcpServer,
   type DiscoveredModel,
@@ -28,7 +38,8 @@ import {
   type DiscoveryResult,
 } from 'autocatalog-agents-core';
 
-type DiscoverSource = DiscoveryAdapter | typeof MCP_ADAPTER | typeof MCP_SNAPSHOT_ADAPTER;
+type DiscoverSource =
+  DiscoveryAdapter | typeof MCP_ADAPTER | typeof MCP_SNAPSHOT_ADAPTER | typeof SKILLS_ADAPTER;
 
 type DiscoverArgs = {
   adapter: DiscoverSource;
@@ -39,11 +50,13 @@ type DiscoverArgs = {
   prune: boolean;
   perRepository: boolean;
   internal: string[];
+  check: boolean;
 };
 
 const usage = (): string =>
-  'usage: ac-agents discover --from pydantic-ai|ai-sdk|mcp|mcp-snapshot [<source-dir>] [--root <catalog>] [--dry-run]\n' +
-  '       with mcp: [--home] [--prune] [--per-repository] [--internal <host-or-@scope>,...]\n';
+  'usage: ac-agents discover --from pydantic-ai|ai-sdk|mcp|mcp-snapshot|skills [<source-dir>] [--root <catalog>] [--dry-run]\n' +
+  '       with mcp: [--home] [--prune] [--per-repository] [--internal <host-or-@scope>,...]\n' +
+  '       with skills: [--prune] [--check] [--per-repository]\n';
 
 const parseArgs = (args: string[]): DiscoverArgs | null => {
   let adapter: DiscoverSource | null = null;
@@ -54,6 +67,7 @@ const parseArgs = (args: string[]): DiscoverArgs | null => {
   let prune = false;
   let perRepository = false;
   let internal: string[] = [];
+  let check = false;
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i]!;
@@ -65,7 +79,8 @@ const parseArgs = (args: string[]): DiscoverArgs | null => {
         value === 'pydantic-ai' ||
         value === 'ai-sdk' ||
         value === MCP_ADAPTER ||
-        value === MCP_SNAPSHOT_ADAPTER
+        value === MCP_SNAPSHOT_ADAPTER ||
+        value === SKILLS_ADAPTER
       ) {
         adapter = value;
       } else return null;
@@ -77,6 +92,8 @@ const parseArgs = (args: string[]): DiscoverArgs | null => {
       home = true;
     } else if (arg === '--prune') {
       prune = true;
+    } else if (arg === '--check') {
+      check = true;
     } else if (arg === '--per-repository') {
       perRepository = true;
     } else if (arg === '--internal') {
@@ -90,7 +107,17 @@ const parseArgs = (args: string[]): DiscoverArgs | null => {
 
   if (!adapter) return null;
 
-  return { adapter, source: source ?? '.', root, dryRun, home, prune, perRepository, internal };
+  return {
+    adapter,
+    source: source ?? '.',
+    root,
+    dryRun,
+    home,
+    prune,
+    perRepository,
+    internal,
+    check,
+  };
 };
 
 const discovery = (
@@ -422,6 +449,104 @@ const runSnapshotDiscover = async (parsed: DiscoverArgs): Promise<number> => {
   return 0;
 };
 
+const readEntry = async (path: string): Promise<SkillEntry | null> => {
+  const text = await readFile(path, 'utf8').catch(() => null);
+
+  return text === null ? null : parseSkillEntry(text);
+};
+
+/**
+ * Skills and plugins, written as entries a person reviews. `--check` writes
+ * nothing and exits 1 when a scan would change what is committed, naming each
+ * new grant (an allowed tool, a hook, an MCP server) for review.
+ */
+const runSkillsDiscover = async (parsed: DiscoverArgs): Promise<number> => {
+  const sourceRoot = resolve(parsed.source);
+  const catalogRoot = resolve(parsed.root);
+  const result = await discoverSkills(sourceRoot, { perRepository: parsed.perRepository });
+
+  process.stdout.write(`${kleur.bold('discover:')} skills ${kleur.dim(sourceRoot)}\n`);
+  process.stdout.write(`  files ${result.files.length}\n`);
+  process.stdout.write(`  skills ${result.skills.length}\n`);
+  process.stdout.write(`  plugins ${result.plugins.length}\n`);
+
+  for (const warning of result.warnings) {
+    process.stdout.write(`  ${kleur.yellow('warning')} ${warning}\n`);
+  }
+
+  const drafts: Array<{ kind: SkillKind; id: string; draft: SkillEntry }> = [
+    ...result.skills.map((skill) => ({
+      kind: 'skill' as const,
+      id: skill.id,
+      draft: skillDraft(skill),
+    })),
+    ...result.plugins.map((plugin) => ({
+      kind: 'agent-plugin' as const,
+      id: plugin.id,
+      draft: pluginDraft(plugin),
+    })),
+  ];
+
+  const changes: SkillChange[] = [];
+  const seen = new Set(drafts.map(({ kind, id }) => `${kind}/${id}`));
+
+  for (const { kind, id, draft } of drafts) {
+    const dir = join(catalogRoot, DIR_BY_KIND[kind], id);
+    const path = join(dir, AUTOCATALOG_ENTITY_FILE);
+    const existing = await readEntry(path);
+
+    // An entry with no discovery block was written by hand and stays as it is.
+    if (existing && !existing.discovery) continue;
+
+    const next = existing ? refreshSkillEntry(kind, existing, draft) : draft;
+
+    changes.push(...skillChanges(kind, id, existing ?? undefined, next));
+
+    if (parsed.dryRun || parsed.check) continue;
+
+    await mkdir(dir, { recursive: true });
+    await writeFile(path, jsonFile(next), 'utf8');
+  }
+
+  for (const kind of ['skill', 'agent-plugin'] as const) {
+    const dir = join(catalogRoot, DIR_BY_KIND[kind]);
+
+    for (const entry of await readdir(dir, { withFileTypes: true }).catch(() => [])) {
+      if (!entry.isDirectory() || seen.has(`${kind}/${entry.name}`)) continue;
+
+      const stored = await readEntry(join(dir, entry.name, AUTOCATALOG_ENTITY_FILE));
+
+      if (!stored?.discovery) continue;
+
+      changes.push(...skillChanges(kind, entry.name, stored, undefined));
+
+      if (parsed.prune && !parsed.dryRun && !parsed.check) {
+        await rm(join(dir, entry.name), { recursive: true, force: true });
+      }
+    }
+  }
+
+  for (const change of changes) {
+    const label = change.severity === 'review' ? kleur.yellow('review') : kleur.dim('info  ');
+
+    process.stdout.write(`  ${label} ${change.ref}: ${change.message}\n`);
+  }
+
+  const reviews = changes.filter(({ severity }) => severity === 'review').length;
+
+  process.stdout.write(`\n${reviews} to review · ${changes.length - reviews} info\n`);
+
+  if (parsed.check) return changes.length > 0 ? 1 : 0;
+
+  if (!parsed.dryRun && changes.some(({ message }) => message.startsWith('new'))) {
+    process.stdout.write(
+      `\nNext: set owner in ${DIR_BY_KIND.skill}/ and ${DIR_BY_KIND['agent-plugin']}/, then commit them.\n`,
+    );
+  }
+
+  return 0;
+};
+
 export const runDiscover = async (args: string[]): Promise<number> => {
   const parsed = parseArgs(args);
 
@@ -434,6 +559,8 @@ export const runDiscover = async (args: string[]): Promise<number> => {
   if (parsed.adapter === MCP_ADAPTER) return runMcpDiscover(parsed);
 
   if (parsed.adapter === MCP_SNAPSHOT_ADAPTER) return runSnapshotDiscover(parsed);
+
+  if (parsed.adapter === SKILLS_ADAPTER) return runSkillsDiscover(parsed);
 
   const sourceRoot = resolve(parsed.source);
   const catalogRoot = resolve(parsed.root);

@@ -192,7 +192,8 @@ enforce; without it the site uses the root's, else an enrolled repository's.
 blocks the site's home page is built from, for `layouts.home`, and builds
 nothing. `--fingerprint` prints a hash of
 what is enrolled and builds nothing, so a scheduled job can skip a site with
-nothing new.
+nothing new. `--strict` publishes nothing when any source is left out, keeping
+the last site; every build records what it left out in `/catalog.meta.json`.
 
 `--pages` adds a folder of your own pages and API routes, laid out as
 `src/pages/` is.
@@ -214,7 +215,8 @@ so only use it for repositories you trust to run code on your machine.
 the pins you name.
 
 **`ac federation status`** reports each source's pin, what it contributes, and the
-consumers behind the newest release. See [federation](/docs/federation).
+consumers behind the newest release. `--fail-on gateway,network` also fails on
+those findings. See [federation](/docs/federation).
 
 ## Documentation
 

@@ -144,6 +144,8 @@ const CONFIGS: Array<{ file: RegExp; read: (doc: ConfigDocument) => ConfiguredSe
   { file: /(^|\/)\.codex\/config\.toml$/, read: (doc) => fromServerMap(doc.mcp_servers) },
   { file: /(^|\/)opencode\.jsonc?$/, read: (doc) => fromServerMap(doc.mcp) },
   { file: /(^|\/)executor\.jsonc?$/, read: fromIntegrations },
+  // A Claude Code plugin may declare its servers in its manifest instead of a .mcp.json.
+  { file: /(^|\/)\.claude-plugin\/plugin\.json$/, read: (doc) => fromServerMap(doc.mcpServers) },
 ];
 
 /** The same clients' per-person configs, relative to the home folder. */

@@ -1,4 +1,5 @@
 import type { DomainModel, FlowNote } from 'autocatalog-docs-core';
+import type { DataProductPort } from 'autocatalog-docs-core';
 import { dataProductPath, entityPath } from './model';
 import { twinPath } from './twins';
 import { docPage } from './ui/lib/docs';
@@ -163,6 +164,8 @@ export function renderLlmsTxt({
       lines.push(
         `- [${resource.name}](${base}/${page})${resource.summary ? `: ${resource.summary}` : ''}`,
       );
+
+      if ('outputs' in resource) lines.push(...contractLines(resource.outputs));
     }
 
     lines.push('');
@@ -202,4 +205,41 @@ export function renderLlmsFullTxt({
   twins: string[];
 }): string {
   return `${[`# ${title}`, `> ${description}`, ...twins.map((twin) => twin.trim())].join('\n\n')}\n`;
+}
+
+/**
+ * An output's ODCS contract, as an agent should read it before using the
+ * data: what it promises and how well it kept it, the AI context's
+ * instructions and constraints, and the questions the provider answers.
+ */
+function contractLines(outputs: DataProductPort[]): string[] {
+  const lines: string[] = [];
+
+  for (const { odcs, trackRecord, contract } of outputs) {
+    if (!odcs) continue;
+
+    const slas = odcs.slas.map((sla) => {
+      const record = trackRecord?.slas.find(
+        (s) =>
+          s.property === sla.property && (sla.element === undefined || s.element === sla.element),
+      );
+
+      return `${sla.property} ${sla.promise}${sla.element ? ` on ${sla.element}` : ''}${record ? ` (kept ${record.kept} of the last ${record.measured})` : ''}`;
+    });
+
+    lines.push(
+      `  - Contract ${odcs.id} ${odcs.version}${odcs.status ? ` (${odcs.status})` : ''}, \`${contract}\`${slas.length ? `: ${slas.join('; ')}` : ''}`,
+    );
+
+    if (odcs.terms.limitations) lines.push(`  - Limitations: ${odcs.terms.limitations}`);
+
+    if (odcs.ai.instructions) lines.push(`  - Instructions: ${odcs.ai.instructions}`);
+
+    for (const constraint of odcs.ai.constraints) lines.push(`  - Must not: ${constraint}`);
+
+    for (const statement of odcs.ai.verifiedStatements)
+      lines.push(`  - Verified answer to "${statement.question}"`);
+  }
+
+  return lines;
 }

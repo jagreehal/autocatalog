@@ -118,6 +118,7 @@ do different things, so the mark says where to look.
 
 ## A worked example
 
-[`examples/components`](https://github.com/jagreehal/autocatalog/tree/main/examples/components)
+[`examples/components`](https://github.com/jagreehal/autocatalog-plugins/tree/main/examples/components)
 has three Storybook teams and one team with a format of its own, read by a plugin
-in the example. `pnpm verify:components` publishes them as one site.
+in the example. `pnpm verify:components` in that repository publishes them as
+one site.

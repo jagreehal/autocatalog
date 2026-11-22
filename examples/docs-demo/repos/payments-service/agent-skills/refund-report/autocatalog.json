@@ -1,0 +1,19 @@
+{
+  "name": "refund-report",
+  "owner": "Payments",
+  "format": "command",
+  "description": "Summarise yesterday's refunds by reason.",
+  "allowed_tools": ["Grep", "Read"],
+  "discovery": {
+    "confidence": "inferred",
+    "adapter": "skills",
+    "sources": [
+      {
+        "file": ".claude/commands/refund-report.md",
+        "line": 1,
+        "symbol": "refund-report"
+      }
+    ],
+    "needs_review": []
+  }
+}

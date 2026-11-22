@@ -1,11 +1,35 @@
 import path from 'node:path';
-import { Command, Option } from 'commander';
+import { Command, InvalidArgumentError, Option } from 'commander';
 import type { CompatibilityMode } from 'autocatalog-core';
 import pkg from '../package.json' with { type: 'json' };
 import { runValidate } from './commands/validate';
 import { discoverAdapters, registerAdapterCommand } from './adapters';
 import { registerDeliveryCommands } from './commands/delivery';
 import { registerResourceCommands, withScanIdentities } from './commands/resources';
+import { FAIL_ON, type FailOn } from './federation-fail-on';
+
+/** `--fail-on gateway,network`: each a kind of finding `federation status` reports. */
+const failOnKinds = (value: string): FailOn[] => {
+  const kinds = value.split(',').map((kind) => kind.trim());
+  const unknown = kinds.filter((kind) => !FAIL_ON.some((known) => known === kind));
+
+  if (unknown.length > 0) {
+    throw new InvalidArgumentError(`${unknown.join(', ')}: pick from ${FAIL_ON.join(', ')}`);
+  }
+
+  return FAIL_ON.filter((known) => kinds.includes(known));
+};
+
+/** A number of hours, as `--max-consumers-age` takes it. */
+const hours = (value: string): number => {
+  const parsed = Number(value);
+
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    throw new InvalidArgumentError('a number of hours, 0 or more');
+  }
+
+  return parsed;
+};
 
 export function buildProgram(): Command {
   const program = new Command();
@@ -303,12 +327,24 @@ export function buildProgram(): Command {
       '--repository <name>',
       "this repository's name on the company site (default: from the origin remote)",
     )
+    .option(
+      '--require-consumers',
+      'fail when the consumers cannot be read, instead of checking without them',
+      false,
+    )
+    .option(
+      '--max-consumers-age <hours>',
+      'consumers older than this count as unreadable (warned, or failed with --require-consumers)',
+      hours,
+    )
     .option('-q, --quiet', 'suppress output', false)
     .action(
       async (opts: {
         consumers?: string;
         consumersTokenEnv?: string;
         repository?: string;
+        requireConsumers: boolean;
+        maxConsumersAge?: number;
         base?: string;
         baseRef?: string;
         root: string;
@@ -339,6 +375,8 @@ export function buildProgram(): Command {
             consumers: opts.consumers,
             consumersTokenEnv: opts.consumersTokenEnv,
             repository: opts.repository,
+            requireConsumers: opts.requireConsumers,
+            maxConsumersAge: opts.maxConsumersAge,
             quiet: opts.quiet,
           }),
         );
@@ -671,14 +709,48 @@ export function buildProgram(): Command {
     .command('check [root]')
     .description('Check what this repository publishes, as its pull request should')
     .option('--base-ref <ref>', 'also compare contracts against this ref, e.g. origin/main')
-    .option('--allow-code-execution', 'run committed rules, for a repository you trust', false)
+    .option(
+      '--allow-code-execution',
+      'run committed rules and installed plugins, for a repository you trust',
+      false,
+    )
     .addOption(
       new Option('--format <fmt>', 'output format').choices(['text', 'github']).default('text'),
+    )
+    .option(
+      '--consumers <url|file>',
+      "the company site's /catalog.json, so drift names consumers in other repositories",
+    )
+    .option(
+      '--consumers-token-env <name>',
+      'environment variable holding a token for a private company site',
+    )
+    .option('--repository <name>', "this repository's name on the company site")
+    .option('--require-consumers', 'fail when the consumers cannot be read', false)
+    .option(
+      '--max-consumers-age <hours>',
+      'consumers older than this count as unreadable (failed with --require-consumers)',
+      hours,
+    )
+    .option(
+      '--comment',
+      'post the result as one pull request comment, updated on each run (needs GITHUB_TOKEN)',
+      false,
     )
     .action(
       async (
         root: string | undefined,
-        opts: { baseRef?: string; format: 'text' | 'github'; allowCodeExecution: boolean },
+        opts: {
+          baseRef?: string;
+          format: 'text' | 'github';
+          allowCodeExecution: boolean;
+          consumers?: string;
+          consumersTokenEnv?: string;
+          repository?: string;
+          requireConsumers: boolean;
+          maxConsumersAge?: number;
+          comment: boolean;
+        },
       ) => {
         const { runCheck } = await import('./commands/check');
         process.exit(await runCheck({ ...opts, root: root ?? '.' }));
@@ -736,6 +808,11 @@ export function buildProgram(): Command {
       '--print-layout <page>',
       'print the default blocks of a page (home) for layouts in autocatalog.site.json, and build nothing',
     )
+    .option(
+      '--strict',
+      'refuse to publish a site that left out any repository or source, keeping the last good one',
+      false,
+    )
     .action(
       async (
         root: string | undefined,
@@ -764,6 +841,7 @@ export function buildProgram(): Command {
           lock?: string;
           unlocked: boolean;
           index?: string[];
+          strict: boolean;
         },
       ) => {
         if (opts.printLayout !== undefined) {
@@ -837,6 +915,11 @@ export function buildProgram(): Command {
     )
     .option('--cache <dir>', 'where clones go', '.autocatalog/repos')
     .option('--format <fmt>', 'text or json', 'text')
+    .option(
+      '--fail-on <kinds>',
+      'also fail on these findings, comma separated: gateway, network, unresolved, unpinned, behind',
+      failOnKinds,
+    )
     .action(
       async (
         root: string | undefined,
@@ -847,6 +930,7 @@ export function buildProgram(): Command {
           lock?: string;
           cache: string;
           format: 'text' | 'json';
+          failOn?: FailOn[];
         },
       ) => {
         const { runFederationStatus } = await import('./federation');

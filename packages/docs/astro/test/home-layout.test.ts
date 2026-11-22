@@ -29,6 +29,16 @@ const context: HomeLayoutContext = {
     { title: 'Services', text: 'Every service.', href: '/docs/services/', icon: 'service' },
   ],
   tags: [['start', [doc('api/getting-started/introduction')]]],
+  recent: [
+    {
+      kind: 'Event',
+      icon: 'event',
+      title: 'Payment captured',
+      href: '/docs/events/api/payments/payment.captured/',
+      repository: 'api',
+      updated: '2026-11-12T10:00:00Z',
+    },
+  ],
   catalogHref: '/docs/catalog/',
 };
 
@@ -114,6 +124,7 @@ it('is the built-in home page when the site writes no layout', () => {
       explore: context.explore,
       repos: context.repos,
       tags: context.tags,
+      recent: context.recent,
       attention: context.attention,
       map: context.map,
       catalogHref: context.catalogHref,

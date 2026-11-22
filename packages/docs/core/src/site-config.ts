@@ -159,6 +159,11 @@ export const HOME_BLOCKS = {
     block: z.literal('graph'),
     title: z.string().trim().min(1).optional(),
   }),
+  /** What changed most recently: documents and resources, newest first, dated by git. */
+  recent: z.strictObject({
+    block: z.literal('recent'),
+    title: z.string().trim().min(1).optional(),
+  }),
   /** What needs review, is quarantined, has no producer, consumer or owner. */
   attention: z.strictObject({ block: z.literal('attention') }),
   /** A card for each page the catalog has: the graph, services, fields, owners. */
@@ -177,7 +182,12 @@ export const HOME_BLOCKS = {
  * Blocks that show the company's own systems and upkeep, which a site for an
  * `audience` does not publish: naming one there fails the build.
  */
-export const INSIDE_ONLY_BLOCKS: readonly HomeBlockName[] = ['countCards', 'graph', 'attention'];
+export const INSIDE_ONLY_BLOCKS: readonly HomeBlockName[] = [
+  'countCards',
+  'graph',
+  'recent',
+  'attention',
+];
 
 export type HomeBlockName = keyof typeof HOME_BLOCKS;
 
@@ -199,6 +209,7 @@ export type LayoutBlock = z.infer<typeof layoutBlock>;
 export const DEFAULT_HOME_LAYOUT: LayoutBlock[] = [
   { block: 'countCards' },
   { block: 'graph' },
+  { block: 'recent' },
   { block: 'docs' },
   { block: 'attention' },
   { block: 'explore' },

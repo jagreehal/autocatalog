@@ -170,6 +170,8 @@ export interface RunSiteOptions {
   unlocked?: boolean;
   /** Other sites' `/catalog.json`, joined into the graph without pages. */
   indexes?: string[];
+  /** Refuse to publish a site that left out any source, keeping the last good one. */
+  strict?: boolean;
 }
 
 /**
@@ -231,6 +233,15 @@ export async function runSite(input: RunSiteOptions): Promise<number> {
 
   const pins = lock?.repositories;
 
+  // Every source the build goes without, said in catalog.meta.json and refused by --strict.
+  const leftOut: Array<{ name: string; reason: string }> = [];
+
+  const lockDigest = lock
+    ? createHash('sha256')
+        .update(await fs.readFile(lockPath))
+        .digest('hex')
+    : undefined;
+
   if (opts.fingerprint) {
     const printed = await siteFingerprint(pins, opts, token).catch((error: Error) => error);
 
@@ -271,8 +282,10 @@ export async function runSite(input: RunSiteOptions): Promise<number> {
       return 1;
     }
 
-    for (const failure of [...cloned.failures, ...notLocked])
+    for (const failure of [...cloned.failures, ...notLocked]) {
       console.warn(kleur.yellow(`Left out ${failure.name}: ${failure.reason}`));
+      leftOut.push(failure);
+    }
 
     if (cloned.failures.length === pins.length) {
       console.error(kleur.red('No pinned repository could be built.'));
@@ -324,6 +337,7 @@ export async function runSite(input: RunSiteOptions): Promise<number> {
 
     for (const failure of cloned.failed) {
       console.warn(kleur.yellow(`Left out ${failure.name}: ${failure.reason}`));
+      leftOut.push(failure);
     }
 
     if (cloned.cloned.length === 0) {
@@ -357,8 +371,10 @@ export async function runSite(input: RunSiteOptions): Promise<number> {
 
   const releases = catalogReleases(pins ?? [], root, imported);
 
-  for (const failure of imported.failures)
+  for (const failure of imported.failures) {
     console.warn(kleur.yellow(`Left out ${failure.name}: ${failure.reason}`));
+    leftOut.push(failure);
+  }
 
   if (imported.sources.length > 0)
     console.log(
@@ -384,11 +400,10 @@ export async function runSite(input: RunSiteOptions): Promise<number> {
         await fs.writeFile(file, JSON.stringify(graph));
         indexFiles.push(file);
       } catch (error) {
-        console.warn(
-          kleur.yellow(
-            `Left out ${source}: ${error instanceof Error ? error.message : String(error)}`,
-          ),
-        );
+        const reason = error instanceof Error ? error.message : String(error);
+
+        console.warn(kleur.yellow(`Left out ${source}: ${reason}`));
+        leftOut.push({ name: source, reason });
       }
     }
   }
@@ -618,6 +633,8 @@ export async function runSite(input: RunSiteOptions): Promise<number> {
           ...(Object.keys(releases).length && {
             AUTOCATALOG_DOCS_RELEASES: JSON.stringify(releases),
           }),
+          ...(leftOut.length && { AUTOCATALOG_DOCS_LEFT_OUT: JSON.stringify(leftOut) }),
+          ...(lockDigest && { AUTOCATALOG_DOCS_LOCK_DIGEST: lockDigest }),
           AUTOCATALOG_REACT_FROM: import.meta.resolve('autocatalog-docs-astro'),
           AUTOCATALOG_RESOLVE_FROM: resolveFrom.join(path.delimiter),
           AUTOCATALOG_RESOLVE_SITE: process.cwd(),
@@ -687,6 +704,20 @@ export async function runSite(input: RunSiteOptions): Promise<number> {
   try {
     if (code !== 0) return code;
 
+    if (opts.strict) {
+      const missing = await incomplete(path.join(run, 'dist'));
+
+      if (missing.length > 0) {
+        console.error(
+          kleur.red(
+            `--strict: not published, because the catalog is incomplete. The last site stays where it is.\n  ${missing.join('\n  ')}`,
+          ),
+        );
+
+        return 1;
+      }
+    }
+
     const published = await publishSite(path.join(run, 'dist'), opts.out, eventcatalog);
 
     // The assistant answers per request, so a site with one runs as a server too.
@@ -698,6 +729,46 @@ export async function runSite(input: RunSiteOptions): Promise<number> {
   } finally {
     await fs.rm(run, { recursive: true, force: true });
   }
+}
+
+const metaSchema = z.object({
+  failures: z.number(),
+  problems: z.array(z.object({ repository: z.string(), source: z.string(), message: z.string() })),
+});
+
+/**
+ * Why a built site is incomplete, from the catalog.meta.json it wrote: each
+ * source left out, or why the record itself is missing. Empty when complete.
+ */
+export async function incomplete(dist: string): Promise<string[]> {
+  // A server site keeps what it built ahead under client/.
+  for (const file of ['catalog.meta.json', 'client/catalog.meta.json']) {
+    const text = await fs.readFile(path.join(dist, file), 'utf8').catch(() => null);
+
+    if (text === null) continue;
+
+    let value: unknown;
+
+    try {
+      value = JSON.parse(text);
+    } catch {
+      return [`${file} is not a catalog record`];
+    }
+
+    const meta = metaSchema.safeParse(value);
+
+    if (!meta.success) return [`${file} is not a catalog record`];
+
+    if (meta.data.failures === 0) return [];
+
+    return meta.data.problems.length > 0
+      ? meta.data.problems.map(
+          ({ repository, source, message }) => `${repository} (${source}): ${message}`,
+        )
+      : [`${meta.data.failures} source(s) left out; the build log above names them`];
+  }
+
+  return ['the build wrote no catalog.meta.json, so nothing says the catalog is complete'];
 }
 
 /**

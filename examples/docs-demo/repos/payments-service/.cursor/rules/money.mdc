@@ -1,0 +1,6 @@
+---
+description: Amounts are integers in minor units, never floats.
+globs: src/**/*.ts
+---
+
+Store and pass money as integer minor units with an ISO currency code.

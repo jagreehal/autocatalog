@@ -119,7 +119,16 @@ export interface TermResourceAttributes {
 }
 
 export type AgentSystemResourceKind =
-  'agent' | 'domain' | 'eval' | 'mcp-server' | 'model' | 'policy' | 'tool' | 'workflow';
+  | 'agent'
+  | 'agent-plugin'
+  | 'domain'
+  | 'eval'
+  | 'mcp-server'
+  | 'model'
+  | 'policy'
+  | 'skill'
+  | 'tool'
+  | 'workflow';
 
 export type AgentSystemResourceAttributes = JsonObject;
 
@@ -177,11 +186,13 @@ export function isRepositoryCatalogResource(
 
 const AGENT_SYSTEM_RESOURCE_KINDS = new Set<string>([
   'agent',
+  'agent-plugin',
   'domain',
   'eval',
   'mcp-server',
   'model',
   'policy',
+  'skill',
   'tool',
   'workflow',
 ]);
@@ -214,6 +225,7 @@ export type CatalogRelationshipType =
   | 'routesTo'
   | 'deadLettersTo'
   | 'usesModel'
+  | 'usesPlugin'
   | 'usesServer'
   | 'usesTool';
 

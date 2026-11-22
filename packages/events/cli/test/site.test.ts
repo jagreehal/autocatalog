@@ -4,6 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterAll, afterEach, describe, expect, it, vi } from 'vitest';
 import {
+  incomplete,
   readBrand,
   resolveExtension,
   runSite,
@@ -331,4 +332,46 @@ describe('extend', () => {
 it('knows when Astro could not build a site from its folder', () => {
   expect(sharesAFolder('/Users/a/site', '/Users/a/node_modules/x')).toBe(true);
   expect(sharesAFolder('/app', '/usr/local/lib/node_modules/x')).toBe(false);
+});
+
+describe('ac site --strict', () => {
+  const meta = async (
+    dir: string,
+    file: string,
+    value: { failures: number; problems: Array<Record<string, string>> },
+  ) => {
+    await fs.mkdir(path.dirname(path.join(dir, file)), { recursive: true });
+    await fs.writeFile(path.join(dir, file), JSON.stringify(value));
+  };
+
+  it('names each source a build left out, from the record it wrote', async () => {
+    const dist = await fs.mkdtemp(path.join(os.tmpdir(), 'ac-site-strict-'));
+
+    try {
+      expect(await incomplete(dist)).toEqual([
+        'the build wrote no catalog.meta.json, so nothing says the catalog is complete',
+      ]);
+
+      await meta(dist, 'catalog.meta.json', { failures: 0, problems: [] });
+      expect(await incomplete(dist)).toEqual([]);
+
+      await meta(dist, 'catalog.meta.json', {
+        failures: 1,
+        problems: [{ repository: 'orders', source: 'events', message: 'schema.json: not JSON' }],
+      });
+      expect(await incomplete(dist)).toEqual(['orders (events): schema.json: not JSON']);
+
+      // A server site keeps what it built ahead under client/, and a gated one only counts.
+      await fs.rm(path.join(dist, 'catalog.meta.json'));
+      await meta(dist, 'client/catalog.meta.json', { failures: 2, problems: [] });
+      expect(await incomplete(dist)).toEqual([
+        '2 source(s) left out; the build log above names them',
+      ]);
+
+      await fs.writeFile(path.join(dist, 'client/catalog.meta.json'), '{ not json');
+      expect(await incomplete(dist)).toEqual(['client/catalog.meta.json is not a catalog record']);
+    } finally {
+      await fs.rm(dist, { recursive: true, force: true });
+    }
+  });
 });

@@ -1,5 +1,7 @@
 import {
   ArrowLeftRightIcon,
+  PlugIcon,
+  SparklesIcon,
   ArrowRightIcon,
   ArrowUpRightIcon,
   BookAIcon,
@@ -63,6 +65,8 @@ export const icons = {
   agent: BotIcon,
   tool: WrenchIcon,
   'mcp-server': ServerCogIcon,
+  skill: SparklesIcon,
+  'agent-plugin': PlugIcon,
   component: ComponentIcon,
   doc: FileTextIcon,
   domain: BoxesIcon,

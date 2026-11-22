@@ -71,18 +71,27 @@ export async function runMcpSweep(opts: McpSweepOptions): Promise<number> {
 
     if (cloned.length === 0) return 1;
 
-    const exit = await runAgents([
-      'discover',
-      '--from',
-      'mcp',
+    const shared = [
       opts.cache,
       '--root',
       opts.root,
       '--per-repository',
-      ...(opts.internal ? ['--internal', opts.internal] : []),
       ...(opts.prune && !partial ? ['--prune'] : []),
       ...(opts.dryRun ? ['--dry-run'] : []),
+    ];
+
+    const servers = await runAgents([
+      'discover',
+      '--from',
+      'mcp',
+      ...shared,
+      ...(opts.internal ? ['--internal', opts.internal] : []),
     ]);
+
+    // The same clones say which skills and coding-agent plugins each repository keeps.
+    const skills = await runAgents(['discover', '--from', 'skills', ...shared]);
+
+    const exit = servers || skills;
 
     return exit !== 0 ? exit : partial ? 1 : 0;
   } finally {

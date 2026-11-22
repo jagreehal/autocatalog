@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { jsonObjectSchema, type JsonObject } from 'autocatalog-core';
+import { jsonObjectSchema, type JsonObject } from 'autocatalog-core/plugin';
 import { z } from 'zod';
 import { discoverZodEvents } from '../src/scanner';
 import { staticExports } from '../src/static-scan';

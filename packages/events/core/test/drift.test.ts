@@ -735,6 +735,25 @@ describe('compareSemverish', () => {
       '1.0.0',
     ]);
   });
+
+  it('compares prerelease identifiers as semver does', () => {
+    const versions = [
+      '1.0.0-rc10',
+      '1.0.0-rc2',
+      '1.0.0-alpha.1',
+      '1.0.0-alpha.beta',
+      '1.0.0-alpha',
+    ];
+
+    expect(versions.sort(compareSemverish)).toEqual([
+      '1.0.0-alpha',
+      '1.0.0-alpha.1',
+      '1.0.0-alpha.beta',
+      '1.0.0-rc10',
+      '1.0.0-rc2',
+    ]);
+    expect(compareSemverish('1.0.0-9007199254740993', '1.0.0-9007199254740992')).toBeGreaterThan(0);
+  });
 });
 
 describe('runtime drift against a snapshot', () => {

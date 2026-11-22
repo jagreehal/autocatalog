@@ -1,0 +1,20 @@
+{
+  "name": "money-check",
+  "owner": "Payments",
+  "format": "skill",
+  "description": "Check a diff for float arithmetic on amounts and missing idempotency keys.",
+  "allowed_tools": [],
+  "plugin": "payments-review",
+  "discovery": {
+    "confidence": "inferred",
+    "adapter": "skills",
+    "sources": [
+      {
+        "file": "plugins/payments-review/skills/money-check/SKILL.md",
+        "line": 1,
+        "symbol": "money-check"
+      }
+    ],
+    "needs_review": []
+  }
+}

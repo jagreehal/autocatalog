@@ -6,7 +6,7 @@ import { isIcon } from './icons';
 import type { Stat } from './ui/components/Stats';
 import type { DocListItem } from './ui/lib/docs';
 import type { VisualiserGraph } from './ui/lib/visualiser';
-import type { HomeBlockData } from './ui/pages/HomeBlock';
+import type { HomeBlockData, RecentChange } from './ui/pages/HomeBlock';
 import type { ExploreCard, HomePageProps } from './ui/pages/HomePage';
 
 /** One entry of a home layout: a built-in block with its data, or a site's own by name. */
@@ -28,6 +28,8 @@ export interface HomeLayoutContext {
   explore: ExploreCard[];
   tags: HomePageProps['tags'];
   attention?: HomePageProps['attention'];
+  /** What changed most recently, newest first. */
+  recent: RecentChange[];
   map?: VisualiserGraph | undefined;
   catalogHref?: string | undefined;
 }
@@ -121,6 +123,11 @@ export function resolveHomeLayout(
             map: context.map,
             catalogHref: context.catalogHref,
           },
+        };
+      case 'recent':
+        return {
+          custom: false,
+          data: { block: 'recent', title: block.title, items: context.recent },
         };
       case 'attention':
         return { custom: false, data: { block: 'attention', attention: context.attention } };

@@ -5,6 +5,7 @@ import { defaultHomeLayout, repositoryMetas } from 'autocatalog-docs-core';
 import { apiOperations, apiPath, apiSummary, apiTitle } from '../apis';
 import { readableCatalog } from '../access';
 import { docsCatalog } from '../catalog';
+import { recentChanges } from '../recent';
 import { docsSiteConfig } from '../config';
 import { homePageProps } from '../page-models';
 import { setPageHeader } from '../shell';
@@ -86,6 +87,7 @@ const layout = resolveHomeLayout(site.layouts?.home ?? defaultHomeLayout(site), 
   explore: page.explore,
   tags: page.tags,
   attention: page.attention,
+  recent: site.audience ? [] : recentChanges(catalog, items, base),
   map: page.map,
   catalogHref: page.catalogHref,
 });

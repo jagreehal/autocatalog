@@ -115,96 +115,6 @@ importers:
         specifier: 0.3.2
         version: 0.3.2(@playwright/test@1.64.0)(vite@8.3.4(@types/node@26.6.4)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))(zod@4.6.7)
 
-  examples/components/autocatalog-plugin-gallery:
-    dependencies:
-      autocatalog-core:
-        specifier: workspace:*
-        version: link:../../../packages/events/core
-
-  examples/components/checkout:
-    dependencies:
-      react:
-        specifier: 19.3.1
-        version: 19.3.1
-      react-dom:
-        specifier: 19.3.1
-        version: 19.3.1(react@19.3.1)
-    devDependencies:
-      '@storybook/react-vite':
-        specifier: 10.6.1
-        version: 10.6.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(rollup@4.64.3)(storybook@10.6.1(@types/react@19.3.0)(prettier@3.9.9)(react@19.3.1))(typescript@7.0.2)(vite@8.3.4(@types/node@26.6.4)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
-      autocatalog-cli:
-        specifier: workspace:*
-        version: link:../../../packages/events/cli
-      autocatalog-plugin-storybook:
-        specifier: workspace:*
-        version: link:../../../packages/events/plugin-storybook
-      storybook:
-        specifier: 10.6.1
-        version: 10.6.1(@types/react@19.3.0)(prettier@3.9.9)(react@19.3.1)
-      vite:
-        specifier: ^8.3.1
-        version: 8.3.4(@types/node@26.6.4)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)
-
-  examples/components/design-system:
-    dependencies:
-      react:
-        specifier: 19.3.1
-        version: 19.3.1
-      react-dom:
-        specifier: 19.3.1
-        version: 19.3.1(react@19.3.1)
-    devDependencies:
-      '@storybook/react-vite':
-        specifier: 10.6.1
-        version: 10.6.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(rollup@4.64.3)(storybook@10.6.1(@types/react@19.3.0)(prettier@3.9.9)(react@19.3.1))(typescript@7.0.2)(vite@8.3.4(@types/node@26.6.4)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
-      autocatalog-cli:
-        specifier: workspace:*
-        version: link:../../../packages/events/cli
-      autocatalog-plugin-storybook:
-        specifier: workspace:*
-        version: link:../../../packages/events/plugin-storybook
-      storybook:
-        specifier: 10.6.1
-        version: 10.6.1(@types/react@19.3.0)(prettier@3.9.9)(react@19.3.1)
-      vite:
-        specifier: ^8.3.1
-        version: 8.3.4(@types/node@26.6.4)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)
-
-  examples/components/gallery:
-    devDependencies:
-      '@autocatalog-example/autocatalog-plugin-gallery':
-        specifier: workspace:*
-        version: link:../autocatalog-plugin-gallery
-      autocatalog-cli:
-        specifier: workspace:*
-        version: link:../../../packages/events/cli
-
-  examples/components/reports:
-    dependencies:
-      react:
-        specifier: 19.3.1
-        version: 19.3.1
-      react-dom:
-        specifier: 19.3.1
-        version: 19.3.1(react@19.3.1)
-    devDependencies:
-      '@storybook/react-vite':
-        specifier: 10.6.1
-        version: 10.6.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(rollup@4.64.3)(storybook@10.6.1(@types/react@19.3.0)(prettier@3.9.9)(react@19.3.1))(typescript@7.0.2)(vite@8.3.4(@types/node@26.6.4)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
-      autocatalog-cli:
-        specifier: workspace:*
-        version: link:../../../packages/events/cli
-      autocatalog-plugin-storybook:
-        specifier: workspace:*
-        version: link:../../../packages/events/plugin-storybook
-      storybook:
-        specifier: 10.6.1
-        version: 10.6.1(@types/react@19.3.0)(prettier@3.9.9)(react@19.3.1)
-      vite:
-        specifier: ^8.3.1
-        version: 8.3.4(@types/node@26.6.4)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)
-
   examples/docs-demo:
     dependencies:
       '@astrojs/starlight':
@@ -655,6 +565,9 @@ importers:
       autocatalog-core:
         specifier: workspace:*
         version: link:../../events/core
+      yaml:
+        specifier: ^2.9.1
+        version: 2.9.1
       zod:
         specifier: ^4.6.5
         version: 4.6.5
@@ -838,96 +751,6 @@ importers:
         specifier: ^5.0.3
         version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@26.6.4)(jsdom@27.0.1)(vite@8.3.4(@types/node@26.6.4)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
 
-  packages/events/plugin-kong:
-    dependencies:
-      autocatalog-core:
-        specifier: workspace:*
-        version: link:../core
-      commander:
-        specifier: ^15.0.0
-        version: 15.0.0
-      kleur:
-        specifier: ^4.1.5
-        version: 4.1.5
-      yaml:
-        specifier: ^2.9.1
-        version: 2.9.1
-      zod:
-        specifier: ^4.6.5
-        version: 4.6.7
-    devDependencies:
-      '@types/node':
-        specifier: ^26.6.4
-        version: 26.6.4
-      tsup:
-        specifier: ^8.5.1
-        version: 8.5.1(jiti@2.7.0)(postcss@8.5.29)(tsx@4.23.15)(typescript@6.0.3)(yaml@2.9.1)
-      typescript:
-        specifier: ^6.0.3
-        version: 6.0.3
-      vitest:
-        specifier: ^5.0.3
-        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@26.6.4)(jsdom@27.0.1)(vite@8.3.4(@types/node@26.6.4)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
-
-  packages/events/plugin-kubernetes:
-    dependencies:
-      autocatalog-core:
-        specifier: workspace:*
-        version: link:../core
-      commander:
-        specifier: ^15.0.0
-        version: 15.0.0
-      kleur:
-        specifier: ^4.1.5
-        version: 4.1.5
-      yaml:
-        specifier: ^2.9.1
-        version: 2.9.1
-      zod:
-        specifier: ^4.6.5
-        version: 4.6.7
-    devDependencies:
-      '@types/node':
-        specifier: ^26.6.4
-        version: 26.6.4
-      tsup:
-        specifier: ^8.5.1
-        version: 8.5.1(jiti@2.7.0)(postcss@8.5.29)(tsx@4.23.15)(typescript@6.0.3)(yaml@2.9.1)
-      typescript:
-        specifier: ^6.0.3
-        version: 6.0.3
-      vitest:
-        specifier: ^5.0.3
-        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@26.6.4)(jsdom@27.0.1)(vite@8.3.4(@types/node@26.6.4)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
-
-  packages/events/plugin-storybook:
-    dependencies:
-      autocatalog-core:
-        specifier: workspace:*
-        version: link:../core
-      commander:
-        specifier: ^15.0.0
-        version: 15.0.0
-      kleur:
-        specifier: ^4.1.5
-        version: 4.1.5
-      zod:
-        specifier: ^4.6.5
-        version: 4.6.7
-    devDependencies:
-      '@types/node':
-        specifier: ^26.6.4
-        version: 26.6.4
-      tsup:
-        specifier: ^8.5.1
-        version: 8.5.1(jiti@2.7.0)(postcss@8.5.29)(tsx@4.23.15)(typescript@6.0.3)(yaml@2.9.1)
-      typescript:
-        specifier: ^6.0.3
-        version: 6.0.3
-      vitest:
-        specifier: ^5.0.3
-        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@26.6.4)(jsdom@27.0.1)(vite@8.3.4(@types/node@26.6.4)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
-
   packages/events/plugin-zod:
     dependencies:
       autocatalog-core:
@@ -968,16 +791,16 @@ importers:
     dependencies:
       '@ai-sdk/mcp':
         specifier: latest
-        version: 2.0.93(zod@4.6.7)
+        version: 2.0.101(zod@4.6.7)
       '@ai-sdk/openai-compatible':
         specifier: latest
-        version: 3.0.87(zod@4.6.7)
+        version: 3.0.93(zod@4.6.7)
       '@modelcontextprotocol/sdk':
         specifier: ^1.32.1
         version: 1.32.1(zod@4.6.7)
       ai:
         specifier: latest
-        version: 7.0.166(zod@4.6.7)
+        version: 7.0.177(zod@4.6.7)
 
 packages:
 
@@ -990,8 +813,14 @@ packages:
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
 
-  '@ai-sdk/gateway@4.0.139':
-    resolution: {integrity: sha512-2YEIPm4n59nm4PBhMGjFWH0g+ztPgfybqoeMIjfJYNiB8zLHftUrONgb8P3Ho3Yy5cdoLCjiDE/Hv2Crol0JBw==}
+  '@ai-sdk/gateway@4.0.150':
+    resolution: {integrity: sha512-39jDj4UIN2M5kI/wW0IVMsD1PpjmZHSMFUU/yZSQerE4mg0Oo9AKPOSwn6Vu0MJ31aK+Mi9rUiUgl88Q2lkorg==}
+    engines: {node: '>=22'}
+    peerDependencies:
+      zod: ^3.25.76 || ^4.1.8
+
+  '@ai-sdk/mcp@2.0.101':
+    resolution: {integrity: sha512-lat/6Y6IT5zBRoy1klgfGs9KWhYPjxLkbws4iLd4j3svw2IKcc8nP3huNn8vSqn4VlzGo8nYH20mJITt+eSFrA==}
     engines: {node: '>=22'}
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
@@ -1002,14 +831,8 @@ packages:
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
 
-  '@ai-sdk/mcp@2.0.93':
-    resolution: {integrity: sha512-Jo9NZNfpDVYUhrq/FkFo+AVQJpoFo8YHOfkgjvY4VxJ00njb3Pu129S6AYcjdcelOZSJ10ASJM6T06/oGslGTw==}
-    engines: {node: '>=22'}
-    peerDependencies:
-      zod: ^3.25.76 || ^4.1.8
-
-  '@ai-sdk/openai-compatible@3.0.87':
-    resolution: {integrity: sha512-8eODsrV/DKW9KYoVXi1AhATGitZ1ANZrA5poa192EHUWCmrNjWL6fW7ymVQx+Svx7WtAGJcU+5hlxTG58zDzGw==}
+  '@ai-sdk/openai-compatible@3.0.93':
+    resolution: {integrity: sha512-6/eIx/Y0/4xt6ncUovieFp5HFa0+LW1hy8TcgJQonBJ+5qZpdK5zqdBZ6RRoQ8cSSpuQC6X5kYhzDKrom9Q7+g==}
     engines: {node: '>=22'}
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
@@ -1020,8 +843,8 @@ packages:
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
 
-  '@ai-sdk/provider-utils@5.0.76':
-    resolution: {integrity: sha512-76QcCmVtSunSAbQBJtgQTTE8e+Yaz4rJJe1MRWnJ3GAQYUvNPHJejKx4jZTbhGGTdSSLaYcMBT62SISNgnGq9w==}
+  '@ai-sdk/provider-utils@5.0.82':
+    resolution: {integrity: sha512-9s3Le9LsTR0exy14H8SERw4uMgFhiP0yJVoLefzfQCnnptj71noYh1AoVEsjfJjmMH1y16+1OqBVTDpTpU6M3Q==}
     engines: {node: '>=22'}
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
@@ -1030,8 +853,8 @@ packages:
     resolution: {integrity: sha512-GqvWZSZdBelCGughlBdOoupT258rgM3YMbaLAS9WSZJ0vlt8c9vm3My+ZT31mYhiReMCMCF2qF2axnGbILpk1A==}
     engines: {node: '>=22'}
 
-  '@ai-sdk/provider@4.0.37':
-    resolution: {integrity: sha512-4uPgZ3qiX/JaQFr0dQoibUzHImZit9u05ro2BxGUnJwU4fV28BOAbKUa2OjQvqtM1tMac3bTKkaXdyzGovQXqg==}
+  '@ai-sdk/provider@4.0.39':
+    resolution: {integrity: sha512-jRvAhvW23+TeMGVCME2WGejP/TjzyDg7TplUep3t8HcEYnC2/8zqhCy9RRrjjVs1ljcygABZ8pQ21MbCRdF01w==}
     engines: {node: '>=22'}
 
   '@ai-sdk/react@4.0.168':
@@ -4176,8 +3999,8 @@ packages:
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
 
-  ai@7.0.166:
-    resolution: {integrity: sha512-bijt5WsdpQXQLB0SHYEoSuvpZ8KdUxl3Iz843uvHFcGpEBSrxlgwXXadR7EBVOHoByEf2PwgOxutWU5dcdjs9Q==}
+  ai@7.0.177:
+    resolution: {integrity: sha512-DQNKH2lL4h+5Rxe34AxTdxXtNu3EnsDHpxIE6p4ETsi+r7sM187nP6JKrbASoSNEbR355H3FCGlSP7mj+m6Pzw==}
     engines: {node: '>=22'}
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
@@ -7672,11 +7495,19 @@ snapshots:
       '@vercel/oidc': 3.2.0
       zod: 4.6.7
 
-  '@ai-sdk/gateway@4.0.139(zod@4.6.7)':
+  '@ai-sdk/gateway@4.0.150(zod@4.6.7)':
     dependencies:
-      '@ai-sdk/provider': 4.0.37
-      '@ai-sdk/provider-utils': 5.0.76(zod@4.6.7)
+      '@ai-sdk/provider': 4.0.39
+      '@ai-sdk/provider-utils': 5.0.82(zod@4.6.7)
       '@vercel/oidc': 3.2.0
+      zod: 4.6.7
+
+  '@ai-sdk/mcp@2.0.101(zod@4.6.7)':
+    dependencies:
+      '@ai-sdk/provider': 4.0.39
+      '@ai-sdk/provider-utils': 5.0.82(zod@4.6.7)
+      cross-spawn: 7.0.6
+      pkce-challenge: 5.0.1
       zod: 4.6.7
 
   '@ai-sdk/mcp@2.0.92(zod@4.6.7)':
@@ -7687,18 +7518,10 @@ snapshots:
       pkce-challenge: 5.0.1
       zod: 4.6.7
 
-  '@ai-sdk/mcp@2.0.93(zod@4.6.7)':
+  '@ai-sdk/openai-compatible@3.0.93(zod@4.6.7)':
     dependencies:
-      '@ai-sdk/provider': 4.0.37
-      '@ai-sdk/provider-utils': 5.0.76(zod@4.6.7)
-      cross-spawn: 7.0.6
-      pkce-challenge: 5.0.1
-      zod: 4.6.7
-
-  '@ai-sdk/openai-compatible@3.0.87(zod@4.6.7)':
-    dependencies:
-      '@ai-sdk/provider': 4.0.37
-      '@ai-sdk/provider-utils': 5.0.76(zod@4.6.7)
+      '@ai-sdk/provider': 4.0.39
+      '@ai-sdk/provider-utils': 5.0.82(zod@4.6.7)
       zod: 4.6.7
 
   '@ai-sdk/provider-utils@5.0.75(zod@4.6.7)':
@@ -7710,20 +7533,19 @@ snapshots:
       undici: 7.30.0
       zod: 4.6.7
 
-  '@ai-sdk/provider-utils@5.0.76(zod@4.6.7)':
+  '@ai-sdk/provider-utils@5.0.82(zod@4.6.7)':
     dependencies:
-      '@ai-sdk/provider': 4.0.37
+      '@ai-sdk/provider': 4.0.39
       '@standard-schema/spec': 1.1.0
       '@workflow/serde': 4.1.0
       eventsource-parser: 3.1.1
-      undici: 7.30.0
       zod: 4.6.7
 
   '@ai-sdk/provider@4.0.36':
     dependencies:
       json-schema: 0.4.0
 
-  '@ai-sdk/provider@4.0.37':
+  '@ai-sdk/provider@4.0.39':
     dependencies:
       json-schema: 0.4.0
 
@@ -9046,14 +8868,6 @@ snapshots:
     optionalDependencies:
       typescript: 6.0.3
 
-  '@joshwooding/vite-plugin-react-docgen-typescript@0.7.0(typescript@7.0.2)(vite@8.3.4(@types/node@26.6.4)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))':
-    dependencies:
-      glob: 13.0.6
-      react-docgen-typescript: 2.4.0(typescript@7.0.2)
-      vite: 8.3.4(@types/node@26.6.4)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)
-    optionalDependencies:
-      typescript: 7.0.2
-
   '@jridgewell/gen-mapping@0.3.13':
     dependencies:
       '@jridgewell/sourcemap-codec': 1.6.0
@@ -10206,29 +10020,6 @@ snapshots:
       - rollup
       - supports-color
 
-  '@storybook/react-vite@10.6.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(rollup@4.64.3)(storybook@10.6.1(@types/react@19.3.0)(prettier@3.9.9)(react@19.3.1))(typescript@7.0.2)(vite@8.3.4(@types/node@26.6.4)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))':
-    dependencies:
-      '@joshwooding/vite-plugin-react-docgen-typescript': 0.7.0(typescript@7.0.2)(vite@8.3.4(@types/node@26.6.4)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
-      '@rollup/pluginutils': 5.4.0(rollup@4.64.3)
-      '@storybook/builder-vite': 10.6.1(storybook@10.6.1(@types/react@19.3.0)(prettier@3.9.9)(react@19.3.1))(vite@8.3.4(@types/node@26.6.4)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
-      '@storybook/react': 10.6.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(storybook@10.6.1(@types/react@19.3.0)(prettier@3.9.9)(react@19.3.1))(typescript@7.0.2)
-      empathic: 2.1.0
-      magic-string: 1.4.3
-      react: 19.3.1
-      react-docgen: 8.0.4
-      react-dom: 19.3.1(react@19.3.1)
-      resolve: 1.22.13
-      storybook: 10.6.1(@types/react@19.3.0)(prettier@3.9.9)(react@19.3.1)
-      tsconfig-paths: 4.2.0
-      vite: 8.3.4(@types/node@26.6.4)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)
-    optionalDependencies:
-      typescript: 7.0.2
-    transitivePeerDependencies:
-      - '@types/react'
-      - '@types/react-dom'
-      - rollup
-      - supports-color
-
   '@storybook/react@10.6.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(storybook@10.6.1(@types/react@19.3.0)(prettier@3.9.9)(react@19.3.1))(typescript@6.0.3)':
     dependencies:
       '@storybook/global': 5.0.0
@@ -10242,22 +10033,6 @@ snapshots:
       '@types/react': 19.3.0
       '@types/react-dom': 19.3.0(@types/react@19.3.0)
       typescript: 6.0.3
-    transitivePeerDependencies:
-      - supports-color
-
-  '@storybook/react@10.6.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(storybook@10.6.1(@types/react@19.3.0)(prettier@3.9.9)(react@19.3.1))(typescript@7.0.2)':
-    dependencies:
-      '@storybook/global': 5.0.0
-      '@storybook/react-dom-shim': 10.6.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(storybook@10.6.1(@types/react@19.3.0)(prettier@3.9.9)(react@19.3.1))
-      react: 19.3.1
-      react-docgen: 8.0.4
-      react-docgen-typescript: 2.4.0(typescript@7.0.2)
-      react-dom: 19.3.1(react@19.3.1)
-      storybook: 10.6.1(@types/react@19.3.0)(prettier@3.9.9)(react@19.3.1)
-    optionalDependencies:
-      '@types/react': 19.3.0
-      '@types/react-dom': 19.3.0(@types/react@19.3.0)
-      typescript: 7.0.2
     transitivePeerDependencies:
       - supports-color
 
@@ -10779,11 +10554,11 @@ snapshots:
       '@ai-sdk/provider-utils': 5.0.75(zod@4.6.7)
       zod: 4.6.7
 
-  ai@7.0.166(zod@4.6.7):
+  ai@7.0.177(zod@4.6.7):
     dependencies:
-      '@ai-sdk/gateway': 4.0.139(zod@4.6.7)
-      '@ai-sdk/provider': 4.0.37
-      '@ai-sdk/provider-utils': 5.0.76(zod@4.6.7)
+      '@ai-sdk/gateway': 4.0.150(zod@4.6.7)
+      '@ai-sdk/provider': 4.0.39
+      '@ai-sdk/provider-utils': 5.0.82(zod@4.6.7)
       zod: 4.6.7
 
   ajv-formats@2.1.1(ajv@8.20.0):
@@ -13757,10 +13532,6 @@ snapshots:
   react-docgen-typescript@2.4.0(typescript@6.0.3):
     dependencies:
       typescript: 6.0.3
-
-  react-docgen-typescript@2.4.0(typescript@7.0.2):
-    dependencies:
-      typescript: 7.0.2
 
   react-docgen@8.0.4:
     dependencies:

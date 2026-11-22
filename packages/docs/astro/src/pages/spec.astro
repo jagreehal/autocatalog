@@ -1,8 +1,8 @@
 ---
 import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
 import type { InferGetStaticPropsType } from 'astro';
-import { docsCatalog } from '../catalog';
-import { setPageHeader } from '../shell';
+import { docsCatalog, repositoryFileChangedAt } from '../catalog';
+import { setLastChanged, setPageHeader } from '../shell';
 import { specificationPageProps } from '../specifications';
 import { SpecificationPage } from '../ui/pages/SpecificationPage';
 
@@ -28,6 +28,8 @@ const page = specificationPageProps(spec, catalog.events, base);
 setPageHeader(Astro.locals, {
   actions: [{ label: 'Download', href: page.downloadHref, icon: 'braces' }],
 });
+
+setLastChanged(Astro.locals, repositoryFileChangedAt(catalog, spec.repository, spec.file));
 ---
 
 <StarlightPage

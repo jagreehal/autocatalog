@@ -4,7 +4,7 @@ import type { AttentionSnapshot } from '../../attention';
 import type { DocListItem } from '../components/DocList';
 import type { Stat } from '../components/Stats';
 import type { VisualiserGraph } from '../lib/visualiser';
-import { blockIds, CardGrid, HomeBlock, type HomeBlockData } from './HomeBlock';
+import { blockIds, CardGrid, HomeBlock, type HomeBlockData, type RecentChange } from './HomeBlock';
 
 /** One way into the catalog this build actually made. */
 export interface ExploreCard {
@@ -28,6 +28,8 @@ export interface HomePageProps {
   }>;
   /** Tags in name order; empty when no document is tagged. */
   tags: Array<[string, DocListItem[]]>;
+  /** What changed most recently, newest first; empty when git cannot date anything. */
+  recent?: RecentChange[] | undefined;
   /** Dark spots: review work, quarantine, orphans. */
   attention?: AttentionSnapshot | undefined;
   /** Architecture canvas; omitted when the graph has nothing to draw. */
@@ -43,6 +45,7 @@ export interface HomePageProps {
 export const HOME_PAGE_ORDER = [
   'countCards',
   'graph',
+  'recent',
   'docs',
   'attention',
   'explore',
@@ -55,6 +58,7 @@ export function homePageBlocks({
   explore,
   repos,
   tags,
+  recent,
   attention,
   map,
   catalogHref,
@@ -62,6 +66,7 @@ export function homePageBlocks({
   const data: Record<(typeof HOME_PAGE_ORDER)[number], HomeBlockData> = {
     countCards: { block: 'countCards', stats },
     graph: { block: 'graph', map, catalogHref },
+    recent: { block: 'recent', items: recent ?? [] },
     docs: { block: 'docs', repos },
     attention: { block: 'attention', attention },
     explore: { block: 'explore', cards: explore },

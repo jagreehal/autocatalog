@@ -11,5 +11,4 @@ packages:
   - 'starters/*'
   - 'fixtures/*'
   - 'examples/*'
-  - 'examples/components/*'
   - 'tools/ask-benchmark'
