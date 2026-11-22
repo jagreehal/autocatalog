@@ -67,7 +67,9 @@ describe('Graph', () => {
     await act(async () => intersect[0]!([{ isIntersecting: true }]));
 
     expect(await screen.findByRole('region', { name: 'Message flow' })).toBeTruthy();
-  });
+    // The first import of the map transforms its whole graph library, which
+    // takes longer than the default when CI builds sites beside the tests.
+  }, 30_000);
 
   it('shows only the static picture when there is nothing to draw', () => {
     const html = renderToString(createElement(Graph, { ...props, visualiser: undefined }));
