@@ -1,5 +1,11 @@
 # autocatalog
 
+## 0.1.19
+
+### Patch Changes
+
+- autocatalog-cli@0.14.1
+
 ## 0.1.18
 
 ### Patch Changes
