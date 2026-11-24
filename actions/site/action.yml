@@ -30,7 +30,7 @@ inputs:
     default: 'true'
   version:
     description: The autocatalog version to run. Pinned to this release of the action.
-    default: '0.1.19'
+    default: '0.2.0'
   node-version:
     description: The Node.js version to run it on.
     default: '24'
