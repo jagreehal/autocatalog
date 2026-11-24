@@ -576,22 +576,13 @@ export async function buildDocsCatalog(
       const declared = declaredApiService(api.document);
 
       // With a lock, a spec serves only a service the lock pins to its repository.
-      const unpinned = Boolean(
-        declared && serviceOwners && serviceOwners.get(declared) !== api.repository,
-      );
+      const services = servicesForApi(api, events, serviceOwners);
 
-      if (unpinned) {
+      if (declared && services.length === 0) {
         failed(
           `x-autocatalog.service names ${declared}, which the lock does not pin to ${api.repository}, so no service exposes its operations`,
         );
       }
-
-      // A service guessed from the title or webhooks is held to the lock the same way.
-      const services = unpinned
-        ? []
-        : servicesForApi(api, events).filter(
-            (service) => !serviceOwners || serviceOwners.get(service) === api.repository,
-          );
 
       // A service a spec names gets a page, so its name is a path too.
       for (const service of services) {
@@ -686,6 +677,7 @@ export async function buildDocsCatalog(
     composedRepositories.map(({ repository, dir }) => ({ name: repository, root: dir })),
     apis,
     root,
+    modelRepositories,
   );
 
   const about = createDescribesRelationships(docs, composed.resources, {

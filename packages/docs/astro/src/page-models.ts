@@ -113,7 +113,9 @@ export function homeCounts<Stat extends { label: string; value: number; kind?: s
   all: Array<Stat>,
   chosen?: ReadonlyArray<string>,
 ): Array<Stat> {
-  const present = all.filter(({ value }) => value > 0);
+  const held = all.filter(({ value }) => value > 0);
+  // A catalog that holds nothing keeps its zeros, so the home page says what to add.
+  const present = held.length === 0 && !chosen ? all : held;
 
   const key = (stat: Stat) => stat.kind ?? stat.label;
 
@@ -1337,19 +1339,28 @@ export async function eventVersionPageProps(
   };
 }
 
+/** The source each provenance counts under, as its evidence is drawn: see Evidence.tsx. */
+const COUNTED_AS = {
+  extracted: 'extracted',
+  observed: 'extracted',
+  declared: 'declared',
+  overridden: 'declared',
+  inferred: 'inferred',
+} as const satisfies Record<ProvenanceValue, keyof CatalogProvenance['resources']>;
+
 /**
- * How many resources and relationships each source gave: read from code,
- * written by owners, or worked out. A fact known another way (overridden,
- * observed) is left out of the figures rather than counted as one of the three.
+ * How many resources and relationships each source gave: read from code or seen
+ * at runtime, written by owners, or worked out. Every fact counts once, so the
+ * totals are the catalog's.
  */
 export function catalogProvenance(graph: DocsCatalog['graph']) {
   const tally = (sources: Array<ProvenanceValue>) => {
     const counts: CatalogProvenance['resources'] = {};
 
     for (const source of sources) {
-      if (source === 'extracted' || source === 'declared' || source === 'inferred') {
-        counts[source] = (counts[source] ?? 0) + 1;
-      }
+      const counted = COUNTED_AS[source];
+
+      counts[counted] = (counts[counted] ?? 0) + 1;
     }
 
     return counts;
@@ -1364,6 +1375,7 @@ export function catalogProvenance(graph: DocsCatalog['graph']) {
 /** The whole architecture is read by its domains first; a click on a level goes deeper. */
 const byDomain = (catalog: DocsCatalog, base: string) => ({
   open: 1 as const,
+  domains: new Set(buildDomains(catalog.events, catalog.graph).map(({ name }) => name)),
   domainHref: (name: string) => domainHref(base, name),
   domainTitle: (name: string) => domainTitle(catalog.overviews, name),
 });

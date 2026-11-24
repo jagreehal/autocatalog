@@ -165,8 +165,15 @@ keeps the last good site.
   beside it as `openapi.json`. Without JavaScript the page lists the operations.
   A service links to the API that names it in a top-level
   `x-autocatalog.service`. Failing that, it links to the API whose title names
-  it or whose webhooks it produces, and the link is marked `inferred`. Each
-  operation is also an `endpoint` in `/catalog.json`, exposed by that service.
+  it or whose webhooks it produces, and the link is marked `inferred`. A spec
+  that names no service is served by the `service` saved in the repository's
+  `.autocatalog/config.json`, which `ac federation lock` counts as a claim; else
+  by that match; else, for a repository with one spec, by the `name` in its
+  `package.json` when it has no scope. With a lock, a service counts only where
+  the lock pins it. Each operation is also an `endpoint` in `/catalog.json`,
+  exposed by that service and owned by the CODEOWNERS rule for the spec, else
+  the `owner` in `docs/meta.json`. A collection or table takes that owner too when
+  that team's services write it and no other service uses it.
 - `/specs/<repository>/<name>/` shows any other specification a repository
   commits under `contracts/`, as written and highlighted, with the file beside
   it under its own name. A WSDL, XML Schema, XML, GraphQL or RAML file counts by
@@ -878,8 +885,13 @@ that take requests. The catalog's own pages are still built once. With
 `llms.txt`, `llms-full.txt` and `/mcp` render per request too, and follow the
 same rule as the pages. Without either, your middleware alone decides who reads
 what, so the site publishes no Markdown twin and no `llms-full.txt`, its
-`llms.txt` lists no documents, and `/mcp` waits for `"mcp": true`. Set it only
-when your middleware gates `/mcp` as it gates the documents. Pagefind indexes only pages built ahead, so the header's search box asks
+`llms.txt` lists no documents, and `/mcp` waits for `"mcp": true`. The build
+says so. Set `mcp` only when your middleware gates `/mcp` as it gates the documents.
+`"llms": true` lists the documents in `llms.txt` and serves their twins and
+`llms-full.txt`. Set it only when everyone who reaches the site may read every
+document, or your middleware gates those addresses too.
+
+Pagefind indexes only pages built ahead, so the header's search box asks
 the server, and `/search` lists the pages with any of the words, those with
 more of them first. The build carries the catalog it read, so you deploy `dist/`
 without the repositories. It writes `server.mjs` beside the site:
@@ -1290,8 +1302,12 @@ const shown = results.slice(0, 30).map((result, i) => ({
 ```
 
 What the project's own `package.json` installs stays outside the server
-bundle and loads from its `node_modules`, as in any Astro project. Packages that
-render with React are bundled instead, so every component shares one React. One that exports `const prerender = false` renders per request on a site
+bundle and loads from its `node_modules`, as in any Astro project. Your code and
+an extension you install get the version their own `package.json` names, with
+`import` or `require()`, beside whatever version autocatalog uses. `ac site`
+bundles packages that render with React, so every component shares one React.
+
+A page that exports `const prerender = false` renders per request on a site
 with `"output": "server"`, so it can read `Astro.locals`. A `.md`
 or `.mdx` page takes the site's layout and needs a `title` in its frontmatter,
 which accepts what Starlight's does. Files

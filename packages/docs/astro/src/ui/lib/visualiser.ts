@@ -183,37 +183,3 @@ export function mapHeight(
 
   return Math.min(max, Math.max(MAP_MIN_REM, (MAP_CHROME_PX + rows * MAP_ROW_PX) / 16));
 }
-
-// A domain card's title is 13px at full size; this draws it at about 12px.
-const READABLE_ZOOM = 0.9;
-
-interface Point {
-  x: number;
-  y: number;
-}
-
-/**
- * The pinch that zooms a map from `zoom` up to a readable size and brings the
- * drawing's top left corner, `from` on screen, to `to`. It is a Ctrl+wheel
- * event in pages: React Flow zooms by 2^-deltaY (ten times as strong on a
- * Mac) about the pointer, so the pointer goes where that zoom carries `from`
- * onto `to`. Nothing when the map is readable already.
- */
-export function readablePinch(
-  zoom: number,
-  mac: boolean,
-  from: Point,
-  to: Point,
-): { deltaY: number; clientX: number; clientY: number } | undefined {
-  if (zoom >= READABLE_ZOOM) {
-    return undefined;
-  }
-
-  const scale = READABLE_ZOOM / zoom;
-
-  return {
-    deltaY: -Math.log2(scale) / (mac ? 10 : 1),
-    clientX: (scale * from.x - to.x) / (scale - 1),
-    clientY: (scale * from.y - to.y) / (scale - 1),
-  };
-}

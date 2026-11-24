@@ -1,9 +1,9 @@
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { parseResourceGraph } from 'autocatalog-core';
+import { parseResourceGraph, resourceKey } from 'autocatalog-core';
 import type { ResourceGraph } from 'autocatalog-core';
-import { afterEach, beforeEach, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { withCodeowners } from '../src/codeowned';
 
 let root: string;
@@ -76,6 +76,40 @@ const apis = [
   { repository: 'orders-api', file: 'contracts/openapi.json', services: ['orders-api'] },
 ];
 
+it('owns a contract as docs/meta.json owns the documents, where no rule covers it', async () => {
+  await fs.rm(path.join(root, 'CODEOWNERS'));
+  await fs.mkdir(path.join(root, 'services/orders-api/docs'));
+  await fs.writeFile(
+    path.join(root, 'services/orders-api/docs/meta.json'),
+    JSON.stringify({ owner: 'platform' }),
+  );
+
+  expect(await owners()).toMatchObject({ 'GET /orders': 'platform', 'orders-api': 'platform' });
+});
+
+it('keeps the rule for one spec when docs/meta.json would own the service through another', async () => {
+  await fs.writeFile(
+    path.join(root, 'CODEOWNERS'),
+    '/services/orders-api/contracts/openapi.json @example-org/orders-team',
+  );
+  await fs.mkdir(path.join(root, 'services/orders-api/docs'));
+  await fs.writeFile(
+    path.join(root, 'services/orders-api/docs/meta.json'),
+    JSON.stringify({ owner: 'platform' }),
+  );
+
+  const owned = await withCodeowners(
+    graph,
+    repositories(),
+    [...apis, { repository: 'orders-api', file: 'contracts/admin.json', services: ['orders-api'] }],
+    root,
+  );
+
+  expect(owned.resources.find(({ ref }) => ref.id === 'orders-api')?.owner?.team).toBe(
+    'example-org/orders-team',
+  );
+});
+
 const owners = async () => {
   const owned = await withCodeowners(graph, repositories(), apis, root);
 
@@ -122,4 +156,107 @@ it('leaves the graph as it was when there is no CODEOWNERS', async () => {
   await fs.rm(path.join(root, 'CODEOWNERS'));
 
   expect(await withCodeowners(graph, repositories(), apis, root)).toBe(graph);
+});
+
+it('keeps the owner a service was imported with over docs/meta.json', async () => {
+  await fs.rm(path.join(root, 'CODEOWNERS'));
+  await fs.mkdir(path.join(root, 'services/orders-api/docs'));
+  await fs.writeFile(
+    path.join(root, 'services/orders-api/docs/meta.json'),
+    JSON.stringify({ owner: 'platform' }),
+  );
+
+  const imported = resource(
+    { kind: 'service', id: 'orders-api' },
+    {
+      owner: { team: 'orders-team' },
+      provenance: { default: 'inferred', fields: { owner: 'extracted' } },
+    },
+  );
+
+  const owned = await withCodeowners(
+    parseResourceGraph({ spec: 'autocatalog/graph-v1', resources: [imported], relationships: [] }),
+    repositories(),
+    apis,
+    root,
+  );
+
+  expect(owned.resources[0]?.owner?.team).toBe('orders-team');
+  expect(owned.resources[0]?.provenance.fields.owner).toBe('extracted');
+});
+
+describe('a collection in a repository whose docs/meta.json names an owner', () => {
+  const tracks = { kind: 'collection' as const, namespace: 'm/db', id: 'tracks' };
+
+  const uses = (service: string, type: string) => ({
+    type,
+    from: { kind: 'service', id: service },
+    to: tracks,
+    provenance: 'extracted',
+    needsReview: false,
+  });
+
+  const ownerOf = async (
+    relationships: Array<ReturnType<typeof uses>>,
+    others: Array<ReturnType<typeof resource>> = [],
+    own = {},
+  ) => {
+    await fs.rm(path.join(root, 'CODEOWNERS'));
+    await fs.mkdir(path.join(root, 'services/orders-api/docs'));
+    await fs.writeFile(
+      path.join(root, 'services/orders-api/docs/meta.json'),
+      JSON.stringify({ owner: '@platform' }),
+    );
+
+    const owned = await withCodeowners(
+      parseResourceGraph({
+        spec: 'autocatalog/graph-v1',
+        resources: [
+          resource({ kind: 'service', id: 'orders-api' }),
+          // As a repository's resources.json holds one: its source names no repository.
+          resource(tracks, { source: { type: 'code', file: 'src/models.ts' }, ...own }),
+          ...others,
+        ],
+        relationships,
+      }),
+      repositories(),
+      apis,
+      root,
+      new Map([[resourceKey(tracks), { repository: 'orders-api' }]]),
+    );
+
+    return owned.resources.find(({ ref }) => ref.id === 'tracks')?.owner?.team;
+  };
+
+  it('is owned by it when only that owner’s services use the collection', async () => {
+    expect(await ownerOf([uses('orders-api', 'writes'), uses('orders-api', 'reads')])).toBe(
+      'platform',
+    );
+  });
+
+  it('keeps the owner the scan read from CODEOWNERS', async () => {
+    const own = { owner: { team: 'ledger' } };
+
+    expect(await ownerOf([uses('orders-api', 'writes')], [], own)).toBe('ledger');
+  });
+
+  it('stays unowned when its own services only read it', async () => {
+    expect(await ownerOf([uses('orders-api', 'reads')])).toBeUndefined();
+  });
+
+  it('stays unowned with no use recorded', async () => {
+    expect(await ownerOf([])).toBeUndefined();
+  });
+
+  it.each([
+    ['another team’s', { owner: { team: 'ledger' } }],
+    ['an unowned', {}],
+  ])('stays unowned when %s service uses it too', async (_, extra) => {
+    expect(
+      await ownerOf(
+        [uses('orders-api', 'writes'), uses('billing', 'reads')],
+        [resource({ kind: 'service', id: 'billing' }, extra)],
+      ),
+    ).toBeUndefined();
+  });
 });

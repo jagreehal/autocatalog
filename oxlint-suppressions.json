@@ -252,7 +252,7 @@
       "count": 16
     },
     "complexity": {
-      "count": 2
+      "count": 1
     },
     "max-params": {
       "count": 3
@@ -261,16 +261,10 @@
       "count": 2
     },
     "no-nested-ternary": {
-      "count": 2
-    },
-    "sonarjs/cognitive-complexity": {
-      "count": 1
-    },
-    "unicorn/consistent-function-scoping": {
       "count": 1
     },
     "unicorn/no-array-callback-reference": {
-      "count": 3
+      "count": 2
     },
     "unicorn/no-array-sort": {
       "count": 2
@@ -1027,9 +1021,6 @@
     }
   },
   "packages/docs/astro/src/apis.ts": {
-    "curly": {
-      "count": 1
-    },
     "max-params": {
       "count": 1
     },
@@ -1040,7 +1031,7 @@
       "count": 1
     },
     "typescript/strict-boolean-expressions": {
-      "count": 4
+      "count": 3
     },
     "unicorn/no-array-sort": {
       "count": 1
@@ -1146,14 +1137,11 @@
     }
   },
   "packages/docs/astro/src/codeowned.ts": {
-    "anti-slop/require-readable-spacing": {
-      "count": 1
-    },
     "max-params": {
       "count": 1
     },
     "typescript/strict-boolean-expressions": {
-      "count": 4
+      "count": 1
     }
   },
   "packages/docs/astro/src/components.ts": {
@@ -1349,11 +1337,8 @@
     "no-unused-vars": {
       "count": 1
     },
-    "typescript/no-non-null-assertion": {
-      "count": 1
-    },
     "typescript/strict-boolean-expressions": {
-      "count": 2
+      "count": 1
     },
     "unicorn/no-array-callback-reference": {
       "count": 3
@@ -2083,7 +2068,7 @@
       "count": 1
     },
     "typescript/strict-boolean-expressions": {
-      "count": 7
+      "count": 6
     }
   },
   "packages/docs/astro/src/shell.ts": {
@@ -2554,7 +2539,7 @@
       "count": 1
     },
     "typescript/consistent-return": {
-      "count": 4
+      "count": 3
     },
     "typescript/explicit-module-boundary-types": {
       "count": 1
@@ -2636,9 +2621,6 @@
   },
   "packages/docs/astro/src/ui/lib/visualiser.ts": {
     "complexity": {
-      "count": 1
-    },
-    "max-params": {
       "count": 1
     },
     "typescript/no-non-null-assertion": {
@@ -3305,9 +3287,6 @@
     "jsx-a11y/prefer-tag-over-role": {
       "count": 1
     },
-    "react/set-state-in-effect": {
-      "count": 1
-    },
     "typescript/explicit-module-boundary-types": {
       "count": 2
     },
@@ -3389,7 +3368,7 @@
       "count": 1
     },
     "typescript/strict-boolean-expressions": {
-      "count": 13
+      "count": 12
     },
     "unicorn/no-array-sort": {
       "count": 1
@@ -3628,11 +3607,6 @@
       "count": 1
     },
     "typescript/no-unsafe-type-assertion": {
-      "count": 1
-    }
-  },
-  "packages/docs/astro/test/readable-pinch.test.ts": {
-    "complexity": {
       "count": 1
     }
   },
@@ -4808,7 +4782,7 @@
       "count": 2
     },
     "typescript/strict-boolean-expressions": {
-      "count": 77
+      "count": 75
     },
     "typescript/use-unknown-in-catch-callback-variable": {
       "count": 8
@@ -5013,17 +4987,8 @@
     "complexity": {
       "count": 1
     },
-    "curly": {
-      "count": 3
-    },
     "typescript/explicit-module-boundary-types": {
       "count": 2
-    },
-    "typescript/no-non-null-assertion": {
-      "count": 1
-    },
-    "typescript/no-unnecessary-condition": {
-      "count": 1
     },
     "typescript/no-unsafe-argument": {
       "count": 1
@@ -5384,29 +5349,20 @@
     }
   },
   "packages/events/core/src/api-resources.ts": {
-    "anti-slop/require-readable-spacing": {
-      "count": 1
-    },
     "complexity": {
-      "count": 3
-    },
-    "curly": {
-      "count": 5
+      "count": 2
     },
     "max-params": {
       "count": 1
     },
-    "no-nested-ternary": {
-      "count": 1
-    },
     "sonarjs/cognitive-complexity": {
-      "count": 2
+      "count": 1
     },
     "typescript/explicit-module-boundary-types": {
       "count": 1
     },
     "typescript/strict-boolean-expressions": {
-      "count": 19
+      "count": 16
     },
     "unicorn/consistent-function-scoping": {
       "count": 1
@@ -5818,23 +5774,17 @@
     }
   },
   "packages/events/core/src/diff.ts": {
-    "anti-slop/require-readable-spacing": {
-      "count": 7
-    },
     "complexity": {
       "count": 4
     },
     "max-params": {
-      "count": 5
+      "count": 4
     },
     "no-nested-ternary": {
       "count": 4
     },
     "sonarjs/cognitive-complexity": {
       "count": 3
-    },
-    "typescript/no-non-null-assertion": {
-      "count": 4
     },
     "unicorn/no-array-sort": {
       "count": 1
@@ -5863,7 +5813,7 @@
       "count": 7
     },
     "typescript/strict-boolean-expressions": {
-      "count": 28
+      "count": 26
     },
     "unicorn/consistent-function-scoping": {
       "count": 2
@@ -6082,38 +6032,26 @@
     }
   },
   "packages/events/core/src/model-resources.ts": {
-    "anti-slop/require-readable-spacing": {
-      "count": 31
-    },
     "complexity": {
-      "count": 16
-    },
-    "curly": {
-      "count": 18
+      "count": 5
     },
     "max-depth": {
-      "count": 10
+      "count": 3
     },
     "max-params": {
-      "count": 5
+      "count": 1
     },
     "no-nested-ternary": {
       "count": 1
     },
     "sonarjs/cognitive-complexity": {
-      "count": 10
+      "count": 4
     },
     "typescript/no-non-null-assertion": {
-      "count": 13
-    },
-    "typescript/prefer-nullish-coalescing": {
       "count": 1
     },
     "typescript/strict-boolean-expressions": {
-      "count": 35
-    },
-    "unicorn/consistent-function-scoping": {
-      "count": 1
+      "count": 11
     },
     "unicorn/no-array-callback-reference": {
       "count": 1

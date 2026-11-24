@@ -63,6 +63,8 @@ export function autocatalogDocsRoutes(
   perReaderKinds?: Array<string>,
   /** A repository published at the root has `docs/index.md`, which is the home page. */
   docsHome = false,
+  /** `"llms": true`: documents are listed and copied for agents on a server site that knows no reader. */
+  llms = false,
 ): AstroIntegration {
   let base = '/';
   let output = 'static';
@@ -184,6 +186,7 @@ export function autocatalogDocsRoutes(
             perRequest: config.output === 'server',
             access: perReaderKinds !== undefined,
             audience,
+            llms,
           })
         ) {
           const kept = pages.filter(([pattern]) => !DOCUMENT_COPIES.has(pattern));
@@ -272,10 +275,11 @@ export function autocatalogDocsRoutes(
         const name = path.basename(file);
 
         // With `access`, every page that lists or copies documents is the reader's own.
-        // A server site for an audience renders them per request, behind its middleware.
+        // A server site for an audience, or with `llms`, renders the lists per request,
+        // behind its middleware.
         route.prerender = !(
           (perReaderKinds && PER_READER_PAGES.has(name)) ||
-          (output === 'server' && audience && DOCUMENT_LISTS.has(name))
+          (output === 'server' && (audience !== undefined || llms) && DOCUMENT_LISTS.has(name))
         );
       },
       // The dev server reloads every page when a file under the catalog changes.

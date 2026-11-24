@@ -201,9 +201,13 @@ export function HomeBlock({ block, id }: { block: HomeBlockData; id: string }) {
         <Attention id={id} attention={block.attention} />
       ) : null;
     case 'browse':
-      return block.stats.some(({ value }) => value > 0) ? (
+      return block.stats.length > 0 ? (
         <Section id={id} title={block.title ?? 'Browse by type'}>
-          <BrowseByType stats={block.stats} />
+          {block.stats.some(({ value }) => value > 0) ? (
+            <BrowseByType stats={block.stats} />
+          ) : (
+            <NoDocuments />
+          )}
         </Section>
       ) : null;
     case 'hero':
@@ -341,18 +345,7 @@ function Shelves({
   return (
     <Section id={id} title={title} count={total > 0 ? counted : undefined}>
       {repos.length === 0 ? (
-        <Empty>
-          <EmptyHeader>
-            <EmptyMedia variant="icon">
-              <Icon name="doc" />
-            </EmptyMedia>
-            <EmptyTitle>No documents yet</EmptyTitle>
-            <EmptyDescription>
-              Commit Markdown to a <code>docs/</code> folder in an enrolled repository and it
-              appears here on the next build.
-            </EmptyDescription>
-          </EmptyHeader>
-        </Empty>
+        <NoDocuments />
       ) : (
         <div className="grid items-start gap-4 md:grid-cols-2">
           {repos.map(({ name, label, description, href, docs }) => (
@@ -624,11 +617,29 @@ function BrowseByType({ stats }: { stats: Array<Stat> }) {
   );
 }
 
+/** What a site with nothing published yet says to do first. */
+function NoDocuments() {
+  return (
+    <Empty>
+      <EmptyHeader>
+        <EmptyMedia variant="icon">
+          <Icon name="doc" />
+        </EmptyMedia>
+        <EmptyTitle>No documents yet</EmptyTitle>
+        <EmptyDescription>
+          Commit Markdown to a <code>docs/</code> folder in an enrolled repository and it appears
+          here on the next build.
+        </EmptyDescription>
+      </EmptyHeader>
+    </Empty>
+  );
+}
+
 const SOURCES: Array<{ source: Source; name: string; means: string; colour: string }> = [
   {
     source: 'extracted',
     name: 'Extracted',
-    means: 'read from code and contracts',
+    means: 'read from code and contracts, or seen at runtime',
     colour: 'bg-extracted',
   },
   {

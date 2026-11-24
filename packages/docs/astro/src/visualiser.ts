@@ -114,6 +114,8 @@ export interface CatalogGraphOptions {
    */
   levels?: {
     open: 1 | 2 | 3;
+    /** The domains with a page; one only a message's namespace suggests is not drawn. */
+    domains: ReadonlySet<string>;
     domainHref: (name: string) => string;
     domainTitle: (name: string) => string;
   };
@@ -177,7 +179,7 @@ const MESSAGES = new Set(['event', 'command', 'query']);
 export function catalogLevels(
   diagram: { nodes: Array<GraphNode>; edges: Array<GraphEdge> },
   resources: Map<string, CatalogResource>,
-  { domainHref, domainTitle }: NonNullable<CatalogGraphOptions['levels']>,
+  { domains: known, domainHref, domainTitle }: NonNullable<CatalogGraphOptions['levels']>,
 ): { levels: NonNullable<VisualiserGraph['levels']>; hrefs: Record<string, string> } | undefined {
   const types = new Map(diagram.nodes.map((node) => [node.id, node.type]));
 
@@ -206,7 +208,7 @@ export function catalogLevels(
   for (const node of diagram.nodes) {
     const domain = ownDomain(node.id);
 
-    if (domain) {
+    if (domain !== undefined && known.has(domain)) {
       domainOf.set(node.id, domain);
     }
   }

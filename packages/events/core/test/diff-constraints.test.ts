@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { assessEventChange, compatibilityBreaks, diffSchemas, summariseDrift } from '../src/index';
-import type { JsonObject } from '../src/index';
+import type { CompatibilityMode, JsonObject, JsonValue } from '../src/index';
 
 // Properties stay plain JSON: JSON Schema allows boolean schemas, which the
 // cases below use and SchemaNode's `properties` does not describe.
@@ -412,6 +412,593 @@ describe('a $ref and its siblings both apply', () => {
     expect(report.hasBreaking).toBe(true);
     expect(compatibilityBreaks(report, 'backward').length).toBeGreaterThan(0);
   });
+});
+
+const branching = (branches: number) => ({
+  $defs: {
+    Base: {
+      type: 'object',
+      allOf: Array.from({ length: branches }, (_, i) => ({ required: [`r${i}`] })),
+    },
+  },
+  type: 'object',
+  properties: { value: { $ref: '#/$defs/Base', required: ['id'] } },
+});
+
+const beside = (sibling: { required?: Array<string> }) => ({
+  $defs: { Base: { type: 'object', allOf: [{ required: ['name'] }] } },
+  type: 'object',
+  properties: { value: { $ref: '#/$defs/Base', ...sibling } },
+});
+
+const capped = (sibling: { maxLength?: number }) => ({
+  $defs: { Name: { type: 'string', maxLength: 5 } },
+  type: 'object',
+  properties: { value: { $ref: '#/$defs/Name', ...sibling } },
+});
+
+const TUPLE: JsonObject = { unevaluatedItems: { type: 'string' } };
+
+const TAGS: JsonObject = { type: 'array', items: { type: 'string' } };
+
+const referring = (sibling: JsonObject, target = TAGS): JsonObject => ({
+  $defs: { Target: target },
+  type: 'object',
+  properties: { value: { $ref: '#/$defs/Target', ...sibling } },
+});
+
+const enclosed = (sibling: JsonObject, target: JsonObject = {}): JsonObject => ({
+  $defs: { Base: { type: 'object', ...target } },
+  type: 'object',
+  properties: {
+    value: { allOf: [{ $ref: '#/$defs/Base', ...sibling }], unevaluatedProperties: false },
+  },
+});
+
+/** A schema nested far deeper than the call stack goes. */
+const nested = (keyword: 'allOf' | 'items'): JsonObject => {
+  let schema: JsonObject = { type: 'string' };
+
+  for (let depth = 0; depth < 20_000; depth += 1) {
+    schema = { [keyword]: keyword === 'allOf' ? [schema] : schema };
+  }
+
+  return schema;
+};
+
+const elsewhere = (value: JsonObject): JsonObject => ({
+  type: 'object',
+  properties: {
+    value: { type: 'string', ...value },
+    metadata: { type: 'object', unevaluatedProperties: false },
+  },
+});
+
+const severities = (from: JsonObject, to: JsonObject) => [
+  ...new Set(assess(from, to).map(({ severity }) => severity)),
+];
+
+const deepValue = (last: string): JsonValue => {
+  let value: JsonValue = last;
+
+  for (let depth = 0; depth < 20_000; depth += 1) {
+    value = [value];
+  }
+
+  return value;
+};
+
+const closing = (schema: JsonObject): JsonObject =>
+  wrap({ value: { ...schema, unevaluatedProperties: false } });
+
+const besideA = (branch: JsonObject): JsonObject =>
+  closing({ allOf: [branch, { properties: { a: true } }] });
+
+const fielded = (sibling: JsonObject, target: JsonObject): JsonObject => ({
+  $defs: {
+    Short: { type: 'string' },
+    Target: {
+      type: 'object',
+      properties: { id: { type: 'string' }, ref: { $ref: '#/$defs/Short' } },
+      ...target,
+    },
+  },
+  type: 'object',
+  properties: { value: { $ref: '#/$defs/Target', properties: sibling } },
+});
+
+const modesBroken = (from: JsonObject, to: JsonObject) => {
+  const report = summariseDrift(assess(from, to));
+
+  return (['backward', 'forward'] as const).filter(
+    (mode) => compatibilityBreaks(report, mode).length > 0,
+  );
+};
+
+describe('a $ref with siblings lines up with the same schema', () => {
+  it('reports only the branch a target gains, beside an unchanged sibling', () => {
+    const findings = assess(branching(1), branching(2));
+
+    expect(findings.map((f) => f.diff?.path)).toEqual(['value|allOf']);
+  });
+
+  it.each([
+    ['removed', {}],
+    ['changed', { required: ['other'] }],
+  ])('compares the target with itself when a sibling is %s', (_, sibling) => {
+    const id = beside({ required: ['id'] });
+    const other = beside(sibling);
+    const named = expect.stringContaining('.name');
+
+    expect(assess(id, other).map((f) => f.diff?.path)).not.toContainEqual(named);
+    expect(assess(other, id).map((f) => f.diff?.path)).not.toContainEqual(named);
+    expect(assess(id, beside({})).filter((f) => f.severity === 'breaking')).toEqual([]);
+  });
+
+  it('reads a sibling by what it adds to the same keyword in the target', () => {
+    expect(assess(capped({}), capped({ maxLength: 10 }))).toEqual([]);
+    expect(assess(capped({ maxLength: 10 }), capped({}))).toEqual([]);
+    expect(assess(capped({}), capped({ maxLength: 3 })).map((f) => f.diff?.detail)).toEqual([
+      'maxLength 5 → 3',
+    ]);
+  });
+
+  it.each([
+    ['required', ['id'], ['id']],
+    ['type', 'integer', 'number'],
+    ['enum', ['a', 'b'], ['b', 'a', 'c']],
+    ['multipleOf', 10, 5],
+    ['uniqueItems', true, false],
+    ['pattern', '^a', '^a'],
+  ])('finds nothing in a %s the target already says', (keyword, target, sibling) => {
+    const schema = (next: JsonObject) => ({
+      $defs: { Base: { [keyword]: target } },
+      type: 'object',
+      properties: { value: { $ref: '#/$defs/Base', ...next } },
+    });
+
+    expect(assess(schema({}), schema({ [keyword]: sibling }))).toEqual([]);
+  });
+
+  it.each<JsonObject>([
+    { uniqueItems: false },
+    { minItems: 0 },
+    { items: {} },
+    { required: [] },
+    { additionalProperties: true },
+    { not: false },
+  ])('finds nothing in a sibling that rejects nothing: %j', (sibling) => {
+    expect(assess(referring({}), referring(sibling))).toEqual([]);
+    expect(assess(referring(sibling), referring({}))).toEqual([]);
+  });
+
+  it('keeps a sibling field that an unevaluatedProperties around it relies on', () => {
+    expect(assess(enclosed({ properties: { a: true } }), enclosed({}))).not.toEqual([]);
+    expect(assess(enclosed({ additionalProperties: true }), enclosed({}))).not.toEqual([]);
+    expect(
+      assess(enclosed({ allOf: [{ properties: { b: true } }] }), enclosed({})).map(
+        (f) => f.severity,
+      ),
+    ).not.toContain('additive');
+  });
+
+  it('reads unevaluatedProperties only where it applies', () => {
+    expect(severities(elsewhere({ allOf: [{ minLength: 2 }] }), elsewhere({}))).toEqual([
+      'additive',
+    ]);
+    expect(severities(enclosed({}), enclosed({ properties: { a: true } }))).toEqual(['additive']);
+    expect(severities(enclosed({ properties: { a: true } }), enclosed({}))).not.toContain(
+      'additive',
+    );
+  });
+
+  it('keeps an object both enums allow, however its fields are ordered', () => {
+    const target: JsonObject = { enum: [{ a: 1, b: 2 }, { c: 3 }] };
+    const both = referring({ enum: [{ b: 2, a: 1 }, { c: 3 }] }, target);
+
+    expect(assess(both, referring({ enum: [{ c: 3 }] }, target))).not.toEqual([]);
+    expect(assess(both, referring({}, target))).toEqual([]);
+  });
+
+  it('compares a schema deeper than the walk with itself', () => {
+    expect(diffSchemas(nested('allOf'), nested('allOf'))).toEqual([]);
+    expect(diffSchemas(nested('items'), nested('items'))).toEqual([]);
+    expect(diffSchemas(referring({}, nested('items')), referring({}, nested('items')))).toEqual([]);
+  });
+
+  it('leaves a target’s own unevaluatedProperties out of what is beside the reference', () => {
+    const closed: JsonObject = { type: 'object', unevaluatedProperties: false };
+    const named = referring({ properties: { a: true } }, closed);
+
+    expect(assess(named, referring({}, closed))).toEqual([]);
+    expect(assess(referring({}, closed), named)).toEqual([]);
+    // A target's unevaluatedItems says nothing of one for properties beside the reference.
+    expect(
+      severities(
+        referring({ properties: { a: {} }, unevaluatedProperties: false }, TUPLE),
+        referring({ unevaluatedProperties: false }, TUPLE),
+      ),
+    ).toEqual(['breaking']);
+    // One around the reference reads both, and the target's names every field.
+    expect(
+      severities(
+        enclosed({ properties: { a: true } }, { unevaluatedProperties: { type: 'string' } }),
+        enclosed({}, { unevaluatedProperties: { type: 'string' } }),
+      ),
+    ).toEqual([]);
+  });
+
+  it.each<[string, { before: JsonObject; after: JsonObject; expected: Array<string> }]>([
+    [
+      'names nothing',
+      {
+        before: { dependentSchemas: { a: { required: ['b'] } } },
+        after: {},
+        expected: ['additive'],
+      },
+    ],
+    [
+      'names only what the target still names',
+      {
+        before: {
+          allOf: [{ properties: { a: true, b: true } }, { properties: { a: { maximum: 5 } } }],
+        },
+        after: { allOf: [{ properties: { a: true, b: true } }] },
+        expected: ['additive'],
+      },
+    ],
+    [
+      'names fields a pattern still names',
+      {
+        before: { patternProperties: { '^a': true }, allOf: [{ properties: { ab: true } }] },
+        after: { patternProperties: { '^a': true } },
+        expected: [],
+      },
+    ],
+    [
+      'names fields of a value that is never an object',
+      {
+        before: { type: 'string', allOf: [{ properties: { a: true } }] },
+        after: { type: 'string' },
+        expected: [],
+      },
+    ],
+    [
+      'names a field nothing else does',
+      { before: { allOf: [{ properties: { a: true } }] }, after: {}, expected: ['breaking'] },
+    ],
+    [
+      'names every field',
+      {
+        before: { properties: { a: true }, allOf: [{ additionalProperties: { type: 'string' } }] },
+        after: { properties: { a: true } },
+        expected: ['breaking'],
+      },
+    ],
+    [
+      'named fields only to reject them',
+      {
+        before: { allOf: [{ patternProperties: { '^a': false }, additionalProperties: false }] },
+        after: {},
+        expected: [],
+      },
+    ],
+    [
+      'may name a field',
+      { before: { anyOf: [{ properties: { a: true } }, {}] }, after: {}, expected: ['breaking'] },
+    ],
+  ])('reads what goes under unevaluatedProperties when it %s', (_, { before, after, expected }) => {
+    expect(severities(closing(before), closing(after))).toEqual(expected);
+  });
+
+  it('reads what another branch under the same unevaluatedProperties names', () => {
+    const named = { allOf: [{ properties: { a: { maximum: 5 } } }] };
+    const alone = { allOf: [{ properties: { b: true } }] };
+
+    expect(severities(besideA(named), besideA({}))).toEqual(['additive']);
+    expect(severities(besideA(alone), besideA({}))).toEqual(['breaking']);
+  });
+
+  it('prints a value nested deeper than the call stack', () => {
+    for (const keyword of ['const', 'enum', 'x-unmodelled', 'dependentRequired']) {
+      const schema = (last: string) =>
+        wrap({ value: { [keyword]: keyword === 'enum' ? [deepValue(last)] : deepValue(last) } });
+
+      const findings = assess(schema('a'), schema('b'));
+
+      expect(findings.length > 0).toBe(!keyword.startsWith('x-'));
+    }
+
+    expect(
+      assess(wrap({ value: { const: { a: [1] } } }), wrap({ value: { const: 2 } })).map(
+        (f) => f.diff?.detail,
+      ),
+    ).toEqual(['const {"a":[1]} → 2']);
+  });
+
+  it.each<[string, { before: JsonObject; after: JsonObject; expected: Array<string> }]>([
+    [
+      'dropped, so items governs its place',
+      {
+        before: { prefixItems: [{}], items: { type: 'string', minLength: 2 } },
+        after: { items: { type: 'string', minLength: 2 } },
+        expected: ['breaking'],
+      },
+    ],
+    [
+      'dropped with nothing after it',
+      { before: { prefixItems: [{ type: 'string' }] }, after: {}, expected: ['additive'] },
+    ],
+    ['added', { before: {}, after: { prefixItems: [{ type: 'string' }] }, expected: ['breaking'] }],
+    ['that rejects nothing', { before: {}, after: { prefixItems: [{}, true] }, expected: [] }],
+    [
+      'longer by one',
+      {
+        before: { prefixItems: [{ type: 'string' }] },
+        after: { prefixItems: [{ type: 'string' }, { type: 'integer' }] },
+        expected: ['breaking'],
+      },
+    ],
+    [
+      'longer, where items allowed nothing',
+      {
+        before: { prefixItems: [{}], items: false },
+        after: { prefixItems: [{}, { type: 'string' }], items: false },
+        expected: ['additive'],
+      },
+    ],
+  ])('reads a prefixItems %s', (_, { before, after, expected }) => {
+    expect(
+      severities(
+        wrap({ list: { type: 'array', ...before } }),
+        wrap({ list: { type: 'array', ...after } }),
+      ),
+    ).toEqual(expected);
+  });
+
+  it.each<
+    [string, { from: JsonObject; to: JsonObject; target?: JsonObject; expected: Array<string> }]
+  >([
+    [
+      'added',
+      { from: {}, to: { note: { type: 'string' } }, expected: ['additive field_added value.note'] },
+    ],
+    [
+      'removed',
+      {
+        from: { note: { type: 'string' } },
+        to: {},
+        expected: ['breaking field_removed value.note'],
+      },
+    ],
+    [
+      'added as anything',
+      { from: {}, to: { note: true }, expected: ['additive field_added value.note'] },
+    ],
+    [
+      'tightened',
+      {
+        from: {},
+        to: { id: { maxLength: 3 } },
+        expected: ['breaking constraint_tightened value.id'],
+      },
+    ],
+    [
+      'tightened through its own reference',
+      {
+        from: {},
+        to: { ref: { maxLength: 3 } },
+        expected: ['breaking constraint_tightened value.ref'],
+      },
+    ],
+    [
+      'added beside a closed target',
+      {
+        from: {},
+        to: { note: { type: 'string' } },
+        target: { additionalProperties: false },
+        expected: ['breaking constraint_tightened value|allOf'],
+      },
+    ],
+  ])(
+    'reads a field %s beside a $ref as one written inline',
+    (_, { from, to, target, expected }) => {
+      const schema = (properties: JsonObject) => fielded(properties, target ?? {});
+
+      expect(
+        assess(schema(from), schema(to)).map((f) => [f.severity, f.kind, f.diff?.path].join(' ')),
+      ).toEqual(expected);
+    },
+  );
+
+  it('reads a draft 2019-09 tuple', () => {
+    const open = referring({}, { type: 'array' });
+
+    expect(severities(open, referring({ items: [{ type: 'string' }] }, { type: 'array' }))).toEqual(
+      ['breaking'],
+    );
+
+    const tuple = (more: JsonObject) => wrap({ list: { items: [{ type: 'string' }], ...more } });
+
+    expect(severities(tuple({}), tuple({ additionalItems: false }))).toEqual(['breaking']);
+    expect(severities(tuple({ additionalItems: false }), tuple({}))).toEqual(['additive']);
+    expect(
+      severities(tuple({}), wrap({ list: { items: [{ type: 'string' }, { type: 'string' }] } })),
+    ).toEqual(['breaking']);
+  });
+
+  it.each<[string, (value: JsonValue) => JsonObject]>([
+    ['a field', (value) => wrap({ a: value })],
+    ['items', (value) => wrap({ list: { type: 'array', items: value } })],
+    ['unknown fields', (value) => wrap({ map: { type: 'object', additionalProperties: value } })],
+  ])('compares %s that accepts anything with one that does not', (_, schema) => {
+    expect(modesBroken(schema(true), schema({ minLength: 2 }))).toEqual(['backward']);
+    expect(modesBroken(schema({ minLength: 2 }), schema(true))).toEqual(['forward']);
+    expect(modesBroken(schema(true), schema(false))).toContain('backward');
+  });
+
+  it.each<[string, { target: JsonObject; sibling: JsonObject }]>([
+    [
+      'the target’s own',
+      {
+        target: { unevaluatedProperties: { type: 'string' } },
+        sibling: { unevaluatedProperties: false },
+      },
+    ],
+    [
+      'additionalProperties',
+      { target: { additionalProperties: true }, sibling: { unevaluatedProperties: false } },
+    ],
+    ['items', { target: { items: { type: 'string' } }, sibling: { unevaluatedItems: false } }],
+  ])(
+    'finds nothing in an unevaluated keyword that %s leaves nothing for',
+    (_, { target, sibling }) => {
+      expect(assess(referring({}, target), referring(sibling, target))).toEqual([]);
+      expect(assess(referring(sibling, target), referring({}, target))).toEqual([]);
+    },
+  );
+
+  it('reads an unevaluated keyword that has something left', () => {
+    const target = { properties: { a: true } };
+
+    expect(
+      modesBroken(referring({}, target), referring({ unevaluatedProperties: false }, target)),
+    ).toEqual(['backward']);
+  });
+
+  it('reports a field newly required as it stops being described', () => {
+    const before = wrap({ a: { type: 'string' } });
+
+    expect(modesBroken(before, { type: 'object', required: ['a'] })).toContain('backward');
+  });
+
+  it('keeps what a branch named when it is replaced with one that accepts anything', () => {
+    const conditional = { properties: { a: true }, if: { required: ['a'] } };
+    const named = { properties: { b: { type: 'string' } } };
+
+    expect(
+      severities(
+        closing({ ...conditional, else: { properties: { b: true } } }),
+        closing({ ...conditional, else: true }),
+      ),
+    ).toEqual(['breaking']);
+    // A predicate that widens can send a value into the stricter branch.
+    expect(
+      severities(
+        wrap({ value: { if: { required: ['a'] }, else: named } }),
+        wrap({ value: { if: true, else: named } }),
+      ),
+    ).toEqual(['breaking']);
+  });
+
+  it.each<[string, { before: JsonObject; gained: JsonObject; expected: Array<CompatibilityMode> }]>(
+    [
+      [
+        'a field by a branch',
+        {
+          before: { unevaluatedProperties: false },
+          gained: { allOf: [{ properties: { a: { type: 'string' } } }] },
+          expected: ['forward'],
+        },
+      ],
+      [
+        'a field',
+        {
+          before: { unevaluatedProperties: false },
+          gained: { properties: { a: { type: 'string' } } },
+          expected: ['forward'],
+        },
+      ],
+      [
+        'every item',
+        { before: { unevaluatedItems: false }, gained: { items: true }, expected: ['forward'] },
+      ],
+      [
+        'items of one type',
+        {
+          before: { unevaluatedItems: false },
+          gained: { items: { type: 'string' } },
+          expected: ['forward'],
+        },
+      ],
+      [
+        'a field of any type',
+        {
+          before: { unevaluatedProperties: { type: 'integer' } },
+          gained: { properties: { a: true } },
+          expected: ['forward'],
+        },
+      ],
+      [
+        'a constrained field that another schema governed',
+        {
+          before: { unevaluatedProperties: { type: 'integer' } },
+          gained: { properties: { a: { minimum: 5 } } },
+          expected: ['backward', 'forward'],
+        },
+      ],
+      [
+        'fields a pattern exempts',
+        {
+          before: { additionalProperties: false },
+          gained: { patternProperties: { '^a': { type: 'string' } } },
+          expected: ['forward'],
+        },
+      ],
+      [
+        'a field, and requires it',
+        {
+          before: { unevaluatedProperties: false },
+          gained: { allOf: [{ properties: { a: true }, required: ['a'] }] },
+          expected: ['backward', 'forward'],
+        },
+      ],
+    ],
+  )('breaks the readers that reject %s', (_, { before, gained, expected }) => {
+    const [from, to] = [wrap({ value: before }), wrap({ value: { ...before, ...gained } })];
+
+    expect(modesBroken(from, to)).toEqual(expected);
+    expect(modesBroken(to, from)).toEqual(
+      expect.arrayContaining(expected.length > 1 ? expected : ['backward']),
+    );
+  });
+
+  it('keeps a sibling that names the only fields allowed', () => {
+    const closed = referring({ properties: { id: true }, additionalProperties: false });
+
+    expect(assess(referring({}), closed)).toContainEqual(
+      expect.objectContaining({ severity: 'breaking' }),
+    );
+    expect(assess(closed, referring({ additionalProperties: false }))).not.toEqual([]);
+  });
+
+  it('finds nothing in an inline bound that rejects nothing', () => {
+    const tags = { type: 'array' };
+
+    expect(
+      assess(wrap({ tags }), wrap({ tags: { ...tags, uniqueItems: false, minItems: 0 } })),
+    ).toEqual([]);
+  });
+
+  it('reads an added constraint as that constraint, and one written inline as no change', () => {
+    const named = { $defs: { Name: { type: 'string' } }, type: 'object' };
+    const value = { $ref: '#/$defs/Name' };
+    const plain = { ...named, properties: { value } };
+    const referenced = { ...named, properties: { value: { ...value, maxLength: 5 } } };
+    const inline = { ...named, properties: { value: { type: 'string', maxLength: 5 } } };
+
+    expect(assess(plain, referenced).map((f) => f.diff?.detail)).toEqual([
+      expect.stringContaining('maxLength'),
+    ]);
+    expect(assess(inline, referenced)).toEqual([]);
+  });
+});
+
+it('catches a oneOf branch that stops rejecting everything', () => {
+  const before = wrap({ value: { oneOf: [{ type: 'string' }, false] } });
+  const after = wrap({ value: { oneOf: [{ type: 'string' }, true] } });
+
+  expect(assess(before, after)).toContainEqual(expect.objectContaining({ severity: 'breaking' }));
 });
 
 describe('a boolean property schema is a schema', () => {

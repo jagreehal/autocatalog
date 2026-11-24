@@ -10,7 +10,8 @@ ac drift         # compare against a baseline and fail on breaking changes
 ac site . --dev  # serve the catalog and docs as one site
 ```
 
-Most people start with `npx autocatalog .`, which installs and runs this.
+Most people start with `npx autocatalog .`, which installs and runs this with
+the site builder. On its own this package runs everything except `ac site`.
 
 Documented at **[jagreehal.github.io/autocatalog](https://jagreehal.github.io/autocatalog)**.
 

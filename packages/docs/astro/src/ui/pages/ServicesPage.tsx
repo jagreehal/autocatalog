@@ -1,7 +1,7 @@
 /** @jsxImportSource react */
-import { useFieldValue } from '#ui/lib/field.ts';
+import { usePagedTable } from '#ui/lib/paged-table.ts';
 import { SearchIcon } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import type { Key, SortDescriptor } from 'react-aria-components';
 import { Card, CardContent } from '#ui/components/ui/card.tsx';
 import {
@@ -23,7 +23,7 @@ import {
 import { Icon } from '../components/Icon';
 import { IconTile } from '../components/IconTile';
 import { ExpandButton, SortableHead, TablePager } from '../components/PagedTable';
-import { pageOf, rangeLabel, readSort, sortRows, writeSort } from '../lib/paging';
+import { pageOf, rangeLabel, sortRows } from '../lib/paging';
 
 export interface ServiceLink {
   label: string;
@@ -112,23 +112,15 @@ const SORT_COLUMNS = ['name', 'domain', 'owner', 'sends', 'receives'] as const;
  * and OpenAPI specs alike, so a catalog with either has a full list.
  */
 export function ServicesPage({ services }: ServicesPageProps) {
-  const { value: query, setValue: setQuery, field: queryField } = useFieldValue();
+  const table = usePagedTable(SORT_COLUMNS, byName);
 
-  const [sort, setSort] = useState(byName);
-
-  const [page, setPage] = useState(1);
-
-  const [open, setOpen] = useState<ReadonlySet<string>>(new Set());
+  const { query, sort, open, restore } = table;
 
   // `?page=`, `?q=` and the sort from the pager, so a page survives a reload
   // or a new tab showing the same rows.
   useEffect(() => {
-    const params = new URLSearchParams(location.search);
-
-    setQuery(params.get('q') ?? '');
-    setSort(readSort(params, SORT_COLUMNS, byName));
-    setPage(Number(params.get('page')) || 1);
-  }, [setQuery]);
+    restore(new URLSearchParams(location.search));
+  }, [restore]);
 
   if (services.length === 0) {
     return (
@@ -157,20 +149,9 @@ export function ServicesPage({ services }: ServicesPageProps) {
     sortValue,
   );
 
-  const current = pageOf(shown, page);
+  const current = pageOf(shown, table.page);
 
   const unowned = services.filter((row) => !row.owner).length;
-
-  const toggle = (href: string) =>
-    setOpen((was) => {
-      const next = new Set(was);
-
-      if (!next.delete(href)) {
-        next.add(href);
-      }
-
-      return next;
-    });
 
   return (
     <div className="not-content flex flex-col gap-6" data-wide>
@@ -191,11 +172,7 @@ export function ServicesPage({ services }: ServicesPageProps) {
             aria-label="Filter services"
             placeholder="Filter by service, owner, domain, API or event"
             autoComplete="off"
-            {...queryField}
-            onChange={(event) => {
-              queryField.onChange(event);
-              setPage(1);
-            }}
+            {...table.field}
           />
         </InputGroup>
         <p
@@ -212,14 +189,7 @@ export function ServicesPage({ services }: ServicesPageProps) {
           {shown.length === 0 ? (
             <p className="m-0 text-muted-foreground">No service matches “{query}”.</p>
           ) : (
-            <Table
-              aria-label="Services"
-              sortDescriptor={sort}
-              onSortChange={(next) => {
-                setSort(next);
-                setPage(1);
-              }}
-            >
+            <Table aria-label="Services" {...table.sorting}>
               <TableHeader>
                 <TableHead id="details">
                   <span className="sr-only">Details</span>
@@ -245,7 +215,7 @@ export function ServicesPage({ services }: ServicesPageProps) {
                       key={row.href}
                       row={row}
                       expanded={expanded}
-                      onToggle={() => toggle(row.href)}
+                      onToggle={() => table.toggle(row.href)}
                     />
                   );
 
@@ -263,19 +233,8 @@ export function ServicesPage({ services }: ServicesPageProps) {
         label="Service pages"
         page={current.page}
         pages={current.pages}
-        hrefOf={(target) => {
-          const params = new URLSearchParams();
-
-          if (query.trim()) {
-            params.set('q', query.trim());
-          }
-
-          writeSort(params, sort, byName);
-          params.set('page', String(target));
-
-          return `?${params}`;
-        }}
-        onPage={setPage}
+        hrefOf={(target) => table.hrefOf(target)}
+        onPage={table.setPage}
       />
     </div>
   );

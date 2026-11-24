@@ -109,6 +109,7 @@ export {
   endpointId,
   linkEndpointCalls,
   publishedApis,
+  servicesServing,
   withEndpoints,
   withoutCallerFields,
   withLinkedCalls,

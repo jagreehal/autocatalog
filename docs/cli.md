@@ -17,6 +17,10 @@ npx autocatalog .        # scan this repository into events/
 ac .                     # the same thing, once installed
 ```
 
+`autocatalog` also installs what `ac site` builds with. A repository that checks
+contracts in CI and builds no site can install `autocatalog-cli` alone, which is
+smaller and runs every other command.
+
 A bare directory means `scan`, because a directory cannot mean anything else.
 Every command that writes into your repository ends by saying what it wrote and
 whether to commit it; `ac site --dev` writes nothing there. Run `ac <command> --help` for the full flag list; this

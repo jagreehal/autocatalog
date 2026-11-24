@@ -24,7 +24,7 @@ Its last line names the contract in force:
 
 If `additionalProperties` is `false`, a field the contract does not declare will fail the check. Ask before proposing a contract change.
 
-When `docs/meta.json` names an `owner`, a page takes it unless the page names its own. Leave `owner` out of those pages.
+When `docs/meta.json` names an `owner`, a page takes it unless the page names its own. Leave `owner` out of those pages. The repository's API endpoints take that owner too, where no CODEOWNERS rule covers the spec, and so do the collections and tables that only the owner's services use.
 
 ## 2. Put the file in the repository that owns the code
 

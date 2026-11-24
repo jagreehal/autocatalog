@@ -12,9 +12,9 @@ import {
   edgesForFrame,
   edgeWeight,
   liveFrame,
-  readablePinch,
   replaySchedule,
 } from '#ui/lib/visualiser.ts';
+import { openReadable } from '#ui/lib/open-readable.ts';
 import type { EdgeEvidence, LiveFeed, FlowStepData, VisualiserGraph } from '#ui/lib/visualiser.ts';
 
 // The visualiser's legend counts and colours nodes by collection name, which
@@ -207,77 +207,14 @@ export default function Visualiser({
 
   const opensAtOverview = initialLevel === 1 && levelsLaid[1] !== undefined;
 
-  // Once the visualiser has fitted the overview to its box, zoom it to a
-  // readable size from its top left, where the flow begins. The reader pans
-  // from there, and Fit view still shows it all.
+  // Once fitted to its box, the overview is zoomed to a readable size from its
+  // top left, where the flow begins. Fit view still shows it all.
   useEffect(() => {
     const portal = document.getElementById(`${id}-portal`);
 
-    if (!opensAtOverview || !portal) {
-      return;
-    }
-
-    let last: number | undefined;
-    let still = 0;
-
-    const timer = window.setInterval(() => {
-      const viewport = portal.querySelector('.react-flow__viewport');
-
-      const pane = portal.querySelector('.react-flow__renderer');
-
-      if (!viewport || !pane) {
-        return;
-      }
-
-      const zoom = new DOMMatrix(getComputedStyle(viewport).transform).a;
-
-      still = zoom === last ? still + 1 : 0;
-      last = zoom;
-
-      if (still < 3) {
-        return;
-      }
-
-      clearInterval(timer);
-
-      const box = pane.getBoundingClientRect();
-
-      const nodes = [...portal.querySelectorAll('.react-flow__node')].map((node) =>
-        node.getBoundingClientRect(),
-      );
-
-      const { padding } = DIAGRAM_FIT_VIEW_OPTIONS;
-
-      const pinch = readablePinch(
-        zoom,
-        navigator.userAgent.includes('Mac'),
-        {
-          x: Math.min(...nodes.map(({ left }) => left)),
-          y: Math.min(...nodes.map(({ top }) => top)),
-        },
-        // The corner sits where the visualiser's own fit leaves it, clear of its controls.
-        {
-          x: box.left + Number.parseFloat(padding.left),
-          y: box.top + Number.parseFloat(padding.top),
-        },
-      );
-
-      if (!pinch) {
-        return;
-      }
-
-      pane.dispatchEvent(
-        new WheelEvent('wheel', {
-          ...pinch,
-          ctrlKey: true,
-          deltaMode: WheelEvent.DOM_DELTA_PAGE,
-          bubbles: true,
-          cancelable: true,
-        }),
-      );
-    }, 100);
-
-    return () => clearInterval(timer);
+    return opensAtOverview && portal
+      ? openReadable(portal, DIAGRAM_FIT_VIEW_OPTIONS.padding)
+      : undefined;
   }, [id, opensAtOverview]);
 
   // The visualiser reads its grouping style from the address alone, so a

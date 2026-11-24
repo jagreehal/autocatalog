@@ -67,6 +67,8 @@ node scripts/regenerate.mjs ~/eventcatalog
 It runs `ac from-eventcatalog`, then `scripts/convert.mjs`, then
 `ac resources scan` on each repository, then Prettier. Run twice, it writes the
 same files, so change the catalog by changing the converter and regenerating.
+Each repository's `flows/` is the exception: those are written by hand, and
+regenerating keeps them.
 
 ## What the build reports
 

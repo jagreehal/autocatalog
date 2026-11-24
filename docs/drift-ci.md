@@ -473,17 +473,20 @@ response change that old readers cannot parse — a new enum value, say — fail
 
 Whether a change is compatible usually depends on the object it happens in, so
 the rows below say which condition decides. "Open" means the object accepts
-properties it does not name; "restricted" means `additionalProperties` is
-`false` or a schema that constrains them.
+properties it does not name. "Restricted" means `additionalProperties`, or an
+`unevaluatedProperties` that applies to the object, is a schema for them, and
+"closed" means it is `false`. Drift compares a `$ref` with the keywords beside it
+as one schema.
 
 | Change                                                                                                  | BACKWARD | FORWARD |
 | ------------------------------------------------------------------------------------------------------- | -------- | ------- |
 | Add optional field, object open                                                                         | ✖        | ok      |
 | Add optional field, object restricted                                                                   | ✖        | ✖       |
+| Add optional field, object closed                                                                       | ok       | ✖       |
 | Add required field                                                                                      | ✖        | ok      |
 | Add a field forbidden by `false`                                                                        | ✖        | ok      |
 | Remove optional field, object open                                                                      | ok       | ✖       |
-| Remove optional field, object closed                                                                    | ok       | ok      |
+| Remove optional field, object closed                                                                    | ✖        | ok      |
 | Remove required field                                                                                   | ok       | ✖       |
 | Field becomes required                                                                                  | ✖        | ok      |
 | Field becomes optional                                                                                  | ok       | ✖       |
@@ -495,13 +498,11 @@ properties it does not name; "restricted" means `additionalProperties` is
 | Enum values added, or an enum dropped                                                                   | ok       | ✖       |
 | Event removed                                                                                           | ✖        | ✖       |
 
-Two rows are worth reading twice, because both once said "ok" here and a
-validator disagreed.
-
-**Adding an optional field is not free.** If the object was open, that name
+**Adding an optional field can break a reader.** If the object was open, that name
 already accepted any value, and typing it rejects payloads that carried
-something else — so BACKWARD fails. If the object was restricted, the new field
-also lets through values the old schema refused, so FORWARD fails too. The
+something else, so BACKWARD fails. If the object was restricted, the new field
+also lets through values the old schema refused, so FORWARD fails too. In a
+closed object no old payload carries the field, so FORWARD alone fails. The
 severity model still calls this `additive`, on purpose: adding a field is the
 commonest change there is, and failing the default gate on it is how a gate
 gets turned off.
@@ -516,10 +517,11 @@ branches are identical — because there the predicate cannot change what is
 accepted. For the rest, `--compatibility none` or a narrower gate is the escape
 hatch.
 
-**Removing an optional field is not free either.** Dropping the definition stops
+**Removing an optional field can too.** Dropping the definition stops
 constraining the name, so a new producer may send it as anything and a reader
-built from the old schema rejects that — FORWARD fails. It only stays compatible
-when the object is closed, which stops the field appearing at all.
+built from the old schema rejects that: FORWARD fails. In a closed object
+BACKWARD fails instead, because the new schema rejects an old payload that
+carries the field.
 
 These are the registry's rules, not the severity model above, and the two
 disagree on purpose. Removing an optional field is `breaking` here — a consumer

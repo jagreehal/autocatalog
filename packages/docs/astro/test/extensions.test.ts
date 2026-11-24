@@ -2,7 +2,13 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { loadSiteExtensions, mergeSiteExtensions, siteBundling } from '../src/extensions';
+import type { JsonObject } from 'autocatalog-core';
+import {
+  loadSiteExtensions,
+  mergeSiteExtensions,
+  siteBundling,
+  siteImport,
+} from '../src/extensions';
 
 describe('site extensions', () => {
   it('folds extensions in order, local paths against their own folder', () => {
@@ -78,6 +84,56 @@ describe('site extensions', () => {
   });
 });
 
+describe('an import the server loads when it runs', () => {
+  it('is marked with the folder that names it, unless that is autocatalog’s', async () => {
+    const project = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), 'autocatalog-own-')));
+
+    const module = async (file: string, root: string, manifest: JsonObject) => {
+      await fs.mkdir(path.join(project, path.dirname(file)), { recursive: true });
+      await fs.writeFile(path.join(project, root, 'package.json'), JSON.stringify(manifest));
+      await fs.writeFile(path.join(project, file), '');
+
+      return path.join(project, file);
+    };
+
+    const ext = 'node_modules/.pnpm/ext@1/node_modules/ext';
+
+    try {
+      const site = await module('site/middleware.ts', '.', {
+        dependencies: { buffer: '6', express: '4', path: '0.12' },
+      });
+
+      const extension = await module(`${ext}/lib/middleware.js`, ext, {
+        peerDependencies: { express: '4' },
+      });
+
+      const sdk = await module('node_modules/sdk/server.js', 'node_modules/sdk', {
+        dependencies: { express: '5' },
+      });
+
+      const bare = await module('node_modules/bare/index.js', 'node_modules/bare', {});
+      const folders = new Set([path.dirname(sdk)]);
+
+      const mark = (importer: string, source = 'express') =>
+        siteImport(source, importer, { project, folders });
+
+      expect(mark(`${site}?astro`)).toBe('autocatalog-site:express?from=');
+      expect(mark(extension, 'express/lib/router')).toBe(
+        `autocatalog-site:express/lib/router?from=${encodeURIComponent(ext)}`,
+      );
+      expect(mark(sdk)).toBeUndefined();
+      expect(mark(bare)).toBeUndefined();
+      expect(mark(site, 'cookie')).toBeUndefined();
+      // The npm polyfills: Node answers these names itself, but not with a path after them.
+      expect(mark(site, 'path')).toBeUndefined();
+      expect(mark(site, 'buffer/')).toBe('autocatalog-site:buffer/?from=');
+      expect(mark('virtual:astro')).toBeUndefined();
+    } finally {
+      await fs.rm(project, { recursive: true, force: true });
+    }
+  });
+});
+
 describe('the site’s own dependencies', () => {
   it('stay out of the server bundle, except what renders with React', async () => {
     const project = await fs.mkdtemp(path.join(os.tmpdir(), 'autocatalog-deps-'));
@@ -88,10 +144,12 @@ describe('the site’s own dependencies', () => {
         JSON.stringify({
           dependencies: {
             autotel: '1.0.0',
+            cookie: '0.7.2',
             'lucide-react': '1.0.0',
             'autocatalog-cli': '1.0.0',
             react: '18.3.1',
           },
+          optionalDependencies: { ws: '7.0.0' },
         }),
       );
       await fs.mkdir(path.join(project, 'node_modules/lucide-react'), { recursive: true });
@@ -101,7 +159,7 @@ describe('the site’s own dependencies', () => {
       );
 
       expect(siteBundling(project)).toEqual({
-        external: ['autotel'],
+        external: ['autotel', 'cookie', 'ws'],
         noExternal: ['lucide-react'],
       });
     } finally {

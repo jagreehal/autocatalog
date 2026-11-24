@@ -331,6 +331,7 @@ describe('commands, queries and datastores', () => {
     const map = catalogGraph(placed, '/', {
       levels: {
         open: 1,
+        domains: new Set(['books', 'pay', 'ship', 'shop']),
         domainHref: (name) => `/domains/${name}/`,
         domainTitle: (name) => name.toUpperCase(),
       },
@@ -354,6 +355,20 @@ describe('commands, queries and datastores', () => {
     );
     expect(map?.levels?.[1]?.edges).toHaveLength(2);
     expect(map?.hrefs['domain:pay']).toBe('/domains/pay/');
+
+    // A domain with no page is not drawn, and one domain is no level.
+    const levelOne = (...domains: Array<string>) =>
+      catalogGraph(placed, '/', {
+        levels: {
+          open: 1,
+          domains: new Set(domains),
+          domainHref: (name) => name,
+          domainTitle: (name) => name,
+        },
+      })?.levels?.[1]?.nodes.map(({ id }) => id);
+
+    expect(levelOne('pay', 'ship')).toEqual(['domain:pay', 'domain:ship']);
+    expect(levelOne('pay')).toBeUndefined();
     expect(map?.levels?.[2]?.nodes.some(({ type }) => type === 'event' || type === 'command')).toBe(
       false,
     );
@@ -370,7 +385,12 @@ describe('commands, queries and datastores', () => {
   it('keeps a part of the map as it is', () => {
     const map = catalogGraph(graph, '/', {
       only: new Set(['service:billing']),
-      levels: { open: 1, domainHref: (name) => name, domainTitle: (name) => name },
+      levels: {
+        open: 1,
+        domains: new Set(['pay', 'shop']),
+        domainHref: (name) => name,
+        domainTitle: (name) => name,
+      },
     });
 
     expect(map?.levels).toBeUndefined();

@@ -5,6 +5,7 @@ import {
   isJsonObject,
   isServiceCatalogResource,
   publishedApis,
+  servicesServing,
 } from 'autocatalog-core';
 import type { JsonValue, RepositoryApi, ResourceGraph, ServiceSummary } from 'autocatalog-core';
 import { z } from 'zod';
@@ -94,8 +95,9 @@ export function catalogServices({
     const declared = declaredApiService(api.document);
 
     for (const name of api.services ?? (declared ? [declared] : [])) {
-      if (!services.has(name))
+      if (!services.has(name)) {
         services.set(name, { name, domains: [], produces: [], consumes: [] });
+      }
     }
   }
 
@@ -115,21 +117,21 @@ export function catalogServices({
   return services;
 }
 
-/** The services that serve one API, by the same rule. */
-export function servicesForApi(api: CatalogApi, events: Array<CatalogEvent>): Array<string> {
+/** The services that serve one API, as {@link servicesServing} settles them, with the lock's owners. */
+export function servicesForApi(
+  api: CatalogApi,
+  events: Array<CatalogEvent>,
+  owners?: ReadonlyMap<string, string>,
+): Array<string> {
   if (api.services) {
     return api.services;
   }
 
-  const declared = declaredApiService(api.document);
-
-  if (declared) {
-    return [declared];
-  }
-
-  return [...buildServices(events.map(({ event }) => event)).keys()].filter(
+  const matched = [...buildServices(events.map(({ event }) => event)).keys()].filter(
     (name) => apisForService([api], events, name).length > 0,
   );
+
+  return servicesServing(api, matched, owners);
 }
 
 /** Each operation in path order, as the reference lists them. */

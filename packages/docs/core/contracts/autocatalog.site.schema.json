@@ -284,6 +284,10 @@
     "mcp": {
       "type": "boolean"
     },
+    "llms": {
+      "type": "boolean",
+      "const": true
+    },
     "output": {
       "type": "string",
       "enum": [
