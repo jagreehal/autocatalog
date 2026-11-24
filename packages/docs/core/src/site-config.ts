@@ -327,6 +327,12 @@ export const siteConfigSchema = z.strictObject({
    * `false` leaves it out.
    */
   mcp: z.boolean().optional(),
+  /**
+   * Lists the documents in `llms.txt`, and serves their Markdown twins and
+   * `llms-full.txt`, on a site with `"output": "server"` and neither `access`
+   * nor an `audience`. Set it when no middleware of the site's gates documents.
+   */
+  llms: z.literal(true).optional(),
   /** `server` renders documents per request, behind the extensions' middleware. */
   output: z.enum(['static', 'server']).optional(),
   /** Where the site is deployed, such as `https://help.example.com`: for the sitemap and llms.txt. `--site` overrides it. */

@@ -13,6 +13,7 @@ import type { CallDeclaration } from './consumes';
 import { isJsonObject } from './json';
 import type { JsonObject, JsonValue } from './json';
 import { derefLocal } from './json-ref';
+import { packageName, readOptionalResourceJson } from './resource-files';
 import { relationshipKey, resourceKey } from './resource-graph';
 import type {
   ArchitectureCatalogResource,
@@ -100,6 +101,8 @@ export function apiOperations(
 /** A service name a page can be made for: no path, no markup. */
 const SERVICE_NAME = /^[A-Za-z0-9][\w.-]{0,199}$/;
 
+const NOT_A_SERVICE_NAME = 'is not a service name: use letters, digits, . _ and -';
+
 const namedService = (doc: JsonObject) => {
   const extension = doc['x-autocatalog'];
 
@@ -118,7 +121,7 @@ export function apiServiceProblem(doc: JsonObject): string | undefined {
   const name = namedService(doc);
 
   return name && !SERVICE_NAME.test(name)
-    ? `x-autocatalog.service ${shownName(name)} is not a service name: use letters, digits, . _ and -`
+    ? `x-autocatalog.service ${shownName(name)} ${NOT_A_SERVICE_NAME}`
     : undefined;
 }
 
@@ -130,6 +133,10 @@ export interface RepositoryApi {
   /** Where the repository keeps it, from the repository's root. */
   file: string;
   document: JsonObject;
+  /** The service saved in the repository's .autocatalog/config.json. */
+  service?: string;
+  /** The service its package's name suggests, when this is its only spec. */
+  guessedService?: string;
 }
 
 const slug = (value: string) =>
@@ -137,6 +144,84 @@ const slug = (value: string) =>
     .toLowerCase()
     .replaceAll(/[^a-z0-9]+/g, '-')
     .replaceAll(/^-+|-+$/g, '');
+
+/** The service saved in .autocatalog/config.json; null for one that cannot be read. */
+async function savedService(
+  root: string,
+  warn: (message: string) => void,
+): Promise<string | undefined | null> {
+  try {
+    const config = await readOptionalResourceJson(path.join(root, '.autocatalog/config.json'), {
+      root,
+    });
+
+    const saved = isJsonObject(config) ? text(config.service) : undefined;
+
+    if (saved === undefined || SERVICE_NAME.test(saved)) {
+      return saved;
+    }
+
+    warn(`.autocatalog/config.json: service ${shownName(saved)} ${NOT_A_SERVICE_NAME}`);
+  } catch (error) {
+    warn(error instanceof Error ? error.message : String(error));
+  }
+
+  return null;
+}
+
+/**
+ * The service a repository's models are read as, so its endpoints join them:
+ * the one it saved, and its package's name, which is only a guess and says
+ * nothing of which of several specs it serves. A scoped package name is no
+ * service name, so it guesses nothing.
+ */
+async function repositoryService(
+  root: string,
+  oneSpec: boolean,
+  warn: (message: string) => void,
+): Promise<Pick<RepositoryApi, 'service' | 'guessedService'>> {
+  const service = await savedService(root, warn);
+
+  // A repository that saves a service takes no guess from its package.
+  if (service === null) {
+    return {};
+  }
+
+  const guess = oneSpec ? await packageName(root) : undefined;
+
+  return {
+    ...(service !== undefined && { service }),
+    ...(guess !== undefined && SERVICE_NAME.test(guess) && { guessedService: guess }),
+  };
+}
+
+/**
+ * The services that serve a spec: the one it names, else the one its repository
+ * saved, else those `matched` by title or webhooks, else the package's name.
+ * With a lock, each counts only when the lock pins it to the spec's repository.
+ */
+export function servicesServing(
+  api: RepositoryApi,
+  matched: Array<string>,
+  owners: ReadonlyMap<string, string> | undefined,
+): Array<string> {
+  const held = (names: Array<string | undefined>) =>
+    names.flatMap((name) =>
+      name !== undefined && (!owners || owners.get(name) === api.repository) ? [name] : [],
+    );
+
+  const declared = declaredApiService(api.document);
+
+  if (declared !== undefined) {
+    return held([declared]);
+  }
+
+  return (
+    [[api.service], matched, [api.guessedService]]
+      .map((names) => held(names))
+      .find((names) => names.length > 0) ?? []
+  );
+}
 
 /** Where the scan looks for contracts, and so where a published spec lives. */
 const CONTRACTS = 'contracts';
@@ -175,6 +260,10 @@ export async function publishedApis(
 
   const taken = new Set<string>();
 
+  const service = await repositoryService(repositoryRoot, documents.length === 1, (message) =>
+    warn(`${repository}: ${message}`),
+  );
+
   return [...documents]
     .sort((a, b) => a.relFile.localeCompare(b.relFile))
     .map(({ relFile, doc }) => {
@@ -183,9 +272,16 @@ export async function publishedApis(
       for (let n = 2; taken.has(name); n += 1) {
         name = `${slug(relFile)}-${n}`;
       }
+
       taken.add(name);
 
-      return { repository, name, file: `${CONTRACTS}/${relFile}`, document: doc };
+      return {
+        repository,
+        name,
+        file: `${CONTRACTS}/${relFile}`,
+        document: doc,
+        ...service,
+      };
     });
 }
 
@@ -428,10 +524,11 @@ export function linkEndpointCalls(
       const all = exposed.get(target) ?? [];
       const picked = operation ? all.filter((e) => isOperation(e, operation)) : all;
 
-      if (picked.length === 0)
+      if (picked.length === 0) {
         unresolved.push(
           `${repository}: ${CONSUMES_FILE}: ${service} calls ${[target, operation].flatMap((part) => (part ? [shownName(part)] : [])).join(' ')}, which nothing exposes`,
         );
+      }
 
       for (const endpoint of picked) {
         const edge: CatalogRelationship = {
@@ -446,8 +543,11 @@ export function linkEndpointCalls(
           ...(fields && ownedBy(service, repository) && { attributes: { fields: [...fields] } }),
         };
 
-        if (fields && !options.owners) unverified.add(service);
-        else if (fields && !ownedBy(service, repository)) unowned.add(`${repository}: ${service}`);
+        if (fields && !options.owners) {
+          unverified.add(service);
+        } else if (fields && !ownedBy(service, repository)) {
+          unowned.add(`${repository}: ${service}`);
+        }
 
         const key = relationshipKey(edge);
         const earlier = edges.get(key);
@@ -456,7 +556,9 @@ export function linkEndpointCalls(
         callers.set(service, architectureService(service));
       }
 
-      if (picked.length === 0) continue;
+      if (picked.length === 0) {
+        continue;
+      }
 
       // The call between the services too, which is what a map draws.
       const between: CatalogRelationship = {
@@ -468,7 +570,9 @@ export function linkEndpointCalls(
         source: { type: 'code', file: CONSUMES_FILE },
       };
 
-      if (!known.has(relationshipKey(between))) edges.set(relationshipKey(between), between);
+      if (!known.has(relationshipKey(between))) {
+        edges.set(relationshipKey(between), between);
+      }
     }
   }
 
@@ -536,7 +640,7 @@ export function linkEndpointCalls(
 
 /**
  * A graph with each repository's APIs in it, for a reader that has no site: the
- * spec's service, else one the graph has whose name its title gives. What
+ * services {@link servicesServing} settles, the graph's matched by title. What
  * cannot be read or joined goes to `onProblem`, its repository first.
  */
 export async function withEndpoints(
@@ -562,9 +666,9 @@ export async function withEndpoints(
       );
 
       // With a lock, a spec serves only a service the lock pins to its repository.
-      const unpinned = declared && options.owners && options.owners.get(declared) !== repository;
+      const services = servicesServing(api, named, options.owners);
 
-      if (unpinned) {
+      if (declared && services.length === 0) {
         onProblem(
           `${repository}: ${api.file}: x-autocatalog.service names ${declared}, which the lock does not pin to this repository, so no service exposes its operations`,
         );
@@ -572,19 +676,8 @@ export async function withEndpoints(
 
       graph = mergeConsumerGraph(
         graph,
-        createEndpointGraph(
-          {
-            ...api,
-            // A service guessed from the title is held to the lock the same way.
-            services: unpinned
-              ? []
-              : declared
-                ? [declared]
-                : named.filter(
-                    (service) => !options.owners || options.owners.get(service) === repository,
-                  ),
-          },
-          (message) => onProblem(`${repository}: ${api.file}: ${message}`),
+        createEndpointGraph({ ...api, services }, (message) =>
+          onProblem(`${repository}: ${api.file}: ${message}`),
         ),
       );
     }

@@ -9,7 +9,8 @@
 // 3. `ac resources scan` folds each repository's imported services into resources.json.
 // 4. Prettier formats them as the rest of the repository is.
 //
-// Run twice, it writes the same files: the storefront is this script's output.
+// Run twice, it writes the same files: the storefront is this script's output,
+// except each repository's flows/, which are written by hand and kept.
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -69,6 +70,12 @@ for (const repository of repositories) {
 
 // Replace each repository whole, so a file the converter no longer writes goes too.
 for (const repository of repositories) {
+  const flows = path.join(demo, repository, 'flows');
+
+  if (fs.existsSync(flows)) {
+    fs.cpSync(flows, path.join(work, 'out', repository, 'flows'), { recursive: true });
+  }
+
   fs.rmSync(path.join(demo, repository), { recursive: true, force: true });
   fs.cpSync(path.join(work, 'out', repository), path.join(demo, repository), { recursive: true });
 }

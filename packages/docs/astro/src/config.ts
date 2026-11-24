@@ -66,6 +66,11 @@ export interface DocsSiteConfig {
    * a site with `access` or an `audience` serves it, as each knows what a reader may open.
    */
   mcp: boolean | undefined;
+  /**
+   * Whether a site rendered per request lists and copies its documents for
+   * agents though it has no `access` or `audience`.
+   */
+  llms: boolean;
   navigation: SiteNavigation | undefined;
   /** A server-sent events feed the maps can follow live. */
   live: { url: string; event: string } | undefined;
@@ -75,18 +80,20 @@ export interface DocsSiteConfig {
  * Whether a site serves each document's Markdown twin and `llms-full.txt`. A
  * site built ahead does. One rendered per request does with `access` or an
  * `audience`; without either, only its own middleware decides who reads what,
- * and a copy at another address would skip that.
+ * and a copy at another address could skip that, so it waits for `"llms": true`.
  */
 export function servesDocumentCopies({
   perRequest,
   access,
   audience,
+  llms,
 }: {
   perRequest: boolean;
   access: boolean;
   audience: string | undefined;
+  llms: boolean;
 }): boolean {
-  return !perRequest || access || audience !== undefined;
+  return !perRequest || access || audience !== undefined || llms;
 }
 
 /**
@@ -130,6 +137,7 @@ export function docsSiteConfig(): DocsSiteConfig {
     title: process.env.AUTOCATALOG_DOCS_TITLE ?? 'Documentation',
     audience: process.env.AUTOCATALOG_SITE_AUDIENCE || undefined,
     pageActions: process.env.AUTOCATALOG_SITE_PAGE_ACTIONS !== 'false',
+    llms: process.env.AUTOCATALOG_SITE_LLMS === 'true',
     mcp: process.env.AUTOCATALOG_SITE_MCP ? process.env.AUTOCATALOG_SITE_MCP === 'true' : undefined,
     // A frame keeps the site's navigation beside Scalar's own, for readers inside and out.
     apiReference:

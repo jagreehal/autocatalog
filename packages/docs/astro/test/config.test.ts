@@ -69,17 +69,12 @@ describe('mcp', () => {
 
 describe('servesDocumentCopies', () => {
   it('serves twins built ahead, and per request only where the site knows who reads', () => {
-    expect(servesDocumentCopies({ perRequest: false, access: false, audience: undefined })).toBe(
-      true,
-    );
-    expect(servesDocumentCopies({ perRequest: true, access: true, audience: undefined })).toBe(
-      true,
-    );
-    expect(servesDocumentCopies({ perRequest: true, access: false, audience: 'public' })).toBe(
-      true,
-    );
-    expect(servesDocumentCopies({ perRequest: true, access: false, audience: undefined })).toBe(
-      false,
-    );
+    const site = { perRequest: true, access: false, audience: undefined, llms: false };
+
+    expect(servesDocumentCopies({ ...site, perRequest: false })).toBe(true);
+    expect(servesDocumentCopies({ ...site, access: true })).toBe(true);
+    expect(servesDocumentCopies({ ...site, audience: 'public' })).toBe(true);
+    expect(servesDocumentCopies(site)).toBe(false);
+    expect(servesDocumentCopies({ ...site, llms: true })).toBe(true);
   });
 });

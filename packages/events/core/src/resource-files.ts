@@ -1,6 +1,7 @@
 import { constants as fsConstants } from 'node:fs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { z } from 'zod';
 import { jsonValueSchema } from './json';
 import type { JsonValue } from './json';
 import { DEFAULT_SCAN_EXCLUDE, isRealFileInside } from './utils';
@@ -188,4 +189,15 @@ export async function writeResourceFile(file: string, text: string): Promise<voi
   } finally {
     await handle.close();
   }
+}
+
+/** The root package's name: a service id that does not depend on the checkout's directory name. */
+export async function packageName(root: string): Promise<string | undefined> {
+  const manifest = await readOptionalResourceJson(path.join(root, 'package.json'), { root }).catch(
+    () => undefined,
+  );
+
+  const parsed = z.object({ name: z.string().min(1) }).safeParse(manifest);
+
+  return parsed.success ? parsed.data.name : undefined;
 }

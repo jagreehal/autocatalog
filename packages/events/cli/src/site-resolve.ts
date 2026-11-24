@@ -1,7 +1,8 @@
 import fs from 'node:fs';
 import { createRequire, isBuiltin, registerHooks } from 'node:module';
+import type { ResolveFnOutput, ResolveHookContext } from 'node:module';
 import path from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 /**
  * Loaded with `--import` by the build and by a server site's `server.mjs`. The
@@ -9,10 +10,10 @@ import { pathToFileURL } from 'node:url';
  * either side installed can be missing from where it runs. A bare import Node
  * cannot find is tried again from each folder in AUTOCATALOG_RESOLVE_FROM, in order.
  *
- * The site's own project, AUTOCATALOG_RESOLVE_SITE, answers first only for the
- * packages its package.json names. Anything else autocatalog's code imports
- * comes from autocatalog's tree first: a version the project only has hoisted,
- * from some other tool, is not the one that code was written against.
+ * A package that one of those folders names comes from there, then from the
+ * site's own project, AUTOCATALOG_RESOLVE_SITE, when its package.json names it. A
+ * version either side only has hoisted, from some other tool, comes last: it is
+ * not the one the code was written against.
  */
 const parent = (dir: string) => pathToFileURL(path.join(dir, 'noop.js')).href;
 
@@ -23,16 +24,18 @@ const from = (process.env.AUTOCATALOG_RESOLVE_FROM ?? '')
 
 const site = process.env.AUTOCATALOG_RESOLVE_SITE;
 
-/** The packages the site's package.json names, in any of its dependency lists. */
-export function declaredPackages(project: string): Set<string> {
+/** What an installed package has beside it: its devDependencies are not installed. */
+const INSTALLED = ['dependencies', 'peerDependencies', 'optionalDependencies'];
+
+/** The packages a folder's package.json names: the site's own, in any of its dependency lists. */
+export function declaredPackages(
+  project: string,
+  fields = [...INSTALLED, 'devDependencies'],
+): Set<string> {
   try {
     const manifest = JSON.parse(fs.readFileSync(path.join(project, 'package.json'), 'utf8'));
 
-    return new Set(
-      ['dependencies', 'devDependencies', 'peerDependencies', 'optionalDependencies'].flatMap(
-        (field) => Object.keys(manifest[field] ?? {}),
-      ),
-    );
+    return new Set(fields.flatMap((field) => Object.keys(manifest[field] ?? {})));
   } catch {
     return new Set();
   }
@@ -45,33 +48,80 @@ export const packageName = (specifier: string) =>
     .slice(0, specifier.startsWith('@') ? 2 : 1)
     .join('/');
 
-const declared = new Map<string, Set<string>>();
+const known = new Map<string, Set<string>>();
 
-/** Where to look for a bare import, best first. */
-export function resolveOrder(specifier: string, folders = from, project = site): Array<string> {
-  if (!project) {
-    return folders;
-  }
+/** {@link declaredPackages}, read once per folder. */
+function packagesIn(folder: string, fields?: Array<string>): Set<string> {
+  const names = known.get(folder) ?? declaredPackages(path.dirname(fileURLToPath(folder)), fields);
 
-  if (!declared.has(project)) {
-    declared.set(project, declaredPackages(project));
-  }
+  known.set(folder, names);
 
-  return declared.get(project)!.has(packageName(specifier))
-    ? [parent(project), ...folders]
-    : [...folders, parent(project)];
+  return names;
 }
 
-// createRequire().resolve passes through this hook too; inside it, the default runs.
+/**
+ * The folders whose package.json names a package. Only from one of those is it
+ * certain to be the version that code wants: from another, a hoisted copy such
+ * as Express's `cookie` can answer for the one Astro's output imports.
+ */
+export function declaringFolders(specifier: string, folders = from): Array<string> {
+  return folders.filter((folder) => packagesIn(folder, INSTALLED).has(packageName(specifier)));
+}
+
+/**
+ * Where to look for a bare import, best first: where a package names it, then
+ * the project if it does, then anywhere.
+ */
+export function resolveOrder(specifier: string, all = from, project = site): Array<string> {
+  const declaring = declaringFolders(specifier, all);
+  const rest = all.filter((folder) => !declaring.includes(folder));
+
+  if (!project) {
+    return [...declaring, ...rest];
+  }
+
+  const own = parent(project);
+
+  return packagesIn(own).has(packageName(specifier))
+    ? [...declaring, own, ...rest]
+    : [...declaring, ...rest, own];
+}
+
+// createRequire().resolve passes through these hooks too; inside it, the default runs.
 let resolving = false;
+
+/** What an import resolves to from a folder. require() resolves from its parent module and ignores parentURL. */
+const resolveFrom = (
+  specifier: string,
+  parentURL: string,
+  [context, next]: [ResolveHookContext, NextResolve],
+): ResolveFnOutput => {
+  // Node's own modules are not files to look for.
+  if (isBuiltin(specifier) || !context.conditions.includes('require')) {
+    return next(specifier, { ...context, parentURL });
+  }
+
+  resolving = true;
+
+  try {
+    const url = pathToFileURL(createRequire(parentURL).resolve(specifier)).href;
+
+    return { url, shortCircuit: true };
+  } finally {
+    resolving = false;
+  }
+};
+
+type NextResolve = (specifier: string, context?: Partial<ResolveHookContext>) => ResolveFnOutput;
 
 // A package name, not a path, URL or one of Node's own modules.
 const bare = (specifier: string) => !/^[./]|^[a-z]+:/i.test(specifier) && !isBuiltin(specifier);
 
 /**
- * The built site, AUTOCATALOG_RESOLVE_OUT. Its chunks hold autocatalog's code, so
- * their imports take resolveOrder() before Node's own lookup: built into a `dist/`
- * inside the project, that lookup walks up to the project's node_modules first.
+ * The built site, AUTOCATALOG_RESOLVE_OUT: `--out`, or the run's folder while it is
+ * being built. Its chunks hold autocatalog's code, so their imports take
+ * resolveOrder() before Node's own lookup, which walks up to whatever the
+ * project, or pnpm's hoisted folder, has at the top.
  */
 const out = process.env.AUTOCATALOG_RESOLVE_OUT
   ? pathToFileURL(path.join(process.env.AUTOCATALOG_RESOLVE_OUT, path.sep)).href
@@ -81,30 +131,43 @@ const out = process.env.AUTOCATALOG_RESOLVE_OUT
 export const fromBuiltSite = (parentURL: string | undefined, built = out) =>
   built !== undefined && parentURL?.startsWith(built) === true;
 
+/** How the build marks what a site's own code, or an extension it installs, imports. */
+const FROM_SITE = /^autocatalog-site:([^?]+)\?from=(.*)$/;
+
+/** The package a marked import names, and the folder under the project it is looked up from. */
+export function fromSite(specifier: string): { name: string; folder: string } | undefined {
+  const [, name, folder] = FROM_SITE.exec(specifier) ?? [];
+
+  return name === undefined || folder === undefined
+    ? undefined
+    : { name, folder: decodeURIComponent(folder) };
+}
+
+if (site !== undefined && site !== '') {
+  const root = fs.existsSync(site) ? fs.realpathSync(site) : site;
+
+  registerHooks({
+    resolve: (specifier, context, next) => {
+      const marked = fromSite(specifier);
+
+      return marked === undefined
+        ? next(specifier, context)
+        : resolveFrom(marked.name, parent(path.resolve(root, marked.folder)), [context, next]);
+    },
+  });
+}
+
 if (from.length > 0 || site) {
   registerHooks({
     resolve: (specifier, context, next) => {
-      if (resolving) return next(specifier, context);
-
-      // require() resolves from its parent module and ignores parentURL.
-      const cjs = context.conditions?.includes('require');
+      if (resolving) {
+        return next(specifier, context);
+      }
 
       const fromFolders = () => {
         for (const parentURL of resolveOrder(specifier)) {
           try {
-            if (cjs) {
-              resolving = true;
-
-              try {
-                const url = pathToFileURL(createRequire(parentURL).resolve(specifier)).href;
-
-                return { url, shortCircuit: true };
-              } finally {
-                resolving = false;
-              }
-            }
-
-            return next(specifier, { ...context, parentURL });
+            return resolveFrom(specifier, parentURL, [context, next]);
           } catch {
             // the next folder
           }
@@ -116,7 +179,9 @@ if (from.length > 0 || site) {
       if (bare(specifier) && fromBuiltSite(context.parentURL)) {
         const found = fromFolders();
 
-        if (found) return found;
+        if (found) {
+          return found;
+        }
       }
 
       try {
@@ -131,7 +196,9 @@ if (from.length > 0 || site) {
 
         const found = fromFolders();
 
-        if (found) return found;
+        if (found) {
+          return found;
+        }
 
         throw error;
       }

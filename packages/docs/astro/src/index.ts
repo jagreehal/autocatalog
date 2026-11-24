@@ -151,6 +151,12 @@ export interface AutocatalogDocsOptions {
    */
   mcp?: boolean;
   /**
+   * Lists the documents in `llms.txt`, and serves their Markdown twins and
+   * `llms-full.txt`, on a site with `output: 'server'` and neither `access` nor
+   * an `audience`. Set it when the site's middleware does not gate documents.
+   */
+  llms?: true;
+  /**
    * A server-sent events URL the maps follow in their live mode: each frame's
    * JSON names the event that fired (`{ "name": "order.placed", "producer"? }`).
    * `event` is the SSE event name frames arrive under; `message` by default.
@@ -263,6 +269,10 @@ export default function autocatalogDocs(opts: AutocatalogDocsOptions = {}): Star
             },
           },
         });
+
+        if (opts.llms) {
+          process.env.AUTOCATALOG_SITE_LLMS ??= 'true';
+        }
 
         if (opts.mcp !== undefined) {
           process.env.AUTOCATALOG_SITE_MCP ??= String(opts.mcp);
@@ -655,6 +665,7 @@ export default function autocatalogDocs(opts: AutocatalogDocsOptions = {}): Star
             // Each reader's lists are their own, so kind pages render per request.
             access && catalog.kinds.map((kind) => kind.path),
             rootRepo !== undefined && catalog.docs.some((doc) => docPage(doc.id) === ''),
+            effective.llms,
           ),
         );
 

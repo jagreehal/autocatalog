@@ -58,7 +58,7 @@
     "executable-stories-playwright": "8.11.0",
     "executable-stories-vitest": "8.10.2",
     "oxlint": "1.94.0",
-    "oxlint-tsgolint": "7.0.2005",
+    "oxlint-tsgolint": "7.0.2007",
     "prettier": "^3.9.9",
     "tsrs": "7.1.0-beta.tsrs4",
     "tsup": "^8.5.1",

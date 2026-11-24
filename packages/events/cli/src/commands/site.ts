@@ -1,9 +1,10 @@
 import { execFile, spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
+import { realpathSync } from 'node:fs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { findPackageJSON } from 'node:module';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { pathToFileURL } from 'node:url';
 import { promisify } from 'node:util';
 import {
   defaultHomeLayout,
@@ -491,6 +492,20 @@ export async function runSite(input: RunSiteOptions): Promise<number> {
     );
   }
 
+  // The site's own middleware may gate documents there, so nothing lists them unasked.
+  if (config.output === 'server' && audience === undefined && config.access === undefined) {
+    const off = [
+      ...(config.mcp === undefined ? ['MCP is off ("mcp": true serves /mcp)'] : []),
+      ...(config.llms ? [] : ['llms.txt lists no documents ("llms": true lists them)']),
+    ];
+
+    if (off.length > 0) {
+      const notice = `${off.join(' and ')}: this server site has no "audience" or "access" in autocatalog.site.json.`;
+
+      process.stdout.write(`${kleur.dim(notice)}\n`);
+    }
+  }
+
   const brandDir = opts.brand ?? config.brand;
 
   if (brandDir && !(await fs.stat(brandDir).catch(() => null))?.isDirectory()) {
@@ -532,24 +547,29 @@ export async function runSite(input: RunSiteOptions): Promise<number> {
     return 1;
   }
 
-  const siteProject = path.join(
-    path.dirname(fileURLToPath(import.meta.resolve('autocatalog-docs-astro'))),
-    '..',
-    'site',
-  );
+  const docsPackage = siteBuilder();
 
-  const astro = path.join(
-    path.dirname(fileURLToPath(import.meta.resolve('astro/package.json'))),
-    'bin',
-    'astro.mjs',
-  );
+  const astroPackage =
+    docsPackage === undefined ? undefined : manifestFrom('astro', pathToFileURL(docsPackage).href);
+
+  if (docsPackage === undefined || astroPackage === undefined) {
+    process.stderr.write(
+      `${kleur.red(
+        'The site builder is not installed: autocatalog-cli leaves it out. Install autocatalog, which has it: npm install --save-dev autocatalog',
+      )}\n`,
+    );
+
+    return 1;
+  }
+
+  const siteProject = path.join(path.dirname(docsPackage), 'site');
+  const astro = path.join(path.dirname(astroPackage), 'bin', 'astro.mjs');
 
   // Astro reads a component path that shares no folder with its root, below
   // `/`, as inside the root, and cannot compile it.
-  if (
-    (extend.length > 0 || pages || config.chat || config.access) &&
-    !sharesAFolder(process.cwd(), siteProject)
-  ) {
+  const ownCode = [extend[0], pages, config.chat, config.access].some((code) => code !== undefined);
+
+  if (ownCode && !sharesAFolder(process.cwd(), siteProject)) {
     console.error(
       kleur.red(
         `This site's own code is in ${process.cwd()}, which shares no folder with autocatalog in ${siteProject}, and Astro cannot build it from there. Install autocatalog in the site's folder: npm install --save-dev autocatalog`,
@@ -594,7 +614,8 @@ export async function runSite(input: RunSiteOptions): Promise<number> {
   const description = opts.description ?? config.description;
 
   // autocatalog's packages; the site's own project answers for what it names. See site-resolve.ts.
-  const resolveFrom = await siteDependencyDirs();
+  const resolveFrom = await siteDependencyDirs(docsPackage);
+  const reactFrom = pathToFileURL(docsPackage).href;
 
   const code = await new Promise<number>((resolve) => {
     // Run from that root: Astro resolves some of its build output against the
@@ -603,7 +624,7 @@ export async function runSite(input: RunSiteOptions): Promise<number> {
       process.execPath,
       [
         '--import',
-        new URL('./site-react.js', import.meta.url).href,
+        SITE_REACT,
         '--import',
         SITE_RESOLVE,
         astro,
@@ -633,9 +654,10 @@ export async function runSite(input: RunSiteOptions): Promise<number> {
           }),
           ...(leftOut.length && { AUTOCATALOG_DOCS_LEFT_OUT: JSON.stringify(leftOut) }),
           ...(lockDigest && { AUTOCATALOG_DOCS_LOCK_DIGEST: lockDigest }),
-          AUTOCATALOG_REACT_FROM: import.meta.resolve('autocatalog-docs-astro'),
+          AUTOCATALOG_REACT_FROM: reactFrom,
           AUTOCATALOG_RESOLVE_FROM: resolveFrom.join(path.delimiter),
           AUTOCATALOG_RESOLVE_SITE: process.cwd(),
+          ...(!opts.dev && { AUTOCATALOG_RESOLVE_OUT: run }),
           ...(opts.site && { AUTOCATALOG_SITE_URL: opts.site }),
           ...(opts.base && { AUTOCATALOG_SITE_BASE: opts.base }),
           ...(title && { AUTOCATALOG_DOCS_TITLE: title }),
@@ -676,6 +698,7 @@ export async function runSite(input: RunSiteOptions): Promise<number> {
             AUTOCATALOG_SITE_HOME_COUNTS: JSON.stringify(config.homeCounts),
           }),
           ...(config.layouts && { AUTOCATALOG_SITE_LAYOUTS: JSON.stringify(config.layouts) }),
+          ...(config.llms && { AUTOCATALOG_SITE_LLMS: 'true' }),
           ...(config.mcp !== undefined && { AUTOCATALOG_SITE_MCP: String(config.mcp) }),
           ...(eventcatalog && { AUTOCATALOG_EVENTCATALOG: eventcatalog.embedsFile }),
           ...(opts.liveUrl && { AUTOCATALOG_DOCS_LIVE_URL: opts.liveUrl }),
@@ -724,7 +747,7 @@ export async function runSite(input: RunSiteOptions): Promise<number> {
 
     // The assistant answers per request, so a site with one runs as a server too.
     if (published === 0 && (config.output === 'server' || config.chat)) {
-      await writeServerStart(path.resolve(opts.out), resolveFrom);
+      await writeServerStart(path.resolve(opts.out), resolveFrom, reactFrom);
     }
 
     return published;
@@ -779,25 +802,58 @@ export async function incomplete(dist: string): Promise<Array<string>> {
   return ['the build wrote no catalog.meta.json, so nothing says the catalog is complete'];
 }
 
+/** A package's real package.json, as code at `base` resolves it. */
+function manifestFrom(name: string, base: string | undefined): string | undefined {
+  try {
+    const found = base === undefined ? undefined : findPackageJSON(name, base);
+
+    return found === undefined ? undefined : realpathSync(found);
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * autocatalog-docs-astro's package.json. The `autocatalog` package installs it
+ * and says where from; otherwise it is beside this CLI or in the site's project.
+ */
+function siteBuilder(): string | undefined {
+  const project = pathToFileURL(path.join(process.cwd(), 'package.json')).href;
+  // `ac` run where `autocatalog` is installed too: its packages are beside it.
+  const frontDoor = manifestFrom('autocatalog', project);
+
+  const bases = [
+    process.env.AUTOCATALOG_INSTALLED_FROM,
+    import.meta.url,
+    project,
+    frontDoor === undefined ? undefined : pathToFileURL(frontDoor).href,
+  ];
+
+  return bases
+    .map((base) => manifestFrom('autocatalog-docs-astro', base))
+    .find((found) => found !== undefined);
+}
+
 /**
  * autocatalog-docs-astro and each package it depends on. The server bundle
  * imports their dependencies by name, which only resolve from beside them.
  */
-async function siteDependencyDirs(): Promise<Array<string>> {
-  const manifest = findPackageJSON(import.meta.resolve('autocatalog-docs-astro'));
-
-  if (!manifest) {
-    return [];
-  }
-
+async function siteDependencyDirs(manifest: string): Promise<Array<string>> {
   const pkg = dependenciesSchema.parse(JSON.parse(await fs.readFile(manifest, 'utf8')));
 
   const from = pathToFileURL(manifest);
 
-  const dirs = Object.keys({ ...pkg.dependencies, ...pkg.peerDependencies }).flatMap((name) => {
+  // Astro's before the rest: the output is mostly its own and autocatalog's code.
+  const names = new Set([
+    'astro',
+    ...Object.keys({ ...pkg.dependencies, ...pkg.peerDependencies }),
+  ]);
+
+  const dirs = [...names].flatMap((name) => {
     const found = findPackageJSON(name, from);
 
-    return found ? [path.dirname(found)] : [];
+    // Its real folder: pnpm keeps a package's own dependencies beside that, not beside the link.
+    return found ? [path.dirname(realpathSync(found))] : [];
   });
 
   return [path.dirname(manifest), ...dirs];
@@ -815,11 +871,17 @@ const siteEntrySchema = z.object({
 
 const SITE_RESOLVE = new URL('./site-resolve.js', import.meta.url).href;
 
+const SITE_REACT = new URL('./site-react.js', import.meta.url).href;
+
 /**
  * `node <out>/server.mjs` starts a server site. It resolves autocatalog's
  * packages from this install, so build where it runs, as with any Node server.
  */
-async function writeServerStart(out: string, resolveFrom: Array<string>): Promise<void> {
+async function writeServerStart(
+  out: string,
+  resolveFrom: Array<string>,
+  reactFrom: string,
+): Promise<void> {
   await fs.writeFile(
     path.join(out, 'server.mjs'),
     [
@@ -828,6 +890,9 @@ async function writeServerStart(out: string, resolveFrom: Array<string>): Promis
       `process.env.AUTOCATALOG_RESOLVE_SITE ??= ${JSON.stringify(process.cwd())};`,
       // Where this file is, so the built chunks beside it resolve as autocatalog's code.
       `process.env.AUTOCATALOG_RESOLVE_OUT ??= import.meta.dirname;`,
+      // The one React, as in the build.
+      `process.env.AUTOCATALOG_REACT_FROM ??= ${JSON.stringify(reactFrom)};`,
+      `await import(${JSON.stringify(SITE_REACT)});`,
       `await import(${JSON.stringify(SITE_RESOLVE)});`,
       "await import('./server/entry.mjs');",
       '',

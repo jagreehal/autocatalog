@@ -1,9 +1,17 @@
+import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { afterAll, describe, expect, it } from 'vitest';
-import { declaredPackages, fromBuiltSite, packageName, resolveOrder } from '../src/site-resolve';
+import {
+  declaredPackages,
+  declaringFolders,
+  fromBuiltSite,
+  fromSite,
+  packageName,
+  resolveOrder,
+} from '../src/site-resolve';
 
 const project = fs.mkdtempSync(path.join(os.tmpdir(), 'autocatalog-resolve-'));
 
@@ -21,6 +29,54 @@ describe('site-resolve', () => {
     expect(packageName('js-yaml')).toBe('js-yaml');
     expect(packageName('js-yaml/dist/js-yaml.mjs')).toBe('js-yaml');
     expect(packageName('@scope/name/sub/path')).toBe('@scope/name');
+  });
+
+  it('reads an import the build marked as the site’s', () => {
+    expect(fromSite('autocatalog-site:express?from=')).toEqual({ name: 'express', folder: '' });
+    expect(fromSite('autocatalog-site:@scope/name/sub?from=node_modules%2Fext')).toEqual({
+      name: '@scope/name/sub',
+      folder: 'node_modules/ext',
+    });
+    expect(fromSite('express')).toBeUndefined();
+  });
+
+  it('gives CommonJS and ES modules the same marked package', () => {
+    const site = path.join(project, 'cjs');
+    const other = path.join(project, 'other');
+
+    for (const [dir, version] of [
+      [site, 'the site’s'],
+      [other, 'another'],
+    ] as const) {
+      const thing = path.join(dir, 'node_modules/thing');
+      fs.mkdirSync(thing, { recursive: true });
+      fs.writeFileSync(path.join(thing, 'package.json'), JSON.stringify({ name: 'thing' }));
+      fs.writeFileSync(
+        path.join(thing, 'index.js'),
+        `module.exports = ${JSON.stringify(version)};`,
+      );
+    }
+
+    const built = path.join(other, 'built.mjs');
+    fs.writeFileSync(
+      built,
+      [
+        "import { createRequire } from 'node:module';",
+        "import imported from 'autocatalog-site:thing?from=';",
+        "const required = createRequire(import.meta.url)('autocatalog-site:thing?from=');",
+        "const { sep } = createRequire(import.meta.url)('autocatalog-site:path?from=');",
+        'console.log(JSON.stringify([imported, required, sep]));',
+      ].join('\n'),
+    );
+
+    const hook = new URL('../src/site-resolve.ts', import.meta.url).href;
+
+    const output = execFileSync(process.execPath, ['--import', hook, built], {
+      encoding: 'utf8',
+      env: { ...process.env, NODE_OPTIONS: '', AUTOCATALOG_RESOLVE_SITE: site },
+    });
+
+    expect(JSON.parse(output)).toEqual(['the site’s', 'the site’s', path.sep]);
   });
 
   it('reads every dependency list the project names', () => {
@@ -47,9 +103,26 @@ describe('site-resolve', () => {
     expect(fromBuiltSite(`${dist}server/entry.mjs`, undefined)).toBe(false);
   });
 
+  it('tries the folder that names a package before one that only has it hoisted', () => {
+    // Express brings cookie 0.7; Astro's output imports the cookie 2 that Astro names.
+    const astro = path.join(project, 'astro');
+    fs.mkdirSync(astro, { recursive: true });
+    fs.writeFileSync(
+      path.join(astro, 'package.json'),
+      JSON.stringify({ dependencies: { cookie: '^2.0.0' }, devDependencies: { express: '5' } }),
+    );
+
+    const folders = [at('/autocatalog/docs-astro'), at(astro)];
+
+    expect(declaringFolders('cookie', folders)).toEqual([at(astro)]);
+    expect(declaringFolders('express', folders)).toEqual([]);
+    expect(resolveOrder('cookie', folders, project)).toEqual([at(astro), folders[0], at(project)]);
+  });
+
   it('tries the project first for a package it names, so its own code gets its version', () => {
     const folders = [at('/autocatalog/docs-astro')];
 
+    // No folder names these, so nothing but the project can be meant.
     expect(resolveOrder('yaml', folders, project)).toEqual([at(project), ...folders]);
     expect(resolveOrder('@acme/ui/button', folders, project)[0]).toBe(at(project));
   });

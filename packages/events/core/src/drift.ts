@@ -2,12 +2,12 @@ import { createHash } from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { z } from 'zod';
-import { diffSchemas } from './diff';
-import type { DiffResult, SchemaNode } from './diff';
+import { diffSchemas, isSchemaNode } from './diff';
+import type { DiffResult, SchemaNode, SchemaValue } from './diff';
 import { fieldConstraints, fieldPaths } from './fields';
 import type { FieldConstraint } from './fields';
 import { jsonObjectSchema } from './json';
-import type { JsonValue } from './json';
+import type { JsonObject, JsonValue } from './json';
 import { loadCatalog } from './load';
 import type { LoadedEvent } from './load';
 import { durationSeconds } from './schema';
@@ -326,6 +326,34 @@ export function consumerUsage(
   return usage;
 }
 
+/** Deeper than any schema a person writes, and shallower than the call stack. */
+const MAX_PARSED_DEPTH = 256;
+
+function valuesIn(value: SchemaValue | undefined): Array<SchemaValue | undefined> {
+  if (Array.isArray(value)) {
+    return value;
+  }
+
+  return isSchemaNode(value) ? Object.values(value) : [];
+}
+
+/** A schema as JSON; nothing for one that is not, or is nested too deeply to read whole. */
+function parsedSchema(schema: SchemaNode): JsonObject | undefined {
+  let level: Array<SchemaValue | undefined> = [schema];
+
+  for (let depth = 0; level.length > 0; depth += 1) {
+    if (depth > MAX_PARSED_DEPTH) {
+      return undefined;
+    }
+
+    level = [...new Set(level.flatMap((value) => valuesIn(value)))];
+  }
+
+  const parsed = jsonObjectSchema.safeParse(schema);
+
+  return parsed.success ? parsed.data : undefined;
+}
+
 /**
  * Classify one event's schema change and name who it reaches.
  *
@@ -348,12 +376,10 @@ export function assessEventChange(input: {
 
   if (consumerFields) {
     for (const schema of [previous, proposed]) {
-      const parsed = jsonObjectSchema.safeParse(schema);
+      const parsed = parsedSchema(schema);
 
-      if (parsed.success) {
-        for (const field of fieldPaths(parsed.data)) {
-          knownFields.add(field);
-        }
+      for (const field of parsed ? fieldPaths(parsed) : []) {
+        knownFields.add(field);
       }
     }
   }
@@ -383,10 +409,8 @@ export function assessEventChange(input: {
 
   const folded = foldRenames(findings);
   const risky = folded.some((f) => f.severity === 'breaking' || f.severity === 'suspicious');
-  const [before, after] = [previous, proposed].map((schema) => jsonObjectSchema.safeParse(schema));
-
-  const rehearse =
-    risky && before?.success && after?.success ? rehearser(before.data, after.data) : undefined;
+  const [before, after] = [previous, proposed].map((schema) => parsedSchema(schema));
+  const rehearse = risky && before && after ? rehearser(before, after) : undefined;
 
   return folded.map((finding) => {
     const reaches = finding.severity === 'breaking' || finding.severity === 'suspicious';
@@ -1463,7 +1487,7 @@ export function compatibilityViolations(finding: DriftFinding): Array<'backward'
 
       // If the object refuses unknown properties now, old payloads still
       // carrying the field are rejected outright.
-      if (finding.diff?.containerClosedAfter) {
+      if (finding.diff?.containerClosedAfter || finding.diff?.containerGovernedAfter === true) {
         violations.push('backward');
       }
 
@@ -1479,8 +1503,9 @@ export function compatibilityViolations(finding: DriftFinding): Array<'backward'
 
       // Typing a field the old schema left free rejects old payloads that
       // carried it as something else.
+      // Where something governed it, an old reader rejects the new field too.
       if (finding.diff?.constrainsPreviouslyFree) {
-        return ['backward'];
+        return finding.diff.containerClosedBefore === true ? ['backward', 'forward'] : ['backward'];
       }
 
       // The required case is reported separately as required_added. An optional

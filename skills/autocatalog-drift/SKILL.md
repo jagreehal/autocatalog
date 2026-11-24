@@ -21,6 +21,8 @@ Changes are classified and each is attributed to the services that consume the e
 | `suspicious` | Legal but usually unintended — a field that quietly became optional                    |
 | `additive`   | Safe — a new optional field                                                            |
 
+Drift compares a `$ref` with the keywords beside it as one schema, so a field written there reports like an inline field. It reads `unevaluatedProperties` and `unevaluatedItems` where they apply: naming a field they reject breaks old readers, and dropping one that only you name breaks new readers.
+
 A breaking or suspicious finding can carry a `rehearsal:` payload, one the new schema accepts and the current contract rejects, with the check it fails. Put it in the pull request, or in a consumer's test, to show the break.
 
 Read the named consumers. That list is the whole point of running this, and it is what a schema differ alone cannot tell you.

@@ -2,28 +2,41 @@ import path from 'node:path';
 import { z } from 'zod';
 import ts from 'typescript';
 import {
-  architectureResource,
   architectureService,
   emptyResourceGraph,
   mergeArchitectureGraphs,
   databaseAccess,
 } from './architecture';
 import {
+  packageName,
   readOptionalResourceJson,
   readResourceSource,
   ResourceReadError,
   resourceFiles,
 } from './resource-files';
 import type { ResourceScanOptions } from './resource-files';
-import { jsonObjectSchema, jsonValueSchema } from './json';
-import type { JsonObject, JsonValue } from './json';
+import { mongooseModels } from './model-mongoose';
+import { drizzleAccess, drizzleResources } from './model-drizzle';
+import { PRISMA_READS, PRISMA_WRITES, prismaResources, prismaSelection } from './model-prisma';
+import type { PrismaModel } from './model-prisma';
+import {
+  describeModel,
+  literal,
+  modelReferences,
+  propertyName,
+  sourceResource,
+  staticObject,
+  textLiteral,
+} from './model-source';
+import type { Binding, ModelField, ParsedModel } from './model-source';
+import { jsonObjectSchema } from './json';
+import type { JsonObject } from './json';
 import { resourceKey, isArchitectureCatalogResource } from './resource-graph';
-import type {
-  CatalogRelationship,
-  CatalogResource,
-  ResourceGraph,
-  ResourceRef,
-} from './resource-graph';
+import type { ResourceGraph, ResourceRef } from './resource-graph';
+
+export { mongooseCollectionName } from './model-mongoose';
+
+export type { ModelField, ModelIndex, ModelRelation } from './model-source';
 
 export interface ModelScanOptions extends ResourceScanOptions {
   datastore?: string;
@@ -46,6 +59,9 @@ export const modelExports = z.array(
     adapter: z.enum(['mongoose', 'prisma', 'drizzle', 'odcs']),
     schema: jsonObjectSchema,
     symbol: z.string().optional(),
+    /** The service that uses it; the scan's own when left out. Only read with `access`. */
+    service: z.string().min(1).optional(),
+    access: z.array(z.enum(['reads', 'writes'])).optional(),
   }),
 );
 
@@ -60,6 +76,10 @@ export interface MongooseModelContract {
 export interface ModelExportOptions {
   datastore: string;
   database: string;
+  /** The service that uses the models; the scan's `--service` when left out. */
+  service?: string;
+  /** What that service does with them. Left out, the export claims no access. */
+  access?: Array<'reads' | 'writes'>;
 }
 
 /** Called by an explicitly run application exporter, never by the passive scanner. */
@@ -79,47 +99,6 @@ export function exportMongooseModels(
   );
 }
 
-function propertyName(node: ts.PropertyName): string | undefined {
-  return ts.isIdentifier(node) || ts.isStringLiteral(node) || ts.isNumericLiteral(node)
-    ? node.text
-    : undefined;
-}
-
-function objectFields(node: ts.Node | undefined): Map<string, ts.Expression> {
-  const fields = new Map<string, ts.Expression>();
-
-  if (!node || !ts.isObjectLiteralExpression(node)) {
-    return fields;
-  }
-
-  for (const item of node.properties) {
-    if (ts.isPropertyAssignment(item)) {
-      const name = propertyName(item.name);
-
-      if (name) fields.set(name, item.initializer);
-    }
-  }
-
-  return fields;
-}
-
-/** An object literal's properties, or undefined when a spread or computed name could add others. */
-function staticObject(node: ts.Node | undefined): Map<string, ts.Expression> | undefined {
-  if (!node || !ts.isObjectLiteralExpression(node)) {
-    return undefined;
-  }
-
-  if (
-    !node.properties.every(
-      (item) => ts.isPropertyAssignment(item) && propertyName(item.name) !== undefined,
-    )
-  ) {
-    return undefined;
-  }
-
-  return objectFields(node);
-}
-
 /** Fields named by an inclusion projection; empty (every field) for anything else. */
 function includedProjection(node: ts.Node | undefined): Array<string> {
   const projection = staticObject(node);
@@ -132,550 +111,6 @@ function includedProjection(node: ts.Node | undefined): Array<string> {
   }
 
   return [...projection.keys()];
-}
-
-function literal(node: ts.Node | undefined): JsonValue | undefined {
-  if (!node) {
-    return undefined;
-  }
-
-  if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) {
-    return node.text;
-  }
-
-  if (ts.isNumericLiteral(node)) {
-    return Number(node.text);
-  }
-
-  if (node.kind === ts.SyntaxKind.TrueKeyword) {
-    return true;
-  }
-
-  if (node.kind === ts.SyntaxKind.FalseKeyword) {
-    return false;
-  }
-
-  if (node.kind === ts.SyntaxKind.NullKeyword) {
-    return null;
-  }
-
-  if (ts.isArrayLiteralExpression(node)) {
-    const values = node.elements.map(literal);
-
-    return values.every((item) => item !== undefined) ? values : undefined;
-  }
-
-  return undefined;
-}
-
-function textLiteral(node: ts.Node | undefined): string | undefined {
-  if (!node) {
-    return undefined;
-  }
-
-  return ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)
-    ? node.text
-    : undefined;
-}
-
-function mongooseField(
-  node: ts.Expression,
-  variables: Map<string, ts.Expression>,
-  skipped: Array<string>,
-  open = new Set<string>(),
-): JsonObject {
-  if (ts.isIdentifier(node) && variables.has(node.text) && !open.has(node.text)) {
-    return mongooseField(
-      variables.get(node.text)!,
-      variables,
-      skipped,
-      new Set([...open, node.text]),
-    );
-  }
-
-  if (
-    ts.isNewExpression(node) &&
-    node.expression.getText().endsWith('Schema') &&
-    node.arguments?.[0]
-  ) {
-    return mongooseObject(node.arguments[0], variables, skipped);
-  }
-
-  if (ts.isArrayLiteralExpression(node)) {
-    return {
-      type: 'array',
-      items:
-        node.elements[0] && ts.isExpression(node.elements[0])
-          ? mongooseField(node.elements[0], variables, skipped, open)
-          : {},
-    };
-  }
-  const fields = objectFields(node);
-
-  if (ts.isObjectLiteralExpression(node) && !fields.has('type')) {
-    return mongooseObject(node, variables, skipped);
-  }
-  const type = fields.get('type') ?? node;
-  let schema: JsonObject;
-
-  if (type !== node) {
-    schema = mongooseField(type, variables, skipped, open);
-  } else {
-    const name = type.getText();
-
-    const primitives = new Map(
-      Object.entries<JsonObject>({
-        String: { type: 'string' },
-        Number: { type: 'number' },
-        Boolean: { type: 'boolean' },
-        Date: { type: 'string', format: 'date-time' },
-        Buffer: { type: 'string', contentEncoding: 'base64' },
-        Object: { type: 'object' },
-      }),
-    );
-
-    schema =
-      primitives.get(name) ??
-      (name.endsWith('ObjectId') ? { type: 'string', pattern: '^[a-fA-F0-9]{24}$' } : {});
-
-    if (!Object.keys(schema).length) {
-      skipped.push(`Unsupported Mongoose type ${name}; retained as unconstrained`);
-    }
-  }
-
-  const values = literal(fields.get('enum'));
-
-  if (Array.isArray(values)) {
-    schema.enum = values;
-  }
-
-  for (const [input, output] of [
-    ['min', 'minimum'],
-    ['max', 'maximum'],
-    ['minlength', 'minLength'],
-    ['maxlength', 'maxLength'],
-  ] as const) {
-    const value = literal(fields.get(input));
-
-    if (value !== undefined) {
-      schema[output] = value;
-    }
-  }
-
-  return schema;
-}
-
-function mongooseObject(
-  node: ts.Expression,
-  variables: Map<string, ts.Expression>,
-  skipped: Array<string>,
-): JsonObject {
-  const properties: JsonObject = {};
-  const required: Array<string> = [];
-
-  if (!ts.isObjectLiteralExpression(node)) {
-    skipped.push(`Dynamic Mongoose schema ${node.getText()} requires an exported schema`);
-
-    return {};
-  }
-
-  for (const [name, value] of objectFields(node)) {
-    properties[name] = mongooseField(value, variables, skipped);
-
-    if (literal(objectFields(value).get('required')) === true) {
-      required.push(name);
-    }
-  }
-
-  const schema: JsonObject = { type: 'object', properties };
-
-  if (required.length) {
-    schema.required = required;
-  }
-
-  return schema;
-}
-
-/**
- * A Mongoose schema's fields as its page lists them: each one's type as
- * written, the options that constrain it, and the model a `ref` points at.
- */
-function mongooseFields(
-  node: ts.Expression,
-  variables: Map<string, ts.Expression>,
-  open = new Set<string>(),
-): Array<ModelField> {
-  if (!ts.isObjectLiteralExpression(node)) {
-    return [];
-  }
-
-  return [...objectFields(node)].map(([name, value]) =>
-    mongooseFieldDetail(name, value, variables, open),
-  );
-}
-
-function mongooseFieldDetail(
-  name: string,
-  node: ts.Expression,
-  variables: Map<string, ts.Expression>,
-  open: Set<string>,
-): ModelField {
-  if (ts.isIdentifier(node) && variables.has(node.text) && !open.has(node.text)) {
-    return mongooseFieldDetail(
-      name,
-      variables.get(node.text)!,
-      variables,
-      new Set([...open, node.text]),
-    );
-  }
-
-  if (ts.isArrayLiteralExpression(node)) {
-    const [item] = node.elements;
-
-    const inner =
-      item && ts.isExpression(item)
-        ? mongooseFieldDetail(name, item, variables, open)
-        : { name, type: 'Mixed' };
-
-    return {
-      ...inner,
-      list: true,
-      ...(inner.relation && { relation: { ...inner.relation, many: true } }),
-    };
-  }
-
-  if (ts.isNewExpression(node) && node.expression.getText().endsWith('Schema')) {
-    return {
-      name,
-      type: 'Object',
-      fields: node.arguments?.[0] ? mongooseFields(node.arguments[0], variables, open) : [],
-    };
-  }
-  const options = objectFields(node);
-
-  if (ts.isObjectLiteralExpression(node) && !options.has('type')) {
-    return { name, type: 'Object', fields: mongooseFields(node, variables, open) };
-  }
-  const type = options.get('type');
-
-  if (type && (ts.isArrayLiteralExpression(type) || ts.isNewExpression(type))) {
-    return {
-      ...mongooseFieldDetail(name, type, variables, open),
-      ...mongooseOptions(name, options),
-    };
-  }
-
-  return {
-    name,
-    type: (type ?? node).getText().replace(/^.*\./, ''),
-    ...mongooseOptions(name, options),
-  };
-}
-
-function mongooseOptions(name: string, options: Map<string, ts.Expression>) {
-  const values = literal(options.get('enum'));
-  const ref = textLiteral(options.get('ref'));
-  const fallback = options.get('default');
-
-  return {
-    ...(literal(options.get('required')) !== true && { optional: true }),
-    ...(literal(options.get('unique')) === true && { unique: true }),
-    ...(fallback && { default: fallback.getText() }),
-    ...(Array.isArray(values) && { enum: values.map(String) }),
-    ...(ref && { relation: { model: ref, many: false, fields: [name] } }),
-  } satisfies Partial<ModelField>;
-}
-
-function sourceResource(
-  ref: ResourceRef<'collection' | 'table'>,
-  schema: JsonObject,
-  adapter: string,
-  file: string,
-  symbol: string,
-  line: number,
-): CatalogResource {
-  return {
-    ...architectureResource(ref, { adapter, schema }),
-    source: { type: 'code', file, symbol, line },
-    provenance: { default: 'extracted', fields: {} },
-    needsReview: false,
-  };
-}
-
-interface PrismaDoc {
-  text: string;
-  /** The comment is the whole line, so it documents the line below it. */
-  own: boolean;
-}
-
-/**
- * Remove `//` comments. String literals stay whole: they may contain `//`, `{`
- * or `}`. A `///` comment is Prisma's documentation for what it sits on, so its
- * text is kept by line number.
- */
-function withoutPrismaComments(content: string) {
-  const docs = new Map<number, PrismaDoc>();
-  let output = '';
-  let quoted = false;
-  let line = 1;
-  let lineStart = 0;
-
-  for (let index = 0; index < content.length; index++) {
-    const char = content[index]!;
-
-    if (char === '\n') {
-      line++;
-      lineStart = index + 1;
-    }
-
-    if (quoted) {
-      if (char === '\\') {
-        output += content.slice(index, index + 2);
-        index++;
-        continue;
-      }
-
-      if (char === '"' || char === '\n') {
-        quoted = false;
-      }
-    } else if (char === '"') {
-      quoted = true;
-    } else if (char === '/' && content[index + 1] === '/') {
-      const end = content.indexOf('\n', index);
-      const comment = content.slice(index, end === -1 ? undefined : end);
-
-      if (comment.startsWith('///')) {
-        docs.set(line, {
-          text: comment.slice(3).trim(),
-          own: content.slice(lineStart, index).trim() === '',
-        });
-      }
-
-      if (end === -1) {
-        break;
-      }
-      index = end - 1;
-      continue;
-    }
-
-    output += char;
-  }
-
-  return { code: output, docs };
-}
-
-// Bounds the walk, so a schema of nothing but `///` lines stays linear.
-const MAX_DOC_LINES = 50;
-
-/** The `///` lines directly above a line, as one paragraph: the last 50 at most. */
-function docAbove(docs: Map<number, PrismaDoc>, line: number): string | undefined {
-  const lines: Array<string> = [];
-
-  for (let above = line - 1; docs.get(above)?.own && lines.length < MAX_DOC_LINES; above--) {
-    lines.unshift(docs.get(above)!.text);
-  }
-
-  return lines.join('\n').trim() || undefined;
-}
-
-interface PrismaBlock {
-  keyword: string;
-  name: string;
-  line: number;
-  lines: Array<string>;
-  /** Its `///` documentation. */
-  doc?: string | undefined;
-  /** Each line's `///` documentation, trailing it or directly above it. */
-  docs: Array<string | undefined>;
-}
-
-/**
- * The top-level `keyword Name { ... }` blocks of a schema file. One pass over
- * the text; a brace inside a string does not open or close a block.
- */
-function prismaBlocks(content: string, file: string, skipped: Array<string>): Array<PrismaBlock> {
-  const { code, docs } = withoutPrismaComments(content);
-  const blocks: Array<PrismaBlock> = [];
-  let depth = 0;
-  let quoted = false;
-  let line = 1;
-  let headerStart = 0;
-  let bodyStart = 0;
-  let open: Pick<PrismaBlock, 'keyword' | 'name' | 'line'> | undefined;
-
-  for (let index = 0; index < code.length; index++) {
-    const char = code[index];
-
-    if (char === '\n') {
-      line++;
-    }
-
-    if (quoted) {
-      if (char === '\\') {
-        index++;
-      } else if (char === '"' || char === '\n') {
-        quoted = false;
-      }
-      continue;
-    }
-
-    if (char === '"') {
-      quoted = true;
-    } else if (char === '{') {
-      if (depth === 0) {
-        const [keyword = '', name = ''] = code
-          .slice(headerStart, index)
-          .trim()
-          .split(/\s+/)
-          .slice(-2);
-
-        open = { keyword, name, line };
-        bodyStart = index + 1;
-      }
-
-      depth++;
-    } else if (char === '}' && depth > 0) {
-      depth--;
-
-      if (depth === 0) {
-        if (open?.name) {
-          const lines = code.slice(bodyStart, index).split('\n');
-          const start = open.line;
-
-          blocks.push({
-            ...open,
-            lines,
-            doc: docAbove(docs, start),
-            docs: lines.map((_, i) => {
-              const own = docs.get(start + i);
-
-              return own && !own.own ? own.text : docAbove(docs, start + i);
-            }),
-          });
-        }
-
-        headerStart = index + 1;
-      }
-    }
-  }
-
-  if (depth > 0 && open) {
-    skipped.push(`${file}: ${open.keyword} ${open.name} is never closed`);
-  }
-
-  return blocks;
-}
-
-const mappedName = (text: string, attribute: '@map' | '@@map' | '@@schema') =>
-  new RegExp(`(?:^|\\s)${attribute}\\("([^"]*)"\\)`).exec(text)?.[1];
-
-/** The text between an attribute's parentheses, nested calls and strings included. */
-function attributeArguments(text: string, attribute: string): string | undefined {
-  const start = new RegExp(`(?:^|\\s)${attribute}\\(`).exec(text);
-
-  if (!start) {
-    return undefined;
-  }
-  const from = start.index + start[0].length;
-  let depth = 1;
-  let quoted = false;
-
-  for (let index = from; index < text.length; index++) {
-    const char = text[index];
-
-    if (quoted) {
-      if (char === '\\') {
-        index++;
-      } else if (char === '"') {
-        quoted = false;
-      }
-    } else if (char === '"') {
-      quoted = true;
-    } else if (char === '(') {
-      depth++;
-    } else if (char === ')' && --depth === 0) {
-      return text.slice(from, index).trim();
-    }
-  }
-
-  return undefined;
-}
-
-/** `fields: [a, b(sort: Desc)]` as `['a', 'b']`. */
-function namedList(text: string, name?: string): Array<string> | undefined {
-  const list = new RegExp(name ? `${name}:\\s*\\[([^\\]]*)\\]` : String.raw`^\s*\[([^\]]*)\]`).exec(
-    text,
-  )?.[1];
-
-  if (list === undefined) {
-    return undefined;
-  }
-
-  // An item's arguments may hold commas of their own: `email(sort: Desc, length: 10)`.
-  let depth = 0;
-  let names = '';
-
-  for (const char of list) {
-    if (char === '(') {
-      depth++;
-    } else if (char === ')') {
-      depth = Math.max(0, depth - 1);
-    } else if (depth === 0) {
-      names += char;
-    }
-  }
-
-  return names
-    .split(',')
-    .map((item) => item.trim())
-    .filter(Boolean);
-}
-
-/** The relation a model's field points at, beside the column it may hold. */
-export interface ModelRelation {
-  /** The related model, as the code names it. */
-  model: string;
-  /** The related resource, once the scan found it. */
-  to?: ResourceRef;
-  /** A list of related records rather than one. */
-  many: boolean;
-  /** Prisma's relation name, which pairs the two sides of one relation. */
-  name?: string;
-  /** This model's columns that hold the related key: present on the side that owns the foreign key. */
-  fields?: Array<string>;
-  /** The related model's columns those hold. */
-  references?: Array<string>;
-}
-
-/** One field of a model as its page shows it, beside the JSON Schema drift compares. */
-export interface ModelField {
-  /** As the code names it. */
-  name: string;
-  /** The database's own name, when it differs. */
-  column?: string;
-  /** As the schema declares it: `String`, `Currency`, `varchar`. */
-  type: string;
-  list?: boolean;
-  optional?: boolean;
-  id?: boolean;
-  unique?: boolean;
-  /** The default as written, such as `now()` or `"pending"`. */
-  default?: string;
-  /** Set by the ORM on every update. */
-  updatedAt?: boolean;
-  enum?: Array<string>;
-  doc?: string;
-  relation?: ModelRelation;
-  /** An embedded type's own fields. */
-  fields?: Array<ModelField>;
-}
-
-export interface ModelIndex {
-  fields: Array<string>;
-  unique: boolean;
-  /** A composite primary key, as `@@id` declares one. */
-  primary?: boolean;
-  name?: string;
 }
 
 const relationRef = z.object({
@@ -722,319 +157,6 @@ export const modelIndexes = z.array(
     name: z.string().optional(),
   }),
 );
-
-const PRISMA_PRIMITIVES = new Map(
-  Object.entries<JsonObject>({
-    String: { type: 'string' },
-    Boolean: { type: 'boolean' },
-    Int: { type: 'integer' },
-    Float: { type: 'number' },
-    Decimal: { type: 'string', format: 'decimal' },
-    BigInt: { type: 'string', pattern: '^-?[0-9]+$' },
-    DateTime: { type: 'string', format: 'date-time' },
-    Bytes: { type: 'string', contentEncoding: 'base64' },
-    Json: {},
-  }),
-);
-
-interface PrismaContext {
-  file: string;
-  skipped: Array<string>;
-  enums: Map<string, Array<string>>;
-  /** MongoDB's embedded `type` blocks. */
-  composites: Map<string, PrismaBlock>;
-  models: Map<string, ResourceRef<'collection' | 'table'>>;
-}
-
-/** A model's or embedded type's fields, its JSON Schema, and each field's column. */
-function prismaFields(block: PrismaBlock, context: PrismaContext, open: Set<string>) {
-  const { file, skipped, enums, composites, models } = context;
-  const fields: Array<ModelField> = [];
-  const properties: JsonObject = {};
-  const required: Array<string> = [];
-  const aliases = new Map<string, string>();
-
-  for (const [index, line] of block.lines.entries()) {
-    // `Unsupported("geometry(Point, 4326)")?`: the type's argument comes before its modifier.
-    const match = /^\s*(\w+)\s+(\w+)(?:\("[^"]*"\))?(\[\]|\?)?(.*)$/.exec(line);
-
-    if (!match) {
-      continue;
-    }
-    const [, name = '', type = '', modifier, options = ''] = match;
-    const column = mappedName(options, '@map') ?? name;
-    const fallback = attributeArguments(options, '@default');
-    const doc = block.docs[index];
-
-    const field: ModelField = {
-      name,
-      type,
-      ...(column !== name && { column }),
-      ...(modifier === '[]' && { list: true }),
-      ...(modifier === '?' && { optional: true }),
-      ...(/(?:^|\s)@id\b/.test(options) && { id: true }),
-      ...(/(?:^|\s)@unique\b/.test(options) && { unique: true }),
-      ...(fallback !== undefined && { default: fallback }),
-      ...(/(?:^|\s)@updatedAt\b/.test(options) && { updatedAt: true }),
-      ...(doc && { doc }),
-    };
-
-    const related = models.get(type);
-
-    // A relation is the link between two models, not a column of either: it
-    // stays out of the schema drift compares, and the field holding the key is
-    // a column of its own.
-    if (related) {
-      const relation = attributeArguments(options, '@relation') ?? '';
-
-      const relationName =
-        /^"([^"]*)"/.exec(relation)?.[1] ?? /name:\s*"([^"]*)"/.exec(relation)?.[1];
-
-      const keys = namedList(relation, 'fields');
-      const references = namedList(relation, 'references');
-
-      fields.push({
-        ...field,
-        relation: {
-          model: type,
-          to: related,
-          many: modifier === '[]',
-          ...(relationName && { name: relationName }),
-          ...(keys && { fields: keys }),
-          ...(references && { references }),
-        },
-      });
-      continue;
-    }
-
-    const values = enums.get(type);
-    const composite = composites.get(type);
-    let schema = PRISMA_PRIMITIVES.get(type) ?? (values && { type: 'string', enum: values });
-
-    if (values) {
-      field.enum = values;
-    }
-
-    if (!schema && composite && !open.has(type)) {
-      const embedded = prismaFields(composite, context, new Set([...open, type]));
-      field.fields = embedded.fields;
-      schema = embedded.schema;
-    }
-
-    if (!schema) {
-      skipped.push(`${file}: unsupported Prisma field ${block.name}.${name} (${type})`);
-      schema = {};
-    }
-
-    if (modifier === '[]') {
-      schema = { type: 'array', items: schema };
-    }
-
-    if (modifier === '?') {
-      schema = { anyOf: [schema, { type: 'null' }] };
-    }
-    properties[column] = schema;
-    aliases.set(name, column);
-    required.push(column);
-    fields.push(field);
-  }
-
-  return { fields, schema: { type: 'object', properties, required }, aliases };
-}
-
-/** `@@index`, `@@unique` and `@@id`, by the fields each covers. */
-function prismaIndexes(block: PrismaBlock): Array<ModelIndex> {
-  return block.lines.flatMap((line) => {
-    const kind = /^\s*@@(index|unique|id)\s*\(/.exec(line)?.[1];
-    const args = kind && attributeArguments(line.trim(), `@@${kind}`);
-    const fields = args ? (namedList(args) ?? namedList(args, 'fields')) : undefined;
-
-    if (!fields) {
-      return [];
-    }
-    const name = args && /(?:name|map):\s*"([^"]*)"/.exec(args)?.[1];
-
-    return [
-      {
-        fields,
-        unique: kind !== 'index',
-        ...(kind === 'id' && { primary: true }),
-        ...(name && { name }),
-      },
-    ];
-  });
-}
-
-/** A model's fields, kept by reference so a relation found later can be resolved in place. */
-interface ParsedModel {
-  resource: CatalogResource;
-  ref: ResourceRef;
-  fields: Array<ModelField>;
-  file: string;
-  line: number;
-}
-
-/** Record a model's fields on its resource, once each relation's target is resolved. */
-function describeModel({ resource, fields }: ParsedModel, indexes: Array<ModelIndex> = []): void {
-  resource.attributes = {
-    ...resource.attributes,
-    fields: jsonValueSchema.parse(fields),
-    ...(indexes.length && { indexes: jsonValueSchema.parse(indexes) }),
-  };
-}
-
-interface PrismaModel {
-  ref: ResourceRef<'collection' | 'table'>;
-  /** Prisma field name → database column name. */
-  aliases: Map<string, string>;
-}
-
-/**
- * Models of every schema file, read together: a multi-file schema declares its
- * datasource, enums and related models in different files.
- */
-function prismaResources(
-  files: Array<{ relative: string; content: string }>,
-  namespace: string,
-  skipped: Array<string>,
-) {
-  const graph = emptyResourceGraph();
-  const models = new Map<string, PrismaModel>();
-
-  const blocks = files.map((file) => ({
-    ...file,
-    blocks: prismaBlocks(file.content, file.relative, skipped),
-  }));
-
-  const all = blocks.flatMap((file) => file.blocks);
-  const enums = new Map<string, Array<string>>();
-
-  for (const block of all.filter((item) => item.keyword === 'enum')) {
-    enums.set(
-      block.name,
-      block.lines.flatMap((line) => {
-        const name = /^\s*(\w+)/.exec(line)?.[1];
-
-        return name ? [mappedName(line, '@map') ?? name] : [];
-      }),
-    );
-  }
-
-  const kind = all.some(
-    (block) =>
-      block.keyword === 'datasource' &&
-      block.lines.some((line) => /^\s*provider\s*=\s*"mongodb"/.test(line)),
-  )
-    ? 'collection'
-    : 'table';
-
-  // Every model's identity first, so a relation can name one declared later.
-  const refs = new Map<string, ResourceRef<'collection' | 'table'>>();
-
-  for (const block of all) {
-    if (block.keyword !== 'model') {
-      continue;
-    }
-    const body = block.lines.join('\n');
-    const table = mappedName(body, '@@map') ?? block.name;
-    const sqlSchema = mappedName(body, '@@schema');
-
-    refs.set(block.name, { kind, namespace, id: sqlSchema ? `${sqlSchema}.${table}` : table });
-  }
-
-  const context: PrismaContext = {
-    file: '',
-    skipped,
-    enums,
-    composites: new Map(
-      all.flatMap((item) => (item.keyword === 'type' ? [[item.name, item]] : [])),
-    ),
-    models: refs,
-  };
-
-  const parsed: Array<ParsedModel> = [];
-
-  for (const { relative: file, blocks: fileBlocks } of blocks) {
-    for (const block of fileBlocks) {
-      if (block.keyword !== 'model') continue;
-      const symbol = block.name;
-      const ref = refs.get(symbol)!;
-      const { fields, schema, aliases } = prismaFields(block, { ...context, file }, new Set());
-      const indexes = prismaIndexes(block);
-      const resource = sourceResource(ref, schema, 'prisma', file, symbol, block.line);
-
-      resource.attributes = { ...resource.attributes, fieldAliases: Object.fromEntries(aliases) };
-
-      if (block.doc) resource.summary = block.doc;
-      graph.resources.push(resource);
-      models.set(`${symbol[0]!.toLowerCase()}${symbol.slice(1)}`, { ref, aliases });
-      const model = { resource, ref, fields, file, line: block.line };
-
-      describeModel(model, indexes);
-      parsed.push(model);
-    }
-  }
-
-  graph.relationships.push(...modelReferences(parsed));
-
-  return { graph, models };
-}
-
-/**
- * A `references` edge from each model to every other model it holds a key of,
- * so a map can join them. A many-to-many relation with no key on either side
- * is drawn once, from the model whose name sorts first. A model's relation to
- * itself is on its page rather than on the map.
- */
-function modelReferences(models: Array<ParsedModel>): Array<CatalogRelationship> {
-  const edges = new Map<string, CatalogRelationship>();
-  const byKey = new Map(models.map((model) => [resourceKey(model.ref), model]));
-
-  for (const model of models) {
-    for (const field of model.fields) {
-      const to = field.relation?.to;
-
-      if (!to || resourceKey(to) === resourceKey(model.ref)) continue;
-
-      const opposite = byKey
-        .get(resourceKey(to))
-        ?.fields.find(
-          (other) =>
-            other.relation?.to &&
-            resourceKey(other.relation.to) === resourceKey(model.ref) &&
-            other.relation.name === field.relation!.name,
-        );
-
-      const holdsKey =
-        field.relation!.fields?.length ||
-        (field.relation!.many &&
-          opposite?.relation?.many &&
-          resourceKey(model.ref) < resourceKey(to));
-
-      if (!holdsKey) continue;
-      const key = `${resourceKey(model.ref)}->${resourceKey(to)}`;
-      const edge = edges.get(key);
-      const names = z.array(z.string()).catch([]).parse(edge?.attributes?.fields);
-
-      edges.set(key, {
-        type: 'references',
-        from: model.ref,
-        to,
-        provenance: 'extracted',
-        needsReview: false,
-        source: edge?.source ?? { type: 'code', file: model.file, line: model.line },
-        attributes: { fields: [...names, field.name] },
-      });
-    }
-  }
-
-  return [...edges.values()];
-}
-
-/** A model, table or Prisma client that a local name refers to. */
-type Binding =
-  | { kind: 'model'; ref: ResourceRef<'collection' | 'table'>; inferred: boolean }
-  | { kind: 'prisma' };
 
 interface ImportedName {
   module: string;
@@ -1092,8 +214,9 @@ function moduleLinks(ast: ts.SourceFile) {
       }
 
       if (clause.namedBindings && ts.isNamedImports(clause.namedBindings)) {
-        for (const item of clause.namedBindings.elements)
+        for (const item of clause.namedBindings.elements) {
           imports.set(item.name.text, { module, name: item.propertyName?.text ?? item.name.text });
+        }
       }
     } else if (ts.isExportDeclaration(statement)) {
       const module = textLiteral(statement.moduleSpecifier);
@@ -1106,8 +229,11 @@ function moduleLinks(ast: ts.SourceFile) {
         for (const item of statement.exportClause.elements) {
           const local = item.propertyName?.text ?? item.name.text;
 
-          if (module) reexports.set(item.name.text, { module, name: local });
-          else exports.set(item.name.text, local);
+          if (module) {
+            reexports.set(item.name.text, { module, name: local });
+          } else {
+            exports.set(item.name.text, local);
+          }
         }
       }
     } else if (ts.isExportAssignment(statement)) {
@@ -1117,8 +243,9 @@ function moduleLinks(ast: ts.SourceFile) {
       statement.modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword)
     ) {
       for (const declaration of statement.declarationList.declarations) {
-        if (ts.isIdentifier(declaration.name))
+        if (ts.isIdentifier(declaration.name)) {
           exports.set(declaration.name.text, declaration.name.text);
+        }
       }
     } else if (
       ts.isExpressionStatement(statement) &&
@@ -1130,11 +257,14 @@ function moduleLinks(ast: ts.SourceFile) {
 
       if (target === 'module.exports' && ts.isObjectLiteralExpression(right)) {
         for (const item of right.properties) {
-          if (ts.isShorthandPropertyAssignment(item)) exports.set(item.name.text, item.name.text);
-          else if (ts.isPropertyAssignment(item)) {
+          if (ts.isShorthandPropertyAssignment(item)) {
+            exports.set(item.name.text, item.name.text);
+          } else if (ts.isPropertyAssignment(item)) {
             const name = propertyName(item.name);
 
-            if (name) exportValue(name, item.initializer);
+            if (name) {
+              exportValue(name, item.initializer);
+            }
           }
         }
       } else if (target === 'module.exports') {
@@ -1164,12 +294,14 @@ function moduleLinks(ast: ts.SourceFile) {
           imports.set(node.name.text, { module: required, name: 'default' });
         }
       } else if (required && ts.isObjectBindingPattern(node.name)) {
-        for (const item of node.name.elements)
-          if (ts.isIdentifier(item.name))
+        for (const item of node.name.elements) {
+          if (ts.isIdentifier(item.name)) {
             imports.set(item.name.text, {
               module: required,
               name: item.propertyName ? (propertyName(item.propertyName) ?? '') : item.name.text,
             });
+          }
+        }
       }
     }
 
@@ -1197,355 +329,22 @@ function findWithin<T extends ts.Node>(
   return ts.forEachChild(node, (child) => findWithin(child, match));
 }
 
-const MONGOOSE_UNCOUNTABLE = new Set([
-  'advice',
-  'energy',
-  'excretion',
-  'digestion',
-  'cooperation',
-  'health',
-  'justice',
-  'labour',
-  'machinery',
-  'equipment',
-  'information',
-  'pollution',
-  'sewage',
-  'paper',
-  'money',
-  'species',
-  'series',
-  'rain',
-  'rice',
-  'fish',
-  'sheep',
-  'moose',
-  'deer',
-  'news',
-  'expertise',
-  'status',
-  'media',
-]);
-
-const MONGOOSE_PLURALS: Array<[RegExp, string]> = [
-  [/human$/gi, 'humans'],
-  [/(m)an$/gi, '$1en'],
-  [/(pe)rson$/gi, '$1ople'],
-  [/(child)$/gi, '$1ren'],
-  [/^(ox)$/gi, '$1en'],
-  [/(ax|test)is$/gi, '$1es'],
-  [/(octop|vir)us$/gi, '$1i'],
-  [/(alias|status)$/gi, '$1es'],
-  [/(bu)s$/gi, '$1ses'],
-  [/(buffal|tomat|potat)o$/gi, '$1oes'],
-  [/([ti])um$/gi, '$1a'],
-  [/sis$/gi, 'ses'],
-  [/(?:([^f])fe|([lr])f)$/gi, '$1$2ves'],
-  [/(hive)$/gi, '$1s'],
-  [/([^aeiouy]|qu)y$/gi, '$1ies'],
-  [/(x|ch|ss|sh)$/gi, '$1es'],
-  [/(matr|vert|ind)ix|ex$/gi, '$1ices'],
-  [/([m|l])ouse$/gi, '$1ice'],
-  [/(kn|w|l)ife$/gi, '$1ives'],
-  [/(quiz)$/gi, '$1zes'],
-  [/^goose$/i, 'geese'],
-  [/s$/gi, 's'],
-  [/([^a-z])$/, '$1'],
-  [/$/gi, 's'],
-];
-
-/** Mongoose's default collection name for a model (mongoose/lib/helpers/pluralize.js). */
-export function mongooseCollectionName(model: string): string {
-  const name = model.toLowerCase();
-
-  if (MONGOOSE_UNCOUNTABLE.has(name)) {
-    return name;
-  }
-  const rule = MONGOOSE_PLURALS.find(([pattern]) => name.match(pattern));
-
-  return rule ? name.replace(rule[0], rule[1]) : name;
-}
-
-function mongooseModels(
-  values: Map<string, ts.Expression>,
-  context: { ast: ts.SourceFile; relative: string; namespace: string; skipped: Array<string> },
-) {
-  const { ast, relative, namespace, skipped } = context;
-  const resources: Array<CatalogResource> = [];
-  const locals = new Map<string, Binding>();
-  const models: Array<ParsedModel & { model: string }> = [];
-
-  const isModelCall = (node: ts.Node): node is ts.CallExpression =>
-    ts.isCallExpression(node) &&
-    (ts.isPropertyAccessExpression(node.expression)
-      ? node.expression.name.text === 'model'
-      : ts.isIdentifier(node.expression) && node.expression.text === 'model') &&
-    textLiteral(node.arguments[0]) !== undefined &&
-    node.arguments[1] !== undefined;
-
-  for (const [local, value] of values) {
-    const call = findWithin(value, isModelCall);
-
-    if (!call) {
-      continue;
-    }
-    const model = textLiteral(call.arguments[0])!;
-    const schemaArg = call.arguments[1]!;
-    const symbol = /^\w+$/.test(local) ? local : model;
-    const definition = ts.isIdentifier(schemaArg) ? values.get(schemaArg.text) : schemaArg;
-
-    if (!definition || !ts.isNewExpression(definition) || !definition.arguments?.[0]) {
-      skipped.push(`${relative}: ${symbol} has a dynamic schema`);
-      continue;
-    }
-
-    const collection =
-      textLiteral(call.arguments[2]) ??
-      textLiteral(objectFields(definition.arguments[1]).get('collection'));
-
-    // Without a declared collection the name is Mongoose's default pluralisation,
-    // which an application can replace; the name and every edge to it stay reviewable.
-    const ref: ResourceRef<'collection'> = {
-      kind: 'collection',
-      namespace,
-      id: collection ?? mongooseCollectionName(model),
-    };
-
-    locals.set(local, { kind: 'model', ref, inferred: !collection });
-
-    const resource = sourceResource(
-      ref,
-      mongooseObject(definition.arguments[0], values, skipped),
-      'mongoose',
-      relative,
-      symbol,
-      ast.getLineAndCharacterOfPosition(call.getStart()).line + 1,
-    );
-
-    models.push({
-      model,
-      resource,
-      ref,
-      fields: mongooseFields(definition.arguments[0], values),
-      file: relative,
-      line: resource.source!.line ?? 1,
-    });
-
-    if (!collection) {
-      resource.provenance.fields.id = 'inferred';
-      resource.needsReview = true;
-      skipped.push(
-        `${relative}: ${symbol} collection name inferred; declare collection for custom pluralization`,
-      );
-    }
-
-    resources.push(resource);
+/** The binding a call's receiver names: `Track`, or `models.Track` in an object of models. */
+function receiverBinding(
+  receiver: ts.Expression,
+  bindings: Map<string, Binding>,
+): Binding | undefined {
+  if (ts.isIdentifier(receiver)) {
+    return bindings.get(receiver.text);
   }
 
-  return { resources, locals, models };
-}
-
-function drizzleResources(
-  ast: ts.SourceFile,
-  namespace: string,
-  file: string,
-  skipped: Array<string>,
-) {
-  const resources: Array<CatalogResource> = [];
-  const models: Array<ParsedModel> = [];
-  const tables = new Map<string, ResourceRef<'table'>>();
-  const constructors = new Map<string, string>();
-
-  for (const statement of ast.statements) {
-    if (
-      !ts.isImportDeclaration(statement) ||
-      !textLiteral(statement.moduleSpecifier)?.startsWith('drizzle-orm/')
-    ) {
-      continue;
-    }
-    const bindings = statement.importClause?.namedBindings;
-
-    if (bindings && ts.isNamedImports(bindings)) {
-      for (const item of bindings.elements)
-        constructors.set(item.name.text, item.propertyName?.text ?? item.name.text);
-    }
+  if (!ts.isPropertyAccessExpression(receiver) || !ts.isIdentifier(receiver.expression)) {
+    return undefined;
   }
 
-  const visit = (node: ts.Node) => {
-    if (
-      ts.isVariableDeclaration(node) &&
-      ts.isIdentifier(node.name) &&
-      node.initializer &&
-      ts.isCallExpression(node.initializer)
-    ) {
-      const call = node.initializer;
+  const group = bindings.get(receiver.expression.text);
 
-      const factory = ts.isIdentifier(call.expression)
-        ? constructors.get(call.expression.text)
-        : undefined;
-
-      const id = textLiteral(call.arguments[0]);
-
-      if (
-        factory &&
-        ['pgTable', 'mysqlTable', 'sqliteTable'].includes(factory) &&
-        id &&
-        call.arguments[1]
-      ) {
-        const properties: JsonObject = {};
-        const required: Array<string> = [];
-        const aliases: JsonObject = {};
-        const fields: Array<ModelField> = [];
-
-        for (const [name, expression] of objectFields(call.arguments[1])) {
-          let base = expression;
-          let nonNullable = false;
-          let array = false;
-          const field: ModelField = { name, type: '' };
-
-          while (ts.isCallExpression(base) && ts.isPropertyAccessExpression(base.expression)) {
-            const modifier = base.expression.name.text;
-            const [argument] = base.arguments;
-
-            if (modifier === 'notNull' || modifier === 'primaryKey') {
-              nonNullable = true;
-            }
-
-            if (modifier === 'primaryKey') {
-              field.id = true;
-            }
-
-            if (modifier === 'unique') {
-              field.unique = true;
-            }
-
-            if (modifier === 'default' && argument) {
-              field.default = argument.getText();
-            }
-
-            if (modifier === 'defaultNow') {
-              field.default = 'now()';
-            }
-
-            // `.references(() => users.id)`: the table is resolved once every file is read.
-            const target =
-              modifier === 'references' && argument && ts.isArrowFunction(argument)
-                ? argument.body
-                : undefined;
-
-            if (
-              target &&
-              ts.isPropertyAccessExpression(target) &&
-              ts.isIdentifier(target.expression)
-            ) {
-              field.relation = {
-                model: target.expression.text,
-                many: false,
-                fields: [name],
-                references: [target.name.text],
-              };
-            }
-
-            if (modifier === 'array') {
-              array = true;
-            }
-            base = base.expression.expression;
-          }
-
-          if (!ts.isCallExpression(base) || !ts.isIdentifier(base.expression)) {
-            skipped.push(`${file}: dynamic Drizzle column ${name}`);
-            properties[name] = {};
-            required.push(name);
-            continue;
-          }
-
-          const type = constructors.get(base.expression.text) ?? base.expression.text;
-          const column = textLiteral(base.arguments[0]) ?? name;
-
-          const primitives = new Map(
-            Object.entries<JsonObject>({
-              text: { type: 'string' },
-              varchar: { type: 'string' },
-              char: { type: 'string' },
-              uuid: { type: 'string', format: 'uuid' },
-              integer: { type: 'integer' },
-              int: { type: 'integer' },
-              smallint: { type: 'integer' },
-              serial: { type: 'integer' },
-              boolean: { type: 'boolean' },
-              real: { type: 'number' },
-              doublePrecision: { type: 'number' },
-              numeric: { type: 'string', format: 'decimal' },
-              decimal: { type: 'string', format: 'decimal' },
-              bigint: { type: 'string', pattern: '^-?[0-9]+$' },
-              timestamp: { type: 'string', format: 'date-time' },
-              date: { type: 'string', format: 'date' },
-              json: {},
-              jsonb: {},
-            }),
-          );
-
-          let schema = primitives.get(type) ?? {};
-
-          if (!primitives.has(type)) {
-            skipped.push(`${file}: unsupported Drizzle column ${name} (${type})`);
-          }
-          const values = literal(objectFields(base.arguments[1]).get('enum'));
-
-          if (Array.isArray(values)) {
-            schema = { ...schema, enum: values };
-          }
-
-          if (array) {
-            schema = { type: 'array', items: schema };
-          }
-
-          if (!nonNullable && !['serial'].includes(type)) {
-            schema = { anyOf: [schema, { type: 'null' }] };
-          }
-          properties[column] = schema;
-          aliases[name] = column;
-          required.push(column);
-          fields.push({
-            ...field,
-            type,
-            ...(column !== name && { column }),
-            ...(array && { list: true }),
-            ...(!nonNullable && type !== 'serial' && { optional: true }),
-            ...(Array.isArray(values) && { enum: values.map(String) }),
-          });
-        }
-
-        const ref: ResourceRef<'table'> = { kind: 'table', namespace, id };
-        tables.set(node.name.text, ref);
-
-        const resource = sourceResource(
-          ref,
-          { type: 'object', properties, required },
-          'drizzle',
-          file,
-          node.name.text,
-          ast.getLineAndCharacterOfPosition(node.getStart()).line + 1,
-        );
-
-        resource.attributes = { ...resource.attributes, fieldAliases: aliases };
-        resources.push(resource);
-        models.push({
-          resource,
-          ref,
-          fields,
-          file,
-          line: ast.getLineAndCharacterOfPosition(node.getStart()).line + 1,
-        });
-      }
-    }
-
-    ts.forEachChild(node, visit);
-  };
-
-  visit(ast);
-
-  return { resources, models, tables };
+  return group?.kind === 'models' ? group.members.get(receiver.name.text) : undefined;
 }
 
 const SOURCE_EXTENSIONS = ['.ts', '.tsx', '.mts', '.cts', '.js', '.jsx', '.mjs', '.cjs'];
@@ -1559,101 +358,6 @@ const SOURCE_FOR_OUTPUT = new Map([
 ]);
 
 const isSourceFile = (file: string) => SOURCE_EXTENSIONS.includes(path.extname(file));
-
-const DRIZZLE_READS = new Set(['from', 'leftJoin', 'rightJoin', 'innerJoin', 'fullJoin']);
-
-const PRISMA_READS = new Set([
-  'findMany',
-  'findFirst',
-  'findUnique',
-  'findFirstOrThrow',
-  'findUniqueOrThrow',
-  'count',
-  'aggregate',
-  'groupBy',
-]);
-
-const PRISMA_WRITES = new Set([
-  'create',
-  'createMany',
-  'createManyAndReturn',
-  'update',
-  'updateMany',
-  'updateManyAndReturn',
-  'upsert',
-  'delete',
-  'deleteMany',
-]);
-
-/**
- * A Drizzle builder call with a table argument. Reading needs a builder before
- * it (`db.select().from(t)`, so `Array.from(t)` is not a read). Writing needs
- * the query to be chained, awaited or returned.
- */
-function drizzleAccess(call: ts.CallExpression, method: string): 'reads' | 'writes' | undefined {
-  if (!ts.isPropertyAccessExpression(call.expression)) {
-    return undefined;
-  }
-
-  if (DRIZZLE_READS.has(method)) {
-    return ts.isCallExpression(call.expression.expression) ? 'reads' : undefined;
-  }
-
-  if (method !== 'insert' && method !== 'update' && method !== 'delete') {
-    return undefined;
-  }
-  const parent = call.parent;
-
-  // Read from syntax: `cache.delete(users)` as a statement is not a query, and
-  // `await cache.delete(users)` is.
-  return (ts.isPropertyAccessExpression(parent) && parent.expression === call) ||
-    ts.isAwaitExpression(parent) ||
-    ts.isReturnStatement(parent)
-    ? 'writes'
-    : undefined;
-}
-
-/** Fields named by a Prisma `select`; empty (every field) unless it is a plain literal. */
-function prismaSelection(args: ts.Node | undefined, aliases: Map<string, string>): Array<string> {
-  const select = staticObject(args)?.get('select');
-  const fields = select ? staticObject(select) : undefined;
-
-  if (!fields) {
-    return [];
-  }
-  const columns: Array<string> = [];
-
-  for (const [name, value] of fields) {
-    const column = aliases.get(name);
-
-    // A relation: its own columns are not this table's.
-    if (!column) {
-      continue;
-    }
-    const chosen = literal(value);
-
-    if (chosen !== true && chosen !== false) {
-      return [];
-    }
-
-    if (chosen) {
-      columns.push(column);
-    }
-  }
-
-  return columns;
-}
-
-/** The root package's name: a service id that does not depend on the checkout's directory name. */
-async function packageName(root: string): Promise<string | undefined> {
-  const manifest = await readOptionalResourceJson(path.join(root, 'package.json'), { root }).catch(
-    () => undefined,
-  );
-
-  const parsed = z.object({ name: z.string().min(1) }).safeParse(manifest);
-
-  return parsed.success ? parsed.data.name : undefined;
-}
 
 /**
  * Two definitions of one resource that disagree, typically one `model User` per
@@ -1671,6 +375,7 @@ function withoutCompetingSchemas(
     if (!isArchitectureCatalogResource(resource) || !resource.attributes.schema) {
       continue;
     }
+
     const key = resourceKey(resource.ref);
 
     definitions.set(key, [
@@ -1689,6 +394,7 @@ function withoutCompetingSchemas(
     if (new Set(found.map((item) => item.schema)).size < 2) {
       continue;
     }
+
     competing.add(key);
     const files = [...new Set(found.map((item) => item.file))].sort();
     const ref = found[0]!.ref;
@@ -1757,6 +463,7 @@ export async function scanModelResources(
       if (!(error instanceof ResourceReadError)) {
         throw error;
       }
+
       skipped.push(error.message);
 
       return undefined;
@@ -1810,6 +517,7 @@ export async function scanModelResources(
     if (content === undefined) {
       continue;
     }
+
     const relative = relativeTo(file);
     const ast = ts.createSourceFile(file, content, ts.ScriptTarget.Latest, true);
     const { values, ...links } = moduleLinks(ast);
@@ -1828,12 +536,15 @@ export async function scanModelResources(
       constructors.has(node.expression.text);
 
     if (constructors.size) {
-      for (const [local, value] of values)
-        if (findWithin(value, isClient)) locals.set(local, { kind: 'prisma' });
+      for (const [local, value] of values) {
+        if (findWithin(value, isClient)) {
+          locals.set(local, { kind: 'prisma' });
+        }
+      }
     }
 
     if (content.includes('drizzle-orm')) {
-      const drizzle = drizzleResources(ast, namespace, relative, skipped);
+      const drizzle = drizzleResources(ast, { namespace, file: relative, skipped });
       graph.resources.push(...drizzle.resources);
       drizzleModels.push(...drizzle.models.map((model) => ({ file, model })));
 
@@ -1868,6 +579,7 @@ export async function scanModelResources(
     if (!specifier.startsWith('.')) {
       return undefined;
     }
+
     const base = path.resolve(path.dirname(file), specifier);
     const extension = path.extname(base);
     const stem = base.slice(0, base.length - extension.length);
@@ -1888,12 +600,14 @@ export async function scanModelResources(
     if (!info || seen.has(key)) {
       return undefined;
     }
+
     seen.add(key);
     const local = info.exports.get(name);
 
     if (local !== undefined) {
       return bound(file, local, seen);
     }
+
     const reexport = info.reexports.get(name);
 
     if (reexport) {
@@ -1925,6 +639,7 @@ export async function scanModelResources(
     if (own) {
       return own;
     }
+
     const imported = info?.imports.get(local);
     const target = imported ? resolveModule(file, imported.module) : undefined;
 
@@ -1937,8 +652,9 @@ export async function scanModelResources(
     for (const { relation } of model.fields) {
       const binding = relation && bound(file, relation.model, new Set());
 
-      if (relation && binding?.kind === 'model' && binding.ref.kind === 'table')
+      if (relation && binding?.kind === 'model' && binding.ref.kind === 'table') {
         relation.to = binding.ref;
+      }
     }
   }
 
@@ -1946,7 +662,9 @@ export async function scanModelResources(
     for (const { relation } of model.fields) {
       const to = relation && mongooseModelsByName.get(relation.model)?.ref;
 
-      if (relation && to) relation.to = to;
+      if (relation && to) {
+        relation.to = to;
+      }
     }
   }
 
@@ -1973,11 +691,13 @@ export async function scanModelResources(
     if (!bindings.size && !(info.queries && drizzleTables.size)) {
       continue;
     }
+
     const content = await read(file);
 
     if (content === undefined) {
       continue;
     }
+
     const relative = relativeTo(file);
     const ast = ts.createSourceFile(file, content, ts.ScriptTarget.Latest, true);
     const graph = emptyResourceGraph();
@@ -2011,7 +731,8 @@ export async function scanModelResources(
       if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression)) {
         const method = node.expression.name.text;
         const receiver = node.expression.expression;
-        const model = ts.isIdentifier(receiver) ? bindings.get(receiver.text) : undefined;
+        const model = receiverBinding(receiver, bindings);
+
         const argument = node.arguments[0];
 
         const table =
@@ -2109,21 +830,35 @@ export async function scanModelResources(
     const exported = emptyResourceGraph();
 
     for (const definition of exports) {
+      const ref: ResourceRef<'collection' | 'table'> = {
+        kind: definition.kind,
+        namespace: `${definition.datastore}/${definition.database}`,
+        id: definition.id,
+      };
+
       exported.resources.push(
-        sourceResource(
-          {
-            kind: definition.kind,
-            namespace: `${definition.datastore}/${definition.database}`,
-            id: definition.id,
-          },
-          definition.schema,
-          definition.adapter,
-          '.autocatalog/models.json',
-          definition.symbol ?? definition.id,
-          1,
-        ),
+        sourceResource(ref, definition, {
+          file: '.autocatalog/models.json',
+          symbol: definition.symbol ?? definition.id,
+          line: 1,
+        }),
       );
+
+      const user = definition.service ?? service;
+
+      for (const type of definition.access ?? []) {
+        exported.resources.push(architectureService(user));
+        exported.relationships.push({
+          type,
+          from: { kind: 'service', id: user },
+          to: ref,
+          provenance: 'declared',
+          needsReview: false,
+          source: { type: 'code', file: '.autocatalog/models.json' },
+        });
+      }
     }
+
     const exportedKeys = new Set(exported.resources.map((resource) => resourceKey(resource.ref)));
 
     const passive = withoutCompetingSchemas(

@@ -72,6 +72,31 @@ describe('driftOpenApi', () => {
     expect(compatibilityBreaks(summariseDrift(findings), 'backward').length).toBeGreaterThan(0);
   });
 
+  it('reports nothing lost when a keyword joins a $ref', async () => {
+    const ref = '#/components/schemas/CreatePaymentBody';
+
+    const document = (sibling: JsonObject) =>
+      spec(create('#/components/schemas/Aliased', {}), {
+        Aliased: { $ref: ref, ...sibling },
+        CreatePaymentBody: body('amount'),
+      });
+
+    await write(baseDir, document({}));
+    await write(currDir, document({ description: 'What to charge', deprecated: true, 'x-a': 1 }));
+    const annotated = await driftOpenApi(baseDir, currDir);
+
+    expect(annotated.map((f) => f.kind)).toEqual(['description_changed']);
+    expect(compatibilityBreaks(summariseDrift(annotated), 'backward')).toEqual([]);
+
+    // A constraint beside the $ref is one finding, about that constraint.
+    await write(currDir, document({ minProperties: 2 }));
+    const constrained = await driftOpenApi(baseDir, currDir);
+
+    expect(constrained.map((f) => [f.kind, f.severity])).toEqual([
+      ['constraint_tightened', 'breaking'],
+    ]);
+  });
+
   it('grades by who reads: a tightened request and a widened response break, the mirrors do not', async () => {
     const op = (request: JsonObject, response: JsonObject) => ({
       '/limits': {

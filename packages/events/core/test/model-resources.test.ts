@@ -277,6 +277,229 @@ describe('model resources', () => {
       await fs.rm(root, { recursive: true, force: true });
     }
   });
+  it('records the access an explicit model export declares, for the saved service or its own', async () => {
+    const store = { datastore: 'acme', database: 'finance' };
+
+    const { graph, errors } = await scanFiles({
+      '.autocatalog/models.json': JSON.stringify([
+        ...exportMongooseModels([exportable('statements')], {
+          ...store,
+          access: ['reads', 'writes'],
+        }),
+        ...exportMongooseModels([exportable('ledgers')], {
+          ...store,
+          service: 'ledger',
+          access: ['writes'],
+        }),
+        ...exportMongooseModels([exportable('audits')], store),
+      ]),
+    });
+
+    expect(errors).toEqual([]);
+    expect(edges(graph)).toEqual([
+      ['reads', 'statements', 'declared', false],
+      ['writes', 'ledgers', 'declared', false],
+      ['writes', 'statements', 'declared', false],
+    ]);
+    expect(
+      new Set(graph.resources.flatMap(({ ref }) => (ref.kind === 'service' ? [ref.id] : []))),
+    ).toEqual(new Set(['ledger', 'svc']));
+  });
+  it('finds every model in a declaration, and follows each by its property name', async () => {
+    const { graph } = await scanFiles({
+      'models.ts': `import mongoose from 'mongoose';
+        const trackSchema = new mongoose.Schema({ title: String }, { collection: 'tracks' });
+        const clientSchema = new mongoose.Schema({ name: String }, { collection: 'clients' });
+        export const models = {
+          Track: mongoose.model('Track', trackSchema),
+          Client: mongoose.model('Client', clientSchema),
+        };`,
+      'worker.ts': `import { models } from './models'; models.Client.find(); models.Track.create({});`,
+    });
+
+    expect(
+      new Set(graph.resources.flatMap(({ ref }) => (ref.kind === 'collection' ? [ref.id] : []))),
+    ).toEqual(new Set(['clients', 'tracks']));
+    expect(edges(graph)).toEqual([
+      ['reads', 'clients', 'extracted', false],
+      ['writes', 'tracks', 'extracted', false],
+    ]);
+  });
+  it('finds models a function builds from a declared schema, and reports the ones it cannot read', async () => {
+    const { graph, skipped } = await scanFiles({
+      'models.ts': `import { Schema, type Connection } from 'mongoose';
+        const trackSchema = new Schema({ title: String }, { collection: 'tracks' });
+        export const modelsOn = (connection: Connection) => ({
+          Track: connection.model('Track', trackSchema),
+          Client: connection.model('Client', buildSchema()),
+        });
+        export function named(connection: Connection, name: string) {
+          return connection.model(name, trackSchema);
+        }`,
+    });
+
+    expect(
+      graph.resources.flatMap(({ ref }) => (ref.kind === 'collection' ? [ref.id] : [])),
+    ).toEqual(['tracks']);
+    expect(skipped).toEqual([
+      expect.stringMatching(
+        /^models\.ts:5: Client is built inside a function .*exportMongooseModels$/,
+      ),
+      expect.stringMatching(/^models\.ts:8: a model's name is computed.*exportMongooseModels$/),
+    ]);
+  });
+  it('takes no schema another function, or a parameter, gives the same name', async () => {
+    const { graph, skipped } = await scanFiles({
+      'models.ts': `import { Schema } from 'mongoose';
+        const trackSchema = new Schema({ title: String }, { collection: 'tracks' });
+        export const modelsOn = (connection) => ({ Track: connection.model('Track', trackSchema) });
+        export const clientOn = (connection, trackSchema) => connection.model('Client', trackSchema);
+        export function legacy() {
+          const trackSchema = new Schema({ old: String }, { collection: 'old_tracks' });
+          return trackSchema;
+        }`,
+    });
+
+    expect(
+      graph.resources.flatMap((resource) =>
+        resource.ref.kind === 'collection' && isArchitectureCatalogResource(resource)
+          ? [[resource.ref.id, resource.attributes.schema]]
+          : [],
+      ),
+    ).toEqual([['tracks', { type: 'object', properties: { title: { type: 'string' } } }]]);
+    expect(skipped).toEqual([expect.stringMatching(/^models\.ts:4: Client is built inside/)]);
+  });
+  it('takes a schema by scope where a function assigns the model to a name of its own', async () => {
+    const { graph, skipped } = await scanFiles({
+      'models.ts': `import mongoose, { Schema } from 'mongoose';
+        export function clientOn(connection, schema) {
+          const Client = connection.model('Client', schema);
+          return Client;
+        }
+        export function trackOn(connection) {
+          const title = String;
+          const schema = new Schema({ title }, { collection: 'unread' });
+          const other = new Schema({ title: name, at: Date }, { collection: 'tracks' });
+          const Track = connection.model('Track', other);
+          return Track;
+        }
+        export const unrelated = () => {
+          const name = Number;
+          const schema = new Schema({ old: String }, { collection: 'old_tracks' });
+          return schema;
+        };
+        const name = String;
+        export const Late = mongoose.model('Late', buildSchema());
+        export const Open = mongoose.model('Open', new Schema(fields(), { collection: 'open' }));`,
+    });
+
+    expect(
+      graph.resources.flatMap((resource) =>
+        resource.ref.kind === 'collection' && isArchitectureCatalogResource(resource)
+          ? [[resource.ref.id, resource.attributes.schema]]
+          : [],
+      ),
+    ).toEqual([
+      ['open', {}],
+      [
+        'tracks',
+        {
+          type: 'object',
+          properties: { title: { type: 'string' }, at: { type: 'string', format: 'date-time' } },
+        },
+      ],
+    ]);
+    expect(skipped).toEqual([
+      expect.stringMatching(/^models\.ts:3: Client is built inside a function/),
+      expect.stringMatching(/^models\.ts:19: Late has a dynamic schema/),
+      expect.stringMatching(/^models\.ts:20: .*fields\(\)/),
+    ]);
+  });
+  it('finds a model call under another name, and reports one it cannot read', async () => {
+    const { graph, skipped } = await scanFiles({
+      'imported.ts': `import { model as registerModel, Schema } from 'mongoose';
+        const trackSchema = new Schema({ title: String }, { collection: 'tracks' });
+        export const Track = registerModel('Track', trackSchema);
+        export const Late = registerModel('Late', buildSchema());`,
+      'assigned.js': `const mongoose = require('mongoose');
+        const { model: define, Schema } = mongoose;
+        const register = mongoose.model.bind(mongoose);
+        define('Client', new Schema({ name: String }, { collection: 'clients' }));
+        register('Album', new Schema({ name: String }, { collection: 'albums' }));
+        other('Nothing', new Schema({ name: String }, { collection: 'nothing' }));`,
+    });
+
+    expect(
+      new Set(graph.resources.flatMap(({ ref }) => (ref.kind === 'collection' ? [ref.id] : []))),
+    ).toEqual(new Set(['albums', 'clients', 'tracks']));
+    expect(skipped).toEqual([expect.stringMatching(/^imported\.ts:4: Late has a dynamic schema/)]);
+  });
+  it('takes no model from another package, under its own name or another', async () => {
+    const { graph, skipped } = await scanFiles({
+      'other.ts': `import { Schema } from 'mongoose';
+        import { model as train } from '@acme/ml';
+        import other from '@acme/ml';
+        const { model: fit } = other;
+        const tune = other.model;
+        train('Track', new Schema({ title: String }, { collection: 'a' }));
+        fit('Track', new Schema({ title: String }, { collection: 'b' }));
+        tune('Track', new Schema({ title: String }, { collection: 'c' }));`,
+      'plain.js': `const { Schema } = require('mongoose');
+        const { model } = require('@acme/ml');
+        model('Track', new Schema({ title: String }, { collection: 'd' }));`,
+      'local.ts': `import { Schema } from 'mongoose';
+        import { model as define } from './db';
+        define('Track', new Schema({ title: String }, { collection: 'tracks' }));`,
+    });
+
+    expect(
+      graph.resources.flatMap(({ ref }) => (ref.kind === 'collection' ? [ref.id] : [])),
+    ).toEqual(['tracks']);
+    expect(skipped).toEqual(
+      ['other.ts:6', 'other.ts:7', 'other.ts:8', 'plain.js:3'].map(
+        (at) =>
+          `${at}: Track is registered by another package; export it with exportMongooseModels`,
+      ),
+    );
+  });
+  it('takes a model from a module named for Mongoose', async () => {
+    const { graph, skipped } = await scanFiles({
+      'path.ts': `import { model, Schema } from 'src/db/mongoose';
+        export const A = model('A', new Schema({ a: String }, { collection: 'a' }));`,
+      'workspace.ts': `import mongoose from '@acme/mongoose';
+        const { model, Schema } = mongoose;
+        export const B = model('B', new Schema({ b: String }), 'b');`,
+      'npm.ts': `import { model, Schema } from 'npm:mongoose@8';
+        export const C = model('C', new Schema({ c: String }), 'c');`,
+    });
+
+    expect(
+      new Set(graph.resources.flatMap(({ ref }) => (ref.kind === 'collection' ? [ref.id] : []))),
+    ).toEqual(new Set(['a', 'b', 'c']));
+    expect(skipped).toEqual([]);
+  });
+  it('names a model by its variable or property, not by an option around the call', async () => {
+    const { graph } = await scanFiles({
+      'models.ts': `import mongoose from 'mongoose';
+        const trackSchema = new mongoose.Schema({ title: String }, { collection: 'tracks' });
+        const clientSchema = new mongoose.Schema({ name: String }, { collection: 'clients' });
+        export const providers = [
+          { provide: 'TRACK', useFactory: (connection) => connection.model('Track', trackSchema) },
+        ];
+        export const clients = createService({ model: mongoose.model('Client', clientSchema) });
+        clients.find();`,
+    });
+
+    expect(
+      graph.resources.flatMap(({ ref, source }) =>
+        ref.kind === 'collection' ? [[ref.id, source?.symbol]] : [],
+      ),
+    ).toEqual([
+      ['clients', 'clients'],
+      ['tracks', 'Track'],
+    ]);
+    expect(edges(graph)).toEqual([['reads', 'clients', 'extracted', false]]);
+  });
   it('connects Prisma client reads and writes to mapped physical columns', async () => {
     const root = await fs.mkdtemp(path.join(os.tmpdir(), 'ac-prisma-access-'));
 
@@ -313,6 +536,13 @@ describe('model resources', () => {
       await fs.rm(root, { recursive: true, force: true });
     }
   });
+});
+
+/** A Mongoose model as the export reads one. */
+const exportable = (id: string) => ({
+  modelName: id,
+  collection: { collectionName: id },
+  schema: { toJSONSchema: () => ({ type: 'object' }) },
 });
 
 type Edge = [

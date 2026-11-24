@@ -20,10 +20,16 @@ function patterns({
   output = 'static',
   audience,
   perReaderKinds,
-}: { output?: string; audience?: string; perReaderKinds?: Array<string> } = {}): Array<string> {
+  llms,
+}: {
+  output?: string;
+  audience?: string;
+  perReaderKinds?: Array<string>;
+  llms?: boolean;
+} = {}): Array<string> {
   const injected: Array<string> = [];
 
-  const setup = autocatalogDocsRoutes(root, undefined, audience, perReaderKinds).hooks[
+  const setup = autocatalogDocsRoutes(root, undefined, audience, perReaderKinds, false, llms).hooks[
     'astro:config:setup'
   ];
 
@@ -119,6 +125,7 @@ it('leaves out whole-document copies on a server site that does not know who rea
   expect(patterns({ output: 'server', audience: 'public' })).toEqual(
     expect.arrayContaining(copies),
   );
+  expect(patterns({ output: 'server', llms: true })).toEqual(expect.arrayContaining(copies));
   expect(patterns()).toEqual(expect.arrayContaining(copies));
 });
 

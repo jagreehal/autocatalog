@@ -52,7 +52,7 @@ Promotion preserves evidence and survives subsequent scans. Source-only rescans 
 
 ## Model contracts and document validation
 
-Built-in scanners discover Mongoose schemas, Prisma models and Drizzle tables without executing repository code. They extract collection/table JSON Schema and recognizable read/write operations, including relative imports and Prisma field mappings. Dynamic models and unsupported constructs produce scan diagnostics. Review extracted contracts before using them as authoritative compatibility gates.
+Built-in scanners discover Mongoose schemas, Prisma models and Drizzle tables without executing repository code. They extract collection/table JSON Schema and recognizable read/write operations, including relative imports and Prisma field mappings. The scan reads a Mongoose model built inside a function, such as one per connection, when the file declares its schema, and follows `model` under another name you import or assign it as. For a dynamic model or an unsupported construct it prints the file and line of the call. Review extracted contracts before using them as authoritative compatibility gates.
 
 Beside the JSON Schema, each table or collection carries `attributes.fields`, one entry per field as the code names it, for its page on the site:
 
@@ -68,11 +68,15 @@ For Mongoose models that are built dynamically, export the actual models' schema
 import { exportMongooseModels } from 'autocatalog-core';
 import fs from 'node:fs/promises';
 
-const contracts = exportMongooseModels([Statement], { datastore: 'main', database: 'finance' });
+const contracts = exportMongooseModels([Statement], {
+  datastore: 'main',
+  database: 'finance',
+  access: ['reads', 'writes'],
+});
 await fs.writeFile('.autocatalog/models.json', JSON.stringify(contracts, null, 2));
 ```
 
-This uses each model's `schema.toJSONSchema()`; run it in an environment with a Mongoose version exposing that method. Explicit model exports take precedence over passive extraction. Inspect the exported array's collection identity and align the scan's datastore/database options with trace discovery.
+This uses each model's `schema.toJSONSchema()`; run it in an environment with a Mongoose version exposing that method. `access` says what the scan's `--service` does with these collections, so they join the ownership table and the cross-team check; `service` names another one. Without `access` an export describes the schema alone. Explicit model exports take precedence over passive extraction. Inspect the exported array's collection identity and align the scan's datastore/database options with trace discovery.
 
 Compare saved graphs, or use the normal drift command alongside event drift:
 

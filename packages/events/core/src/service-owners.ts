@@ -3,8 +3,9 @@ import { loadRepositoryEvents } from './repository-events';
 
 /**
  * The services a repository says are its own: those its events name as
- * producer, and those its OpenAPI specs name in `x-autocatalog.service`. A
- * claim is only a claim: `ac federation lock` decides who owns each service.
+ * producer, those its OpenAPI specs name in `x-autocatalog.service`, and for a
+ * spec that names none, the one saved in `.autocatalog/config.json`. A claim is
+ * only a claim: `ac federation lock` decides who owns each service.
  */
 export async function serviceClaims(repository: string, dir: string): Promise<Array<string>> {
   // A repository whose events cannot be read claims nothing it can be held to: the caller decides.
@@ -14,7 +15,7 @@ export async function serviceClaims(repository: string, dir: string): Promise<Ar
   return [
     ...new Set([
       ...events.flatMap((event) => (event.folder.isVersioned ? [] : event.frontmatter.producers)),
-      ...apis.flatMap((api) => declaredApiService(api.document) ?? []),
+      ...apis.flatMap((api) => declaredApiService(api.document) ?? api.service ?? []),
     ]),
   ].sort();
 }

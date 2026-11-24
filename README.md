@@ -292,7 +292,7 @@ servers and code generators.
 | Package                         | What it does                                               |
 | ------------------------------- | ---------------------------------------------------------- |
 | `autocatalog`                   | the one to install: `npx autocatalog`                      |
-| `autocatalog-cli`               | the `ac` command                                           |
+| `autocatalog-cli`               | the `ac` command, without the site builder                 |
 | `autocatalog-core`              | catalog model, scanners, drift rules                       |
 | `autocatalog-plugin-zod`        | `defineEvent` for Zod                                      |
 | `autocatalog-plugin-storybook`  | `ac from-storybook`: Storybook components on the site      |

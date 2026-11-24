@@ -1,5 +1,5 @@
 /** @jsxImportSource react */
-import { useFieldValue } from '#ui/lib/field.ts';
+import { usePagedTable } from '#ui/lib/paged-table.ts';
 import { cn } from 'cn';
 import { ChevronRightIcon, SearchIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -28,7 +28,7 @@ import {
 import { Toggle } from '#ui/components/ui/toggle.tsx';
 import { ToggleGroup, ToggleGroupItem } from '#ui/components/ui/toggle-group.tsx';
 import { kindIcon } from '../../icons';
-import { pageOf, pageOfIndex, rangeLabel, readSort, sortRows, writeSort } from '../lib/paging';
+import { pageOf, pageOfIndex, rangeLabel, sortRows } from '../lib/paging';
 import type { ExplorerModel, ExplorerRow } from './catalog-explorer-model';
 import { Code } from './Code';
 import { Evidence, isMethod, rule, tone } from './Evidence';
@@ -87,17 +87,13 @@ const isAnchorOf = (row: ExplorerRow, hash: string) =>
   hash === row.anchor || hash === decodeURIComponent(row.anchor);
 
 export function CatalogExplorer({ model }: CatalogExplorerProps) {
-  const { value: query, setValue: setQuery, field: queryField } = useFieldValue();
+  const table = usePagedTable(SORT_COLUMNS, byKey);
+
+  const { query, sort, open } = table;
 
   const [kind, setKind] = useState('all');
 
   const [reviewOnly, setReviewOnly] = useState(false);
-
-  const [sort, setSort] = useState(byKey);
-
-  const [page, setPage] = useState(1);
-
-  const [open, setOpen] = useState<ReadonlySet<string>>(new Set());
 
   // The row a fragment named, scrolled to once its page has drawn.
   const [landing, setLanding] = useState<string | null>(null);
@@ -106,9 +102,9 @@ export function CatalogExplorer({ model }: CatalogExplorerProps) {
 
   const apply = (next: Filters) => {
     setKind(next.kind);
-    setQuery(next.query);
+    table.setQuery(next.query);
     setReviewOnly(next.reviewOnly);
-    setPage(1);
+    table.setPage(1);
   };
 
   // `#resource-…` names one row, which may sit on a later page or behind the
@@ -126,8 +122,8 @@ export function CatalogExplorer({ model }: CatalogExplorerProps) {
     const view = filterRows(model.rows, from).includes(row) ? from : everything;
 
     apply(view);
-    setPage(pageOfIndex(sortRows(filterRows(model.rows, view), by, sortValue).indexOf(row)));
-    setOpen((was) => new Set(was).add(row.key));
+    table.setPage(pageOfIndex(sortRows(filterRows(model.rows, view), by, sortValue).indexOf(row)));
+    table.expand(row.key);
     setLanding(row.anchor);
   };
 
@@ -145,12 +141,8 @@ export function CatalogExplorer({ model }: CatalogExplorerProps) {
       reviewOnly: params.get('review') === '1',
     };
 
-    const sorted = readSort(params, SORT_COLUMNS, byKey);
-
     apply(initial);
-    setSort(sorted);
-    setPage(Number(params.get('page')) || 1);
-    land(initial, sorted);
+    land(initial, table.restore(params));
   }, [model]);
 
   // A connection, the datastore table or any other link on the page can name
@@ -165,7 +157,7 @@ export function CatalogExplorer({ model }: CatalogExplorerProps) {
 
   const shown = sortRows(filterRows(model.rows, filters), sort, sortValue);
 
-  const current = pageOf(shown, page);
+  const current = pageOf(shown, table.page);
 
   const hrefOf = (target: number) => {
     const params = new URLSearchParams();
@@ -174,30 +166,12 @@ export function CatalogExplorer({ model }: CatalogExplorerProps) {
       params.set('kind', kind);
     }
 
-    if (query) {
-      params.set('q', query);
-    }
-
     if (reviewOnly) {
       params.set('review', '1');
     }
 
-    writeSort(params, sort, byKey);
-    params.set('page', String(target));
-
-    return `?${params}`;
+    return table.hrefOf(target, params);
   };
-
-  const toggle = (key: string) =>
-    setOpen((was) => {
-      const next = new Set(was);
-
-      if (!next.delete(key)) {
-        next.add(key);
-      }
-
-      return next;
-    });
 
   const noun = shown.length === 1 ? 'resource' : 'resources';
 
@@ -230,11 +204,7 @@ export function CatalogExplorer({ model }: CatalogExplorerProps) {
             aria-label="Find anything"
             placeholder="Filter by name, owner, kind…"
             autoComplete="off"
-            {...queryField}
-            onChange={(event) => {
-              queryField.onChange(event);
-              setPage(1);
-            }}
+            {...table.field}
           />
         </InputGroup>
         {model.kinds.length > 0 && (
@@ -249,7 +219,7 @@ export function CatalogExplorer({ model }: CatalogExplorerProps) {
             selectedKeys={[kind]}
             onSelectionChange={(keys) => {
               setKind(String([...keys][0] ?? 'all'));
-              setPage(1);
+              table.setPage(1);
             }}
           >
             <ToggleGroupItem id="all">
@@ -274,7 +244,7 @@ export function CatalogExplorer({ model }: CatalogExplorerProps) {
             isSelected={reviewOnly}
             onChange={(selected) => {
               setReviewOnly(selected);
-              setPage(1);
+              table.setPage(1);
             }}
           >
             Needs review <Count>{model.review}</Count>
@@ -302,14 +272,7 @@ export function CatalogExplorer({ model }: CatalogExplorerProps) {
       <Card>
         <CardContent>
           {shown.length > 0 ? (
-            <Table
-              aria-label="Resources"
-              sortDescriptor={sort}
-              onSortChange={(next) => {
-                setSort(next);
-                setPage(1);
-              }}
-            >
+            <Table aria-label="Resources" {...table.sorting}>
               <TableHeader>
                 <TableHead id="details">
                   <span className="sr-only">Details</span>
@@ -336,13 +299,20 @@ export function CatalogExplorer({ model }: CatalogExplorerProps) {
                       key={row.key}
                       row={row}
                       expanded={expanded}
-                      onToggle={() => toggle(row.key)}
+                      onToggle={() => table.toggle(row.key)}
                       onLanded={landing === row.anchor ? () => setLanding(null) : undefined}
                     />
                   );
 
                   return expanded
-                    ? [line, <ResourceDetails key={`${row.key}#details`} row={row} />]
+                    ? [
+                        line,
+                        <ResourceDetails
+                          key={`${row.key}#details`}
+                          row={row}
+                          onFollow={() => land(filters)}
+                        />,
+                      ]
                     : [line];
                 })}
               </TableBody>
@@ -377,7 +347,7 @@ export function CatalogExplorer({ model }: CatalogExplorerProps) {
                   size="sm"
                   onPress={() => {
                     apply(everything);
-                    queryField.ref.current?.focus();
+                    table.field.ref.current?.focus();
                   }}
                 >
                   Clear filters
@@ -393,7 +363,7 @@ export function CatalogExplorer({ model }: CatalogExplorerProps) {
         page={current.page}
         pages={current.pages}
         hrefOf={hrefOf}
-        onPage={setPage}
+        onPage={table.setPage}
       />
     </section>
   );
@@ -488,7 +458,7 @@ function ResourceRow({
 }
 
 /** What a row opens to: the summary, where it was read and how sure, its schema and connections. */
-function ResourceDetails({ row }: { row: ExplorerRow }) {
+function ResourceDetails({ row, onFollow }: { row: ExplorerRow; onFollow: () => void }) {
   return (
     <TableRow id={`${row.key}#details`}>
       <TableCell colSpan={5} className="whitespace-normal">
@@ -562,6 +532,12 @@ function ResourceDetails({ row }: { row: ExplorerRow }) {
                     {connection.target ? (
                       <a
                         href={`#${connection.target.anchor}`}
+                        // The address names it already, so no hashchange will follow.
+                        onClick={(event) => {
+                          if (event.currentTarget.hash === location.hash) {
+                            onFollow();
+                          }
+                        }}
                         className="break-all text-foreground underline underline-offset-4"
                       >
                         {connection.target.title}

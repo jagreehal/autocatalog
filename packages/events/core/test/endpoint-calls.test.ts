@@ -16,6 +16,7 @@ import {
 } from '../src/architecture';
 import { consumersFromGraph, endpointConsumerKey, mergeConsumerGraph } from '../src/consumes';
 import type { JsonObject } from '../src/json';
+import { serviceClaims } from '../src/service-owners';
 import { driftOpenApi } from '../src/openapi-drift';
 import type { CatalogRelationship, ResourceGraph } from '../src/resource-graph';
 
@@ -452,4 +453,98 @@ describe('drift', () => {
       'checkout',
     ]);
   });
+});
+
+it('serves a spec that names no service from the service its repository is', async () => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'ac-api-service-'));
+
+  const exposers = async () => {
+    const graph = await withEndpoints(
+      emptyResourceGraph(),
+      [{ repository: 'repo', dir }],
+      () => undefined,
+    );
+
+    return graph.relationships.map(({ type, from, to }) => `${from.id} ${type} ${to.id}`);
+  };
+
+  try {
+    await fs.mkdir(path.join(dir, 'contracts'));
+    await fs.mkdir(path.join(dir, '.autocatalog'));
+    await fs.writeFile(path.join(dir, 'contracts/api.json'), JSON.stringify(document));
+    expect(await exposers()).toEqual([]);
+
+    await fs.writeFile(path.join(dir, 'package.json'), JSON.stringify({ name: 'customers-app' }));
+    expect(await exposers()).toEqual(['GET /customers/{id} exposedBy customers-app']);
+
+    // Two specs: the package's name does not say which one it serves; a saved service does.
+    await fs.writeFile(
+      path.join(dir, 'contracts/other.json'),
+      JSON.stringify({ ...document, paths: {} }),
+    );
+    expect(await exposers()).toEqual([]);
+
+    await fs.writeFile(
+      path.join(dir, '.autocatalog/config.json'),
+      JSON.stringify({ service: 'customers' }),
+    );
+    expect(await exposers()).toEqual(['GET /customers/{id} exposedBy customers']);
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+it('puts the saved service before a title, holds each to the lock, and lets it be claimed', async () => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'ac-api-saved-'));
+  const problems: Array<string> = [];
+
+  const exposers = async (owners?: Map<string, string>) => {
+    const graph = await withEndpoints(
+      { ...emptyResourceGraph(), resources: [architectureService('customers')] },
+      [{ repository: 'repo', dir }],
+      (message) => problems.push(message),
+      { owners },
+    );
+
+    return graph.relationships.map(({ to }) => to.id);
+  };
+
+  const save = (service: string) =>
+    fs.writeFile(path.join(dir, '.autocatalog/config.json'), JSON.stringify({ service }));
+
+  try {
+    await fs.mkdir(path.join(dir, 'contracts'));
+    await fs.mkdir(path.join(dir, '.autocatalog'));
+    await fs.writeFile(path.join(dir, 'contracts/api.json'), JSON.stringify(document));
+    await fs.writeFile(path.join(dir, 'package.json'), JSON.stringify({ name: 'guess' }));
+    await save('customers-svc');
+
+    expect(await exposers()).toEqual(['customers-svc']);
+    expect(await serviceClaims('repo', dir)).toEqual(['customers-svc']);
+    // Not pinned here, a name is passed over for the next one this repository holds.
+    expect(await exposers(new Map([['customers', 'repo']]))).toEqual(['customers']);
+    expect(
+      await exposers(
+        new Map([
+          ['customers', 'other'],
+          ['guess', 'repo'],
+        ]),
+      ),
+    ).toEqual(['guess']);
+    expect(await exposers(new Map([['guess', 'other']]))).toEqual([]);
+    expect(problems).toEqual([]);
+
+    await save('Customers Service');
+    expect(await exposers()).toEqual(['customers']);
+    expect(problems).toEqual([
+      expect.stringMatching(/^repo: \.autocatalog\/config\.json: service .* is not a service name/),
+    ]);
+
+    problems.length = 0;
+    await fs.writeFile(path.join(dir, '.autocatalog/config.json'), '{');
+    await exposers();
+    expect(problems).toEqual(['repo: .autocatalog/config.json: not valid JSON']);
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
 });

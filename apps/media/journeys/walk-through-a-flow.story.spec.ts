@@ -15,7 +15,8 @@ test('Walk through a flow', async ({ page, frame }, testInfo) => {
   await page.goto(`${SITES.docs}/flows/payments-service/capturing-a-payment/`);
   const map = page.getByRole('region', { name: 'Flow' });
   await map.scrollIntoViewIfNeeded();
-  await expect(map.locator('.react-flow__node').first()).toBeVisible();
+  // The map's first load on a cold server can outlast the default wait.
+  await expect(map.locator('.react-flow__node').first()).toBeVisible({ timeout: 30_000 });
   await frame('The flow, every step and branch', { still: 'flow' });
 
   when('the reader walks through it');

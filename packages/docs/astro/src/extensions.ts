@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import { isBuiltin } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import type { StarlightPlugin, StarlightUserConfig } from '@astrojs/starlight/types';
@@ -144,10 +145,9 @@ export async function loadSiteExtensions(files: Array<string>): Promise<SiteExte
   const merged = mergeSiteExtensions(loaded);
 
   // A site's own modules, such as a panel for the assistant, import what the site has.
-  merged.integrations.unshift(
-    resolveFromSite(),
-    siteDependencies(process.env.AUTOCATALOG_SITE_PROJECT),
-  );
+  const project = process.env.AUTOCATALOG_SITE_PROJECT;
+
+  merged.integrations.unshift(resolveFromSite(project), siteDependencies(project));
 
   // Astro middleware has no config field; an integration adds it. After
   // autocatalog's own, so it reads the `locals.reader` that `access` set.
@@ -173,12 +173,6 @@ const SITE_IMPORTER = import.meta.filename;
 const REACT = /^react(-dom)?(\/|$)/;
 
 /**
- * A site's own files import what the site is built with (`astro:*` aside):
- * `@astrojs/starlight/components/...`, React, the catalog. The site's project
- * does not install those, so a bare import its own node_modules cannot answer is
- * resolved from here instead. What the project installs itself still wins.
- */
-/**
  * What the site's own project installs stays outside the server bundle, loaded
  * from its node_modules when the server runs, as in any Astro project: some
  * packages, such as OpenTelemetry's, do not survive being bundled.
@@ -202,26 +196,32 @@ export interface SiteBundling {
   noExternal: Array<string>;
 }
 
+/** autocatalog's own packages are part of the site it builds, and React is the one it brings: see resolveFromSite. */
+const own = (names: Array<string>) =>
+  names.filter((name) => !name.startsWith('autocatalog') && !REACT.test(name));
+
 /**
  * Which of the site project's dependencies the server loads from its
  * node_modules (`external`), and which it bundles (`noExternal`): anything that
  * renders with React, so it renders with the one React the pages do.
  */
 export function siteBundling(project: string | undefined): SiteBundling {
-  // autocatalog's own packages are part of the site it builds, and React is
-  // the one autocatalog brings: see resolveFromSite.
-  const dependencies = dependenciesOf(project).filter(
-    (name) => !name.startsWith('autocatalog') && !REACT.test(name),
-  );
+  if (project === undefined) {
+    return { external: [], noExternal: [] };
+  }
 
-  const noExternal = dependencies.filter((name) => usesReact(project!, name));
+  const { dependencies, optionalDependencies } = manifestAt(project);
+  const running = own(Object.keys({ ...dependencies, ...optionalDependencies }));
+  const noExternal = running.filter((name) => usesReact(project, name));
 
-  return { external: dependencies.filter((name) => !noExternal.includes(name)), noExternal };
+  return { external: running.filter((name) => !noExternal.includes(name)), noExternal };
 }
 
 const manifestSchema = z.object({
   dependencies: z.record(z.string(), z.string()).optional(),
+  devDependencies: z.record(z.string(), z.string()).optional(),
   peerDependencies: z.record(z.string(), z.string()).optional(),
+  optionalDependencies: z.record(z.string(), z.string()).optional(),
 });
 
 /** A package.json, or nothing when there is none. */
@@ -231,9 +231,16 @@ function manifestAt(dir: string): z.infer<typeof manifestSchema> {
   return fs.existsSync(file) ? manifestSchema.parse(JSON.parse(fs.readFileSync(file, 'utf8'))) : {};
 }
 
-/** The names a project's package.json depends on; none without one. */
-function dependenciesOf(project: string | undefined): Array<string> {
-  return project ? Object.keys(manifestAt(project).dependencies ?? {}) : [];
+/** Whether a package names another, in any of its dependency lists. */
+function declares(dir: string, name: string): boolean {
+  const manifest = manifestAt(dir);
+
+  return [
+    manifest.dependencies,
+    manifest.optionalDependencies,
+    manifest.peerDependencies,
+    manifest.devDependencies,
+  ].some((names) => names !== undefined && Object.hasOwn(names, name));
 }
 
 /** Whether a dependency renders with React. */
@@ -243,7 +250,77 @@ function usesReact(project: string, name: string): boolean {
   return 'react' in peers;
 }
 
-function resolveFromSite(): AstroIntegration {
+const packageName = (specifier: string) =>
+  specifier
+    .split('/')
+    .slice(0, specifier.startsWith('@') ? 2 : 1)
+    .join('/');
+
+/** Where autocatalog's own code is, as `ac site` lists it: this package and what it installs. */
+const ownFolders = () =>
+  new Set((process.env.AUTOCATALOG_RESOLVE_FROM ?? '').split(path.delimiter).filter(Boolean));
+
+/** A module's folder and those around it, to the top of the package it was installed as. */
+function packageFolders(module: string): Array<string> {
+  const folders: Array<string> = [];
+
+  for (
+    let dir = path.dirname(module);
+    path.basename(dir) !== 'node_modules' && path.dirname(dir) !== dir;
+    dir = path.dirname(dir)
+  ) {
+    folders.push(dir);
+  }
+
+  return folders;
+}
+
+/**
+ * Names a package a site's code imports and the server loads when it runs: the
+ * one beside that code, where autocatalog may load another version by the plain
+ * name. `site-resolve` in autocatalog-cli looks it up from the folder it gives.
+ */
+const FROM_SITE = 'autocatalog-site:';
+
+/**
+ * An import of a package by the site's own code, or by an extension it installs,
+ * marked with the folder whose package.json names it; nothing for autocatalog's.
+ */
+export function siteImport(
+  source: string,
+  importer: string,
+  { project, folders = ownFolders() }: { project: string; folders?: ReadonlySet<string> },
+): string | undefined {
+  const name = packageName(source);
+  const module = importer.replace(/\?.*$/s, '');
+
+  // Node answers its own names, whatever the project installs under them.
+  if (isBuiltin(source) || own([name]).length === 0 || !fs.existsSync(module)) {
+    return undefined;
+  }
+
+  const around = packageFolders(fs.realpathSync(module));
+  const owner = around.find((dir) => declares(dir, name));
+
+  if (owner === undefined || around.some((dir) => folders.has(dir))) {
+    return undefined;
+  }
+
+  const beside = path.relative(fs.realpathSync(project), owner).split(path.sep).join('/');
+
+  return `${FROM_SITE}${source}?from=${encodeURIComponent(beside)}`;
+}
+
+/**
+ * A site's own files import what the site is built with (`astro:*` aside):
+ * `@astrojs/starlight/components/...`, React, the catalog. The site's project
+ * does not install those, so a bare import its own node_modules cannot answer is
+ * resolved from here instead. What the project installs itself still wins.
+ */
+function resolveFromSite(project: string | undefined): AstroIntegration {
+  const mark = (source: string, importer: string) =>
+    project === undefined ? undefined : siteImport(source, importer, { project });
+
   return {
     name: 'autocatalog-site-resolve',
     hooks: {
@@ -264,9 +341,21 @@ function resolveFromSite(): AstroIntegration {
                     return this.resolve(source, SITE_IMPORTER, { ...options, skipSelf: true });
                   }
 
-                  const own = await this.resolve(source, importer, { ...options, skipSelf: true });
+                  const found = await this.resolve(source, importer, {
+                    ...options,
+                    skipSelf: true,
+                  });
 
-                  return own ?? this.resolve(source, SITE_IMPORTER, { ...options, skipSelf: true });
+                  const external = (found?.external ?? false) !== false;
+                  const marked = external ? mark(source, importer) : undefined;
+
+                  if (marked !== undefined) {
+                    return { id: marked, external: true };
+                  }
+
+                  return (
+                    found ?? this.resolve(source, SITE_IMPORTER, { ...options, skipSelf: true })
+                  );
                 },
               },
             ],

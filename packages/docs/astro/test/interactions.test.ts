@@ -160,6 +160,21 @@ describe('CatalogExplorer behaviour', () => {
     ).toBe('true');
   });
 
+  it('follows a connection again when the address already names it', async () => {
+    history.replaceState(null, '', '/catalog#resource-service-LedgerService');
+    explorer();
+
+    fireEvent.click(screen.getByRole('radio', { name: /^event/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Details of Payment completed' }));
+    expect(titles()).not.toContain('LedgerService');
+
+    act(() => {
+      screen.getByText('LedgerService', { selector: '[data-relations] a' }).click();
+    });
+
+    await waitFor(() => expect(titles()).toContain('LedgerService'));
+  });
+
   it('names every row as a fragment in the page as built, the later pages too', () => {
     const html = renderToString(createElement(CatalogExplorer, { model: largeExplorerModel }));
 

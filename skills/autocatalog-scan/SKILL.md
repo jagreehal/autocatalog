@@ -19,6 +19,14 @@ If discovery requires executing the project's own modules, `ac scan . --allow-co
 
 Events in a format of the company's own? Describe a file of schemas under `sources` in `contracts/autocatalog.conventions.json`, or pass a shared one with `--conventions <file>`. It runs no code. For a format a mapping cannot describe, an installed `autocatalog-plugin-<name>` or `@scope/autocatalog-plugin-<name>` package teaches the scan to read it. `docs/plugins.md` shows both.
 
+Tables and collections come from a second scan, which reads Mongoose, Prisma and Drizzle:
+
+```bash
+ac resources scan . --service payments-service
+```
+
+It prints the file and line of each Mongoose model call it skips. Export those models with `exportMongooseModels` into `.autocatalog/models.json`, with `access: ['reads', 'writes']` for what the service does with them. `docs/brownfield-resources.md` shows the script.
+
 ## 2. Read the provenance before believing the catalog
 
 Every field records where it came from. This is the point of the tool: check it rather than skimming the count.

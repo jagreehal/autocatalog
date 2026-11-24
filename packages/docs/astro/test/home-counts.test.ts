@@ -1,5 +1,7 @@
+import { emptyResourceGraph } from 'autocatalog-core';
+import type { CatalogRelationship } from 'autocatalog-core';
 import { expect, it } from 'vitest';
-import { homeCounts } from '../src/page-models';
+import { catalogProvenance, homeCounts } from '../src/page-models';
 
 const stat = (kind: string, value: number) => ({ label: `${kind}s`, value, kind });
 
@@ -34,4 +36,25 @@ it('counts what the site names, in its order, and nothing it holds none of', () 
     'relationship',
     'agent',
   ]);
+});
+
+it('keeps the zeros of a catalog that holds nothing, so the page says what to add', () => {
+  expect(homeCounts([stat('domain', 0)])).toEqual([stat('domain', 0)]);
+  expect(homeCounts([stat('domain', 0)], ['domain'])).toEqual([]);
+});
+
+it('counts every fact once under where it came from, so the totals are the catalog’s', () => {
+  const found = (['extracted', 'observed', 'declared', 'overridden', 'inferred'] as const).map(
+    (provenance, index): CatalogRelationship => ({
+      type: 'reads',
+      from: { kind: 'service', id: `s${index}` },
+      to: { kind: 'table', id: 't' },
+      provenance,
+      needsReview: false,
+    }),
+  );
+
+  expect(
+    catalogProvenance({ ...emptyResourceGraph(), relationships: found }).relationships,
+  ).toEqual({ extracted: 2, declared: 2, inferred: 1 });
 });

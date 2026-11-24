@@ -778,86 +778,7 @@ for (const e of byKind('entity')) {
   write(path.join(repoDir(team), 'entities', `${e.id}.md`), front(data, convertBody(e.body)));
 }
 
-// ---------- 6. flows
-const stepOut = (s) => {
-  const out = { id: String(s.id) };
-
-  if (s.title) {
-    out.title = s.title;
-  }
-
-  if (s.summary) {
-    out.summary = String(s.summary).trim();
-  }
-
-  if (s.message) {
-    const m = messageById.get(s.message.id);
-
-    if (m?.kind === 'event') {
-      out.event = `${m.manifest.domain}/${m.manifest.id}`;
-    }
-    // `command:` would make this an EventStorming board, where branches read as failures;
-    // the demo's flows are maps whose branches run side by side
-    else if (m) {
-      out.custom = { title: s.title ?? m.manifest.name, summary: `Command: ${m.manifest.name}` };
-    } else {
-      out.custom = { title: s.title ?? s.message.id };
-    }
-  } else if (s.service) {
-    out.service = ecServiceName.get(s.service.id) ?? s.service.id;
-  } else if (s.actor) {
-    out.actor = defined({
-      name: s.actor.name,
-      summary: s.actor.summary ? String(s.actor.summary).trim() : undefined,
-    });
-  } else if (s.externalSystem) {
-    out.externalSystem = Object.fromEntries(
-      ['name', 'summary', 'url'].flatMap((k) =>
-        s.externalSystem[k] ? [[k, String(s.externalSystem[k]).trim()]] : [],
-      ),
-    );
-  } else if (s.flow) {
-    const f = find('flow', s.flow.id);
-    out.custom = {
-      title: s.title ?? f?.data.name ?? s.flow.id,
-      summary: `Flow: ${f?.data.name ?? s.flow.id}`,
-    };
-  } else if (s.container) {
-    out.custom = { title: ecContainer.get(s.container.id)?.data.name ?? s.container.id };
-  } else if (s.custom) {
-    out.custom = Object.fromEntries(
-      ['title', 'summary', 'url'].flatMap((k) => (s.custom[k] ? [[k, s.custom[k]]] : [])),
-    );
-  }
-
-  // A next step is written as its id, or as { id, label }.
-  const hop = (n) =>
-    n?.id === undefined ? String(n) : n.label ? { id: String(n.id), label: n.label } : String(n.id);
-
-  if (s.next_step) {
-    out.next_step = hop(s.next_step);
-  }
-
-  if (s.next_steps) {
-    out.next_steps = s.next_steps.map(hop);
-  }
-
-  return out;
-};
-
-for (const f of byKind('flow')) {
-  const team = ownerOf(f) ?? HANDBOOK;
-
-  const data = {
-    title: f.data.name,
-    summary: f.data.summary?.trim(),
-    steps: (f.data.steps ?? []).map(stepOut),
-  };
-
-  write(path.join(repoDir(team), 'flows', `${f.id}.md`), front(data, convertBody(f.body)));
-}
-
-// ---------- 7. directory: teams and one person
+// ---------- 6. directory: teams and one person
 for (const file of fs.readdirSync(path.join(EC, 'teams'))) {
   const { data, body } = matter(read(path.join(EC, 'teams', file)));
 
@@ -883,5 +804,5 @@ write(
 console.log(`teams: ${teams.join(', ')}`);
 
 console.log(
-  `messages: ${messages.length}, docs: ${plans.length}, overviews: ${overviews.length}, entities: ${byKind('entity').length}, flows: ${byKind('flow').length}`,
+  `messages: ${messages.length}, docs: ${plans.length}, overviews: ${overviews.length}, entities: ${byKind('entity').length}`,
 );

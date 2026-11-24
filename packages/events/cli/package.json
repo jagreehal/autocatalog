@@ -31,13 +31,10 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@astrojs/starlight": "^0.42.6",
     "@aws-sdk/client-glue": "3.1149.0",
     "@eventcatalog/sdk": "^2.29.2",
-    "astro": "^7.3.8",
     "autocatalog-agents-core": "workspace:*",
     "autocatalog-core": "workspace:*",
-    "autocatalog-docs-astro": "workspace:*",
     "autocatalog-docs-core": "workspace:*",
     "autocatalog-plugin-zod": "workspace:*",
     "commander": "^15.0.0",
@@ -47,9 +44,12 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@astrojs/starlight": "^0.42.6",
     "@asyncapi/specs": "6.11.1",
     "@types/node": "^26.6.4",
     "ajv": "8.20.0",
+    "astro": "^7.3.8",
+    "autocatalog-docs-astro": "workspace:*",
     "effect-analyzer": "3.11.0",
     "gray-matter": "^4.0.3",
     "tsup": "^8.5.1",
